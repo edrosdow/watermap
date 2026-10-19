@@ -1,7 +1,7 @@
 {
  "schema_version": 2,
  "region": "DE",
- "generated": "2026-10-19T19:42:26+00:00",
+ "generated": "2026-10-19T21:36:03+00:00",
  "source": "OpenStreetMap (Overpass API)",
  "license": "ODbL 1.0",
  "attribution": "© OpenStreetMap-Mitwirkende",
@@ -21,41 +21,41 @@
  },
  "categories": {
   "slip": {
-   "raw": 3584,
+   "raw": 3484,
    "rejected": 4,
-   "merged_duplicates": 279,
-   "final": 3301,
-   "with_name": 445,
-   "with_locality": 0,
-   "with_water": 0,
-   "with_nearest_place": 0
+   "merged_duplicates": 268,
+   "final": 3212,
+   "with_name": 435,
+   "with_locality": 2739,
+   "with_water": 2189,
+   "with_nearest_place": 2739
   },
   "marina": {
-   "raw": 2761,
+   "raw": 2570,
    "rejected": 1,
-   "merged_duplicates": 158,
-   "final": 2602,
-   "with_name": 2374,
-   "with_locality": 200,
-   "with_water": 0,
-   "with_nearest_place": 0
+   "merged_duplicates": 142,
+   "final": 2427,
+   "with_name": 2216,
+   "with_locality": 2048,
+   "with_water": 1606,
+   "with_nearest_place": 1876
   },
   "fuel": {
-   "raw": 151,
+   "raw": 144,
    "rejected": 0,
    "merged_duplicates": 9,
-   "final": 142,
-   "with_name": 87,
-   "with_locality": 13,
-   "with_water": 0,
-   "with_nearest_place": 0
+   "final": 135,
+   "with_name": 80,
+   "with_locality": 100,
+   "with_water": 75,
+   "with_nearest_place": 88
   }
  },
- "total": 6045,
- "osm_base_timestamp": "2026-07-28T02:16:18Z",
+ "total": 5774,
+ "osm_base_timestamp": "2026-07-24T11:04:51Z",
  "source_detail": "Overpass API",
  "enrichment": {
-  "places": "übersprungen",
-  "water": "übersprungen"
+  "places": "teilweise (ohne: DE-MV, DE-RP)",
+  "water": "teilweise (ohne: DE-SN)"
  }
 }
