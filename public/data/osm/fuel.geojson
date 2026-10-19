@@ -1,4 +1,375 @@
 {
  "type": "FeatureCollection",
- "features": []
+ "features": [
+  {
+   "type": "Feature",
+   "id": "node/2457748734",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     8.899624,
+     52.301416
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerboote",
+    "locality": "Bärenkämpen",
+    "locality_kind": "nearest",
+    "water": {
+     "name": "Mittellandkanal",
+     "approx": true,
+     "dist_m": 30
+    },
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "nur Diesel",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2457748734,
+     "timestamp": "2013-09-14T08:49:01Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2013-09-14"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2296728313",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.663148,
+     51.970249
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Ihnen Bunker Service",
+    "locality": "Mauritzviertel",
+    "locality_kind": "nearest",
+    "water": {
+     "name": "Dortmund-Ems-Kanal",
+     "approx": true,
+     "dist_m": 31
+    },
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Fr 07:00-19:00; Sa 07:00-16:00",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Kraftstoffe nur für die Berufsschifffahrt",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2296728313,
+     "timestamp": "2026-04-22T07:56:24Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-04-22"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1544996256",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     6.588091,
+     51.662425
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "nur Diesel",
+    "locality": "Wesel",
+    "locality_kind": "nearest",
+    "water": {
+     "name": "Sporthafen",
+     "approx": true,
+     "dist_m": 0
+    },
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "Yacht Club Wesel (YCW)",
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1544996256,
+     "timestamp": "2021-08-15T09:24:07Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2021-08-15"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1544997433",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     6.764373,
+     51.439221
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstation: Marina Duisburg",
+    "locality": "Altstadt",
+    "locality_kind": "nearest",
+    "water": {
+     "name": "Innenhafen",
+     "approx": true,
+     "dist_m": 0
+    },
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": "+49 203 2895697",
+    "email": null,
+    "description": "Benzin, Diesel, pump-out",
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1544997433,
+     "timestamp": "2026-01-04T10:21:07Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-01-04"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/670239240",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.640717,
+     51.641385
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstelle Marina Rünthe Diesel / Super",
+    "locality": "Rünthe",
+    "locality_kind": "nearest",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "\"nach Vereinbarung mit Hafenmeister\"",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 670239240,
+     "timestamp": "2022-05-10T21:04:49Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2022-05-10"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1641264622",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.02385,
+     51.66493
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": "Hervest",
+    "locality_kind": "nearest",
+    "water": {
+     "name": "Wesel-Datteln-Kanal",
+     "approx": true,
+     "dist_m": 48
+    },
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Diesel",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1641264622,
+     "timestamp": "2012-02-20T23:44:43Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2012-02-20"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1661449074",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.254831,
+     51.565897
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": "Pöppinghausen",
+    "locality_kind": "nearest",
+    "water": {
+     "name": "Rhein-Herne-Kanal",
+     "approx": true,
+     "dist_m": 74
+    },
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "AMC Castrop, nur Diesel",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1661449074,
+     "timestamp": "2021-02-18T17:33:30Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2021-02-18"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/558838623",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     6.965031,
+     50.926729
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": "Südstadt",
+    "locality_kind": "nearest",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Bootstankstelle für Diesel und Superbenzin im KAMC-Yachthafen. Hafenmeister : +49 221 9320585",
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 558838623,
+     "timestamp": "2026-03-31T09:18:38Z"
+    },
+    "also_osm": [
+     "node/2137577401"
+    ],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-03-31"
+   }
+  }
+ ]
 }
