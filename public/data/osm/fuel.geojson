@@ -3,6 +3,100 @@
  "features": [
   {
    "type": "Feature",
+   "id": "node/3523381293",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.421714,
+     52.513597
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Aral",
+    "locality": "Berlin",
+    "locality_kind": "address",
+    "water": {
+     "name": "Spree",
+     "approx": true,
+     "dist_m": 65
+    },
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "24/7",
+    "operator": null,
+    "website": null,
+    "phone": "+49 30 24720748",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 3523381293,
+     "timestamp": "2023-02-01T20:32:57Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-02-01"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/3523388893",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.555502,
+     52.454389
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Aral",
+    "locality": "Köpenick",
+    "locality_kind": "nearest",
+    "water": {
+     "name": "Treptower Spree",
+     "approx": true,
+     "dist_m": 62
+    },
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "24/7",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "An der Wuhlheide 240 12459 Berlin Tel. 030-53790502",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 3523388893,
+     "timestamp": "2023-09-18T06:27:17Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-09-18"
+   }
+  },
+  {
+   "type": "Feature",
    "id": "way/145394607",
    "geometry": {
     "type": "Point",
@@ -106,8 +200,8 @@
    "properties": {
     "type": "fuel",
     "name": "Barther Yachtservice - Diesel, Super",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Barth",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -188,6 +282,53 @@
   },
   {
    "type": "Feature",
+   "id": "node/431315670",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.188571,
+     52.501942
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bootstankstelle Berlin",
+    "locality": "Gatow",
+    "locality_kind": "nearest",
+    "water": {
+     "name": "Havel",
+     "approx": true,
+     "dist_m": 0
+    },
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Fr 10:00-20:00",
+    "operator": null,
+    "website": "http://bootstankstelle-berlin.de/",
+    "phone": "+49 30 33936766",
+    "email": null,
+    "description": "Marina Lanke",
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431315670,
+     "timestamp": "2018-10-10T22:26:12Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2018-10-10"
+   }
+  },
+  {
+   "type": "Feature",
    "id": "node/322199680",
    "geometry": {
     "type": "Point",
@@ -199,8 +340,8 @@
    "properties": {
     "type": "fuel",
     "name": "Bootstankstelle Diesel, Super und Normalbenzin",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Talwel",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -242,7 +383,7 @@
    "properties": {
     "type": "fuel",
     "name": "Bootstankstelle Eldena",
-    "locality": "Krinitz",
+    "locality": "Eldena",
     "locality_kind": "nearest",
     "water": {
      "name": "Marina Eldena",
@@ -332,8 +473,8 @@
    "properties": {
     "type": "fuel",
     "name": "Bootstankstelle Marina Neuwied",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Weißenthurm",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -418,8 +559,8 @@
    "properties": {
     "type": "fuel",
     "name": "Bootstankstelle Waren",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Altstadt",
+    "locality_kind": "nearest",
     "water": {
      "name": "Müritz",
      "approx": true,
@@ -512,8 +653,8 @@
    "properties": {
     "type": "fuel",
     "name": "Borbe Yachttank",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Barhöft",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -767,6 +908,53 @@
   },
   {
    "type": "Feature",
+   "id": "node/2024984797",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.200098,
+     52.528696
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerboot Aral 13",
+    "locality": "Spandau",
+    "locality_kind": "nearest",
+    "water": {
+     "name": "Havel",
+     "approx": true,
+     "dist_m": 40
+    },
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": "+49 172 3000226",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2024984797,
+     "timestamp": "2026-05-31T07:20:06Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-05-31"
+   }
+  },
+  {
+   "type": "Feature",
    "id": "node/2459299022",
    "geometry": {
     "type": "Point",
@@ -806,6 +994,96 @@
     "source": "osm",
     "imported": "2026-10-19",
     "updated": "2016-03-09"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1337616506",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.20096,
+     52.527688
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerboot Shell 5",
+    "locality": "Spandau",
+    "locality_kind": "nearest",
+    "water": {
+     "name": "Havel",
+     "approx": true,
+     "dist_m": 34
+    },
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "Bunkerboot",
+    "website": "http://www.schiffsservice.de/service/schiffstankstellen/index.php",
+    "phone": "+49 172 3097072",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1337616506,
+     "timestamp": "2015-12-31T00:40:07Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2015-12-31"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1912561249",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.486874,
+     52.492003
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerboot Spree",
+    "locality": "Rummelsburg",
+    "locality_kind": "nearest",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Fr 10:00-16:00",
+    "operator": null,
+    "website": "https://www.nwb-bunker.de/",
+    "phone": "+49 170 2837725",
+    "email": null,
+    "description": "Keine Service für Sportboote",
+    "attrs": {
+     "diesel": true,
+     "petrol": false,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1912561249,
+     "timestamp": "2024-11-03T09:53:02Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-11-03"
    }
   },
   {
@@ -917,7 +1195,11 @@
     "name": "Bunkerstation Johannisbollwerk",
     "locality": "Neustadt",
     "locality_kind": "nearest",
-    "water": null,
+    "water": {
+     "name": "Niedernhafen",
+     "approx": true,
+     "dist_m": 55
+    },
     "access": null,
     "fee": null,
     "fee_note": null,
@@ -1003,8 +1285,8 @@
    "properties": {
     "type": "fuel",
     "name": "Bunkerstation Schaprode",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Schaprode",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -1046,8 +1328,8 @@
    "properties": {
     "type": "fuel",
     "name": "Bunkerstation Vitte",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Vitte",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -1181,8 +1463,8 @@
    "properties": {
     "type": "fuel",
     "name": "Diesel",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Gager",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -1224,8 +1506,8 @@
    "properties": {
     "type": "fuel",
     "name": "Diesel",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Kühlungsborn",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -1267,8 +1549,8 @@
    "properties": {
     "type": "fuel",
     "name": "Diesel",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Freest",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -1490,7 +1772,7 @@
    "properties": {
     "type": "fuel",
     "name": "Funboat Marina",
-    "locality": "Oberwesel",
+    "locality": "Sankt Goarshausen",
     "locality_kind": "nearest",
     "water": null,
     "access": null,
@@ -1535,7 +1817,11 @@
     "name": "Hoyer",
     "locality": "Neustadt",
     "locality_kind": "nearest",
-    "water": null,
+    "water": {
+     "name": "Niedernhafen",
+     "approx": true,
+     "dist_m": 33
+    },
     "access": null,
     "fee": null,
     "fee_note": null,
@@ -1766,8 +2052,8 @@
    "properties": {
     "type": "fuel",
     "name": "MYC Neuwied",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Weißenthurm",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -1950,8 +2236,8 @@
    "properties": {
     "type": "fuel",
     "name": "R&M Bootsservice / Diesel und Super",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Winningen",
+    "locality_kind": "nearest",
     "water": {
      "name": "Mosel",
      "approx": true,
@@ -2264,6 +2550,53 @@
   },
   {
    "type": "Feature",
+   "id": "node/431089422",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.577523,
+     52.451551
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Spreves Wassertankstelle",
+    "locality": "Köpenick",
+    "locality_kind": "nearest",
+    "water": {
+     "name": "Alte Spree",
+     "approx": true,
+     "dist_m": 31
+    },
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "24/7",
+    "operator": null,
+    "website": "http://www.spreves.com/index.php?id=39",
+    "phone": "+49 30 65667836; +49 30 656678 011",
+    "email": "info@spreves.com",
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431089422,
+     "timestamp": "2023-01-21T17:08:10Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-01-21"
+   }
+  },
+  {
+   "type": "Feature",
    "id": "node/431061192",
    "geometry": {
     "type": "Point",
@@ -2275,8 +2608,8 @@
    "properties": {
     "type": "fuel",
     "name": "Sundtank",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Altstadt",
+    "locality_kind": "nearest",
     "water": {
      "name": "Querkanal",
      "approx": true,
@@ -2322,8 +2655,8 @@
    "properties": {
     "type": "fuel",
     "name": "Sundtank GmbH",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Breege",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -2547,7 +2880,7 @@
    "properties": {
     "type": "fuel",
     "name": "Tankstation WSC-Marina",
-    "locality": "Kolkhof",
+    "locality": "Gneve",
     "locality_kind": "nearest",
     "water": {
      "name": "Müritz",
@@ -2684,8 +3017,8 @@
    "properties": {
     "type": "fuel",
     "name": "Tankstelle Bootsservice Kutscher",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Maaracker",
+    "locality_kind": "nearest",
     "water": {
      "name": "Kanal der Schleuse Bad Ems",
      "approx": true,
@@ -3560,8 +3893,8 @@
    "properties": {
     "type": "fuel",
     "name": "Yachthafenresort SBS Fleesensee",
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Untergöhren",
+    "locality_kind": "nearest",
     "water": {
      "name": "Fleesensee",
      "approx": true,
@@ -3654,8 +3987,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Ladebow",
+    "locality_kind": "nearest",
     "water": {
      "name": "Ryck",
      "approx": true,
@@ -3748,8 +4081,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Eldenburg",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -3885,7 +4218,7 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": "Mirowdorf",
+    "locality": "Granzow",
     "locality_kind": "nearest",
     "water": {
      "name": "Mirower See",
@@ -3979,7 +4312,7 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": "Ahrensberg",
+    "locality": "Wesenberg",
     "locality_kind": "nearest",
     "water": {
      "name": "Havel",
@@ -4116,7 +4449,7 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": "Rechlin",
+    "locality": "Rechlin-Nord",
     "locality_kind": "nearest",
     "water": {
      "name": "Claassee",
@@ -4306,7 +4639,7 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": "Bungalowsiedlung Brückholz",
+    "locality": "Arneburg",
     "locality_kind": "nearest",
     "water": null,
     "access": null,
@@ -4349,8 +4682,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Malchow",
+    "locality_kind": "nearest",
     "water": {
      "name": "Malchower See",
      "approx": true,
@@ -4443,8 +4776,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Neustrelitz",
+    "locality_kind": "nearest",
     "water": {
      "name": "Zierker See",
      "approx": true,
@@ -4537,8 +4870,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Lutherstadt Wittenberg",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -4580,8 +4913,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Werder",
+    "locality_kind": "nearest",
     "water": {
      "name": "Magdeburg Winterhafen",
      "approx": true,
@@ -5036,8 +5369,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Hohe Düne",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -5222,8 +5555,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Lauterbach",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -5308,8 +5641,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Ladebow",
+    "locality_kind": "nearest",
     "water": {
      "name": "Ryck",
      "approx": true,
@@ -5445,8 +5778,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Kirsch",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -5488,8 +5821,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Nördliche Mühlenvorstadt",
+    "locality_kind": "nearest",
     "water": {
      "name": "Ryck",
      "approx": true,
@@ -5674,8 +6007,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Glowe",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -5717,8 +6050,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Marebaltic",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -5760,8 +6093,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Neuendorf",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -5803,8 +6136,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Traben-Trarbach",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -5846,8 +6179,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Kröslin",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -5889,8 +6222,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Niederhof",
+    "locality_kind": "nearest",
     "water": null,
     "access": null,
     "fee": null,
@@ -5932,8 +6265,8 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
+    "locality": "Demmin",
+    "locality_kind": "nearest",
     "water": {
      "name": "Peene Marina",
      "approx": true,
@@ -5979,9 +6312,13 @@
    "properties": {
     "type": "fuel",
     "name": null,
-    "locality": null,
-    "locality_kind": null,
-    "water": null,
+    "locality": "Nördliche Innenstadt",
+    "locality_kind": "nearest",
+    "water": {
+     "name": "Saale",
+     "approx": true,
+     "dist_m": 7
+    },
     "access": null,
     "fee": null,
     "fee_note": null,
