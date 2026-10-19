@@ -465,7 +465,7 @@ class FetchError(RuntimeError):
     pass
 
 
-def overpass(query: str, log=print, servers=SERVERS, attempts=2) -> dict:
+def overpass(query: str, log=print, servers=SERVERS, attempts=2, allow_empty=True) -> dict:
     last = "unbekannter Fehler"
     for server in servers:
         for attempt in range(1, attempts + 1):
@@ -478,6 +478,9 @@ def overpass(query: str, log=print, servers=SERVERS, attempts=2) -> dict:
                     payload = json.loads(resp.read().decode("utf-8"))
                 if not isinstance(payload.get("elements"), list):
                     raise ValueError("Antwort ohne 'elements'")
+                if not allow_empty and not payload["elements"]:
+                    # Kommt vor, wenn ein Server das Gebiet (area) nicht kennt – nicht als „keine Standorte“ werten
+                    raise ValueError("leere Antwort")
                 remark = str(payload.get("remark", ""))
                 if "runtime error" in remark.lower() or "timed out" in remark.lower():
                     raise ValueError(f"Overpass meldet: {remark[:120]}")
@@ -645,6 +648,7 @@ def main(argv=None) -> int:
         print(f"Overpass-Abruf für {args.area} ({len(areas)} Region{'en' if len(areas) != 1 else ''}) …")
         try:
             got = fetch_regions(areas, enrich=not args.no_enrich,
+                                fetch=functools.partial(overpass, allow_empty=False),       # leere Region = Serverfehler
                                 fetch_enrich=functools.partial(overpass, attempts=1),   # Zugaben dürfen nicht lange blockieren
                                 deadline=time.monotonic() + args.budget * 60)
         except FetchError as exc:

@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
@@ -283,6 +284,36 @@ class RegionTests(unittest.TestCase):
             return base(q)
         imp.fetch_regions(["DE-NW"], fetch=fetch, fetch_enrich=fetch_enrich, pause=0, log=lambda *a: None)
         self.assertEqual((len(main_calls), len(extra_calls)), (1, 2))
+
+    @staticmethod
+    def answers(*payloads):
+        """Ersetzt urlopen: liefert der Reihe nach die angegebenen Antworten."""
+        it = iter(payloads)
+
+        def urlopen(req, timeout=None):
+            resp = mock.MagicMock()
+            resp.__enter__.return_value.read.return_value = json.dumps(next(it)).encode()
+            return resp
+        return urlopen
+
+    def test_empty_answer_tries_next_server(self):
+        # DE-BE kam im Oktober-Lauf von einem Server leer zurück – das darf nicht als „keine Standorte“ gelten
+        full = {"elements": [{"type": "node", "id": 1}]}
+        with mock.patch.object(imp.urllib.request, "urlopen", self.answers({"elements": []}, full)), \
+                mock.patch.object(imp.time, "sleep"):
+            got = imp.overpass("q", log=lambda *a: None, servers=["https://a.example/api", "https://b.example/api"], attempts=1, allow_empty=False)
+        self.assertEqual(got, full)
+
+    def test_empty_answer_everywhere_aborts(self):
+        with mock.patch.object(imp.urllib.request, "urlopen", self.answers({"elements": []}, {"elements": []})), \
+                mock.patch.object(imp.time, "sleep"):
+            with self.assertRaises(imp.FetchError):
+                imp.overpass("q", log=lambda *a: None, servers=["https://a.example/api", "https://b.example/api"], attempts=1, allow_empty=False)
+
+    def test_empty_answer_allowed_by_default(self):
+        with mock.patch.object(imp.urllib.request, "urlopen", self.answers({"elements": []})), \
+                mock.patch.object(imp.time, "sleep"):
+            self.assertEqual(imp.overpass("q", log=lambda *a: None, servers=["https://a.example/api"], attempts=1), {"elements": []})
 
     def test_no_enrich_skips_extra_queries(self):
         fetch, calls = self.fake()
