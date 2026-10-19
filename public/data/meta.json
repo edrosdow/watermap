@@ -1,12 +1,12 @@
 {
  "schema_version": 2,
- "region": "Nordrhein-Westfalen (DE-NW)",
- "generated": null,
- "source": "OpenStreetMap",
+ "region": "DE",
+ "generated": "2026-10-19T19:42:26+00:00",
+ "source": "OpenStreetMap (Overpass API)",
  "license": "ODbL 1.0",
  "attribution": "© OpenStreetMap-Mitwirkende",
  "license_url": "https://www.openstreetmap.org/copyright",
- "notice": "Startdaten: Der vollständige NRW-Import steht noch aus. Es fehlen Marinas, Bootstankstellen und weitere Slipanlagen.",
+ "notice": null,
  "files": {
   "osm": [
    "osm/slip.geojson",
@@ -21,14 +21,41 @@
  },
  "categories": {
   "slip": {
-   "final": 8
+   "raw": 3584,
+   "rejected": 4,
+   "merged_duplicates": 279,
+   "final": 3301,
+   "with_name": 445,
+   "with_locality": 0,
+   "with_water": 0,
+   "with_nearest_place": 0
   },
   "marina": {
-   "final": 0
+   "raw": 2761,
+   "rejected": 1,
+   "merged_duplicates": 158,
+   "final": 2602,
+   "with_name": 2374,
+   "with_locality": 200,
+   "with_water": 0,
+   "with_nearest_place": 0
   },
   "fuel": {
-   "final": 0
+   "raw": 151,
+   "rejected": 0,
+   "merged_duplicates": 9,
+   "final": 142,
+   "with_name": 87,
+   "with_locality": 13,
+   "with_water": 0,
+   "with_nearest_place": 0
   }
  },
- "total": 8
+ "total": 6045,
+ "osm_base_timestamp": "2026-07-28T02:16:18Z",
+ "source_detail": "Overpass API",
+ "enrichment": {
+  "places": "übersprungen",
+  "water": "übersprungen"
+ }
 }

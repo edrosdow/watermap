@@ -1,4 +1,6147 @@
 {
  "type": "FeatureCollection",
- "features": []
+ "features": [
+  {
+   "type": "Feature",
+   "id": "node/3523381293",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.421714,
+     52.513597
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Aral",
+    "locality": "Berlin",
+    "locality_kind": "address",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "24/7",
+    "operator": null,
+    "website": null,
+    "phone": "+49 30 24720748",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 3523381293,
+     "timestamp": "2023-02-01T20:32:57Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-02-01"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/3523388893",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.555502,
+     52.454389
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Aral",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "24/7",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "An der Wuhlheide 240 12459 Berlin Tel. 030-53790502",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 3523388893,
+     "timestamp": "2023-09-18T06:27:17Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-09-18"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "way/145394607",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.871782,
+     53.955319
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Aral-Bunkerdienst",
+    "locality": "Lübeck",
+    "locality_kind": "address",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "way",
+     "id": 145394607,
+     "timestamp": "2025-02-17T01:15:37Z"
+    },
+    "also_osm": [
+     "node/1454712825"
+    ],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-02-17"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2153078529",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     11.190445,
+     54.421653
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Baltic Kölln Bunkerstation",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "Baltic Kölln Burgstaaken",
+    "website": "https://www.baltic-koelln-fehmarn.de/de/bunkerstation",
+    "phone": "+49 4371 3151",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2153078529,
+     "timestamp": "2023-04-04T08:40:54Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-04-04"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1692354523",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.721199,
+     54.371186
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Barther Yachtservice - Diesel, Super",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Fr 09:00-18:00; Sa 09:00-12:00,17:00-18:00",
+    "operator": "Barther Yachtservice",
+    "website": "https://www.barther-yacht-service.de/",
+    "phone": "+49 38231 2740",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1692354523,
+     "timestamp": "2021-07-24T09:17:17Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2021-07-24"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431089431",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.646882,
+     52.30415
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bootstankstelle",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "24/7",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Lutra Wassertankstelle (Super, Diesel, Schiffsdiesel, Fäkalentsorgung), Selbstbedienung mit Automatenzahlung (EC), Fäkalienautomat mit 2€-Münzen, durchgehend geöffnet",
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": [
+      "coins",
+      "maestro"
+     ],
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431089431,
+     "timestamp": "2015-12-14T17:55:24Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2015-12-14"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431315670",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.188571,
+     52.501942
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bootstankstelle Berlin",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Fr 10:00-20:00",
+    "operator": null,
+    "website": "http://bootstankstelle-berlin.de/",
+    "phone": "+49 30 33936766",
+    "email": null,
+    "description": "Marina Lanke",
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431315670,
+     "timestamp": "2018-10-10T22:26:12Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2018-10-10"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/322199680",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.506406,
+     50.309229
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bootstankstelle Diesel, Super und Normalbenzin",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": "+49 2606 2296",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 322199680,
+     "timestamp": "2021-11-22T18:26:10Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2021-11-22"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1819236357",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     11.425351,
+     53.231309
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bootstankstelle Eldena",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "nur Diesel",
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1819236357,
+     "timestamp": "2018-06-26T12:53:56Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2018-06-26"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/443408349",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.99134,
+     54.681462
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bootstankstelle Marina Maasholm",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Apr-Oct 08:00-11:30",
+    "operator": null,
+    "website": null,
+    "phone": "+49 4642 6571",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": false,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 443408349,
+     "timestamp": "2026-09-15T18:36:25Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-09-15"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/454401236",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.482983,
+     50.414473
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bootstankstelle Marina Neuwied",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "09:00-18:00",
+    "operator": null,
+    "website": "https://www.mycn.de/index.php/verein",
+    "phone": "+49 175 5929566",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 454401236,
+     "timestamp": "2019-03-07T13:59:04Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2019-03-07"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431325473",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.452616,
+     54.809561
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bootstankstelle Marina Sonwik",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "24/7",
+    "operator": "Marina Sonwik",
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Marina Sonwik. Selbstbedientankstelle Super / Diesel",
+    "attrs": {
+     "diesel": true,
+     "petrol": false,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431325473,
+     "timestamp": "2018-09-07T10:44:10Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2018-09-07"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431066285",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.689859,
+     53.510478
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bootstankstelle Waren",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Fr 08:00-19:00",
+    "operator": null,
+    "website": null,
+    "phone": "+49 172 6426918",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431066285,
+     "timestamp": "2026-09-07T18:49:02Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-09-07"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "way/1032995655",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.917541,
+     52.418054
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bootstankstelle Yachthafen Ringel",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": "https://www.marina-ringel.de/aktuelles/eindruecke-und-angebote/index.html",
+    "phone": "+49 172 3888104",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "way",
+     "id": 1032995655,
+     "timestamp": "2023-11-08T19:24:43Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-11-08"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1480259001",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.03259,
+     54.433797
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Borbe Yachttank",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "07:30-11:00,16:00-19:00",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1480259001,
+     "timestamp": "2021-09-01T11:01:02Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2021-09-01"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431077436",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     11.189241,
+     54.421552
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Brennstoff Burgstaaken",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431077436,
+     "timestamp": "2013-07-06T13:55:06Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2013-07-06"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431077550",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.991048,
+     54.372748
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Brennstoff Heiligenhafen",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "closed",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Nur Diesel",
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431077550,
+     "timestamp": "2023-01-08T00:15:01Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-01-08"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2400420952",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.516569,
+     50.028737
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerboot",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2400420952,
+     "timestamp": "2019-01-24T18:03:59Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2019-01-24"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2403591522",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.13163,
+     49.022113
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerboot",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2403591522,
+     "timestamp": "2023-06-28T22:03:25Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-06-28"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2406931787",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.435015,
+     48.574196
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerboot",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2406931787,
+     "timestamp": "2024-01-07T16:40:40Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-01-07"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2024984797",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.200098,
+     52.528696
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerboot Aral 13",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": "+49 172 3000226",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2024984797,
+     "timestamp": "2026-05-31T07:20:06Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-05-31"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2459299022",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.389802,
+     52.159491
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerboot Salzgitter bei Km 14,0",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "nur Diesel",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2459299022,
+     "timestamp": "2016-03-09T21:45:38Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2016-03-09"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1337616506",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.20096,
+     52.527688
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerboot Shell 5",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "Bunkerboot",
+    "website": "http://www.schiffsservice.de/service/schiffstankstellen/index.php",
+    "phone": "+49 172 3097072",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1337616506,
+     "timestamp": "2015-12-31T00:40:07Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2015-12-31"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1912561249",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.486874,
+     52.492003
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerboot Spree",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Fr 10:00-16:00",
+    "operator": null,
+    "website": "https://www.nwb-bunker.de/",
+    "phone": "+49 170 2837725",
+    "email": null,
+    "description": "Keine Service für Sportboote",
+    "attrs": {
+     "diesel": true,
+     "petrol": false,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1912561249,
+     "timestamp": "2024-11-03T09:53:02Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-11-03"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2457748734",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     8.899624,
+     52.301416
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerboote",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "nur Diesel",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2457748734,
+     "timestamp": "2013-09-14T08:49:01Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2013-09-14"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1725630687",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.138165,
+     49.02246
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerschiff Castrol",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Mo-Fr, auch für Sportboote,Kein Diesel für Sportboote UKW:10 Phone:+49 0941-791081+0173 6220312",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1725630687,
+     "timestamp": "2013-06-08T13:01:27Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2013-06-08"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/9201176553",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.974129,
+     53.544524
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerstation Johannisbollwerk",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "Hamburg Bunker Service GmbH",
+    "website": "https://www.h-bs.eu/logistik/bunkerstationen/bunkerstation-1.html",
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 9201176553,
+     "timestamp": "2023-06-23T19:26:54Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-06-23"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "way/125012344",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.218434,
+     54.403017
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerstation Laboe",
+    "locality": "Laboe",
+    "locality_kind": "address",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": "https://www.bunkerstation-laboe.de/",
+    "phone": "+49 4343 6437",
+    "email": null,
+    "description": "Lagerung von Dieselkraftstoff im Außentank, keine Unterirdische Lagerung",
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "way",
+     "id": 125012344,
+     "timestamp": "2026-10-14T17:58:16Z"
+    },
+    "also_osm": [
+     "node/4214185711"
+    ],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-10-14"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431065018",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.166132,
+     54.512368
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerstation Schaprode",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "Shell",
+    "website": null,
+    "phone": "+49 38309 1209",
+    "email": null,
+    "description": "Nur Diesel",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431065018,
+     "timestamp": "2022-05-13T13:17:09Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2022-05-13"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1392103137",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.108897,
+     54.569142
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerstation Vitte",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Su 08:00-09:00",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1392103137,
+     "timestamp": "2026-07-21T09:29:56Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-07-21"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2399077730",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.875988,
+     49.808059
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Bunkerstation Würzburg MSG",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2399077730,
+     "timestamp": "2017-07-23T15:20:52Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2017-07-23"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/280776481",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.161561,
+     53.701144
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "C. Carls",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 280776481,
+     "timestamp": "2021-06-28T09:00:31Z"
+    },
+    "also_osm": [
+     "node/4917259221"
+    ],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2021-06-28"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2116020018",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.684117,
+     54.310157
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Diesel",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2116020018,
+     "timestamp": "2023-07-10T07:33:09Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-07-10"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/299583466",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     11.772631,
+     54.151562
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Diesel",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 299583466,
+     "timestamp": "2026-07-26T06:19:02Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-07-26"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/481377730",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.728659,
+     54.137141
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Diesel",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 481377730,
+     "timestamp": "2025-08-30T15:42:52Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-08-30"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/270602036",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     8.163792,
+     53.405955
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Dieseltankstelle",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "24/7",
+    "operator": "Ulffers Bunker-Service",
+    "website": null,
+    "phone": "+49 4451 3384",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 270602036,
+     "timestamp": "2026-03-15T15:11:18Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-03-15"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1360357105",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     8.707226,
+     53.874253
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Dieseltankstelle Jachthafen Cuxhaven",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "24/7",
+    "operator": "Segler-Vereinigung Cuxhaven",
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1360357105,
+     "timestamp": "2026-04-09T08:45:08Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-04-09"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/747916914",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.55183,
+     52.397398
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "ESSO-Bunkerstation Lohnde",
+    "locality": "Seelze",
+    "locality_kind": "address",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": "+49 5137 4636",
+    "email": null,
+    "description": "W. Arnemann GmbH; Dieselkraftstoff (auch für Yachten), Frischwasser, Getränke, Bootszubehör. Mo-Fr 8.00- 17.00 Uhr und Sa 8.00-14.00Uhr. Sonst nach telefonischer Absprache 05137-4636 oder -2401, VHF 14",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 747916914,
+     "timestamp": "2023-12-07T10:20:54Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-12-07"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1338443091",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     11.198332,
+     54.412403
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Firma Weilandt",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": "+49 4371 3833",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1338443091,
+     "timestamp": "2024-05-29T20:33:47Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-05-29"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2371582221",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.708628,
+     50.153536
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Funboat Marina",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Diesel",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2371582221,
+     "timestamp": "2013-07-03T08:05:54Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2013-07-03"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1854585407",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.976482,
+     53.543811
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Hoyer",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": "+49 40 3193016",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1854585407,
+     "timestamp": "2026-09-29T19:33:01Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-09-29"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2296728313",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.663148,
+     51.970249
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Ihnen Bunker Service",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Fr 07:00-19:00; Sa 07:00-16:00",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Kraftstoffe nur für die Berufsschifffahrt",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2296728313,
+     "timestamp": "2026-04-22T07:56:24Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-04-22"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2265778283",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.713035,
+     54.521107
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Marina Brodersby",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Fr 08:00-12:00,13:00-17:00; Sa 09:00-12:00,16:00-17:00; Su 11:00-12:00",
+    "operator": null,
+    "website": "https://www.marina-brodersby.de/Tankstelle.htm",
+    "phone": "+49 4622 2923",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2265778283,
+     "timestamp": "2026-07-22T12:26:46Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-07-22"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/4083655502",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.174967,
+     47.66725
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "MIZU Seetankstelle",
+    "locality": "Konstanz",
+    "locality_kind": "address",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mar,Oct 10:00-18:00; Nov-Feb off; Apr-Sep 10:00-19:00",
+    "operator": "MIZU",
+    "website": null,
+    "phone": "+49 753122533;+49 151 162 33441",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 4083655502,
+     "timestamp": "2026-06-26T06:21:41Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-06-26"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1816233322",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.279344,
+     52.662994
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "MSW Havelboot GmbH",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Fr 07:00-15:00",
+    "operator": null,
+    "website": "https://www.havelboot.de/index.php?page=boots-tankstelle",
+    "phone": "+49 3385 511062",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1816233322,
+     "timestamp": "2019-03-05T10:41:29Z"
+    },
+    "also_osm": [
+     "node/2874444423"
+    ],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2019-03-05"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2378863283",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.480697,
+     50.415676
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "MYC Neuwied",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Diesel und Benzin",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2378863283,
+     "timestamp": "2025-05-20T12:48:32Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-05-20"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431063911",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     14.136991,
+     52.869099
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Märkische Bunker und Service Hohensaaten",
+    "locality": "Bad Freienwalde (Oder)",
+    "locality_kind": "address",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": "https://mbswww.de/hohensaaten/",
+    "phone": "+49 33368 216",
+    "email": null,
+    "description": "Kein Diesel für Sportboote",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431063911,
+     "timestamp": "2025-12-01T10:53:23Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-12-01"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/10109107683",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.663799,
+     52.422556
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "nur Diesel",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 10109107683,
+     "timestamp": "2022-10-17T15:43:56Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2022-10-17"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1544996256",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     6.588091,
+     51.662425
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "nur Diesel",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "Yacht Club Wesel (YCW)",
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1544996256,
+     "timestamp": "2021-08-15T09:24:07Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2021-08-15"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1078854618",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.517811,
+     50.310564
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "R&M Bootsservice / Diesel und Super",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "ED",
+    "website": null,
+    "phone": "+49 2606 962092",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1078854618,
+     "timestamp": "2024-03-01T13:35:10Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-03-01"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/294372626",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.8891,
+     54.177821
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Rickmers Bootstankstelle",
+    "locality": "Helgoland",
+    "locality_kind": "address",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 294372626,
+     "timestamp": "2024-11-19T13:00:32Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-11-19"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/4715410653",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.038373,
+     47.801097
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Schiffs Tankstelle Bodman",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 4715410653,
+     "timestamp": "2023-04-10T15:03:10Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-04-10"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "way/236779543",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     11.746001,
+     52.99038
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Schiffstankstelle",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "way",
+     "id": 236779543,
+     "timestamp": "2025-02-09T13:02:20Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-02-09"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2104285522",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.486466,
+     53.680562
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Schiffstankstelle Dornumer Hafen",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": "private",
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2104285522,
+     "timestamp": "2025-09-19T20:25:56Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-09-19"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2123711885",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.283937,
+     52.709657
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Schonhoff GBR Mineralöle",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": "https://www.schonhoff-mineraloele.de",
+    "phone": "+49 5931 7061",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2123711885,
+     "timestamp": "2025-08-29T08:02:23Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-08-29"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/4043223177",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.133703,
+     47.748421
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Seetankstelle Wallhausen",
+    "locality": "Konstanz",
+    "locality_kind": "address",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "May-Oct: 09:00-17:00; PH 13:00-14:00",
+    "operator": "Bodenseenautic",
+    "website": null,
+    "phone": "+49 160 986 33 238",
+    "email": "post@bodenseenautic.de",
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": [
+      "coins",
+      "maestro",
+      "notes"
+     ],
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 4043223177,
+     "timestamp": "2025-01-14T15:07:24Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-01-14"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431089422",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.577523,
+     52.451551
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Spreves Wassertankstelle",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "24/7",
+    "operator": null,
+    "website": "http://www.spreves.com/index.php?id=39",
+    "phone": "+49 30 65667836; +49 30 656678 011",
+    "email": "info@spreves.com",
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431089422,
+     "timestamp": "2023-01-21T17:08:10Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-01-21"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431061192",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.099322,
+     54.314691
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Sundtank",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431061192,
+     "timestamp": "2013-05-07T08:10:01Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2013-05-07"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431326250",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.355058,
+     54.612253
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Sundtank GmbH",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "08:00-19:00",
+    "operator": null,
+    "website": null,
+    "phone": "+49 381 280380",
+    "email": null,
+    "description": "Hafen Breege",
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": [
+      "cash"
+     ],
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431326250,
+     "timestamp": "2021-10-31T21:36:36Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2021-10-31"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2126207985",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     8.501653,
+     49.4172
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Super und Diesel",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": "+49 170 9523942",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2126207985,
+     "timestamp": "2022-09-12T03:20:15Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2022-09-12"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431078254",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.351557,
+     53.467155
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Susanne Malow",
+    "locality": "Fünfseen",
+    "locality_kind": "address",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Tu-Su 08:00-15:00; Sa 08:00-12:00",
+    "operator": "Susanne Malow",
+    "website": "https://malow.de/lenzer-hafen/",
+    "phone": "+49 171 4018739",
+    "email": "info@lenzer-hafen.de",
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431078254,
+     "timestamp": "2026-08-19T00:02:49Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-08-19"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431057460",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.040263,
+     53.529486
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankschiff Bilwerder",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431057460,
+     "timestamp": "2025-11-18T00:16:55Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-11-18"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/890632340",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.040128,
+     52.389064
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstation auf dem Kiewitt",
+    "locality": "Potsdam",
+    "locality_kind": "address",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "Bootsmotoren Center Zweig",
+    "website": "https://bootsmotoren-zweig.de/tankstelle",
+    "phone": "+49 331 973365",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 890632340,
+     "timestamp": "2023-04-13T10:39:11Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-04-13"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2091321059",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.624886,
+     53.392257
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstation WSC-Marina",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2091321059,
+     "timestamp": "2025-08-13T00:33:37Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-08-13"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1544997433",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     6.764373,
+     51.439221
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstation: Marina Duisburg",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": "+49 203 2895697",
+    "email": null,
+    "description": "Benzin, Diesel, pump-out",
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1544997433,
+     "timestamp": "2026-01-04T10:21:07Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-01-04"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/416378251",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.801284,
+     54.094552
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstelle",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "\"Tankwart per Tel am Haus erreichbar\"",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 416378251,
+     "timestamp": "2026-08-08T17:43:53Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-08-08"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431089563",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.705335,
+     50.332717
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstelle Bootsservice Kutscher",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Apr-Oct Mo-Fr 09:00-12:00,13:00-18:00; Apr-Oct Sa-Su 09:00-18:00",
+    "operator": null,
+    "website": "https://www.boots-service-kutscher.de/",
+    "phone": "+49 2603 4297",
+    "email": null,
+    "description": "http://www.boots-service-kutscher.de/index.html",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431089563,
+     "timestamp": "2019-03-07T14:02:24Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2019-03-07"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/447937104",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.025351,
+     54.581714
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstelle Damp",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 447937104,
+     "timestamp": "2015-09-22T10:10:00Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2015-09-22"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431070698",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     8.501123,
+     49.417059
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstelle für Sportboote",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Tankstelle für Super und Diesel und Fäkalienabsauganlage des MCK",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431070698,
+     "timestamp": "2010-02-11T19:52:14Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2010-02-11"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431065010",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.244677,
+     52.684028
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstelle Havelbaude",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": "https://www.marina-havelbaude.de/",
+    "phone": "+49 170 8926061",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431065010,
+     "timestamp": "2019-03-13T03:50:09Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2019-03-13"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/670239240",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.640717,
+     51.641385
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstelle Marina Rünthe Diesel / Super",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "\"nach Vereinbarung mit Hafenmeister\"",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 670239240,
+     "timestamp": "2022-05-10T21:04:49Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2022-05-10"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1390007994",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.577327,
+     52.420463
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstelle Marina Schoners Wehr",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "Marina Schoners Wehr",
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1390007994,
+     "timestamp": "2016-06-18T15:10:08Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2016-06-18"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431078231",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.897525,
+     53.180617
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstelle Marina Wolfsbruch",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431078231,
+     "timestamp": "2025-06-23T18:56:53Z"
+    },
+    "also_osm": [
+     "node/12947304597",
+     "node/12947307300"
+    ],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-06-23"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431324896",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.429473,
+     54.802629
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstelle Niro Petersen",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Th 08:00-16:00; Fr 08:00-13:00",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Vor dem Tanken nach den Dieselpreisen fragen. Tankanzeige ist versteckt und deshalb kann es zu erhöhten Rechnungen kommen. (Apr. ´09)",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431324896,
+     "timestamp": "2021-08-06T15:17:57Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2021-08-06"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1368197464",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     8.180572,
+     50.032711
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstelle und Werft Schneider",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1368197464,
+     "timestamp": "2012-11-26T19:16:17Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2012-11-26"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/5870893039",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.947315,
+     54.136516
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Tankstelle Yachthafen",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "24/7",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 5870893039,
+     "timestamp": "2025-05-11T08:10:48Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-05-11"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/4879891162",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.602139,
+     53.068106
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Wasserfahrzeug Stromtankstelle",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "24/7",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": [
+      "account_cards"
+     ],
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 4879891162,
+     "timestamp": "2023-12-20T21:55:10Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-12-20"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/4879891163",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.602429,
+     53.06968
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Wasserfahrzeug Stromtankstelle",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "24/7",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": [
+      "account_cards"
+     ],
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 4879891163,
+     "timestamp": "2023-12-20T21:55:10Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-12-20"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/4879891164",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.602615,
+     53.070897
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Wasserfahrzeug Stromtankstelle",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": [
+      "account_cards"
+     ],
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 4879891164,
+     "timestamp": "2017-05-27T10:00:39Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2017-05-27"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/4879891165",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.602748,
+     53.072266
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Wasserfahrzeug Stromtankstelle",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": [
+      "account_cards"
+     ],
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 4879891165,
+     "timestamp": "2017-05-27T10:00:39Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2017-05-27"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1270566771",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     8.578603,
+     53.50865
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Wassertankstelle",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1270566771,
+     "timestamp": "2022-05-18T16:56:53Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2022-05-18"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "way/816533437",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.071102,
+     52.398571
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Wassertankstelle Potsdam",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "May-Sep: Mo-Fr 09:00-17:30; May-Sep: PH,Sa,Su 11:00-15:30; Oct-Apr: Mo-Fr 09:00-18:00; Oct-Apr: Sa-Su 10:00-15:00",
+    "operator": "Weisse Flotte Potsdam GmbH",
+    "website": null,
+    "phone": "+49 331 292 022",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "way",
+     "id": 816533437,
+     "timestamp": "2020-06-16T14:09:15Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2020-06-16"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/513504646",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.172518,
+     54.435811
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Yacht Tankstelle Strande",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": "http://ytstrande.de/",
+    "phone": "+49 4349 8203",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 513504646,
+     "timestamp": "2014-02-03T00:55:43Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2014-02-03"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/672099224",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.543493,
+     52.405669
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Yachtausrüster Hohmann",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "BrK 58.5, Tel. 03381-660166",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 672099224,
+     "timestamp": "2025-04-11T18:03:49Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-04-11"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "way/30240510",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.289924,
+     54.234477
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Yachthafen Stahlbrode",
+    "locality": "Sundhagen",
+    "locality_kind": "address",
+    "water": null,
+    "access": null,
+    "fee": true,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "way",
+     "id": 30240510,
+     "timestamp": "2026-01-27T11:02:38Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-01-27"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1929715924",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.480606,
+     53.492047
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Yachthafenresort SBS Fleesensee",
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1929715924,
+     "timestamp": "2026-09-16T10:44:56Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-09-16"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/292279123",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.682927,
+     53.573505
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": "Yachtprofi Tankstelle",
+    "locality": "Wedel",
+    "locality_kind": "address",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo 09:00-12:00; Tu-Su 09:00-12:00,13:30-18:00; We 13:30-18:00; Nov-Mar off",
+    "operator": "Yachtprofi Tankstelle GmbH & Co. KG",
+    "website": "https://www.hamburger-yachthafen.de/tankstelle.html",
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 292279123,
+     "timestamp": "2026-04-04T05:37:24Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-04-04"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1023680154",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.434678,
+     54.095669
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1023680154,
+     "timestamp": "2023-09-06T12:22:47Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-09-06"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/12847444303",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.760069,
+     53.289101
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": "Lärz",
+    "locality_kind": "address",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "Müritz-Yacht-Management",
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 12847444303,
+     "timestamp": "2026-05-14T11:15:01Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-05-14"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/12848416774",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.635279,
+     53.508404
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 12848416774,
+     "timestamp": "2025-05-19T08:44:50Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-05-19"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/12848910252",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.648381,
+     53.275459
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 12848910252,
+     "timestamp": "2025-05-19T13:26:55Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-05-19"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/13038656624",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.934756,
+     54.661324
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 13038656624,
+     "timestamp": "2026-08-08T12:45:28Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-08-08"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/13172254367",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.810905,
+     53.28843
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "Bootsservice Rick & Rick",
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 13172254367,
+     "timestamp": "2025-09-25T23:58:41Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-09-25"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1349421989",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.31262,
+     53.029273
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Su 08:30-19:00",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "April to October",
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1349421989,
+     "timestamp": "2021-06-09T09:25:44Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2021-06-09"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1353947263",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.985908,
+     53.276715
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1353947263,
+     "timestamp": "2016-04-06T21:43:42Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2016-04-06"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/14214470625",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     11.062206,
+     54.357889
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 14214470625,
+     "timestamp": "2026-09-25T15:06:19Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-09-25"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1452217172",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.715336,
+     53.330135
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1452217172,
+     "timestamp": "2020-10-19T07:46:13Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2020-10-19"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1524774319",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.727489,
+     53.356727
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Tankstelle für Boote",
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1524774319,
+     "timestamp": "2025-09-14T18:40:29Z"
+    },
+    "also_osm": [
+     "node/13190826860"
+    ],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-09-14"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1641264622",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.02385,
+     51.66493
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Diesel",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1641264622,
+     "timestamp": "2012-02-20T23:44:43Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2012-02-20"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1661449074",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.254831,
+     51.565897
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "AMC Castrop, nur Diesel",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1661449074,
+     "timestamp": "2021-02-18T17:33:30Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2021-02-18"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1842892282",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.486637,
+     52.406563
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1842892282,
+     "timestamp": "2012-07-29T15:41:11Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2012-07-29"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1921663561",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.010905,
+     52.674587
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1921663561,
+     "timestamp": "2024-06-26T17:35:11Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-06-26"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1929661811",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.436856,
+     53.478891
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "SEEBOOTECH",
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1929661811,
+     "timestamp": "2025-11-23T13:18:01Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-11-23"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1976446377",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.887223,
+     53.114676
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1976446377,
+     "timestamp": "2015-12-14T17:35:45Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2015-12-14"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1994617322",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.053111,
+     53.366312
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1994617322,
+     "timestamp": "2026-07-03T18:08:57Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-07-03"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2065026524",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.521751,
+     51.983098
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2065026524,
+     "timestamp": "2026-05-04T10:16:25Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-05-04"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2117525650",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.642225,
+     51.856189
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2117525650,
+     "timestamp": "2013-01-18T10:29:29Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2013-01-18"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2117763730",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     11.646203,
+     52.124479
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "08:00-22:00",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Benzin / Diesel",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2117763730,
+     "timestamp": "2017-01-28T22:45:02Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2017-01-28"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2123930386",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     11.926138,
+     48.909665
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2123930386,
+     "timestamp": "2024-08-28T16:03:19Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-08-28"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2126518942",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.780632,
+     48.494774
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2126518942,
+     "timestamp": "2016-10-03T18:44:41Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2016-10-03"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2126519387",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     8.308442,
+     49.037895
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2126519387,
+     "timestamp": "2017-04-30T22:29:23Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2017-04-30"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2126519533",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.803006,
+     48.577779
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Diesel und Benzin",
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2126519533,
+     "timestamp": "2024-07-08T14:21:30Z"
+    },
+    "also_osm": [
+     "node/2373193579"
+    ],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-07-08"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2273169199",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.202037,
+     52.753213
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2273169199,
+     "timestamp": "2015-12-14T17:55:25Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2015-12-14"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2379908973",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.207633,
+     50.618745
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Nur Diesel",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2379908973,
+     "timestamp": "2023-10-14T12:54:58Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-10-14"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2397049605",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.099764,
+     49.971164
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Bunkerboot",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2397049605,
+     "timestamp": "2024-09-10T08:50:14Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-09-10"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2399106007",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.925587,
+     49.78487
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2399106007,
+     "timestamp": "2025-06-10T13:53:59Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-06-10"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2470950986",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.309237,
+     53.209823
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2470950986,
+     "timestamp": "2025-04-12T07:54:50Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2025-04-12"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/290794541",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.10159,
+     54.179064
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 290794541,
+     "timestamp": "2019-10-12T13:57:32Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2019-10-12"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/290812768",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.561294,
+     47.587261
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 290812768,
+     "timestamp": "2024-08-06T10:54:21Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-08-06"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/2939830713",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     11.356981,
+     47.9984
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Apr 1-Sep 15: Mo-Su 09:00-12:00,13:00-17:00; Sep 16-Oct 31: Mo-Sa 09:00-12:00,13:00-17:00",
+    "operator": "Rambeck Bootsvertrieb und Yachthafen GmbH",
+    "website": "https://www.rambeck.de/yachthafen/service-center/tankstelle",
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 2939830713,
+     "timestamp": "2021-01-29T19:08:31Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2021-01-29"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/319950414",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     14.185301,
+     52.013897
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "May-Sep: Mo-Su 08:00-19:00",
+    "operator": "Gemeinde Goyatz",
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Wassertankstelle Selbstbedienung",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": [
+      "maestro"
+     ],
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 319950414,
+     "timestamp": "2026-10-09T05:32:27Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-10-09"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/331982372",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.501017,
+     54.34269
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 331982372,
+     "timestamp": "2016-09-20T13:11:37Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2016-09-20"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/3611456610",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.863717,
+     54.753455
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "Gelting Yachthafen",
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 3611456610,
+     "timestamp": "2023-09-12T07:55:04Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-09-12"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431061456",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.438499,
+     54.095122
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "03-AUG-08 13:39:38",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431061456,
+     "timestamp": "2020-02-29T19:33:46Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2020-02-29"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/431078567",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.334448,
+     52.985617
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 431078567,
+     "timestamp": "2015-12-14T17:35:45Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2015-12-14"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/4360780362",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.554399,
+     52.424989
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Oct, Apr: Mo-Fr 09:00-16:30; May-Sep: Mo-Su 09:00-17:00",
+    "operator": "Stadtmarina Brandenburg",
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 4360780362,
+     "timestamp": "2021-07-25T10:32:41Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2021-07-25"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/490057833",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     6.750107,
+     49.814136
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 490057833,
+     "timestamp": "2022-04-18T16:43:41Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2022-04-18"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/510887633",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.389501,
+     54.099704
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 510887633,
+     "timestamp": "2024-09-28T21:05:48Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-09-28"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/558838623",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     6.965031,
+     50.926729
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Bootstankstelle für Diesel und Superbenzin im KAMC-Yachthafen. Hafenmeister : +49 221 9320585",
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 558838623,
+     "timestamp": "2026-03-31T09:18:38Z"
+    },
+    "also_osm": [
+     "node/2137577401"
+    ],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-03-31"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/606698111",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     10.670666,
+     49.971386
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Straßentankstelle, gut zu erreichen",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 606698111,
+     "timestamp": "2012-12-21T20:29:31Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2012-12-21"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/6699969941",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     9.716051,
+     54.329836
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 6699969941,
+     "timestamp": "2019-08-11T09:35:28Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2019-08-11"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/6979971354",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.469218,
+     54.573659
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mar-Sep 09:00-10:00,17:00-18:00",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 6979971354,
+     "timestamp": "2023-09-26T20:27:21Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2023-09-26"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/732715893",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     11.24731,
+     53.97403
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Fr 07:00-18:00; Sa 09:00-16:00; Su 09:00-16:00",
+    "operator": "Marina Boltenhagen GmbH...",
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 732715893,
+     "timestamp": "2026-10-17T09:04:34Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-10-17"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/818792799",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     14.066759,
+     53.746746
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "tägl 08.00-18.00 Uhr",
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 818792799,
+     "timestamp": "2022-10-04T11:57:29Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2022-10-04"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/822160707",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.129416,
+     49.951833
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": "Mo-Fr 09:00-12:00",
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": true,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 822160707,
+     "timestamp": "2016-02-16T15:14:22Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2016-02-16"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/827507626",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.754098,
+     54.121501
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": "Diesel und Benzin, teuer",
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 827507626,
+     "timestamp": "2024-07-25T15:13:52Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-07-25"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/850895579",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.180893,
+     54.264427
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "Marina Neuhof",
+    "website": "https://borbe-stralsund.de/",
+    "phone": "+49 151 19453820",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 850895579,
+     "timestamp": "2024-08-02T16:11:07Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-08-02"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/9898600128",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     13.023889,
+     53.910557
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": "Peene Marina",
+    "website": "https://www.peene-marina-demmin.de/hafen-camping/tankstelle.html",
+    "phone": "+49 3998 2824281",
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": true,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 9898600128,
+     "timestamp": "2022-07-20T01:07:18Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2022-07-20"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "way/1028766493",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     11.956377,
+     51.486857
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "way",
+     "id": 1028766493,
+     "timestamp": "2022-02-06T21:36:09Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2022-02-06"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "way/1246385646",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     14.00855,
+     51.512961
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "way",
+     "id": 1246385646,
+     "timestamp": "2024-02-05T15:22:01Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2024-02-05"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "way/1533190619",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     8.493573,
+     53.648147
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "way",
+     "id": 1533190619,
+     "timestamp": "2026-06-28T10:00:19Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2026-06-28"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "way/500446297",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.366376,
+     53.167357
+    ]
+   },
+   "properties": {
+    "type": "fuel",
+    "name": null,
+    "locality": null,
+    "locality_kind": null,
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "diesel": null,
+     "petrol": null,
+     "payment": null,
+     "reach_water": null,
+     "reach_land": null
+    },
+    "osm": {
+     "type": "way",
+     "id": 500446297,
+     "timestamp": "2017-06-14T16:30:44Z"
+    },
+    "also_osm": [],
+    "source": "osm",
+    "imported": "2026-10-19",
+    "updated": "2017-06-14"
+   }
+  }
+ ]
 }
