@@ -22,7 +22,7 @@ Stand: Oktober 2026. Ehrliche Übersicht gegenüber dem Master-Prompt.
 ## Nicht gemacht oder nicht geprüft
 | Punkt | Stand |
 |---|---|
-| **Vollständiger NRW-Import** | **Nicht ausgeführt.** In der Entwicklungsumgebung war Overpass gesperrt. Der Importer ist gegen ein synthetisches Fixture getestet, **nicht gegen die echte Overpass-API**. Im Ordner sind weiterhin nur die 8 Slipanlagen aus V6. Erster Lauf bei dir: Ergebnisse stichprobenartig mit OSM vergleichen. |
+| **Import Deutschland (alle 16 Bundesländer)** | **Hier nicht ausgeführt** (Overpass gesperrt). Der Importer ist gegen ein synthetisches Fixture und simulierte Server-Antworten getestet. Ein Lauf nur für NRW (Vorversion) lief per GitHub Action erfolgreich (582 Standorte). Der Deutschland-Lauf ist neu und hat bei dir noch nicht stattgefunden. Im Ordner sind weiterhin nur die 8 Slipanlagen aus V6; die echten Daten entstehen beim ersten Lauf. Danach Ergebnisse stichprobenartig mit OSM vergleichen. |
 | **Echte Kartendarstellung** | Die Oberflächentests nutzten einen Leaflet-Ersatz. Leaflet/MarkerCluster und die Kacheln wurden **nicht** im Browser mit echtem Leaflet getestet. Der Code folgt der Leaflet-1.9-API; nach dem ersten Deploy bitte Karte, Clustering, Marker-Klick, Standortwahl und Zoom auf echtem Gerät durchklicken. |
 | CSP | Strenge Richtlinie. Die App wurde im Test mit exakt diesen Headern ausgeliefert (Leaflet-Ersatz, keine Verstöße), aber nicht mit echtem Leaflet und echten Kacheln. Falls nach dem Deploy die Karte leer bleibt: Browser-Konsole öffnen, geblockte Domains in `public/_headers` ergänzen. |
 | Kartenlibraries selbst gehostet | Skript vorhanden (`vendor_libs.py`), nicht ausgeführt (kein Netzzugriff). |
@@ -36,7 +36,7 @@ Stand: Oktober 2026. Ehrliche Übersicht gegenüber dem Master-Prompt.
 | Impressum/Datenschutz | Vorlagen, von dir auszufüllen und rechtlich zu prüfen. |
 
 ## Abweichungen vom Master-Prompt
-- **Startansicht:** Statt ganz Deutschland zoomt die App auf die vorhandenen Daten (NRW), weil sonst alle Marker in einer Ecke kleben. Umstellbar: `START_MODE` in `config.js`.
+- **Startansicht:** Die App zoomt auf die vorhandenen Daten (bei Deutschland-Import: ganz Deutschland). Umstellbar: `START_MODE` in `config.js`.
 - **Leaflet statt MapLibre:** laut Prompt zulässig, weil V6 Leaflet nutzt und die Umstellung nichts bringt, solange es um wenige tausend Punkte geht.
 - **Datenformat:** GeoJSON für OSM-Daten; die Aufteilung in räumliche Pakete (V9) ist über `meta.json → files` vorbereitet.
 

@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-echo WaterMap: OSM-Daten fuer NRW aktualisieren
+echo WaterMap: OSM-Daten fuer Deutschland aktualisieren (dauert 30-90 Minuten)
 echo.
 where py >nul 2>nul && (set PY=py -3) || (set PY=python)
 %PY% scripts\import_osm.py

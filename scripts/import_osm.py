@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""WaterMap – OSM-Import für Nordrhein-Westfalen.
+"""WaterMap – OSM-Import für Deutschland (auch einzelne Bundesländer oder andere Länder).
 
 Holt Slipanlagen, Marinas und Bootstankstellen aus OpenStreetMap (Overpass API), prüft sie,
 fasst Dubletten zusammen und schreibt GeoJSON-Dateien nach public/data/osm/.
 
-  python3 scripts/import_osm.py                       # Live-Import (Internet nötig)
+  python3 scripts/import_osm.py                       # Live-Import ganz Deutschland (Internet nötig)
+  python3 scripts/import_osm.py --area DE-NW          # nur ein Bundesland
   python3 scripts/import_osm.py --dry-run             # nur rechnen und berichten, nichts schreiben
   python3 scripts/import_osm.py --input antwort.json  # gespeicherte Overpass-Antwort verwenden
 
@@ -24,6 +25,7 @@ import datetime as dt
 import json
 import math
 import pathlib
+import re
 import sys
 import time
 import urllib.error
@@ -34,7 +36,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 DEFAULT_OUT = ROOT / "public" / "data"
 
 SCHEMA_VERSION = 2
-USER_AGENT = "WaterMap-Importer/7.0 (Wassersport-Karte NRW; Kontakt siehe Projekt-Impressum)"
+USER_AGENT = "WaterMap-Importer/7.0 (Wassersport-Karte; Kontakt siehe Projekt-Impressum)"
 SERVERS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
@@ -44,9 +46,14 @@ SERVERS = [
 CATEGORIES = ("slip", "marina", "fuel")
 FILES = {"slip": "osm/slip.geojson", "marina": "osm/marina.geojson", "fuel": "osm/fuel.geojson"}
 
-# Region (ISO-3166-2). Weitere Länder: --area DE-BY usw. (Bounding-Box dann mit --bbox anpassen).
-DEFAULT_AREA = "DE-NW"
-NRW_BBOX = (50.30, 5.85, 52.55, 9.50)  # süd, west, nord, ost – Koordinaten außerhalb gelten als Fehler
+# Region: "DE" = ganz Deutschland, abgerufen Bundesland für Bundesland (kleine Abfragen, kein Zeitlimit).
+# Auch möglich: ein Bundesland (--area DE-BY), mehrere (--area DE-NW,DE-NI) oder ein anderes Land
+# (--area AT --bbox 46.3,9.5,49.1,17.2).
+DEFAULT_AREA = "DE"
+GERMAN_STATES = ["DE-BW", "DE-BY", "DE-BE", "DE-BB", "DE-HB", "DE-HH", "DE-HE", "DE-MV",
+                 "DE-NI", "DE-NW", "DE-RP", "DE-SL", "DE-SN", "DE-ST", "DE-SH", "DE-TH"]
+NRW_BBOX = (50.30, 5.85, 52.55, 9.50)       # süd, west, nord, ost
+GERMANY_BBOX = (47.20, 5.80, 55.10, 15.20)  # Koordinaten außerhalb gelten als Fehler
 
 DEDUPE_RADIUS_M = {"slip": 25, "marina": 150, "fuel": 60}
 WATER_MAX_M = 80
@@ -55,7 +62,53 @@ MIN_KEEP_RATIO = 0.5
 
 
 def area_clause(iso: str) -> str:
-    return f'area["ISO3166-2"="{iso}"]["boundary"="administrative"]->.a;'
+    # "DE-NW" ist ein Bundesland (ISO 3166-2), "AT" ein ganzes Land (ISO 3166-1)
+    key = "ISO3166-2" if "-" in iso else "ISO3166-1"
+    return f'area["{key}"="{iso}"]["boundary"="administrative"]->.a;'
+
+
+def expand_areas(spec: str) -> list[str]:
+    """'DE' → alle 16 Bundesländer; 'DE-NW,DE-NI' → beide; Reihenfolge bleibt, Doppelte entfallen."""
+    out: list[str] = []
+    for part in spec.split(","):
+        part = part.strip().upper()
+        if not part:
+            continue
+        if not re.fullmatch(r"[A-Z]{2}(-[A-Z0-9]{1,3})?", part):
+            raise ValueError(f"ungültiger Regionscode: {part!r} (erwartet z. B. DE, DE-NW oder AT)")
+        for code in (GERMAN_STATES if part == "DE" else [part]):
+            if code not in out:
+                out.append(code)
+    if not out:
+        raise ValueError("keine Region angegeben")
+    return out
+
+
+def default_bbox(areas: list[str]):
+    """Gültigkeitsbereich der Koordinaten; für Regionen außerhalb Deutschlands muss --bbox angegeben werden."""
+    return GERMANY_BBOX if all(a.startswith("DE") for a in areas) else None
+
+
+def parse_bbox(text: str):
+    try:
+        s, w, n, e = (float(x) for x in text.split(","))
+    except ValueError:
+        raise ValueError("--bbox erwartet vier Zahlen: süd,west,nord,ost") from None
+    if not (-90 <= s < n <= 90 and -180 <= w < e <= 180):
+        raise ValueError("--bbox: Werte außerhalb des gültigen Bereichs oder vertauscht (süd,west,nord,ost)")
+    return (s, w, n, e)
+
+
+def merge_elements(chunks) -> list[dict]:
+    """Fasst Antworten mehrerer Regionen zusammen; ein Objekt am Rand zweier Regionen zählt nur einmal."""
+    seen, out = set(), []
+    for chunk in chunks:
+        for el in chunk:
+            key = (el.get("type"), el.get("id"))
+            if key not in seen:
+                seen.add(key)
+                out.append(el)
+    return out
 
 
 def queries(iso: str) -> dict[str, str]:
@@ -164,7 +217,7 @@ def is_inactive(tags: dict) -> bool:
 
 
 # --------------------------------------------------------------------------- Transformation
-def transform(el: dict, kind: str | None = None, bbox=NRW_BBOX) -> dict | None:
+def transform(el: dict, kind: str | None = None, bbox=GERMANY_BBOX) -> dict | None:
     tags = el.get("tags") or {}
     kind = kind or classify(tags)
     if kind not in CATEGORIES or is_inactive(tags):
@@ -435,8 +488,57 @@ def overpass(query: str, log=print, servers=SERVERS, attempts=2) -> dict:
     raise FetchError(last)
 
 
+def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3):
+    """Ruft Standorte (+ Orte, Gewässer) Region für Region ab und führt die Antworten zusammen.
+
+    Schlägt die Standort-Abfrage EINER Region fehl, bricht alles ab (FetchError): Ein Datensatz mit
+    einem fehlenden Bundesland wäre schlechter als der alte. Orte/Gewässer sind nur Zugaben – fehlen sie
+    für eine Region, bleibt dort Ort bzw. Gewässer „Nicht bekannt“.
+    """
+    mains, places, waters, stamps = [], [], [], []
+    failed = {"places": [], "water": []}
+    for i, area in enumerate(areas, 1):
+        qs = queries(area)
+        log(f"[{i}/{len(areas)}] {area}")
+        if i > 1:
+            time.sleep(pause)
+        try:
+            payload = fetch(qs["main"])
+        except FetchError as exc:
+            raise FetchError(f"{area}: {exc}") from exc
+        mains.append(payload["elements"])
+        ts = (payload.get("osm3s") or {}).get("timestamp_osm_base")
+        if ts:
+            stamps.append(ts)
+        if not enrich or not mains[-1]:
+            continue    # leere Region: keine Zuordnung nötig
+        for key, bucket in (("places", places), ("water", waters)):
+            time.sleep(pause)
+            try:
+                bucket.append(fetch(qs[key])["elements"])
+            except FetchError as exc:
+                failed[key].append(area)
+                log(f"  ! Zuordnung '{key}' für {area} übersprungen: {exc}")
+    status = {}
+    for key, bucket in (("places", places), ("water", waters)):
+        if not enrich:
+            status[key] = "übersprungen"
+        elif not failed[key]:
+            status[key] = "ok"
+        elif bucket:
+            status[key] = f"teilweise (ohne: {', '.join(failed[key])})"
+        else:
+            status[key] = "fehlgeschlagen"
+    return {
+        "main": {"osm3s": {"timestamp_osm_base": min(stamps) if stamps else None}, "elements": merge_elements(mains)},
+        "places": merge_elements(places) if places else None,
+        "water": merge_elements(waters) if waters else None,
+        "enrich": status,
+    }
+
+
 # --------------------------------------------------------------------------- Verarbeitung (ohne Netzwerk/Dateien)
-def build(main_elements, places=None, water=None, today=None, bbox=NRW_BBOX, log=print) -> dict:
+def build(main_elements, places=None, water=None, today=None, bbox=GERMANY_BBOX, log=print) -> dict:
     today = today or dt.date.today().isoformat()
     by_kind: dict[str, list[dict]] = {k: [] for k in CATEGORIES}
     seen, rejected = set(), {k: 0 for k in CATEGORIES}
@@ -494,14 +596,24 @@ def main(argv=None) -> int:
     ap.add_argument("--places-input", help="gespeicherte Antwort der Orte-Abfrage (optional)")
     ap.add_argument("--water-input", help="gespeicherte Antwort der Gewässer-Abfrage (optional)")
     ap.add_argument("--out", default=str(DEFAULT_OUT), help="Datenordner (Standard: public/data)")
-    ap.add_argument("--area", default=DEFAULT_AREA, help="ISO-3166-2-Code der Region (Standard: DE-NW)")
+    ap.add_argument("--area", default=DEFAULT_AREA,
+                    help="Region: DE = ganz Deutschland (Standard), DE-NW = ein Bundesland, mehrere mit Komma, AT = anderes Land")
+    ap.add_argument("--bbox", help="Gültigkeitsbereich süd,west,nord,ost (nur nötig außerhalb Deutschlands)")
     ap.add_argument("--no-enrich", action="store_true", help="Orte und Gewässer nicht zuordnen")
     ap.add_argument("--dry-run", action="store_true", help="nichts schreiben")
     ap.add_argument("--force", action="store_true", help="Schutz vor starkem Datenverlust übergehen")
     args = ap.parse_args(argv)
     out_dir = pathlib.Path(args.out)
     today = dt.date.today().isoformat()
-    qs = queries(args.area)
+    try:
+        areas = expand_areas(args.area)
+        bbox = parse_bbox(args.bbox) if args.bbox else default_bbox(areas)
+    except ValueError as exc:
+        print(f"✗ {exc}", file=sys.stderr)
+        return 2
+    if bbox is None:
+        print("✗ Für Regionen außerhalb Deutschlands bitte --bbox süd,west,nord,ost angeben.", file=sys.stderr)
+        return 2
     enrich = {"places": "übersprungen", "water": "übersprungen"}
 
     def load(path):
@@ -516,31 +628,19 @@ def main(argv=None) -> int:
         status = {k: "ok (Datei)" for k in CATEGORIES}
         source_detail = f"Datei {pathlib.Path(args.input).name}"
     else:
-        print(f"Overpass-Abruf für {args.area} …")
+        print(f"Overpass-Abruf für {args.area} ({len(areas)} Region{'en' if len(areas) != 1 else ''}) …")
         try:
-            print("  [Standorte]")
-            main_payload = overpass(qs["main"])
+            got = fetch_regions(areas, enrich=not args.no_enrich)
         except FetchError as exc:
             print(f"✗ Abruf fehlgeschlagen: {exc}\nEs wurden KEINE Dateien verändert.", file=sys.stderr)
             return 2
+        main_payload, places, water, enrich = got["main"], got["places"], got["water"], got["enrich"]
         status = {k: "ok" for k in CATEGORIES}
-        places = water = None
-        if not args.no_enrich:
-            for key in ("places", "water"):
-                time.sleep(3)
-                try:
-                    print(f"  [{'Orte' if key == 'places' else 'Gewässer'}]")
-                    data = overpass(qs[key])["elements"]
-                    enrich[key] = "ok"
-                    places, water = (data, water) if key == "places" else (places, data)
-                except FetchError as exc:
-                    enrich[key] = f"fehlgeschlagen ({exc})"
-                    print(f"  ! Zuordnung '{key}' übersprungen, Import läuft ohne sie weiter.", file=sys.stderr)
         source_detail = "Overpass API"
 
     base_ts = (main_payload.get("osm3s") or {}).get("timestamp_osm_base")
     print("Verarbeitung …")
-    built = build(main_payload["elements"], places, water, today, log=print)
+    built = build(main_payload["elements"], places, water, today, bbox=bbox, log=print)
 
     problems = []
     for kind, feats in built["collections"].items():

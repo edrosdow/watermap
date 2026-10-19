@@ -82,7 +82,7 @@ WATER = [
 class ImportTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.built = imp.build(MAIN, PLACES, WATER, today="2026-01-02", log=lambda *a: None)
+        cls.built = imp.build(MAIN, PLACES, WATER, today="2026-01-02", bbox=imp.NRW_BBOX, log=lambda *a: None)
         cls.by = {k: {f["id"]: f for f in v} for k, v in cls.built["collections"].items()}
 
     def test_counts_and_rejections(self):
@@ -175,6 +175,93 @@ class ImportTests(unittest.TestCase):
         self.assertEqual(f["geometry"], {"type": "Point", "coordinates": [8.12, 51.48]})  # [lon, lat]
 
 
+class RegionTests(unittest.TestCase):
+    def test_expand_areas(self):
+        self.assertEqual(len(imp.expand_areas("DE")), 16)
+        self.assertEqual(imp.expand_areas("de-nw, DE-NI,DE-NW"), ["DE-NW", "DE-NI"])
+        self.assertEqual(imp.expand_areas("DE-NW,DE")[0], "DE-NW")
+        self.assertEqual(len(imp.expand_areas("DE-NW,DE")), 16)     # keine Doppelten
+        for bad in ("", " , ", "Deutschland", "DE-", 'DE"];out;'):
+            with self.assertRaises(ValueError, msg=bad):
+                imp.expand_areas(bad)
+
+    def test_area_clause_state_vs_country(self):
+        self.assertIn('"ISO3166-2"="DE-NW"', imp.area_clause("DE-NW"))
+        self.assertIn('"ISO3166-1"="AT"', imp.area_clause("AT"))
+
+    def test_bbox(self):
+        self.assertEqual(imp.default_bbox(["DE-BY", "DE-NW"]), imp.GERMANY_BBOX)
+        self.assertIsNone(imp.default_bbox(["AT"]))
+        self.assertEqual(imp.parse_bbox("46.3, 9.5,49.1,17.2"), (46.3, 9.5, 49.1, 17.2))
+        for bad in ("1,2,3", "a,b,c,d", "50,5,40,9", "95,5,96,9"):
+            with self.assertRaises(ValueError, msg=bad):
+                imp.parse_bbox(bad)
+
+    def test_bavaria_accepted_with_germany_bbox_rejected_with_nrw(self):
+        el = [node(50, 48.1, 11.5, {"leisure": "slipway", "name": "TEST München"})]
+        quiet = lambda *a: None
+        self.assertEqual(imp.build(el, bbox=imp.GERMANY_BBOX, log=quiet)["stats"]["slip"]["final"], 1)
+        self.assertEqual(imp.build(el, bbox=imp.NRW_BBOX, log=quiet)["stats"]["slip"]["final"], 0)
+
+    def test_merge_elements_dedupes_border_objects(self):
+        a = [{"type": "node", "id": 1}, {"type": "way", "id": 1}]
+        b = [{"type": "node", "id": 1}, {"type": "node", "id": 2}]
+        self.assertEqual([(e["type"], e["id"]) for e in imp.merge_elements([a, b])],
+                         [("node", 1), ("way", 1), ("node", 2)])
+
+    @staticmethod
+    def fake(fail=()):
+        calls = []
+
+        def fetch(query):
+            calls.append(query)
+            for needle in fail:
+                if needle in query:
+                    raise imp.FetchError("simuliert")
+            which = "main" if "out meta center" in query else "places" if "place" in query else "water"
+            region = "NW" if "DE-NW" in query else "NI"
+            ident = {"main": 1, "places": 100, "water": 200}[which]
+            el = {"type": "node" if which != "water" else "way", "id": ident + (0 if region == "NW" else 1),
+                  "lat": 51.0, "lon": 7.0, "tags": {"leisure": "slipway"}}
+            if ident == 1 and region == "NI":
+                el["id"] = 1    # Randobjekt, kommt in beiden Regionen vor
+            return {"osm3s": {"timestamp_osm_base": "2026-02-01T00:00:00Z" if region == "NW" else "2026-01-01T00:00:00Z"},
+                    "elements": [el]}
+        return fetch, calls
+
+    def test_fetch_regions_merges_and_reports(self):
+        fetch, calls = self.fake()
+        got = imp.fetch_regions(["DE-NW", "DE-NI"], fetch=fetch, pause=0, log=lambda *a: None)
+        self.assertEqual(len(calls), 6)                                  # 2 Regionen × (Standorte, Orte, Gewässer)
+        self.assertEqual(len(got["main"]["elements"]), 1)                # Randobjekt nur einmal
+        self.assertEqual(len(got["places"]), 2)
+        self.assertEqual(got["main"]["osm3s"]["timestamp_osm_base"], "2026-01-01T00:00:00Z")   # älterer Stand
+        self.assertEqual(got["enrich"], {"places": "ok", "water": "ok"})
+
+    def test_main_failure_in_one_region_aborts_everything(self):
+        fetch, _ = self.fake(fail=('"DE-NI"',))
+        with self.assertRaises(imp.FetchError) as ctx:
+            imp.fetch_regions(["DE-NW", "DE-NI"], fetch=fetch, pause=0, log=lambda *a: None)
+        self.assertIn("DE-NI", str(ctx.exception))
+
+    def test_enrichment_failure_is_partial_not_fatal(self):
+        def fetch(query, _f=self.fake()[0]):
+            if "DE-NI" in query and "out meta center" not in query:
+                raise imp.FetchError("simuliert")
+            return _f(query)
+        got = imp.fetch_regions(["DE-NW", "DE-NI"], fetch=fetch, pause=0, log=lambda *a: None)
+        self.assertEqual(got["enrich"]["places"], "teilweise (ohne: DE-NI)")
+        self.assertEqual(got["enrich"]["water"], "teilweise (ohne: DE-NI)")
+        self.assertEqual(len(got["places"]), 1)
+
+    def test_no_enrich_skips_extra_queries(self):
+        fetch, calls = self.fake()
+        got = imp.fetch_regions(["DE-NW", "DE-NI"], enrich=False, fetch=fetch, pause=0, log=lambda *a: None)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(got["enrich"], {"places": "übersprungen", "water": "übersprungen"})
+        self.assertIsNone(got["places"])
+
+
 class CliTests(unittest.TestCase):
     def run_cli(self, *args):
         return subprocess.run([sys.executable, "-I", str(SCRIPTS / "import_osm.py"), *args], capture_output=True, text=True)
@@ -212,6 +299,13 @@ class CliTests(unittest.TestCase):
             self.assertEqual(len(json.loads((out / "osm" / "slip.geojson").read_text())["features"]), 100)   # unverändert
             r = self.run_cli("--input", str(tmp / "tiny.json"), "--out", str(out), "--force")
             self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_foreign_area_needs_bbox(self):
+        r = self.run_cli("--area", "AT", "--dry-run")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("--bbox", r.stderr)
+        r = self.run_cli("--area", "Deutschland", "--dry-run")
+        self.assertEqual(r.returncode, 2)
 
     def test_dry_run_writes_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:

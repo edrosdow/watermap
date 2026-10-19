@@ -11,7 +11,7 @@ Statische Web-App (HTML/CSS/JavaScript, Leaflet), kostenlos auf Netlify betreibb
 Details: [docs/INSTALLATION.md](docs/INSTALLATION.md)
 
 ## Daten: wichtigster offener Punkt
-Im ZIP stecken **nur die 8 echten Slipanlagen aus V6**. Der vollständige NRW-Import konnte in der Entwicklungsumgebung nicht ausgeführt werden (kein Zugriff auf die Overpass-API). Auf deinem Rechner oder per GitHub Action läuft er mit einem Klick:
+Im ZIP stecken **nur die 8 echten Slipanlagen aus V6**. Der Import für **ganz Deutschland** (16 Bundesländer, 30 bis 90 Minuten) konnte in der Entwicklungsumgebung nicht ausgeführt werden (kein Zugriff auf die Overpass-API). Auf deinem Rechner oder per GitHub Action läuft er mit einem Klick (ein erster Lauf nur für NRW lief per GitHub Action erfolgreich: 582 Standorte):
 
 - Windows: Doppelklick auf `Daten-aktualisieren.bat`
 - Mac/Linux: `sh daten-aktualisieren.sh`
