@@ -1,0 +1,5 @@
+# WaterMap – Netlify-Konfiguration (für Deployments aus einem Git-Repository).
+# Beim Hochladen per Drag & Drop genügt es, den Ordner "public" hochzuladen.
+[build]
+  publish = "public"
+  # Kein Build-Schritt nötig: reine statische Seite.

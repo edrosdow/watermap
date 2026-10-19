@@ -1,0 +1,10 @@
+[
+  {
+    "station_id": "node/1234567",
+    "fuel": "diesel",
+    "price": 2.189,
+    "observed": "2026-10-04",
+    "status": "approved",
+    "submitted": "2026-10-04"
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "node/1356228723",
+    "status": "approved",
+    "fields": {
+      "fee": true,
+      "fee_note": "10 € pro Slipvorgang",
+      "opening_hours": "Mo–So 8–20 Uhr"
+    },
+    "attrs": {
+      "trailer_parking": true
+    },
+    "photos": [
+      {
+        "url": "photos/node-1356228723-1.jpg",
+        "credit": "Max Mustermann, CC BY 4.0",
+        "alt": "Rampe von der Wasserseite"
+      }
+    ],
+    "updated": "2026-10-05"
+  }
+]

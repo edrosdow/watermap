@@ -1,0 +1,34 @@
+{
+ "schema_version": 2,
+ "region": "Nordrhein-Westfalen (DE-NW)",
+ "generated": null,
+ "source": "OpenStreetMap",
+ "license": "ODbL 1.0",
+ "attribution": "© OpenStreetMap-Mitwirkende",
+ "license_url": "https://www.openstreetmap.org/copyright",
+ "notice": "Startdaten: Der vollständige NRW-Import steht noch aus. Es fehlen Marinas, Bootstankstellen und weitere Slipanlagen.",
+ "files": {
+  "osm": [
+   "osm/slip.geojson",
+   "osm/marina.geojson",
+   "osm/fuel.geojson"
+  ],
+  "community": {
+   "places": "community/places.json",
+   "overrides": "community/overrides.json",
+   "prices": "community/prices.json"
+  }
+ },
+ "categories": {
+  "slip": {
+   "final": 8
+  },
+  "marina": {
+   "final": 0
+  },
+  "fuel": {
+   "final": 0
+  }
+ },
+ "total": 8
+}

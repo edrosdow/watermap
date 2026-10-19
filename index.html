@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>WaterMap – Dein Revier. Deine Karte.</title>
+  <meta name="description" content="Slipanlagen, Marinas und Bootstankstellen in Nordrhein-Westfalen auf einer Karte – kostenlos und gemeinschaftlich gepflegt.">
+  <meta name="theme-color" content="#0B3045">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="./css/app.css">
+</head>
+<body>
+  <a class="skip" href="#map">Zur Karte springen</a>
+
+  <header class="app-header">
+    <a class="brand" href="./" aria-label="WaterMap – Startseite">
+      <span id="brand-logo" class="brand-logo"></span>
+      <span class="brand-text"><strong>WaterMap</strong><small>Dein Revier. Deine Karte.</small></span>
+    </a>
+    <form class="search" id="search-form" role="search" autocomplete="off">
+      <input id="q" type="search" placeholder="Ort, Gewässer oder Standort suchen" aria-label="Suche nach Ort, Gewässer oder Standort"
+             role="combobox" aria-expanded="false" aria-controls="suggest" aria-autocomplete="list" enterkeyhint="search" maxlength="100">
+      <button type="submit" class="search-btn" aria-label="Suchen"><span id="btn-search-ico"></span></button>
+      <ul id="suggest" class="suggest" role="listbox" aria-label="Suchvorschläge" hidden></ul>
+    </form>
+    <span id="offline" class="offline" role="status" hidden title="Standortdaten bleiben verfügbar, Karten nur für bereits angesehene Bereiche.">Offline</span>
+    <button type="button" id="btn-menu" class="icon-btn header-btn" aria-label="Menü öffnen" aria-haspopup="dialog"></button>
+  </header>
+
+  <main class="shell">
+    <aside id="sidebar" class="sidebar" aria-label="Standortliste">
+      <button type="button" id="sheet-handle" class="sheet-handle" aria-expanded="false" aria-controls="list">
+        <span class="grip" aria-hidden="true"></span>
+        <span id="count" class="sheet-count">Standorte werden geladen …</span>
+      </button>
+      <div id="tabs" class="tabs" role="tablist" aria-label="Ansicht">
+        <button type="button" role="tab" data-tab="list" class="is-active" aria-selected="true">Standorte</button>
+        <button type="button" role="tab" data-tab="fav" aria-selected="false">Favoriten <span id="tab-fav-n" class="tab-n"></span></button>
+      </div>
+      <div id="datainfo" class="datainfo"></div>
+      <div id="list-head" class="list-head"></div>
+      <ul id="list" class="list" aria-live="polite"></ul>
+      <p class="sidebar-foot">
+        <a href="./ueber.html">Über WaterMap</a> · <a href="./datenschutz.html">Datenschutz</a> · <a href="./impressum.html">Impressum</a>
+      </p>
+    </aside>
+
+    <section class="map-wrap" aria-label="Karte">
+      <div id="map" role="region" aria-label="Interaktive Karte"></div>
+      <div id="filterbar" class="filterbar"></div>
+      <button type="button" id="btn-locate" class="fab" aria-label="Meine Position anzeigen" title="Meine Position"></button>
+      <div id="banner" class="banner"></div>
+      <div id="pickbar" class="pickbar" hidden></div>
+      <section id="detail" class="detail" aria-label="Standortdetails" hidden></section>
+      <div id="toast" class="toast" role="status" hidden></div>
+    </section>
+  </main>
+
+  <div id="live" class="sr-only" aria-live="polite"></div>
+
+  <dialog id="menu" class="dialog" aria-labelledby="menu-title">
+    <button type="button" id="menu-close" class="icon-btn dlg-x" aria-label="Menü schließen"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    <div id="menu-body"></div>
+  </dialog>
+
+  <dialog id="dlg" class="dialog dialog-form">
+    <button type="button" id="dlg-close" class="icon-btn dlg-x" aria-label="Schließen"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    <div id="dlg-body"></div>
+  </dialog>
+
+  <noscript><p class="noscript">WaterMap braucht JavaScript, um die Karte anzuzeigen. Bitte aktiviere JavaScript in deinem Browser.</p></noscript>
+
+  <!--
+    Netlify erkennt diese Formulare beim Veröffentlichen. Sie spiegeln die Felder der Formulare aus js/forms.js
+    (ein Test prüft den Abgleich). Meldungen siehe Netlify-Dashboard → Forms.
+  -->
+  <form name="slipanlage-melden" method="POST" data-netlify="true" netlify-honeypot="bot-field" enctype="multipart/form-data" hidden>
+    <input name="form-name" value="slipanlage-melden"><input name="bot-field">
+    <input name="name"><input name="gewaesser"><input name="lat"><input name="lon"><input name="zugang"><input name="gebuehr"><input name="gebuehr_betrag">
+    <input name="parkplatz"><input name="trailerparkplatz"><textarea name="beschreibung"></textarea><input type="file" name="foto"><input name="kontakt">
+    <input name="foto_rechte"><input name="dublette_bestaetigt">
+  </form>
+  <form name="tankpreis-melden" method="POST" data-netlify="true" netlify-honeypot="bot-field" enctype="multipart/form-data" hidden>
+    <input name="form-name" value="tankpreis-melden"><input name="bot-field">
+    <input name="tankstelle_id"><input name="tankstelle_name"><input name="kraftstoff"><input name="preis"><input name="datum">
+    <input type="file" name="beleg"><textarea name="kommentar"></textarea><input name="foto_rechte">
+  </form>
+  <form name="foto-einreichen" method="POST" data-netlify="true" netlify-honeypot="bot-field" enctype="multipart/form-data" hidden>
+    <input name="form-name" value="foto-einreichen"><input name="bot-field">
+    <input name="standort_id"><input name="standort_name"><textarea name="beschreibung"></textarea><input type="file" name="foto"><input name="foto_rechte">
+  </form>
+  <form name="fehler-melden" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
+    <input name="form-name" value="fehler-melden"><input name="bot-field">
+    <input name="standort_id"><input name="standort_name"><input name="art"><textarea name="details"></textarea><input name="kontakt">
+  </form>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

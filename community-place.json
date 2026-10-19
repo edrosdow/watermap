@@ -1,0 +1,24 @@
+[
+  {
+    "id": "c/beispiel-rampe-20261001-1",
+    "status": "approved",
+    "type": "slip",
+    "name": "Beispiel-Rampe (nur Schema-Beispiel)",
+    "lat": 51.0,
+    "lon": 7.0,
+    "water": {
+      "name": "Beispielsee",
+      "approx": false
+    },
+    "access": "public",
+    "fee": true,
+    "fee_note": "5 € pro Slipvorgang",
+    "description": "Zufahrt über die Seestraße.",
+    "attrs": {
+      "parking": true,
+      "trailer_parking": true
+    },
+    "submitted": "2026-10-01",
+    "updated": "2026-10-05"
+  }
+]

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Datenschutz – WaterMap</title><meta name="robots" content="noindex">
+<link rel="icon" href="./icons/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="./css/page.css"></head>
+<body><header><a href="./">WaterMap</a><small>Dein Revier. Deine Karte.</small></header><main>
+
+<h1>Datenschutzerklärung</h1>
+<div class="todo"><strong>Vorlage – bitte vor der Veröffentlichung prüfen.</strong> Diese Erklärung beschreibt, was die App technisch tut. Sie ist keine Rechtsberatung. Alle gelb markierten Stellen musst du selbst ausfüllen; lass den Text bei Bedarf rechtlich prüfen.</div>
+
+<h2>Verantwortlicher</h2>
+<p><span class="ph">[Name / Firma]</span>, <span class="ph">[Straße Hausnummer, PLZ Ort]</span>, E-Mail: <span class="ph">[Kontakt-E-Mail]</span></p>
+
+<h2>Hosting (Netlify)</h2>
+<p>Die Website wird bei Netlify, Inc. (USA) gehostet. Beim Aufruf verarbeitet Netlify technisch notwendige Daten (u. a. IP-Adresse, Zeitpunkt, aufgerufene Datei) in Server-Logs, um die Seite auszuliefern und abzusichern (Art. 6 Abs. 1 lit. f DSGVO). <span class="ph">[Auftragsverarbeitungsvertrag und Standardvertragsklauseln mit Netlify abschließen bzw. prüfen.]</span></p>
+
+<h2>Karte und Kartenkacheln</h2>
+<p>Die Kartenbilder werden von <code>tile.openstreetmap.org</code> (OpenStreetMap Foundation) geladen. Dabei erhält der Anbieter deine IP-Adresse und den angeforderten Kartenausschnitt. Das Kartenmodul (Leaflet) wird – sofern nicht selbst gehostet – von <code>unpkg.com</code> oder <code>cdn.jsdelivr.net</code> geladen; auch dabei wird deine IP-Adresse übertragen. <span class="ph">[Streiche diese Zeile, sobald du die Bibliotheken selbst hostest: python3 scripts/vendor_libs.py]</span></p>
+
+<h2>Ortssuche</h2>
+<p>Wenn du nach einem Ort suchst und dafür die Ortssuche auslöst, wird dein Suchbegriff an den Geocoder (<code>nominatim.openstreetmap.org</code>) gesendet. Standortnamen aus der WaterMap-Datenbank werden dagegen lokal in deinem Browser durchsucht.</p>
+
+<h2>Standort</h2>
+<p>Die Standortbestimmung ist freiwillig und startet nur nach deiner Zustimmung im Browser (Art. 6 Abs. 1 lit. a DSGVO). Deine Position wird nur im Browser verwendet, um die Karte auszurichten und Entfernungen zu berechnen. Sie wird nicht an WaterMap gesendet und nicht gespeichert. Beim Laden von Kartenkacheln ergibt sich der sichtbare Kartenausschnitt für den Kachel-Anbieter.</p>
+
+<h2>Meldungen und Foto-Uploads (Netlify Forms)</h2>
+<p>Wenn du eine Slipanlage, einen Preis, ein Foto oder eine Korrektur meldest, werden deine Eingaben (und ggf. das Foto und deine freiwillige E-Mail-Adresse) über Netlify Forms gespeichert und von uns geprüft (Art. 6 Abs. 1 lit. a und f DSGVO). Bei Fotos werden Metadaten (EXIF, insbesondere GPS) vor dem Senden in deinem Browser entfernt. Meldungen werden nicht automatisch veröffentlicht. Nicht veröffentlichte Meldungen löschen wir <span class="ph">[Frist festlegen, z. B. nach 90 Tagen]</span>. Zum Schutz vor Spam nutzen wir ein verstecktes Feld (Honeypot) und die Spam-Filterung von Netlify.</p>
+
+<h2>Lokale Speicherung im Browser</h2>
+<p>Favoriten und kleine Einstellungen (z. B. dass du den Standort-Hinweis geschlossen hast) werden im lokalen Speicher deines Browsers abgelegt und nicht an uns übertragen. Ein Service Worker speichert Programmdateien, Standortdaten und bereits angesehene Kartenkacheln zwischen, damit die App schneller lädt und teilweise offline funktioniert. Du kannst das jederzeit in den Browser-Einstellungen löschen.</p>
+
+<h2>Navigation und externe Links</h2>
+<p>„Navigation starten“ öffnet Google Maps oder OpenStreetMap in einem neuen Tab. Ab dort gelten die Datenschutzbestimmungen des jeweiligen Anbieters.</p>
+
+<h2>Werbung</h2>
+<p>Derzeit wird keine Werbung eingebunden und es werden keine Tracking- oder Analyse-Dienste verwendet. <span class="ph">[Vor Einführung von Werbung (V10) diese Erklärung und ggf. ein Einwilligungsbanner ergänzen.]</span></p>
+
+<h2>Deine Rechte</h2>
+<p>Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch sowie das Recht, deine Einwilligung jederzeit zu widerrufen. Du kannst dich bei einer Datenschutz-Aufsichtsbehörde beschweren, z. B. bei der Landesbeauftragten für Datenschutz und Informationsfreiheit Nordrhein-Westfalen.</p>
+<footer><a href="./">← Zurück zur Karte</a> · <a href="./ueber.html">Über WaterMap</a> · <a href="./datenschutz.html">Datenschutz</a> · <a href="./impressum.html">Impressum</a></footer></main></body></html>

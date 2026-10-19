@@ -1,0 +1,17 @@
+/* Textseiten (Über, Datenschutz, Impressum) */
+:root{--navy:#0B3045;--slip:#087F9C;--bg:#F3F6F8;--ink:#263746;--muted:#566878;--line:#DCE5EA;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);line-height:1.6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg)}
+header{background:var(--navy);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:14px}
+header a{color:#fff;text-decoration:none;font-weight:700;font-size:20px;letter-spacing:-.02em}
+header small{color:#9CCEE3}
+main{max-width:760px;margin:0 auto;padding:28px 20px 56px;background:#fff;min-height:calc(100dvh - 60px)}
+h1{font-size:28px;line-height:1.2;margin:0 0 8px;letter-spacing:-.01em}
+h2{font-size:19px;margin:30px 0 6px;color:var(--navy)}
+p,li{max-width:68ch}
+a{color:#06667E}
+.todo{background:#FFF6E3;border:1px solid #EBC77A;border-radius:12px;padding:12px 16px;color:#5A3E00;margin:16px 0}
+.ph{background:#FFE9A8;padding:0 4px;border-radius:4px;font-weight:600}
+ul{padding-left:22px}
+footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+:focus-visible{outline:3px solid #1C8FB8;outline-offset:2px}

@@ -1,0 +1,52 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "node/1356228723",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.51853,
+          50.75814
+        ]
+      },
+      "properties": {
+        "type": "slip",
+        "name": "Beispiel-Slipanlage (nur Schema-Beispiel)",
+        "locality": "Windeck",
+        "locality_kind": "nearest",
+        "water": {
+          "name": "Beispielsee",
+          "approx": true,
+          "dist_m": 12
+        },
+        "access": "public",
+        "fee": false,
+        "fee_note": null,
+        "opening_hours": null,
+        "operator": null,
+        "website": null,
+        "phone": null,
+        "email": null,
+        "description": null,
+        "attrs": {
+          "surface": "concrete",
+          "incline": null,
+          "motorboat": true,
+          "parking": null,
+          "trailer_parking": null
+        },
+        "osm": {
+          "type": "node",
+          "id": 1356228723,
+          "timestamp": "2025-01-01T00:00:00Z"
+        },
+        "also_osm": [],
+        "source": "osm",
+        "imported": "2026-10-01",
+        "updated": "2025-01-01"
+      }
+    }
+  ]
+}

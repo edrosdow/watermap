@@ -1,0 +1,333 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "id": "node/1356228723",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.51853,
+     50.75814
+    ]
+   },
+   "properties": {
+    "type": "slip",
+    "name": "Wasserzugangsstelle Windeck",
+    "locality": "Windeck",
+    "locality_kind": "legacy",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "surface": null,
+     "incline": null,
+     "motorboat": null,
+     "parking": null,
+     "trailer_parking": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1356228723,
+     "timestamp": null
+    },
+    "source": "osm",
+    "imported": null
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/558852253",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     6.98617,
+     50.89989
+    ]
+   },
+   "properties": {
+    "type": "slip",
+    "name": "Slipanlage Köln-Raderthal",
+    "locality": "Köln",
+    "locality_kind": "legacy",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "surface": null,
+     "incline": null,
+     "motorboat": null,
+     "parking": null,
+     "trailer_parking": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 558852253,
+     "timestamp": null
+    },
+    "source": "osm",
+    "imported": null
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1612848660",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.0143,
+     50.86381
+    ]
+   },
+   "properties": {
+    "type": "slip",
+    "name": "Nato-Rampe Köln-Sürth",
+    "locality": "Köln",
+    "locality_kind": "legacy",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "surface": null,
+     "incline": null,
+     "motorboat": null,
+     "parking": null,
+     "trailer_parking": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1612848660,
+     "timestamp": null
+    },
+    "source": "osm",
+    "imported": null
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/3721283270",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.14839,
+     51.39792
+    ]
+   },
+   "properties": {
+    "type": "slip",
+    "name": "Slipanlage für Rettungsboote",
+    "locality": "Hattingen",
+    "locality_kind": "legacy",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "surface": null,
+     "incline": null,
+     "motorboat": null,
+     "parking": null,
+     "trailer_parking": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 3721283270,
+     "timestamp": null
+    },
+    "source": "osm",
+    "imported": null
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/475936602",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     6.7149,
+     51.49851
+    ]
+   },
+   "properties": {
+    "type": "slip",
+    "name": "Natorampe Woltershof",
+    "locality": "Duisburg",
+    "locality_kind": "legacy",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "surface": null,
+     "incline": null,
+     "motorboat": null,
+     "parking": null,
+     "trailer_parking": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 475936602,
+     "timestamp": null
+    },
+    "source": "osm",
+    "imported": null
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/1717483380",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     7.0196,
+     50.86155
+    ]
+   },
+   "properties": {
+    "type": "slip",
+    "name": "Nato-Rampe Köln-Zündorf",
+    "locality": "Köln",
+    "locality_kind": "legacy",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "surface": null,
+     "incline": null,
+     "motorboat": null,
+     "parking": null,
+     "trailer_parking": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 1717483380,
+     "timestamp": null
+    },
+    "source": "osm",
+    "imported": null
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/766904482",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     6.7242,
+     51.44762
+    ]
+   },
+   "properties": {
+    "type": "slip",
+    "name": "Slipanlage Am Bört",
+    "locality": "Duisburg",
+    "locality_kind": "legacy",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "surface": null,
+     "incline": null,
+     "motorboat": null,
+     "parking": null,
+     "trailer_parking": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 766904482,
+     "timestamp": null
+    },
+    "source": "osm",
+    "imported": null
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "node/6614296314",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     6.61787,
+     51.3942
+    ]
+   },
+   "properties": {
+    "type": "slip",
+    "name": "Sliprampe Moers",
+    "locality": "Moers",
+    "locality_kind": "legacy",
+    "water": null,
+    "access": null,
+    "fee": null,
+    "fee_note": null,
+    "opening_hours": null,
+    "operator": null,
+    "website": null,
+    "phone": null,
+    "email": null,
+    "description": null,
+    "attrs": {
+     "surface": null,
+     "incline": null,
+     "motorboat": null,
+     "parking": null,
+     "trailer_parking": null
+    },
+    "osm": {
+     "type": "node",
+     "id": 6614296314,
+     "timestamp": null
+    },
+    "source": "osm",
+    "imported": null
+   }
+  }
+ ]
+}
