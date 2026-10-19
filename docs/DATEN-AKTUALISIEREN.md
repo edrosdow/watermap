@@ -12,7 +12,7 @@ Voraussetzung: [Python 3](https://www.python.org/downloads/) installiert, Intern
 Dauer: bei ganz Deutschland **etwa 30 bis 90 Minuten**, weil die 16 Bundesländer nacheinander und mit Pausen abgefragt werden (die öffentlichen Overpass-Server drosseln bei Last). Das Fenster dabei offen lassen. Am Ende steht „Fertig“, danach `public` bei Netlify neu hochladen.
 
 ### B) Automatisch (GitHub Action)
-Mit Variante B aus der Installationsanleitung (Git-Verbindung): Die Datei `.github/workflows/update-osm-data.yml` läuft am 1. jedes Monats und auf Knopfdruck (*GitHub → Actions → OSM-Daten aktualisieren → Run workflow*). Sie testet, importiert, prüft und committet nur, wenn sich etwas geändert hat. Netlify veröffentlicht automatisch.
+Mit Variante B aus der Installationsanleitung (Git-Verbindung): Die Datei `.github/workflows/update-osm-data.yml` läuft am 1. jedes Monats und auf Knopfdruck (*GitHub → Actions → OSM-Daten aktualisieren → Run workflow*). Sie testet, importiert, prüft und committet nur, wenn sich etwas geändert hat. Beim Start per Hand gibt es das Häkchen „Nur Standorte holen, ohne Ort/Gewässer“: Das ist deutlich schneller und eignet sich für den ersten Lauf; ein späterer Lauf ohne Häkchen ergänzt Ort und Gewässer. Netlify veröffentlicht automatisch.
 
 ### C) Von Hand über Overpass Turbo (wenn das Skript keinen Zugriff hat)
 1. https://overpass-turbo.eu öffnen, die Abfrage aus `scripts/import_osm.py` (Funktion `queries`, Eintrag `main`) einfügen, *Run*, dann *Export → raw OSM data (JSON)* speichern.
@@ -24,6 +24,7 @@ Mit Variante B aus der Installationsanleitung (Git-Verbindung): Die Datei `.gith
 | `--dry-run` | rechnen und berichten, nichts schreiben |
 | `--no-enrich` | keine Zuordnung von Ort und Gewässer (schneller, weniger Abfragen) |
 | `--input DATEI` | gespeicherte Overpass-Antwort statt Live-Abruf |
+| `--budget MIN` | nach so vielen Minuten (Standard 150) keine Orte/Gewässer mehr abfragen; die Standorte selbst werden immer vollständig geholt |
 | `--force` | Schutz gegen Datenverlust übergehen |
 | `--area DE` | Standard: ganz Deutschland, Bundesland für Bundesland |
 | `--area DE-NW` | nur ein Bundesland; mehrere mit Komma: `DE-NW,DE-NI` |

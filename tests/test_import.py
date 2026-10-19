@@ -254,6 +254,36 @@ class RegionTests(unittest.TestCase):
         self.assertEqual(got["enrich"]["water"], "teilweise (ohne: DE-NI)")
         self.assertEqual(len(got["places"]), 1)
 
+    def test_budget_skips_enrichment_but_never_locations(self):
+        fetch, calls = self.fake()
+        # Budget (500) wird erst nach der ersten Region überschritten: Region 1 mit Zugaben, Region 2 ohne
+        clock = iter([0, 0, 0, 0, 1000, 1000, 1000]).__next__
+        got = imp.fetch_regions(["DE-NW", "DE-NI"], fetch=fetch, pause=0, log=lambda *a: None, deadline=500, clock=clock)
+        self.assertEqual(sum("out meta center" in q for q in calls), 2)       # beide Regionen: Standorte vollständig
+        self.assertEqual(len(calls), 4)                                       # 2 × Standorte + 2 Zugaben (nur NW)
+        self.assertEqual(got["enrich"], {"places": "teilweise (ohne: DE-NI)", "water": "teilweise (ohne: DE-NI)"})
+
+    def test_budget_already_spent_gives_failed_status(self):
+        fetch, calls = self.fake()
+        got = imp.fetch_regions(["DE-NW"], fetch=fetch, pause=0, log=lambda *a: None, deadline=-1)
+        self.assertEqual(len(calls), 1)
+        self.assertIsNone(got["places"])
+        self.assertEqual(got["enrich"], {"places": "fehlgeschlagen", "water": "fehlgeschlagen"})
+
+    def test_enrichment_uses_its_own_fetcher(self):
+        main_calls, extra_calls = [], []
+        base, _ = self.fake()
+
+        def fetch(q):
+            main_calls.append(q)
+            return base(q)
+
+        def fetch_enrich(q):
+            extra_calls.append(q)
+            return base(q)
+        imp.fetch_regions(["DE-NW"], fetch=fetch, fetch_enrich=fetch_enrich, pause=0, log=lambda *a: None)
+        self.assertEqual((len(main_calls), len(extra_calls)), (1, 2))
+
     def test_no_enrich_skips_extra_queries(self):
         fetch, calls = self.fake()
         got = imp.fetch_regions(["DE-NW", "DE-NI"], enrich=False, fetch=fetch, pause=0, log=lambda *a: None)

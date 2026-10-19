@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import functools
 import json
 import math
 import pathlib
@@ -488,18 +489,21 @@ def overpass(query: str, log=print, servers=SERVERS, attempts=2) -> dict:
     raise FetchError(last)
 
 
-def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3):
+def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3, fetch_enrich=None, deadline=None,
+                  clock=time.monotonic):
     """Ruft Standorte (+ Orte, Gewässer) Region für Region ab und führt die Antworten zusammen.
 
     Schlägt die Standort-Abfrage EINER Region fehl, bricht alles ab (FetchError): Ein Datensatz mit
     einem fehlenden Bundesland wäre schlechter als der alte. Orte/Gewässer sind nur Zugaben – fehlen sie
     für eine Region, bleibt dort Ort bzw. Gewässer „Nicht bekannt“.
     """
+    fetch_enrich = fetch_enrich or fetch
+    started = clock()
     mains, places, waters, stamps = [], [], [], []
     failed = {"places": [], "water": []}
     for i, area in enumerate(areas, 1):
         qs = queries(area)
-        log(f"[{i}/{len(areas)}] {area}")
+        log(f"[{i}/{len(areas)}] {area}  (nach {(clock() - started) / 60:.0f} min)")
         if i > 1:
             time.sleep(pause)
         try:
@@ -513,9 +517,13 @@ def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3):
         if not enrich or not mains[-1]:
             continue    # leere Region: keine Zuordnung nötig
         for key, bucket in (("places", places), ("water", waters)):
+            if deadline is not None and clock() > deadline:
+                failed[key].append(area)
+                log(f"  ! Zeitbudget aufgebraucht – '{key}' für {area} übersprungen")
+                continue
             time.sleep(pause)
             try:
-                bucket.append(fetch(qs[key])["elements"])
+                bucket.append(fetch_enrich(qs[key])["elements"])
             except FetchError as exc:
                 failed[key].append(area)
                 log(f"  ! Zuordnung '{key}' für {area} übersprungen: {exc}")
@@ -598,11 +606,17 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=str(DEFAULT_OUT), help="Datenordner (Standard: public/data)")
     ap.add_argument("--area", default=DEFAULT_AREA,
                     help="Region: DE = ganz Deutschland (Standard), DE-NW = ein Bundesland, mehrere mit Komma, AT = anderes Land")
+    ap.add_argument("--budget", type=float, default=150,
+                    help="Minuten, nach denen keine Orte/Gewässer mehr abgefragt werden (Standard: 150; die Standorte selbst werden immer vollständig geholt)")
     ap.add_argument("--bbox", help="Gültigkeitsbereich süd,west,nord,ost (nur nötig außerhalb Deutschlands)")
     ap.add_argument("--no-enrich", action="store_true", help="Orte und Gewässer nicht zuordnen")
     ap.add_argument("--dry-run", action="store_true", help="nichts schreiben")
     ap.add_argument("--force", action="store_true", help="Schutz vor starkem Datenverlust übergehen")
     args = ap.parse_args(argv)
+    try:
+        sys.stdout.reconfigure(line_buffering=True)    # Fortschritt sofort sichtbar (z. B. im GitHub-Log)
+    except (AttributeError, ValueError):
+        pass
     out_dir = pathlib.Path(args.out)
     today = dt.date.today().isoformat()
     try:
@@ -630,7 +644,9 @@ def main(argv=None) -> int:
     else:
         print(f"Overpass-Abruf für {args.area} ({len(areas)} Region{'en' if len(areas) != 1 else ''}) …")
         try:
-            got = fetch_regions(areas, enrich=not args.no_enrich)
+            got = fetch_regions(areas, enrich=not args.no_enrich,
+                                fetch_enrich=functools.partial(overpass, attempts=1),   # Zugaben dürfen nicht lange blockieren
+                                deadline=time.monotonic() + args.budget * 60)
         except FetchError as exc:
             print(f"✗ Abruf fehlgeschlagen: {exc}\nEs wurden KEINE Dateien verändert.", file=sys.stderr)
             return 2
