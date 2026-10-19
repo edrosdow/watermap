@@ -2,8 +2,13 @@ name: OSM-Daten aktualisieren
 
 on:
   schedule:
-    - cron: "17 3 1 * *"
+    - cron: "17 3 1 * *"   # am 1. jedes Monats, 03:17 UTC
   workflow_dispatch:
+    inputs:
+      ohne_zuordnung:
+        description: "Nur Standorte holen, ohne Ort/Gewässer (deutlich schneller, z. B. für den ersten Lauf)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -11,7 +16,7 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 180   # ganz Deutschland, Bundesland für Bundesland
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -20,7 +25,9 @@ jobs:
       - name: Tests
         run: python3 -I -m unittest discover -s tests -p "test_*.py"
       - name: Import aus OpenStreetMap
-        run: python3 scripts/import_osm.py
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: python3 -u scripts/import_osm.py ${{ inputs.ohne_zuordnung && '--no-enrich' || '' }}
       - name: Daten prüfen
         run: python3 scripts/validate_data.py
       - name: Änderungen übernehmen
