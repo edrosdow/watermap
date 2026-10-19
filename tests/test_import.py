@@ -240,10 +240,24 @@ class RegionTests(unittest.TestCase):
         self.assertEqual(got["enrich"], {"places": "ok", "water": "ok"})
 
     def test_main_failure_in_one_region_aborts_everything(self):
-        fetch, _ = self.fake(fail=('"DE-NI"',))
+        fetch, calls = self.fake(fail=('"DE-NI"',))
         with self.assertRaises(imp.FetchError) as ctx:
-            imp.fetch_regions(["DE-NW", "DE-NI"], fetch=fetch, pause=0, log=lambda *a: None)
+            imp.fetch_regions(["DE-NW", "DE-NI"], fetch=fetch, pause=0, retry_wait=0, log=lambda *a: None)
         self.assertIn("DE-NI", str(ctx.exception))
+        self.assertEqual(sum('"DE-NI"' in q for q in calls), 2)              # eine zweite Runde, dann Abbruch
+
+    def test_main_failure_recovers_in_second_round(self):
+        base, calls = self.fake()
+        failed = []
+
+        def fetch(q):
+            if '"DE-NI"' in q and "out meta center" in q and not failed:
+                failed.append(q)
+                raise imp.FetchError("simuliert")
+            return base(q)
+        got = imp.fetch_regions(["DE-NW", "DE-NI"], fetch=fetch, pause=0, retry_wait=0, log=lambda *a: None)
+        self.assertEqual(len(failed), 1)
+        self.assertEqual(got["enrich"], {"places": "ok", "water": "ok"})
 
     def test_enrichment_failure_is_partial_not_fatal(self):
         def fetch(query, _f=self.fake()[0]):

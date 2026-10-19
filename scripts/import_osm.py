@@ -493,7 +493,7 @@ def overpass(query: str, log=print, servers=SERVERS, attempts=2, allow_empty=Tru
 
 
 def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3, fetch_enrich=None, deadline=None,
-                  clock=time.monotonic):
+                  clock=time.monotonic, retry_wait=120):
     """Ruft Standorte (+ Orte, Gewässer) Region für Region ab und führt die Antworten zusammen.
 
     Schlägt die Standort-Abfrage EINER Region fehl, bricht alles ab (FetchError): Ein Datensatz mit
@@ -511,8 +511,14 @@ def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3, fetch_
             time.sleep(pause)
         try:
             payload = fetch(qs["main"])
-        except FetchError as exc:
-            raise FetchError(f"{area}: {exc}") from exc
+        except FetchError:
+            # Overpass-Server sind oft nur kurz überlastet: eine zweite Runde nach einer Pause
+            log(f"  ! {area}: alle Server fehlgeschlagen – neuer Versuch in {retry_wait} s")
+            time.sleep(retry_wait)
+            try:
+                payload = fetch(qs["main"])
+            except FetchError as exc:
+                raise FetchError(f"{area}: {exc}") from exc
         mains.append(payload["elements"])
         ts = (payload.get("osm3s") or {}).get("timestamp_osm_base")
         if ts:
