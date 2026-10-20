@@ -1,7 +1,7 @@
 {
  "schema_version": 2,
  "region": "DE",
- "generated": "2026-10-19T23:29:28+00:00",
+ "generated": "2026-10-20T21:48:58+00:00",
  "source": "OpenStreetMap (Overpass API)",
  "license": "ODbL 1.0",
  "attribution": "© OpenStreetMap-Mitwirkende",
@@ -18,45 +18,64 @@
    "overrides": "community/overrides.json",
    "prices": "community/prices.json"
   },
-  "hafeninfo": "hafeninfo.json"
+  "hafeninfo": "hafeninfo.json",
+  "extras": "osm/extras.geojson"
  },
  "categories": {
   "slip": {
-   "raw": 3584,
+   "raw": 3585,
    "rejected": 4,
-   "merged_duplicates": 279,
-   "final": 3301,
-   "with_name": 445,
-   "with_locality": 3291,
-   "with_water": 2327,
-   "with_nearest_place": 3291
+   "merged_duplicates": 281,
+   "final": 3300,
+   "with_name": 444,
+   "with_locality": 1578,
+   "with_water": 1673,
+   "with_nearest_place": 1578
   },
   "marina": {
-   "raw": 2761,
+   "raw": 2759,
    "rejected": 1,
    "merged_duplicates": 158,
-   "final": 2602,
-   "with_name": 2374,
-   "with_locality": 2599,
-   "with_water": 1895,
-   "with_nearest_place": 2399
+   "final": 2600,
+   "with_name": 2372,
+   "with_locality": 1754,
+   "with_water": 1389,
+   "with_nearest_place": 1554
   },
   "fuel": {
    "raw": 151,
    "rejected": 0,
    "merged_duplicates": 9,
    "final": 142,
-   "with_name": 87,
-   "with_locality": 142,
-   "with_water": 84,
-   "with_nearest_place": 129
+   "with_name": 86,
+   "with_locality": 97,
+   "with_water": 54,
+   "with_nearest_place": 84
   }
  },
- "total": 6045,
- "osm_base_timestamp": "2026-10-19T22:20:16Z",
+ "total": 6042,
+ "osm_base_timestamp": "2026-05-31T22:37:44Z",
  "source_detail": "Overpass API",
  "enrichment": {
-  "places": "ok",
-  "water": "ok"
+  "places": "teilweise (ohne: DE-BW, DE-BY, DE-HE, DE-RP, DE-SL, DE-SN, DE-ST, DE-SH, DE-TH)",
+  "water": "teilweise (ohne: DE-MV, DE-RP, DE-SL, DE-SN, DE-ST, DE-SH, DE-TH)",
+  "extras": "teilweise (Schleusen/Brücken/Kanu/Verleih: teilweise (ohne: DE-BY, DE-HH, DE-NW, DE-RP, DE-SL, DE-SN, DE-ST, DE-SH, DE-TH); Service: teilweise (ohne: DE-BE, DE-MV, DE-NW, DE-RP, DE-SL, DE-SN, DE-ST, DE-SH, DE-TH); Wehre: teilweise (ohne: DE-BW, DE-BY, DE-BE, DE-NI, DE-NW, DE-RP, DE-SL, DE-SN, DE-ST, DE-SH, DE-TH))"
+ },
+ "extras": {
+  "generated": "2026-10-20",
+  "counts": {
+   "lock": 427,
+   "bridge": 1380,
+   "weir": 193,
+   "canoe": 1198,
+   "rental": 521,
+   "toilets": 1643,
+   "water": 504,
+   "food": 5121,
+   "rest": 1045,
+   "parking": 5719
+  },
+  "total": 17751,
+  "status": "teilweise (Schleusen/Brücken/Kanu/Verleih: teilweise (ohne: DE-BY, DE-HH, DE-NW, DE-RP, DE-SL, DE-SN, DE-ST, DE-SH, DE-TH); Service: teilweise (ohne: DE-BE, DE-MV, DE-NW, DE-RP, DE-SL, DE-SN, DE-ST, DE-SH, DE-TH); Wehre: teilweise (ohne: DE-BW, DE-BY, DE-BE, DE-NI, DE-NW, DE-RP, DE-SL, DE-SN, DE-ST, DE-SH, DE-TH))"
  }
 }
