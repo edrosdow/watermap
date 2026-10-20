@@ -1,5 +1,13 @@
 [
   {
+    "zeit": "2026-10-20T22:49:32.449Z",
+    "bereich": "preis",
+    "aktion": "abgelehnt",
+    "standort_id": "node/3523381293",
+    "standort_name": "Aral",
+    "beschreibung": "Diesel 2.80 €/l"
+  },
+  {
     "zeit": "2026-10-20T22:49:13.785Z",
     "bereich": "hinweis",
     "aktion": "verworfen",
