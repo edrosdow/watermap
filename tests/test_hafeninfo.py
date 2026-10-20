@@ -102,6 +102,10 @@ class RuleTests(unittest.TestCase):
         got = hi.extract_rules([{"url": "u", "text": "Gastlieger bis 6 m\n15,00 € | 90,00 €\nGastlieger bis 8 m\nauf Anfrage"}])
         self.assertEqual([(f["value"], f["price_eur"]) for f in got], [("Gastlieger bis 6 m 15,00 € 90,00 €", 15.0), ("Gastlieger bis 8 m", None)])
 
+    def test_first_keyword_is_the_subject(self):
+        got = self.lines("20,00 € Wohnmobil inkl. Strom / Tag\n3,00 € / lfd. Meter / Tag inkl. Strom\nStrom 0,70 € pro kWh")
+        self.assertEqual([k for k, *_ in got], ["wohnmobil", "gast_liegeplatz", "strom"])
+
     def test_form_boxes_and_dot_leaders_are_removed_but_quote_stays_verbatim(self):
         text = ("Sommerliegeplatz 01.04. - 31.10. Ja: ( ) Nein: ( )\n"
                 "Stromanschluss: 3,70 € Grundgebühr pro Monat Ja: ( ) Nein: ( )\n"

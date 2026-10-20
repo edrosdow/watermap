@@ -452,7 +452,7 @@ def first_price(line: str):
 
 # Nur diese Überschriften geben ihr Stichwort an die Preiszeilen darunter weiter (höchstens HEADING_SPAN Zeilen).
 # „Hund“, „Duschen“, „WLAN“ … stehen oft als einzelnes Wort über ganz anderen Preisen (z. B. Bootsmiete).
-RULES_VERSION = 5          # bei Änderungen an den Regeln erhöhen: dann werden auch unveränderte Websites neu ausgewertet
+RULES_VERSION = 6          # bei Änderungen an den Regeln erhöhen: dann werden auch unveränderte Websites neu ausgewertet
 HEADING_KEYS = {"gast_liegeplatz", "dauerliegeplatz", "strom", "wasser", "faekalien", "diesel", "benzin", "parken",
                 "wohnmobil", "slip", "kran", "winterlager", "entsorgung"}
 HEADING_SPAN = 8
@@ -496,7 +496,8 @@ def extract_rules(pages, per_key=4, total=40) -> list[dict]:
             if not line or len(line) > 240:
                 heading_key = None
                 continue
-            keys = [k for k, rx in _RULES.items() if rx.search(line)]
+            hits = {k: m.start() for k, rx in _RULES.items() if (m := rx.search(line))}
+            keys = sorted(hits, key=hits.get)              # zuerst genanntes Stichwort ist das Thema („Wohnmobil inkl. Strom“)
             price = first_price(line)
             informative = price is not None or bool(_INFO.search(line))
             if not informative:

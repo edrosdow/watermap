@@ -1,5 +1,7 @@
 // Hafeninfos, automatisch von den Websites der Marinas ausgelesen (scripts/hafeninfo.py → data/hafeninfo.json).
-// Jede Angabe trägt ein wörtliches Zitat und die Quelle; Text wird nur als Text eingefügt.
+// Sie füllen die Tabelle „Eigenschaften“: leere Felder („Nicht bekannt“) bekommen die Angabe der Website, weitere
+// Angaben (Diesel, Kran …) kommen als eigene Zeilen dazu. Jede Angabe ist eine wörtliche Zeile der Website;
+// Text wird nur als Text eingefügt.
 import { CONFIG } from './config.js';
 import { h } from './dom.js';
 import { icon } from './icons.js';
@@ -16,13 +18,11 @@ const LABELS = {
   hafenmeister: 'Hafenmeister', funk: 'UKW-Kanal', saison: 'Saison / Zeiten', haustiere: 'Hunde / Haustiere', sonstiges: 'Sonstiges',
 };
 
-const GROUPS = [
-  ['Liegeplatz', ['gast_liegeplatz', 'dauerliegeplatz', 'max_laenge', 'wassertiefe']],
-  ['Versorgung', ['strom', 'wasser', 'faekalien', 'diesel', 'benzin', 'entsorgung']],
-  ['Ausstattung', ['duschen', 'toiletten', 'waschmaschine', 'wlan', 'restaurant', 'einkauf', 'parken', 'wohnmobil', 'haustiere']],
-  ['Technik und Service', ['slip', 'kran', 'winterlager', 'werkstatt', 'bootsverleih']],
-  ['Kontakt und Zeiten', ['hafenmeister', 'funk', 'saison', 'sonstiges']],
-];
+// Vorhandene Zeilen der Eigenschaften-Tabelle (model.js describeFacts) → Schlüssel der Website-Angaben
+const FILLS = {
+  'Liegeplatzgebühr': 'gast_liegeplatz', 'Stromanschluss': 'strom', 'Frischwasser': 'wasser', 'Toiletten': 'toiletten',
+  'Duschen': 'duschen', 'Restaurant': 'restaurant', 'Hafenmeister': 'hafenmeister', 'Öffnungszeiten': 'saison',
+};
 
 let loading = null;
 export function loadHafeninfo(meta) {
@@ -38,43 +38,46 @@ export function loadHafeninfo(meta) {
 
 const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
 
-/** Abschnitt für die Detailansicht; leer (null), wenn es für diesen Ort nichts gibt. Füllt sich selbst. */
-export function hafeninfoSection(meta, id) {
-  if (!meta?.files?.hafeninfo) return null;
-  const section = h('section', { class: 'block hi-block', hidden: true });
-  loadHafeninfo(meta).then((places) => {
-    const entry = places?.[id];
-    const facts = (entry?.facts || []).filter(f => LABELS[f.key]);
-    if (!facts.length) return;
-    section.replaceChildren(...render(entry, facts));
-    section.hidden = false;
-  }, () => { /* Zusatzinfo – fehlt die Datei, bleibt der Abschnitt weg */ });
-  return section;
+/** Zeilen [{label, value, note}] + Website-Angaben → Zeilen mit `web: [{value, quote}]` für Werte von der Website. */
+export function mergeFacts(rows, facts) {
+  const by = {};
+  for (const f of facts) if (LABELS[f.key] && f.key !== 'sonstiges') (by[f.key] ||= []).push({ value: f.value, quote: f.quote });
+  const used = new Set();
+  const out = rows.map((r) => {
+    const key = FILLS[r.label];
+    if (key && by[key]) { used.add(key); return { ...r, web: by[key] }; }
+    if (r.label === 'Gastliegeplätze' && !r.value && by.gast_liegeplatz) return { ...r, value: 'Ja', web: [] };  // Preis für Gäste → es gibt Gastplätze
+    return r;
+  });
+  // alles Übrige als eigene Zeilen (nur wenn vorhanden), in der Reihenfolge von LABELS
+  const extra = Object.keys(LABELS).filter(k => by[k] && !used.has(k)).map(k => ({ label: LABELS[k], value: null, web: by[k] }));
+  const at = out.findIndex(r => r.label === 'Öffnungszeiten' || r.label === 'Betreiber');
+  out.splice(at < 0 ? out.length : at, 0, ...extra);
+  return out;
 }
 
-function render(entry, facts) {
-  const out = [h('h3', { text: 'Hafeninfos laut Website' })];
+/**
+ * Füllt die Eigenschaften-Tabelle nach, sobald die Hafeninfos geladen sind.
+ * render(rows) baut die Tabelle (detail.js); block ist der Abschnitt mit der Tabelle.
+ */
+export function enrichFacts(meta, id) {
+  if (!meta?.files?.hafeninfo) return null;
+  return (block, rows, render) => loadHafeninfo(meta).then((places) => {
+    const entry = places?.[id];
+    const facts = (entry?.facts || []).filter(f => LABELS[f.key] && f.key !== 'sonstiges');
+    if (!facts.length || !block.isConnected) return;
+    block.querySelector('dl.facts')?.replaceWith(render(mergeFacts(rows, facts)));
+    block.append(sourceNote(entry));
+  }, () => { /* Zusatzinfo – fehlt die Datei, bleibt die Tabelle wie sie ist */ });
+}
+
+function sourceNote(entry) {
   const age = ageInDays(entry.checked);
-  for (const [title, keys] of GROUPS) {
-    const rows = facts.filter(f => keys.includes(f.key));
-    if (!rows.length) continue;
-    out.push(h('p', { class: 'hi-group', text: title }),
-      h('dl', { class: 'facts hi-facts' }, rows.map(f => [
-        h('dt', { text: LABELS[f.key] }),
-        h('dd', { title: `„${f.quote}“` }, f.value),
-      ])));
-  }
+  const stale = age !== null && age > CONFIG.HAFENINFO_STALE_DAYS;
   const src = safeHttpUrl(entry.source);
-  const verbatim = String(entry.method || '').startsWith('regeln');          // Werte sind wörtliche Zeilen der Website – Belege wären doppelt
-  if (!verbatim) out.push(h('details', { class: 'hi-proof' }, h('summary', { text: 'Belege von der Website' }),
-    h('ul', {}, facts.map(f => {
-      const u = safeHttpUrl(f.url);
-      return h('li', {}, h('strong', { text: `${LABELS[f.key]}: ` }), `„${f.quote}“ `,
-        u ? h('a', { href: u, target: '_blank', rel: 'noopener noreferrer', text: host(u) + (new URL(u).pathname.length > 1 ? new URL(u).pathname : '') }) : null);
-    }))));
-  out.push(h('div', { class: 'note ' + (age !== null && age > CONFIG.HAFENINFO_STALE_DAYS ? 'note-warn' : 'note-info'), html: icon(age !== null && age > CONFIG.HAFENINFO_STALE_DAYS ? 'alert' : 'info', 18) },
-    h('span', {}, verbatim ? 'Wörtliche Auszüge, automatisch von der Website des Hafens übernommen' : 'Automatisch von der Website des Hafens ausgelesen',
+  return h('div', { class: 'note hi-note ' + (stale ? 'note-warn' : 'note-info'), html: icon(stale ? 'alert' : 'globe', 18) },
+    h('span', {}, 'Mit ', h('span', { class: 'web-mark', html: icon('globe', 13), 'aria-hidden': 'true' }),
+      ' markierte Angaben stehen wörtlich so auf der Website des Hafens',
       src ? [' (', h('a', { href: src, target: '_blank', rel: 'noopener noreferrer', text: host(src) }), ')'] : '',
-      `, Stand ${formatDate(entry.checked) || 'unbekannt'}. Ohne Gewähr – Preise und Leistungen können sich geändert haben; im Zweifel beim Hafen nachfragen.`)));
-  return out;
+      `, Stand ${formatDate(entry.checked) || 'unbekannt'}. Automatisch übernommen, ohne Gewähr – Preise und Leistungen können sich geändert haben.`));
 }

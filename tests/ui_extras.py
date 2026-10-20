@@ -117,17 +117,25 @@ with sync_playwright() as p:
         pg.locator('#detail .nearby-list').scroll_into_view_if_needed()
         pg.screenshot(path=str(SHOTS / f'{name}_1_in_der_naehe.png'))
 
-        # Hafeninfos laut Website
-        pg.wait_for_selector('#detail .hi-block:not([hidden])', timeout=8000)
-        hi = pg.inner_text('#detail .hi-block')
-        check('Hafeninfos laut Website' in hi and 'Gastliegeplatz' in hi and '3,00 € pro lfd. Meter und Tag' in hi and 'Fäkalienabsaugung' in hi,
-              f'{name}: Hafeninfos mit Gruppen und Werten')
+        # Hafeninfos laut Website füllen die Eigenschaften-Tabelle
+        pg.wait_for_selector('#detail .facts-block .hi-note', timeout=8000)
+        fb = pg.locator('#detail .facts-block')
+        hi = fb.inner_text()
+        check('Eigenschaften' in hi and 'Gastliegeplatz' in hi and '3,00 € pro lfd. Meter und Tag' in hi and 'Fäkalienabsaugung' in hi and 'WLAN' in hi,
+              f'{name}: Website-Angaben als Zeilen der Eigenschaften')
+        check(pg.locator('#detail .facts-block .facts').count() == 1 and pg.locator('#detail .hi-block').count() == 0, f'{name}: eine Tabelle, kein eigener Block')
+        check(pg.locator('#detail .facts-block dd.from-web .web-mark').count() == 3, f'{name}: Website-Werte markiert')
         check('darf nicht erscheinen' not in hi, f'{name}: unbekannte Schlüssel werden nicht gezeigt')
         check('marina-test.de' in hi and 'ohne gewähr' in hi.lower() and '20.10.2026' in hi, f'{name}: Quelle, Datum und Hinweis')
-        check('<img' in hi and not pg.evaluate('window.__xss') and pg.locator('#detail .hi-block img').count() == 0, f'{name}: HTML in Daten bleibt Text')
-        pg.locator('#detail .hi-proof summary').click()   # Testdaten ohne method → Auswertung mit Belegen
-        check('„3,00 € / lfd. Meter / Tag' in pg.inner_text('#detail .hi-proof'), f'{name}: Belege aufklappbar')
-        pg.locator('#detail .hi-block').scroll_into_view_if_needed(); pg.screenshot(path=str(SHOTS / f'{name}_0_hafeninfo.png'))
+        check('<img' in hi and not pg.evaluate('window.__xss') and pg.locator('#detail .facts-block img').count() == 0, f'{name}: HTML in Daten bleibt Text')
+        check(fb.locator('.web-line').first.get_attribute('title') == '„3,00 € / lfd. Meter / Tag (Berechnung mind. 7m) inkl. Strom“', f'{name}: Zitat als Tooltip')
+        rows = pg.evaluate("""() => import('./js/hafeninfo.js').then(m => m.mergeFacts(
+            ['Zugang', 'Gastliegeplätze', 'Liegeplatzgebühr', 'Stromanschluss', 'Öffnungszeiten'].map(label => ({ label, value: null })),
+            [{ key: 'gast_liegeplatz', value: '3 €' }, { key: 'strom', value: '0,70 €/kWh' }, { key: 'kran', value: 'Kran bis 10 t' }, { key: 'sonstiges', value: 'x' }])
+            .map(r => [r.label, r.value, (r.web || []).map(w => w.value).join('|')]))""")
+        check(rows == [['Zugang', None, ''], ['Gastliegeplätze', 'Ja', ''], ['Liegeplatzgebühr', None, '3 €'], ['Stromanschluss', None, '0,70 €/kWh'],
+                       ['Kran', None, 'Kran bis 10 t'], ['Öffnungszeiten', None, '']], f'{name}: Marina-Felder werden gefüllt, Rest als eigene Zeilen ({rows})')
+        fb.scroll_into_view_if_needed(); pg.screenshot(path=str(SHOTS / f'{name}_0_hafeninfo.png'))
 
         # Eintrag anklicken → Detail
         pg.locator('#detail .nearby-item', has_text='Hubbrücke').click()

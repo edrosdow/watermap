@@ -13,7 +13,7 @@ import { renderDetail } from './detail.js';
 import { loadGauges, loadHistory, renderGaugeDetail } from './pegel.js';
 import { weatherSection } from './wetter.js';
 import { GROUPS, loadExtras, renderExtraDetail, nearbySection, glyph } from './extras.js';
-import { hafeninfoSection } from './hafeninfo.js';
+import { enrichFacts } from './hafeninfo.js';
 
 const state = {
   places: [], byId: new Map(), index: [], meta: null, issues: [], invalid: 0,
@@ -274,7 +274,7 @@ function selectPlace(id, { fly = true, updateHash = true } = {}) {
 function showDetail(p) {
   const [head, body] = renderDetail(p, {
     user: state.user,
-    hafeninfo: hafeninfoSection(state.meta, p.id),
+    enrichFacts: enrichFacts(state.meta, p.id),
     weather: weatherSection(p.lat, p.lon),
     nearby: hasExtras() ? nearbySection(extrasList(), p.lat, p.lon, { onSelect: (id) => selectExtra(id) }) : null,
     actions: {
