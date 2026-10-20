@@ -1,6 +1,6 @@
 // Zentrale Einstellungen. Hier – und nur hier – werden Dienste und Grenzwerte angepasst.
 export const CONFIG = {
-  VERSION: '7.3.0',
+  VERSION: '7.4.0',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -37,6 +37,9 @@ export const CONFIG = {
   // „In der Nähe“ (Schleusen, Toiletten, Parkplätze … aus osm/extras.geojson)
   NEARBY_EXTRAS_M: 500,
   NEARBY_EXTRAS_MAX: 12,
+
+  // Hafeninfos von den Websites (data/hafeninfo.json): ab diesem Alter als möglicherweise veraltet markieren
+  HAFENINFO_STALE_DAYS: 365,
 
   // Liste
   LIST_LIMIT: 120,

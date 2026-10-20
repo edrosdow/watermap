@@ -21,6 +21,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: daten-schreiben          # nie gleichzeitig mit den Hafeninfos committen
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -46,6 +50,7 @@ jobs:
             git config user.email "watermap-bot@users.noreply.github.com"
             git add public/data/osm public/data/meta.json
             git commit -m "OSM-Daten aktualisiert ($(date -u +%F))"
+            git pull --rebase
             git push
           else
             echo "Keine Änderungen."

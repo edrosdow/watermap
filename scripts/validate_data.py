@@ -160,6 +160,24 @@ def main(argv=None) -> int:
                 seen_x.add(fid)
             n_extras = len(seen_x)
 
+    # Hafeninfos (von Websites ausgelesen): jede Angabe braucht bekannten Schlüssel, Zitat und http(s)-Quelle
+    if files.get("hafeninfo"):
+        doc = load(d / files["hafeninfo"], rep) or {}
+        hplaces = doc.get("places")
+        if not isinstance(hplaces, dict):
+            rep.err(files["hafeninfo"], "places muss ein Objekt sein")
+        else:
+            keys = set(doc.get("schema") or {})
+            for pid, entry in hplaces.items():
+                for i, f in enumerate((entry or {}).get("facts") or []):
+                    where = f"{files['hafeninfo']} {pid} [{i}]"
+                    if keys and f.get("key") not in keys:
+                        rep.err(where, f"unbekannter Schlüssel {f.get('key')!r}")
+                    if not f.get("value") or not f.get("quote"):
+                        rep.err(where, "Wert oder Zitat fehlt")
+                    if not str(f.get("url", "")).lower().startswith(("http://", "https://")):
+                        rep.err(where, "Quelle ist keine http(s)-Adresse")
+
     places = load(d / com["places"], rep) or []
     if not isinstance(places, list):
         rep.err(com["places"], "muss eine Liste sein")

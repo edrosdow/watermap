@@ -1,0 +1,64 @@
+name: Hafeninfos aktualisieren
+
+# Liest Preise und Service-Angaben von den Websites der Marinas (scripts/hafeninfo.py) – mit Claude, über die
+# Message Batches API. Braucht das Repository-Secret ANTHROPIC_API_KEY (Settings → Secrets and variables → Actions).
+
+on:
+  schedule:
+    - cron: "41 4 8 * *"   # am 8. jedes Monats, 04:41 UTC (nach dem OSM-Import am 1.)
+  workflow_dispatch:
+    inputs:
+      anzahl:
+        description: "Höchstens so viele Häfen in diesem Lauf (grob 0,04 US-$ je Hafen beim ersten Lesen; 1400 = alle)"
+        type: string
+        default: "25"
+      nur:
+        description: "Nur bestimmte Häfen, z. B. node/123,way/456 (leer = automatisch die am längsten nicht geprüften)"
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daten-schreiben          # nie gleichzeitig mit dem OSM-Import committen
+  cancel-in-progress: false
+
+jobs:
+  hafeninfo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tests
+        run: python3 -I -m unittest discover -s tests -p "test_*.py"
+      - name: Claude-SDK installieren
+        run: python3 -m pip install --quiet "anthropic>=1.15,<2"
+      - name: Hafen-Websites auslesen
+        env:
+          PYTHONUNBUFFERED: "1"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANZAHL: ${{ inputs.anzahl || '200' }}
+          NUR: ${{ inputs.nur || '' }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::Secret ANTHROPIC_API_KEY fehlt (Settings → Secrets and variables → Actions)."; exit 1
+          fi
+          if [ -n "$NUR" ]; then python3 -u scripts/hafeninfo.py --only "$NUR"; else python3 -u scripts/hafeninfo.py --limit "$ANZAHL"; fi
+      - name: Daten prüfen
+        run: python3 scripts/validate_data.py
+      - name: Änderungen übernehmen
+        run: |
+          if [ -n "$(git status --porcelain public/data)" ]; then
+            git config user.name "watermap-bot"
+            git config user.email "watermap-bot@users.noreply.github.com"
+            git add public/data/hafeninfo.json public/data/meta.json
+            git commit -m "Hafeninfos aktualisiert ($(date -u +%F))"
+            git pull --rebase
+            git push
+          else
+            echo "Keine Änderungen."
+          fi

@@ -49,6 +49,14 @@ EXTRAS = [
 FC = json.dumps({'type': 'FeatureCollection', 'features': EXTRAS})
 META = json.loads((ROOT / 'data/meta.json').read_text(encoding='utf-8'))
 META.setdefault('files', {})['extras'] = 'osm/extras.geojson'
+META['files']['hafeninfo'] = 'hafeninfo.json'
+HAFENINFO = json.dumps({'generated': '2026-10-20', 'places': {ANCHOR['id']: {
+    'checked': '2026-10-20', 'status': 'ok', 'source': 'https://www.marina-test.de/', 'facts': [
+        {'key': 'gast_liegeplatz', 'value': '3,00 € pro lfd. Meter und Tag (mind. 7 m), inkl. Strom', 'price_eur': 3.0,
+         'quote': '3,00 € / lfd. Meter / Tag (Berechnung mind. 7m) inkl. Strom', 'url': 'https://www.marina-test.de/hafen/'},
+        {'key': 'faekalien', 'value': '15,00 € pro Tank (bis 300 l)', 'price_eur': 15.0, 'quote': '15,00 € Fäkalienabsaugung pro Tank (bis 300L)', 'url': 'https://www.marina-test.de/hafen/'},
+        {'key': 'wlan', 'value': '<img src=x onerror="window.__xss=1">kostenlos', 'price_eur': None, 'quote': 'WLAN - kostenlos', 'url': 'https://www.marina-test.de/hafen/'},
+        {'key': 'unbekannt', 'value': 'darf nicht erscheinen', 'price_eur': None, 'quote': 'x', 'url': 'https://www.marina-test.de/'}]}}})
 
 extras_calls = []
 mode = {'missing': False}
@@ -81,6 +89,7 @@ with sync_playwright() as p:
         ctx = b.new_context(viewport=vp, device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile, locale='de-DE', service_workers='block')
         ctx.route('**/data/meta.json', lambda r: r.fulfill(status=200, content_type='application/json', body=json.dumps(META)))
         ctx.route('**/data/osm/extras.geojson', extras)
+        ctx.route('**/data/hafeninfo.json', lambda r: r.fulfill(status=200, content_type='application/json', body=HAFENINFO))
         ctx.route('**/api/wetter/**', EMPTY_WX)
         ctx.route(re.compile(r'https://([a-c]\.)?tile\.openstreetmap\.org/.*'), lambda r: r.fulfill(status=200, content_type='image/png', body=TILE))
         ctx.route(re.compile(r'https://(?!([a-c]\.)?tile\.openstreetmap\.org).*'), lambda r: r.abort())
@@ -107,6 +116,18 @@ with sync_playwright() as p:
         check('null' not in txt and 'undefined' not in txt, f'{name}: kein „null“/„undefined“ im Text')
         pg.locator('#detail .nearby-list').scroll_into_view_if_needed()
         pg.screenshot(path=str(SHOTS / f'{name}_1_in_der_naehe.png'))
+
+        # Hafeninfos laut Website
+        pg.wait_for_selector('#detail .hi-block:not([hidden])', timeout=8000)
+        hi = pg.inner_text('#detail .hi-block')
+        check('Hafeninfos laut Website' in hi and 'Gastliegeplatz' in hi and '3,00 € pro lfd. Meter und Tag' in hi and 'Fäkalienabsaugung' in hi,
+              f'{name}: Hafeninfos mit Gruppen und Werten')
+        check('darf nicht erscheinen' not in hi, f'{name}: unbekannte Schlüssel werden nicht gezeigt')
+        check('marina-test.de' in hi and 'ohne gewähr' in hi.lower() and '20.10.2026' in hi, f'{name}: Quelle, Datum und Hinweis')
+        check('<img' in hi and not pg.evaluate('window.__xss') and pg.locator('#detail .hi-block img').count() == 0, f'{name}: HTML in Daten bleibt Text')
+        pg.locator('#detail .hi-proof summary').click()
+        check('„3,00 € / lfd. Meter / Tag' in pg.inner_text('#detail .hi-proof'), f'{name}: Belege aufklappbar')
+        pg.locator('#detail .hi-block').scroll_into_view_if_needed(); pg.screenshot(path=str(SHOTS / f'{name}_0_hafeninfo.png'))
 
         # Eintrag anklicken → Detail
         pg.locator('#detail .nearby-item', has_text='Hubbrücke').click()

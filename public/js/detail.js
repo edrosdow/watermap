@@ -11,7 +11,7 @@ import { CONFIG } from './config.js';
 /**
  * actions = { close, share, report, addPhoto, reportPrice, onFavorite }
  */
-export function renderDetail(p, { user, actions, weather, nearby }) {
+export function renderDetail(p, { user, actions, weather, nearby, hafeninfo }) {
   const isFav = favorites.has(p.id);
   const sub = subtitle(p);
   const dist = user ? haversine(user.lat, user.lon, p.lat, p.lon) : null;
@@ -42,6 +42,8 @@ export function renderDetail(p, { user, actions, weather, nearby }) {
     : h('div', { class: 'note note-warn', html: icon('alert', 18) }, h('span', { text: 'Aus OpenStreetMap, nicht vor Ort geprüft. Zugang, Gebühren und Eignung bitte vor der Anfahrt klären.' })));
 
   if (p.description) body.append(h('p', { class: 'desc', text: p.description }));
+
+  if (hafeninfo) body.append(hafeninfo);
 
   if (weather) body.append(weather);
 
