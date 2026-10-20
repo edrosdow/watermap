@@ -119,8 +119,10 @@ async function publish(gh, env, sub, fetchFn, today) {
 }
 
 export async function handle(req, { env, siteId, fetchFn = fetch, today = new Date().toISOString().slice(0, 10) }) {
-  if (!env.FOTO_ADMIN_PASSWORT || !env.NETLIFY_API_TOKEN || !env.GITHUB_TOKEN) {
-    return json(503, { fehler: 'Foto-Freigabe ist noch nicht eingerichtet (Umgebungsvariablen fehlen).' });
+  const missing = ['FOTO_ADMIN_PASSWORT', 'NETLIFY_API_TOKEN', 'GITHUB_TOKEN'].filter(k => !env[k]);
+  if (missing.length) {
+    return json(503, { fehler: `Foto-Freigabe ist noch nicht eingerichtet – in diesem Deploy fehlt: ${missing.join(', ')}. ` +
+      'Werte müssen auch für „Deploy Previews“ gesetzt sein; danach neu deployen.' });
   }
   if (!passwordOk(req.headers.get('x-passwort'), env.FOTO_ADMIN_PASSWORT)) return json(401, { fehler: 'Passwort falsch.' });
   const { nf, gh } = api(env, fetchFn);
@@ -157,4 +159,11 @@ export async function handle(req, { env, siteId, fetchFn = fetch, today = new Da
   }
 }
 
-export default async (req, context) => handle(req, { env: process.env, siteId: context?.site?.id || process.env.SITE_ID });
+const KEYS = ['FOTO_ADMIN_PASSWORT', 'NETLIFY_API_TOKEN', 'GITHUB_TOKEN', 'GITHUB_REPO', 'FOTO_BRANCH'];
+function runtimeEnv() {
+  // Netlify.env (Functions-Laufzeit) kennt auch als „Secret“ markierte Werte; process.env als Rückfall
+  const nenv = globalThis.Netlify?.env;
+  return Object.fromEntries(KEYS.map(k => [k, nenv?.get?.(k) || process.env[k] || '']));
+}
+
+export default async (req, context) => handle(req, { env: runtimeEnv(), siteId: context?.site?.id || process.env.SITE_ID });
