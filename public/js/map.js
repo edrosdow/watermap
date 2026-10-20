@@ -33,7 +33,8 @@ function loadScript(urls, isLoaded) {
   });
 }
 
-const sources = (lib, kind) => (CONFIG.USE_LOCAL_LIBS ? [lib.local[kind]] : []).concat(lib[kind]);
+// Selbst gehostet: keine CDN-Ausweichadressen (sonst gehen doch IP-Adressen an Dritte; die CSP blockt sie ohnehin)
+const sources = (lib, kind) => (CONFIG.USE_LOCAL_LIBS ? [lib.local[kind]] : lib[kind]);
 
 export async function loadMapLibraries() {
   const lf = CONFIG.LIBS.leaflet, cl = CONFIG.LIBS.cluster;

@@ -37,8 +37,9 @@ export const CONFIG = {
 
   // Bibliotheken (Leaflet + MarkerCluster). Standard: CDN mit Ausweichadresse.
   // Selbst hosten (empfohlen für Produktion, siehe docs/INSTALLATION.md): `python3 scripts/vendor_libs.py`
-  // lädt die Dateien nach public/vendor und setzt dieses Flag auf true.
-  USE_LOCAL_LIBS: false,
+  // lädt die Dateien nach public/vendor und setzt dieses Flag auf true. Die CDN-Adressen werden dann nicht mehr
+  // genutzt; wer zurück auf CDN will, muss unpkg.com/cdn.jsdelivr.net auch wieder in public/_headers (CSP) eintragen.
+  USE_LOCAL_LIBS: true,
   LIBS: {
     leaflet: {
       css: ['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'],

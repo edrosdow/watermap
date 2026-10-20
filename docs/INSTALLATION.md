@@ -27,14 +27,14 @@ Nach dem ersten Veröffentlichen: Netlify → *Forms*. Es müssen vier Formulare
 - Meldungen erscheinen **nie** automatisch auf der Karte. Ablauf: [MODERATION.md](MODERATION.md).
 
 ## 4. Rechtstexte
-`public/impressum.html` und `public/datenschutz.html` sind **Vorlagen** mit gelb markierten Feldern. Vor dem öffentlichen Start ausfüllen und – am besten – juristisch prüfen lassen. Ich bin kein Rechtsanwalt; die Texte beschreiben, was die App technisch tut.
+`public/impressum.html` und `public/datenschutz.html` sind ausgefüllt (Stand Oktober 2026). Vor dem öffentlichen Start am besten juristisch prüfen lassen und den Vertrag zur Auftragsverarbeitung mit Netlify abschließen, auf den die Datenschutzerklärung verweist. Ich bin kein Rechtsanwalt; die Texte beschreiben, was die App technisch tut.
 
-## 5. Kartenmodul selbst hosten (empfohlen)
-Standardmäßig lädt die App Leaflet von unpkg/jsDelivr. Für Produktion besser selbst hosten (schneller, datenschutzfreundlicher, unabhängig):
+## 5. Kartenmodul selbst hosten (eingerichtet)
+Leaflet 1.9.4 und MarkerCluster 1.5.3 liegen in `public/vendor/`, `USE_LOCAL_LIBS` ist `true`, und die CSP lässt unpkg/jsDelivr nicht mehr zu. Zum Neuladen der Dateien (z. B. bei einem Update):
 ```
 python3 scripts/vendor_libs.py
 ```
-Das lädt die Dateien nach `public/vendor/` und stellt `USE_LOCAL_LIBS` in `public/js/config.js` um. Danach `public` neu veröffentlichen und den CDN-Hinweis in der Datenschutzerklärung streichen.
+Das lädt die Dateien nach `public/vendor/` und stellt `USE_LOCAL_LIBS` in `public/js/config.js` um. Zurück auf CDN: Flag auf `false` und unpkg.com/cdn.jsdelivr.net wieder in `public/_headers` (script-src, style-src, img-src) sowie in die Datenschutzerklärung aufnehmen.
 
 ## 6. Kartenkacheln
 Der Standard-Kachelserver von OpenStreetMap (`tile.openstreetmap.org`) ist nur für geringe Last gedacht ([Nutzungsrichtlinie](https://operations.osmfoundation.org/policies/tiles/)). Bei wachsender Nutzung einen Anbieter in `public/js/config.js` (`TILE_URL`) eintragen. Passe dann auch `img-src` in `public/_headers` an.

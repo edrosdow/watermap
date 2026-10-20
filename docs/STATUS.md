@@ -23,9 +23,9 @@ Stand: Oktober 2026. Ehrliche Übersicht gegenüber dem Master-Prompt.
 | Punkt | Stand |
 |---|---|
 | **Import Deutschland (alle 16 Bundesländer)** | **Hier nicht ausgeführt** (Overpass gesperrt). Der Importer ist gegen ein synthetisches Fixture und simulierte Server-Antworten getestet. Ein Lauf nur für NRW (Vorversion) lief per GitHub Action erfolgreich (582 Standorte). Der Deutschland-Lauf ist neu und hat bei dir noch nicht stattgefunden. Im Ordner sind weiterhin nur die 8 Slipanlagen aus V6; die echten Daten entstehen beim ersten Lauf. Danach Ergebnisse stichprobenartig mit OSM vergleichen. |
-| **Echte Kartendarstellung** | Die Oberflächentests nutzten einen Leaflet-Ersatz. Leaflet/MarkerCluster und die Kacheln wurden **nicht** im Browser mit echtem Leaflet getestet. Der Code folgt der Leaflet-1.9-API; nach dem ersten Deploy bitte Karte, Clustering, Marker-Klick, Standortwahl und Zoom auf echtem Gerät durchklicken. |
-| CSP | Strenge Richtlinie. Die App wurde im Test mit exakt diesen Headern ausgeliefert (Leaflet-Ersatz, keine Verstöße), aber nicht mit echtem Leaflet und echten Kacheln. Falls nach dem Deploy die Karte leer bleibt: Browser-Konsole öffnen, geblockte Domains in `public/_headers` ergänzen. |
-| Kartenlibraries selbst gehostet | Skript vorhanden (`vendor_libs.py`), nicht ausgeführt (kein Netzzugriff). |
+| **Echte Kartendarstellung** | Mit echtem Leaflet 1.9.4 + MarkerCluster 1.5.3 in Chromium (Desktop + Mobil) getestet: Clustering, Marker-Klick, Detail, Deep-Link, Standort. Kacheln nur als Platzhalter (OSM-Kachelserver im Test nicht erreichbar). Auf echtem Gerät und in Safari/Firefox noch durchklicken. |
+| CSP | Strenge Richtlinie, ohne CDNs. Mit echtem Leaflet und exakt diesen Headern getestet: keine Verstöße. Echte Kacheln und Nominatim nicht live geprüft. Falls nach dem Deploy die Karte leer bleibt: Browser-Konsole öffnen, geblockte Domains in `public/_headers` ergänzen. |
+| Kartenlibraries selbst gehostet | Erledigt: `public/vendor/`, `USE_LOCAL_LIBS: true`. |
 | Netlify Forms live | Formulare sind vorbereitet und Felder abgeglichen; Zustellung kann erst auf Netlify getestet werden. |
 | Bewertungen (Master-Prompt §5) | Nicht umgesetzt – brauchen Nutzerkonten (V8/Phase 2). Es gibt bewusst keine Platzhalter-Sterne. |
 | Marker-Clustering-Details, Safari/Firefox | Nur Chromium getestet. |
@@ -33,7 +33,7 @@ Stand: Oktober 2026. Ehrliche Übersicht gegenüber dem Master-Prompt.
 | Serverseitige Upload-Prüfung | Phase 2. Bis dahin: Dateien vor Veröffentlichung selbst ansehen. |
 | Werbung | V10, bewusst nicht enthalten. |
 | Deutschlandweit | V9. `START_MODE: 'germany'` in `config.js` vorbereitet. |
-| Impressum/Datenschutz | Vorlagen, von dir auszufüllen und rechtlich zu prüfen. |
+| Impressum/Datenschutz | Ausgefüllt. Rechtlich nicht geprüft. Vertrag zur Auftragsverarbeitung mit Netlify muss abgeschlossen sein. Vor Einführung von Werbung (V10) Erklärung und ggf. Einwilligungsbanner ergänzen. |
 
 ## Abweichungen vom Master-Prompt
 - **Startansicht:** Die App zoomt auf die vorhandenen Daten (bei Deutschland-Import: ganz Deutschland). Umstellbar: `START_MODE` in `config.js`.
@@ -42,7 +42,7 @@ Stand: Oktober 2026. Ehrliche Übersicht gegenüber dem Master-Prompt.
 
 ## Nächste Schritte (empfohlen)
 1. Auf Netlify veröffentlichen, Import laufen lassen, Ergebnis stichprobenartig prüfen.
-2. Karte auf Smartphone und Desktop durchklicken, Konsole auf CSP-Fehler prüfen.
-3. Impressum und Datenschutz ausfüllen.
+2. Karte auf echtem Smartphone (Safari) und Desktop durchklicken, Konsole auf CSP-Fehler prüfen.
+3. Vertrag zur Auftragsverarbeitung mit Netlify abschließen.
 4. Echte Meldung durch alle vier Formulare schicken und im Netlify-Dashboard prüfen.
 5. Dann V8: Supabase, Admin-Bereich, serverseitige Upload-Prüfung.
