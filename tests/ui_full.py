@@ -289,6 +289,13 @@ def desktop(b):
     check('5 MB' in pg.inner_text('#dlg .form-status'), 'Zu großes Foto wird abgelehnt')
     check(len(posts) == 2, 'Abgelehnte Fotos erzeugen keine Anfrage')
     pg.click('#dlg-close')
+    # Aus der Detailansicht: Standort steht fest (auch bei Standorten jenseits der ersten 600 der Liste)
+    last = pg.evaluate("window.__watermap.state.places.map(p => p.id).sort().pop()")
+    pg.evaluate(f"window.__watermap.selectPlace({json.dumps(last)})"); pg.wait_for_selector('#detail button:has-text("Foto hinzufügen")')
+    pg.click('#detail button:has-text("Foto hinzufügen")'); pg.wait_for_selector('#dlg[open]')
+    check(pg.locator('#dlg select[name=standort_id]').count() == 0 and pg.locator('#dlg .fixed-place').count() == 1, 'Foto aus Detail: keine Standortauswahl')
+    check(pg.locator('#dlg input[name=standort_id]').get_attribute('value') == last, f'Foto aus Detail: Standort-ID fest ({last})')
+    pg.click('#dlg-close')
     # Preis-Formular
     pg.click('#btn-menu'); pg.click('#menu .menu-item:has-text("Kraftstoffpreis")'); pg.wait_for_selector('#dlg[open]')
     opts = pg.locator('select[name=tankstelle_id] option').count()
@@ -341,7 +348,8 @@ def mobile(b):
     pg.evaluate("window.__watermap.selectPlace('node/7000')"); pg.wait_for_timeout(300)
     pg.screenshot(path=str(SHOTS / 'full_mobile_fuel.png'))
     pg.click('#detail button:has-text("Preis melden")'); pg.wait_for_selector('#dlg[open]')
-    check(pg.input_value('select[name=tankstelle_id]') == 'node/7000', 'Preis-Formular aus Detail: Tankstelle vorausgewählt')
+    check(pg.locator('#dlg select[name=tankstelle_id]').count() == 0 and pg.locator('#dlg input[name=tankstelle_id]').get_attribute('value') == 'node/7000',
+          'Preis-Formular aus Detail: Tankstelle steht fest')
     pg.screenshot(path=str(SHOTS / 'full_mobile_form.png'))
     check(pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), 'Formular ohne horizontales Scrollen')
     check(not pg.errs, f'Keine JS-Fehler {pg.errs[:3]}')

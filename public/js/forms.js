@@ -219,6 +219,16 @@ export function openForm(formName, ctx, preset = {}) {
     const nameName = isPrice ? 'tankstelle_name' : 'standort_name';
     const pool = ctx.places.filter(p => (isPrice ? p.type === 'fuel' : true))
       .sort((a, b) => displayName(a).localeCompare(displayName(b), 'de'));
+    // Aus der Detailansicht geöffnet: Standort steht fest, keine Auswahl nötig
+    const fixed = preset.standort_id && pool.find(p => p.id === preset.standort_id);
+    if (fixed) {
+      const idIn = h('input', { type: 'hidden', name: idName, value: fixed.id });
+      const nameIn = h('input', { type: 'hidden', name: nameName, value: displayName(fixed) });
+      controls[idName] = idIn; controls[nameName] = nameIn;
+      return h('div', { class: 'field' },
+        h('span', { class: 'field-label', text: isPrice ? 'Bootstankstelle' : 'Standort' }),
+        h('p', { class: 'fixed-place', text: displayName(fixed) + (fixed.locality ? ` – ${fixed.locality}` : '') }), idIn, nameIn);
+    }
     const sel = h('select', { name: idName, 'aria-label': isPrice ? 'Bootstankstelle' : 'Standort' },
       h('option', { value: '', text: isPrice ? 'Bootstankstelle wählen …' : 'Standort wählen …' }),
       pool.slice(0, 600).map(p => h('option', { value: p.id, text: displayName(p) + (p.locality ? ` – ${p.locality}` : '') })),
