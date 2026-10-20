@@ -11,6 +11,7 @@ import { favorites, prefs } from './favorites.js';
 import { openForm } from './forms.js';
 import { renderDetail } from './detail.js';
 import { loadGauges, loadHistory, renderGaugeDetail } from './pegel.js';
+import { weatherSection } from './wetter.js';
 
 const state = {
   places: [], byId: new Map(), index: [], meta: null, issues: [], invalid: 0,
@@ -258,6 +259,7 @@ function selectPlace(id, { fly = true, updateHash = true } = {}) {
 function showDetail(p) {
   const [head, body] = renderDetail(p, {
     user: state.user,
+    weather: weatherSection(p.lat, p.lon),
     actions: {
       close: closeDetail,
       onFavorite: () => { favorites.toggle(p.id); showDetail(p); if (state.tab === 'fav' || true) renderList(); updateTabs(); },
@@ -343,7 +345,7 @@ function selectGauge(id, { fly = true } = {}) {
   state.gaugeId = id;
   state.map?.selectGauge(id);
   const dist = state.user ? formatDistance(haversine(state.user.lat, state.user.lon, g.lat, g.lon)) : null;
-  const [head, body] = renderGaugeDetail(g, { history: loadHistory(id), close: closeDetail, user: state.user, distance: dist });
+  const [head, body] = renderGaugeDetail(g, { history: loadHistory(id), close: closeDetail, user: state.user, distance: dist, weather: weatherSection(g.lat, g.lon) });
   mountDetail(head, body);
   if (state.map && fly) state.map.reveal(g, { zoom: 12, inset: detailInset() });
   history.replaceState(null, '', '#g=' + encodeURIComponent(id));

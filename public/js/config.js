@@ -1,6 +1,6 @@
 // Zentrale Einstellungen. Hier – und nur hier – werden Dienste und Grenzwerte angepasst.
 export const CONFIG = {
-  VERSION: '7.1.0',
+  VERSION: '7.2.0',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -27,6 +27,12 @@ export const CONFIG = {
   PEGEL_STALE_HOURS: 6,        // ältere Messwerte gelten als veraltet
   PEGEL_HISTORY_DAYS: 7,
   PEGEL_ATTRIBUTION: 'Pegel: <a href="https://www.pegelonline.wsv.de" target="_blank" rel="noopener noreferrer">WSV/PEGELONLINE</a>',
+
+  // Wetter und Wind (DWD-Daten über Bright Sky). Abruf über die eigene Domain (public/_redirects).
+  WETTER_BASE: '/api/wetter/',
+  WETTER_HOURS: 48,            // Vorhersagezeitraum im Diagramm
+  WETTER_CACHE_MIN: 10,        // gleiche Stelle innerhalb dieser Zeit nicht erneut abfragen
+  WETTER_GUST_HINT_KMH: 39,    // ab 6 Bft Böen ein Hinweis (gerade für kleine Boote)
 
   // Liste
   LIST_LIMIT: 120,

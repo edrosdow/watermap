@@ -39,6 +39,9 @@ Das lädt die Dateien nach `public/vendor/` und stellt `USE_LOCAL_LIBS` in `publ
 ## 6. Pegelstände
 Die Ebene „Pegel“ lädt Daten von PEGELONLINE über die eigene Domain: `public/_redirects` leitet `/api/pegel/*` auf Netlify an `https://www.pegelonline.wsv.de/webservices/rest-api/v2/` weiter. Ohne Netlify (z. B. lokal) braucht es eine entsprechende Weiterleitung, sonst meldet die App, dass die Pegeldaten nicht erreichbar sind. Lizenz der Daten: Datenlizenz Deutschland – Zero – 2.0.
 
+### Wetter und Wind
+`/api/wetter/*` wird ebenso an `https://api.brightsky.dev/` weitergeleitet (Daten des Deutschen Wetterdienstes, Namensnennung „Datenbasis: Deutscher Wetterdienst“ steht in der App).
+
 ## 7. Kartenkacheln
 Der Standard-Kachelserver von OpenStreetMap (`tile.openstreetmap.org`) ist nur für geringe Last gedacht ([Nutzungsrichtlinie](https://operations.osmfoundation.org/policies/tiles/)). Bei wachsender Nutzung einen Anbieter in `public/js/config.js` (`TILE_URL`) eintragen. Passe dann auch `img-src` in `public/_headers` an.
 

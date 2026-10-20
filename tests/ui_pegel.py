@@ -102,6 +102,9 @@ with sync_playwright() as p:
         ctx = b.new_context(viewport=vp, device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile, locale='de-DE',
                             timezone_id='Europe/Berlin', service_workers='block')
         ctx.route('**/api/pegel/**', api)
+        # Das Pegel-Detail lädt auch das Wetter (eigener Test: ui_wetter.py) – hier nur leere Antworten
+        ctx.route('**/api/wetter/**', lambda r: r.fulfill(status=200, content_type='application/json',
+                  body=json.dumps({'current_weather': {'weather': None}, 'weather': {'weather': []}}.get(urlparse(r.request.url).path.rsplit('/', 1)[1], {'alerts': []}))))
         ctx.route(re.compile(r'https://([a-c]\.)?tile\.openstreetmap\.org/.*'), lambda r: r.fulfill(status=200, content_type='image/png', body=TILE))
         ctx.route(re.compile(r'https://(?!([a-c]\.)?tile\.openstreetmap\.org).*'), lambda r: (foreign.append(r.request.url), r.abort()))
         ctx.add_init_script(CSP_HOOK)

@@ -19,6 +19,7 @@ Stand: Oktober 2026. Ehrliche Übersicht gegenüber dem Master-Prompt.
 - Sicherheits-Header (CSP u. a.), kein HTML aus Daten (XSS getestet), keine Schlüssel im Frontend.
 - Rechtstexte als Vorlagen, OSM-Namensnennung.
 - Pegelstände (PEGELONLINE, Bundeswasserstraßen): zuschaltbare Ebene mit Zustandsfarben, Wert und Trend am Marker, Detail mit Einordnung MNW/MW/MHW/HSW und 7-Tage-Verlauf. Abruf über `/api/pegel/` (Netlify-Weiterleitung in `public/_redirects`). Test: `tests/ui_pegel.py`.
+- Wetter und Wind (DWD-Daten über Bright Sky) in jeder Detailansicht: amtliche Warnungen nach Schwere, aktueller Wind mit Beaufort und Richtung, Hinweis bei Böen ab 6 Bft, 48-Stunden-Winddiagramm, 3-Stunden-Übersicht. Abruf über `/api/wetter/` (Netlify-Weiterleitung). Test: `tests/ui_wetter.py`.
 
 ## Nicht gemacht oder nicht geprüft
 | Punkt | Stand |
@@ -27,6 +28,7 @@ Stand: Oktober 2026. Ehrliche Übersicht gegenüber dem Master-Prompt.
 | **Echte Kartendarstellung** | Mit echtem Leaflet 1.9.4 + MarkerCluster 1.5.3 in Chromium (Desktop + Mobil) getestet: Clustering, Marker-Klick, Detail, Deep-Link, Standort. Kacheln nur als Platzhalter (OSM-Kachelserver im Test nicht erreichbar). Auf echtem Gerät und in Safari/Firefox noch durchklicken. |
 | CSP | Strenge Richtlinie, ohne CDNs. Mit echtem Leaflet und exakt diesen Headern getestet: keine Verstöße. Echte Kacheln und Nominatim nicht live geprüft. Falls nach dem Deploy die Karte leer bleibt: Browser-Konsole öffnen, geblockte Domains in `public/_headers` ergänzen. |
 | Kartenlibraries selbst gehostet | Erledigt: `public/vendor/`, `USE_LOCAL_LIBS: true`. |
+| Wetter live | Gegen Testdaten im Bright-Sky-Format getestet; Bright Sky und der DWD waren in der Entwicklungsumgebung nicht erreichbar. Nach dem Deploy: einen Standort öffnen, Abschnitt „Wetter und Wind“ prüfen. Bright Sky ist ein freier, nicht kommerzieller Dienst; fällt er dauerhaft weg, bräuchte es eine eigene Netlify-Funktion, die die DWD-Rohdaten (MOSMIX, CAP-Warnungen) aufbereitet. |
 | Pegel live | Gegen Testdaten im PEGELONLINE-Format getestet; die echte Schnittstelle und die Netlify-Weiterleitung waren in der Entwicklungsumgebung nicht erreichbar. Nach dem Deploy: Ebene „Pegel“ einschalten, einen Pegel öffnen. Lokal (`tests/serve.sh`) gibt es keine Weiterleitung – dort meldet die App „nicht erreichbar“. Nur Bundeswasserstraßen; Landespegel (z. B. an Seen) fehlen. |
 | Netlify Forms live | Formulare sind vorbereitet und Felder abgeglichen; Zustellung kann erst auf Netlify getestet werden. |
 | Bewertungen (Master-Prompt §5) | Nicht umgesetzt – brauchen Nutzerkonten (V8/Phase 2). Es gibt bewusst keine Platzhalter-Sterne. |

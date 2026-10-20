@@ -25,6 +25,9 @@ def route_libs(ctx):
         f = FIXTURE / rel
         return route.fulfill(status=200, content_type='application/json', body=f.read_bytes()) if f.is_file() else route.fulfill(status=404, body='')
     ctx.route('**/data/**', data)
+    # Details laden auch das Wetter (eigener Test: ui_wetter.py) – hier nur leere Antworten
+    ctx.route('**/api/wetter/**', lambda r: r.fulfill(status=200, content_type='application/json',
+              body=json.dumps({'current_weather': {'weather': None}, 'weather': {'weather': []}}.get(r.request.url.split('?')[0].rsplit('/', 1)[1], {'alerts': []}))))
     ctx.route('**/nominatim.openstreetmap.org/**', lambda r: r.fulfill(status=200, content_type='application/json',
         body=json.dumps([{'display_name': 'Möhnesee, Kreis Soest, Nordrhein-Westfalen, Deutschland', 'lat': '51.4817', 'lon': '8.1253', 'boundingbox': ['51.43', '51.53', '8.0', '8.25']}])))
 

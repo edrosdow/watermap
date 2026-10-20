@@ -4,6 +4,7 @@
 import { CONFIG } from './config.js';
 import { h } from './dom.js';
 import { icon } from './icons.js';
+import { s, niceStep, fmtNum } from './chart.js';
 
 // Zustände (Status-Farben: nie allein – immer mit Wert, Pfeil bzw. Symbol und Text)
 export const GAUGE_STATES = {
@@ -78,7 +79,6 @@ export async function loadHistory(id) {
 }
 
 // ------------------------------------------------------------------ Darstellung
-const fmtNum = (v) => Math.round(v).toLocaleString('de-DE');
 const TREND = { 1: '↑', 0: '→', '-1': '↓' };
 const TREND_TEXT = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' };
 
@@ -99,7 +99,7 @@ export function gaugeMarkerHtml(g, selected = false) {
 }
 
 /** Detailansicht eines Pegels. history = Promise mit Messreihe. */
-export function renderGaugeDetail(g, { history, close, user, distance }) {
+export function renderGaugeDetail(g, { history, close, user, distance, weather }) {
   const st = GAUGE_STATES[g.state];
   const head = h('header', { class: 'detail-head' },
     h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Schließen', title: 'Schließen', html: icon('close', 22), onclick: close }),
@@ -136,6 +136,8 @@ export function renderGaugeDetail(g, { history, close, user, distance }) {
     chartBox.replaceChildren(h('p', { class: 'unknown', text: 'Verlauf konnte nicht geladen werden.' }));
   });
 
+  if (weather) body.append(weather);
+
   body.append(h('p', { class: 'hint', text: 'Pegelwerte beziehen sich auf den Pegelnullpunkt, nicht auf die Wassertiefe. Für Fahrrinnentiefen gelten die amtlichen Bekanntmachungen.' }));
 
   body.append(h('footer', { class: 'source' },
@@ -167,13 +169,6 @@ function gaugeMeter(g) {
 }
 
 // ------------------------------------------------------------------ Verlaufsdiagramm (eigenes SVG, keine Bibliothek)
-const SVGNS = 'http://www.w3.org/2000/svg';
-const s = (tag, attrs = {}) => { const e = document.createElementNS(SVGNS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); return e; };
-
-function niceStep(range, target = 4) {
-  const raw = range / target, mag = 10 ** Math.floor(Math.log10(raw)), f = raw / mag;
-  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * mag;
-}
 
 export function historyChart(pts, g) {
   const W = 360, H = 176, L = 40, R = 46, T = 10, B = 24;
@@ -237,7 +232,8 @@ export function historyChart(pts, g) {
     tip.hidden = false;
     tip.textContent = `${new Date(p.t).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })} ${new Date(p.t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} · ${fmtNum(p.v)} ${g.unit}`;
     const left = cx / W * r.width;
-    tip.style.left = `${Math.min(Math.max(left, 60), r.width - 60)}px`;
+    const half = tip.offsetWidth / 2;   // nie über den Rand hinaus
+    tip.style.left = `${Math.min(Math.max(left, half), r.width - half)}px`;
   };
   const leave = () => { cross.setAttribute('visibility', 'hidden'); hdot.setAttribute('visibility', 'hidden'); tip.hidden = true; };
   hit.addEventListener('pointermove', move); hit.addEventListener('pointerdown', move); hit.addEventListener('pointerleave', leave);
