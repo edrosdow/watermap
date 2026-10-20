@@ -452,10 +452,12 @@ def first_price(line: str):
 
 # Nur diese Überschriften geben ihr Stichwort an die Preiszeilen darunter weiter (höchstens HEADING_SPAN Zeilen).
 # „Hund“, „Duschen“, „WLAN“ … stehen oft als einzelnes Wort über ganz anderen Preisen (z. B. Bootsmiete).
-RULES_VERSION = 2          # bei Änderungen an den Regeln erhöhen: dann werden auch unveränderte Websites neu ausgewertet
+RULES_VERSION = 3          # bei Änderungen an den Regeln erhöhen: dann werden auch unveränderte Websites neu ausgewertet
 HEADING_KEYS = {"gast_liegeplatz", "dauerliegeplatz", "strom", "wasser", "faekalien", "diesel", "benzin", "parken",
                 "wohnmobil", "slip", "kran", "winterlager", "entsorgung"}
 HEADING_SPAN = 8
+_CHECKBOX = re.compile(r"\b(?:ja|nein)\s*:?\s*\(\s*\)", re.I)        # PDF-Formular: „Ja: ( ) Nein: ( )“
+_LEADER = re.compile(r"\s*(?:\.\s?){4,}\s*|\s*…{2,}\s*")               # Punkt-Leitern in Preislisten
 # Seiten, die vor allem Charter, Bootsmiete oder Ferienwohnungen bepreisen, werden ganz übersprungen
 _RENTAL_PAGE = re.compile(r"charter|reisezeit|kaution|endreinigung|bettwäsche|wäschepaket|hausboot|ferienwohn|ferienhaus|"
                           r"mietboot|bootsmiete|motorbetriebsstunde|führerscheinfrei|wochenmiete", re.I)
@@ -477,7 +479,8 @@ def extract_rules(pages, per_key=4, total=40) -> list[dict]:
         is_pdf = p["url"].lower().split("?")[0].endswith(".pdf")
         heading_key, heading_text, since = None, "", 0
         for raw in p["text"].split("\n"):
-            line = raw.strip(" |-–•\t")
+            quote = raw.strip(" |-–•\t")
+            line = _LEADER.sub(" ", _CHECKBOX.sub("", quote)).strip(" |-–•\t")
             since += 1
             if not line or len(line) > 240:
                 heading_key = None
@@ -508,7 +511,7 @@ def extract_rules(pages, per_key=4, total=40) -> list[dict]:
             value = re.sub(r"\s*\|\s*", " ", line).strip()       # Tabellenzellen: Trenner nur fürs Zitat
             if inherited and len(value) <= 30 and heading_text:
                 value = f"{heading_text}: {value}"                  # „0,70 €“ allein sagt nichts
-            out.append({"key": key, "value": value, "price_eur": price, "quote": line, "page": pages.index(p) + 1})
+            out.append({"key": key, "value": value, "price_eur": price, "quote": quote, "page": pages.index(p) + 1})
             if len(out) >= total:
                 return out
     return out
@@ -567,13 +570,58 @@ def load_json(path, default):
         return default
 
 
-def pick(marinas, store, limit, only, max_age_days, today):
+# Wikis und Törnführer: Erfahrungsberichte („Liegegebühr 2011“), nicht die Angaben des Hafens selbst
+_NOT_OWN_SITE = re.compile(r"(^|\.)(skipperguide\.de|wikipedia\.org|wikivoyage\.org|wikiloc\.com)$|wiki\.[a-z]+$", re.I)
+
+
+def _site_key(url: str) -> str:
+    parts = urllib.parse.urlsplit(url.strip())
+    return (parts.hostname or "").removeprefix("www.") + parts.path.rstrip("/")
+
+
+def unusable_websites(marinas) -> set[str]:
+    """IDs, deren Website nicht die eigene ist: Wikis, oder eine Seite, die drei und mehr verschieden benannte Häfen
+    gemeinsam als Unterseite verlinken (Tourismusportal) – sonst stünden dort fremde Preise. Eine gemeinsame Startseite
+    (mehrere Stege eines Vereins) ist in Ordnung."""
+    names: dict[str, set[str]] = {}
+    for f in marinas:
+        url = f["properties"].get("website")
+        if url:
+            names.setdefault(_site_key(url), set()).add((f["properties"].get("name") or f["id"]).casefold())
+    bad = set()
+    for f in marinas:
+        url = f["properties"].get("website")
+        if url and (_NOT_OWN_SITE.search(urllib.parse.urlsplit(url.strip()).hostname or "") or ("/" in _site_key(url) and len(names[_site_key(url)]) >= 3)):
+            bad.add(f["id"])
+    return bad
+
+
+def shared_landings(marinas, store, crawled) -> set[str]:
+    """IDs, deren (verschiedene) Websites auf dieselbe Seite weiterleiten wie die eines anders benannten Hafens –
+    z. B. ein Portal, das alte Hafenseiten auf eine Sammelseite umlenkt."""
+    by_id = {f["id"]: f["properties"] for f in marinas}
+    landing = {fid: e.get("source") for fid, e in store.items() if e.get("status") == "ok" and e.get("source")}
+    landing.update({fid: pages[0]["url"] for fid, (_, pages) in crawled.items() if pages})
+    groups: dict[str, list[str]] = {}
+    for fid, url in landing.items():
+        if fid in by_id and by_id[fid].get("website"):
+            groups.setdefault(_site_key(url), []).append(fid)
+    bad = set()
+    for fids in groups.values():
+        sites = {_site_key(by_id[fid]["website"]) for fid in fids}
+        names = {(by_id[fid].get("name") or fid).casefold() for fid in fids}
+        if len(sites) >= 2 and len(names) >= 2:
+            bad.update(fids)
+    return bad
+
+
+def pick(marinas, store, limit, only, max_age_days, today, skip=frozenset()):
     """Häfen mit Website; zuerst nie geprüfte, dann die am längsten nicht geprüften."""
     cutoff = (today - dt.timedelta(days=max_age_days)).isoformat()
     cands = []
     for f in marinas:
         p = f["properties"]
-        if not p.get("website") or (only and f["id"] not in only):
+        if not p.get("website") or f["id"] in skip or (only and f["id"] not in only):
             continue
         last = (store.get(f["id"]) or {}).get("checked") or ""
         if only or last < cutoff:
@@ -610,7 +658,10 @@ def main(argv=None, client=None, fetcher=None) -> int:
     store_doc = load_json(out_path, {"generated": None, "places": {}})
     store = store_doc.setdefault("places", {})
     only = {s.strip() for s in args.only.split(",")} if args.only else None
-    todo = pick(marinas, store, args.limit, only, args.max_age_days, today)
+    skip = unusable_websites(marinas)
+    for fid in skip & store.keys():
+        del store[fid]                                  # früher von einer fremden Seite übernommen
+    todo = pick(marinas, store, args.limit, only, args.max_age_days, today, skip)
     print(f"{len(todo)} Häfen werden geprüft (von {sum(1 for f in marinas if f['properties'].get('website'))} mit Website).")
     if not todo:
         return 0
@@ -636,11 +687,18 @@ def main(argv=None, client=None, fetcher=None) -> int:
         return 0
 
     stamp = today.isoformat()
+    for fid in shared_landings(marinas, store, crawled):
+        if fid in crawled:
+            crawled[fid] = (crawled[fid][0], [])
+        store[fid] = {"checked": (store.get(fid) or {}).get("checked") or stamp, "status": "sammelseite"}
     requests, ids = [], {}
     for i, (fid, (f, pages)) in enumerate(crawled.items()):
         old = store.get(fid) or {}
         if not pages:
-            store[fid] = {**old, "checked": stamp, "status": "nicht erreichbar"}
+            if old.get("status") == "sammelseite":
+                old["checked"] = stamp
+            else:
+                store[fid] = {**old, "checked": stamp, "status": "nicht erreichbar"}
             continue
         h = pages_hash(pages)
         if old.get("hash") == h and old.get("status") == "ok" and old.get("method") == method:

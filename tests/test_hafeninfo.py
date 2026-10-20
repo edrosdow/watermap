@@ -91,6 +91,17 @@ class RuleTests(unittest.TestCase):
     def lines(self, text):
         return [(f["key"], f["value"], f["price_eur"]) for f in hi.extract_rules([{"url": "u", "text": text}])]
 
+    def test_form_boxes_and_dot_leaders_are_removed_but_quote_stays_verbatim(self):
+        text = ("Sommerliegeplatz 01.04. - 31.10. Ja: ( ) Nein: ( )\n"
+                "Stromanschluss: 3,70 € Grundgebühr pro Monat Ja: ( ) Nein: ( )\n"
+                "Trailer-Parkplatz bis 7 m ..........................4,00 €")
+        got = hi.extract_rules([{"url": "https://x.de/preise.pdf", "text": text}])
+        self.assertEqual([(f["key"], f["value"]) for f in got],
+                         [("strom", "Stromanschluss: 3,70 € Grundgebühr pro Monat"), ("parken", "Trailer-Parkplatz bis 7 m 4,00 €")])
+        self.assertTrue(got[1]["quote"].endswith("....4,00 €"))          # Zitat bleibt wörtlich (Prüfung gegen die Seite)
+        facts, dropped = hi.verify(got, [{"url": "https://x.de/preise.pdf", "text": text}])
+        self.assertEqual((len(facts), dropped), (2, 0))
+
     def test_example_price_list(self):
         text, _ = hi.html_to_text(HAFEN_HTML)
         got = self.lines(text)
@@ -225,6 +236,28 @@ class PickTests(unittest.TestCase):
         marinas = [m(1, "Segelverein Musterstadt e.V."), m(2, "Marina Eldenburg"), m(3, "Steg Nord"), m(4, "Stadthafen Waren")]
         got = hi.pick(marinas, {"node/4": {"checked": "2026-10-01"}}, 3, None, 30, hi.dt.date(2026, 10, 20))
         self.assertEqual([f["id"] for f in got], ["node/2", "node/3", "node/1"])     # node/4 vor kurzem geprüft
+
+    def test_wikis_and_shared_portal_pages_are_not_own_websites(self):
+        def m(i, name, url): return {"id": f"node/{i}", "properties": {"name": name, "website": url}}
+        marinas = [m(1, "Alter Hafen", "https://wuerzburgwiki.de/wiki/Alter_Hafen"),
+                   m(2, "Hafen am Grethaus", "http://www.skipperguide.de/wiki/Ludwigshafen"),
+                   m(3, "Wikinger-Hafen", "https://www.wikinger-hafen.de/"),
+                   *[m(10 + i, f"Hafen {i}", "https://portal.de/haefen/") for i in range(3)],
+                   *[m(20 + i, f"Vereinssteg {i}", "https://www.verein.de/") for i in range(3)]]
+        self.assertEqual(hi.unusable_websites(marinas), {"node/1", "node/2", "node/10", "node/11", "node/12"})
+        got = hi.pick(marinas, {}, 50, None, 30, hi.dt.date(2026, 10, 20), hi.unusable_websites(marinas))
+        self.assertEqual(sorted(f["id"] for f in got), ["node/20", "node/21", "node/22", "node/3"])
+
+    def test_different_websites_redirecting_to_one_page_are_flagged(self):
+        def m(i, name, url): return {"id": f"node/{i}", "properties": {"name": name, "website": url}}
+        marinas = [m(1, "Marina Wustrow", "https://portal.de/wustrow.html"), m(2, "Stadthafen Rostock", "https://portal.de/rostock.html"),
+                   m(3, "Sportboothafen Lathen", "https://sg-lathen.de/"), m(4, "Sportboothafen Lathen", "https://sg-lathen.de/"),
+                   m(5, "Steg A", "https://verein.de/"), m(6, "Steg B", "https://verein.de/")]
+        page = lambda u: [{"url": u, "text": "x"}]
+        crawled = {"node/1": (marinas[0], page("https://portal.de/timmendorf/")), "node/3": (marinas[2], page("https://sg-lathen.de/")),
+                   "node/4": (marinas[3], page("https://sg-lathen.de/")), "node/5": (marinas[4], page("https://verein.de/"))}
+        store = {"node/2": {"status": "ok", "source": "https://www.portal.de/timmendorf"}, "node/6": {"status": "ok", "source": "https://verein.de/"}}
+        self.assertEqual(hi.shared_landings(marinas, store, crawled), {"node/1", "node/2"})
 
 
 class FakeBatches:
