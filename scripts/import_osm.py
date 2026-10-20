@@ -3,6 +3,8 @@
 
 Holt Slipanlagen, Marinas und Bootstankstellen aus OpenStreetMap (Overpass API), prüft sie,
 fasst Dubletten zusammen und schreibt GeoJSON-Dateien nach public/data/osm/.
+Dazu kommen „Extras“ (osm/extras.geojson): Schleusen, Wehre, Brücken mit Durchfahrtshöhe, Kanu-Ein-/Ausstiege,
+Bootsverleih sowie Toiletten, Wasserhähne, Parkplätze, Gastronomie und Rastplätze in der Nähe der Standorte.
 
   python3 scripts/import_osm.py                       # Live-Import ganz Deutschland (Internet nötig)
   python3 scripts/import_osm.py --area DE-NW          # nur ein Bundesland
@@ -61,6 +63,13 @@ WATER_MAX_M = 80
 PLACE_MAX_M = 10_000
 MIN_KEEP_RATIO = 0.5
 
+# Extras: was in der Nähe der Standorte (bzw. Kanu-Einstiege/Verleihe) liegt, wird mitgeholt – ganz Deutschland
+# hätte Hunderttausende Parkplätze. Wehre im weiteren Umkreis, weil sie für die Fahrt auf dem Wasser zählen.
+EXTRAS_FILE = "osm/extras.geojson"
+EXTRA_AROUND_M = 400
+WEIR_AROUND_M = 2000
+EXTRA_KINDS = ("lock", "bridge", "weir", "canoe", "rental", "toilets", "water", "food", "rest", "parking")
+
 
 def area_clause(iso: str) -> str:
     # "DE-NW" ist ein Bundesland (ISO 3166-2), "AT" ein ganzes Land (ISO 3166-1)
@@ -112,16 +121,41 @@ def merge_elements(chunks) -> list[dict]:
     return out
 
 
-def queries(iso: str) -> dict[str, str]:
-    a = area_clause(iso)
-    objects = f"""(
+OBJECT_FILTERS = '''
   nwr["leisure"="slipway"](area.a);
   nwr["seamark:small_craft_facility:category"~"slipway"](area.a);
   nwr["leisure"="marina"](area.a);
   nwr["seamark:type"="harbour"]["seamark:harbour:category"~"marina"](area.a);
   nwr["waterway"="fuel"](area.a);
   nwr["seamark:small_craft_facility:category"~"fuel_station"](area.a);
-)"""
+'''
+# Kanu-Ein-/Ausstiege und Verleihe: eigenständig (ganzes Gebiet) und Bezugspunkte für „in der Nähe“
+ANCHOR_FILTERS = '''
+  nwr["canoe"~"put_in|egress"](area.a);
+  nwr["whitewater"~"put_in|egress"](area.a);
+  nwr["amenity"="boat_rental"](area.a);
+'''
+
+
+def queries(iso: str) -> dict[str, str]:
+    a = area_clause(iso)
+    objects = f"({OBJECT_FILTERS})"
+    r = EXTRA_AROUND_M
+    extras = (f"[out:json][timeout:300];{a}({OBJECT_FILTERS})->.s;({ANCHOR_FILTERS})->.k;(.s;.k;)->.n;("
+              f'way["lock"="yes"]["waterway"](area.a);'
+              f'nwr["seamark:type"="lock_basin"](area.a);'
+              f'nwr["seamark:bridge:clearance_height"](area.a);'
+              f'nwr["seamark:bridge:clearance_height_closed"](area.a);'
+              f'nwr["waterway"="weir"](around.n:{WEIR_AROUND_M});'
+              f".k;"
+              f'nwr["amenity"="toilets"](around.n:{r});'
+              f'nwr["amenity"~"^(drinking_water|water_point)$"](around.n:{r});'
+              f'nwr["amenity"~"^(restaurant|cafe|biergarten|fast_food|pub)$"](around.n:{r});'
+              f'nwr["shop"="kiosk"](around.n:{r});'
+              f'nwr["tourism"~"^(camp_site|picnic_site)$"](around.n:{r});'
+              f'nwr["leisure"="picnic_site"](around.n:{r});'
+              f'nwr["amenity"="parking"](around.n:{r});'
+              ");out tags center qt;")
     return {
         # Hauptabfrage: alle Standorte in einem Rutsch (spart Wartezeit auf den öffentlichen Servern)
         "main": f"[out:json][timeout:240];{a}{objects};out meta center;",
@@ -133,6 +167,8 @@ def queries(iso: str) -> dict[str, str]:
                  f"(way[\"natural\"=\"water\"][\"name\"](around.s:{WATER_MAX_M});"
                  f"way[\"waterway\"~\"^(river|canal|stream|riverbank|dock)$\"][\"name\"](around.s:{WATER_MAX_M});"
                  f"rel[\"natural\"=\"water\"][\"name\"](around.s:{WATER_MAX_M}););out geom;",
+        # Extras (Schleusen, Brücken, Wehre, Kanu, Verleih, Service in der Nähe)
+        "extras": extras,
     }
 
 
@@ -302,6 +338,118 @@ def _fuel(a, tags):
         "payment": pay[:8] or None,
         "reach_water": None, "reach_land": None,       # kein OSM-Standard → Community
     })
+
+
+# --------------------------------------------------------------------------- Extras
+NOT_PUBLIC = {"private", "no", "customers", "permit", "military", "agricultural", "forestry", "delivery"}
+
+
+def classify_extra(tags: dict) -> str | None:
+    """Art eines Extras; Reihenfolge entscheidet bei Mehrfach-Tags (ein Zeltplatz mit canoe=put_in ist ein Einstieg)."""
+    if tags.get("lock") == "yes" or tags.get("seamark:type") == "lock_basin":
+        return "lock"
+    if first(tags, "seamark:bridge:clearance_height", "seamark:bridge:clearance_height_closed"):
+        return "bridge"
+    if tags.get("waterway") == "weir":
+        return "weir"
+    if split_list(tags.get("canoe")) & {"put_in", "egress"} or split_list(tags.get("whitewater")) & {"put_in", "egress"}:
+        return "canoe"
+    if tags.get("amenity") == "boat_rental":
+        return "rental"
+    if tags.get("amenity") == "toilets":
+        return "toilets"
+    if tags.get("amenity") in ("drinking_water", "water_point"):
+        return "water"
+    if tags.get("amenity") in ("restaurant", "cafe", "biergarten", "fast_food", "pub") or tags.get("shop") == "kiosk":
+        return "food"
+    if tags.get("tourism") in ("camp_site", "picnic_site") or tags.get("leisure") == "picnic_site":
+        return "rest"
+    if tags.get("amenity") == "parking":
+        return "parking"
+    return None
+
+
+def parse_meters(value, max_m=100):
+    """„4.5“, „4,5 m“, „4.5m“ → 4.5; Unklares oder Unplausibles (≤ 0, > max_m) → None."""
+    if value is None:
+        return None
+    m = re.fullmatch(r"\s*(\d+(?:[.,]\d+)?)\s*m?\s*", str(value))
+    if not m:
+        return None
+    v = float(m.group(1).replace(",", "."))
+    return v if 0 < v <= max_m else None
+
+
+def transform_extra(el: dict, kind: str | None = None, bbox=GERMANY_BBOX) -> dict | None:
+    tags = el.get("tags") or {}
+    kind = kind or classify_extra(tags)
+    if kind is None or is_inactive(tags):
+        return None
+    if kind in ("toilets", "water", "parking", "rest", "food") and (tags.get("access") or "").strip().lower() in NOT_PUBLIC:
+        return None
+    c = el.get("center") or {}
+    lat, lon = el.get("lat", c.get("lat")), el.get("lon", c.get("lon"))
+    if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)) or not (math.isfinite(lat) and math.isfinite(lon)):
+        return None
+    if not (bbox[0] <= lat <= bbox[2] and bbox[1] <= lon <= bbox[3]):
+        return None
+    if el.get("type") not in ("node", "way", "relation") or not isinstance(el.get("id"), int):
+        return None
+    a: dict = {}
+    if kind == "lock":
+        a.update({"ref": clip(first(tags, "lock_ref", "ref"), 30), "length": parse_meters(first(tags, "maxlength", "seamark:lock_basin:length"), max_m=500),
+                  "width": parse_meters(first(tags, "maxwidth", "seamark:lock_basin:width")),
+                  "vhf": clip(first(tags, "vhf", "vhf_channel", "seamark:radio_station:channel"), 20)})
+    elif kind == "bridge":
+        a.update({"clearance": parse_meters(tags.get("seamark:bridge:clearance_height")),
+                  "clearance_closed": parse_meters(tags.get("seamark:bridge:clearance_height_closed")),
+                  "clearance_open": parse_meters(tags.get("seamark:bridge:clearance_height_open")),
+                  "width": parse_meters(tags.get("seamark:bridge:clearance_width")),
+                  "category": clip(first(tags, "seamark:bridge:category"), 40)})
+    elif kind == "canoe":
+        v = split_list(tags.get("canoe")) | split_list(tags.get("whitewater"))
+        a.update({"put_in": True if "put_in" in v else None, "egress": True if "egress" in v else None,
+                  "portage": tri(tags.get("portage"))})
+    elif kind == "toilets":
+        a.update({"wheelchair": tri(tags.get("wheelchair")), "changing_table": tri(tags.get("changing_table"))})
+    elif kind == "water":
+        a.update({"sub": tags.get("amenity"), "drinkable": tri(tags.get("drinking_water")) if tags.get("amenity") == "water_point" else True,
+                  "seasonal": tri(tags.get("seasonal"))})
+    elif kind == "food":
+        a.update({"sub": tags.get("amenity") or "kiosk", "cuisine": clip(first(tags, "cuisine"), 60)})
+    elif kind == "rest":
+        a.update({"sub": tags.get("tourism") or "picnic_site"})
+    elif kind == "parking":
+        a.update({"capacity": parse_int(tags.get("capacity")), "trailer": tri(tags.get("trailer")),
+                  "maxstay": clip(first(tags, "maxstay"), 40)})
+    props = {
+        "kind": kind,
+        "name": clip(first(tags, "name", "lock_name", "seamark:name"), 120),
+        "fee": tri(tags.get("fee")),
+        "opening_hours": clip(first(tags, "opening_hours"), 200),
+        "operator": clip(first(tags, "operator"), 120),
+        "website": safe_url(first(tags, "website", "contact:website", "url")),
+        "phone": clip(first(tags, "phone", "contact:phone"), 40),
+        "attrs": {k: v for k, v in a.items() if v is not None},
+        "osm": {"type": el["type"], "id": el["id"]},
+    }
+    return {"type": "Feature", "id": f"{el['type']}/{el['id']}",
+            "geometry": {"type": "Point", "coordinates": [round(lon, 6), round(lat, 6)]},
+            "properties": {k: v for k, v in props.items() if v not in (None, {})}}
+
+
+def build_extras(elements, bbox=GERMANY_BBOX, log=print) -> tuple[list[dict], dict]:
+    feats, seen, counts = [], set(), {k: 0 for k in EXTRA_KINDS}
+    for el in elements:
+        f = transform_extra(el, None, bbox)
+        if f is None or f["id"] in seen:
+            continue
+        seen.add(f["id"])
+        feats.append(f)
+        counts[f["properties"]["kind"]] += 1
+    feats.sort(key=lambda f: (f["properties"]["kind"], f["id"]))
+    log("  extras  " + ", ".join(f"{k} {n}" for k, n in counts.items()))
+    return feats, counts
 
 
 # --------------------------------------------------------------------------- Dubletten
@@ -502,8 +650,8 @@ def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3, fetch_
     """
     fetch_enrich = fetch_enrich or fetch
     started = clock()
-    mains, places, waters, stamps = [], [], [], []
-    failed = {"places": [], "water": []}
+    mains, places, waters, extras, stamps = [], [], [], [], []
+    failed = {"places": [], "water": [], "extras": []}
     for i, area in enumerate(areas, 1):
         qs = queries(area)
         log(f"[{i}/{len(areas)}] {area}  (nach {(clock() - started) / 60:.0f} min)")
@@ -525,7 +673,7 @@ def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3, fetch_
             stamps.append(ts)
         if not enrich or not mains[-1]:
             continue    # leere Region: keine Zuordnung nötig
-        for key, bucket in (("places", places), ("water", waters)):
+        for key, bucket in (("places", places), ("water", waters), ("extras", extras)):
             if deadline is not None and clock() > deadline:
                 failed[key].append(area)
                 log(f"  ! Zeitbudget aufgebraucht – '{key}' für {area} übersprungen")
@@ -537,7 +685,7 @@ def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3, fetch_
                 failed[key].append(area)
                 log(f"  ! Zuordnung '{key}' für {area} übersprungen: {exc}")
     status = {}
-    for key, bucket in (("places", places), ("water", waters)):
+    for key, bucket in (("places", places), ("water", waters), ("extras", extras)):
         if not enrich:
             status[key] = "übersprungen"
         elif not failed[key]:
@@ -550,6 +698,7 @@ def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3, fetch_
         "main": {"osm3s": {"timestamp_osm_base": min(stamps) if stamps else None}, "elements": merge_elements(mains)},
         "places": merge_elements(places) if places else None,
         "water": merge_elements(waters) if waters else None,
+        "extras": merge_elements(extras) if extras else None,
         "enrich": status,
     }
 
@@ -612,6 +761,7 @@ def main(argv=None) -> int:
     ap.add_argument("--input", help="gespeicherte Overpass-Antwort (Hauptabfrage) statt Live-Abruf")
     ap.add_argument("--places-input", help="gespeicherte Antwort der Orte-Abfrage (optional)")
     ap.add_argument("--water-input", help="gespeicherte Antwort der Gewässer-Abfrage (optional)")
+    ap.add_argument("--extras-input", help="gespeicherte Antwort der Extras-Abfrage (optional)")
     ap.add_argument("--out", default=str(DEFAULT_OUT), help="Datenordner (Standard: public/data)")
     ap.add_argument("--area", default=DEFAULT_AREA,
                     help="Region: DE = ganz Deutschland (Standard), DE-NW = ein Bundesland, mehrere mit Komma, AT = anderes Land")
@@ -637,7 +787,8 @@ def main(argv=None) -> int:
     if bbox is None:
         print("✗ Für Regionen außerhalb Deutschlands bitte --bbox süd,west,nord,ost angeben.", file=sys.stderr)
         return 2
-    enrich = {"places": "übersprungen", "water": "übersprungen"}
+    enrich = {"places": "übersprungen", "water": "übersprungen", "extras": "übersprungen"}
+    extras = None
 
     def load(path):
         return json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
@@ -647,7 +798,9 @@ def main(argv=None) -> int:
         main_payload = load(args.input)
         places = load(args.places_input)["elements"] if args.places_input else None
         water = load(args.water_input)["elements"] if args.water_input else None
-        enrich = {"places": "Datei" if places else "übersprungen", "water": "Datei" if water else "übersprungen"}
+        extras = load(args.extras_input)["elements"] if args.extras_input else None
+        enrich = {"places": "Datei" if places else "übersprungen", "water": "Datei" if water else "übersprungen",
+                  "extras": "Datei" if extras else "übersprungen"}
         status = {k: "ok (Datei)" for k in CATEGORIES}
         source_detail = f"Datei {pathlib.Path(args.input).name}"
     else:
@@ -660,13 +813,24 @@ def main(argv=None) -> int:
         except FetchError as exc:
             print(f"✗ Abruf fehlgeschlagen: {exc}\nEs wurden KEINE Dateien verändert.", file=sys.stderr)
             return 2
-        main_payload, places, water, enrich = got["main"], got["places"], got["water"], got["enrich"]
+        main_payload, places, water, extras, enrich = got["main"], got["places"], got["water"], got["extras"], got["enrich"]
         status = {k: "ok" for k in CATEGORIES}
         source_detail = "Overpass API"
 
     base_ts = (main_payload.get("osm3s") or {}).get("timestamp_osm_base")
     print("Verarbeitung …")
     built = build(main_payload["elements"], places, water, today, bbox=bbox, log=print)
+    extra_feats, extra_counts = build_extras(extras, bbox=bbox, log=print) if extras else (None, None)
+    if extra_feats is not None:
+        size = len(json.dumps({"type": "FeatureCollection", "features": extra_feats}, ensure_ascii=False, separators=(",", ":")))
+        print(f"  extras  {len(extra_feats)} Objekte, etwa {size / 1024:.0f} KB (kompakt, vor gzip)")
+    # Extras sind eine Zugabe: fehlen sie oder brechen sie ein, bleibt die bisherige Datei – ohne Abbruch
+    if extra_feats is not None:
+        old_extras = read_features(out_dir / EXTRAS_FILE)
+        if len(old_extras) >= 20 and len(extra_feats) < len(old_extras) * MIN_KEEP_RATIO and not args.force:
+            print(f"  ! Extras: nur {len(extra_feats)} statt bisher {len(old_extras)} – bisherige Datei bleibt")
+            extra_feats = None
+            enrich["extras"] = "alt (Einbruch verhindert)"
 
     problems = []
     for kind, feats in built["collections"].items():
@@ -689,6 +853,9 @@ def main(argv=None) -> int:
         meta = {}
     for kind in CATEGORIES:
         write_json(out_dir / FILES[kind], {"type": "FeatureCollection", "features": built["collections"][kind]})
+    if extra_feats is not None:
+        write_json(out_dir / EXTRAS_FILE, {"type": "FeatureCollection", "features": extra_feats})
+        meta["extras"] = {"generated": today, "counts": extra_counts, "total": len(extra_feats), "status": enrich["extras"]}
     meta.update({
         "schema_version": SCHEMA_VERSION,
         "region": f"{args.area}",
@@ -705,6 +872,8 @@ def main(argv=None) -> int:
         "enrichment": enrich,
         "total": sum(s["final"] for s in built["stats"].values()),
     })
+    if (out_dir / EXTRAS_FILE).exists():
+        meta["files"]["extras"] = EXTRAS_FILE
     write_json(meta_path, meta)
     print(f"Fertig: {meta['total']} Standorte nach {out_dir} geschrieben.")
     return 0

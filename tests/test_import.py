@@ -219,9 +219,10 @@ class RegionTests(unittest.TestCase):
             for needle in fail:
                 if needle in query:
                     raise imp.FetchError("simuliert")
-            which = "main" if "out meta center" in query else "places" if "place" in query else "water"
+            which = ("main" if "out meta center" in query else "extras" if "out tags center" in query
+                     else "places" if "place" in query else "water")
             region = "NW" if "DE-NW" in query else "NI"
-            ident = {"main": 1, "places": 100, "water": 200}[which]
+            ident = {"main": 1, "places": 100, "water": 200, "extras": 300}[which]
             el = {"type": "node" if which != "water" else "way", "id": ident + (0 if region == "NW" else 1),
                   "lat": 51.0, "lon": 7.0, "tags": {"leisure": "slipway"}}
             if ident == 1 and region == "NI":
@@ -233,11 +234,12 @@ class RegionTests(unittest.TestCase):
     def test_fetch_regions_merges_and_reports(self):
         fetch, calls = self.fake()
         got = imp.fetch_regions(["DE-NW", "DE-NI"], fetch=fetch, pause=0, log=lambda *a: None)
-        self.assertEqual(len(calls), 6)                                  # 2 Regionen × (Standorte, Orte, Gewässer)
+        self.assertEqual(len(calls), 8)                                  # 2 Regionen × (Standorte, Orte, Gewässer, Extras)
         self.assertEqual(len(got["main"]["elements"]), 1)                # Randobjekt nur einmal
         self.assertEqual(len(got["places"]), 2)
+        self.assertEqual(len(got["extras"]), 2)
         self.assertEqual(got["main"]["osm3s"]["timestamp_osm_base"], "2026-01-01T00:00:00Z")   # älterer Stand
-        self.assertEqual(got["enrich"], {"places": "ok", "water": "ok"})
+        self.assertEqual(got["enrich"], {"places": "ok", "water": "ok", "extras": "ok"})
 
     def test_main_failure_in_one_region_aborts_everything(self):
         fetch, calls = self.fake(fail=('"DE-NI"',))
@@ -257,7 +259,7 @@ class RegionTests(unittest.TestCase):
             return base(q)
         got = imp.fetch_regions(["DE-NW", "DE-NI"], fetch=fetch, pause=0, retry_wait=0, log=lambda *a: None)
         self.assertEqual(len(failed), 1)
-        self.assertEqual(got["enrich"], {"places": "ok", "water": "ok"})
+        self.assertEqual(got["enrich"], {"places": "ok", "water": "ok", "extras": "ok"})
 
     def test_enrichment_failure_is_partial_not_fatal(self):
         def fetch(query, _f=self.fake()[0]):
@@ -267,23 +269,24 @@ class RegionTests(unittest.TestCase):
         got = imp.fetch_regions(["DE-NW", "DE-NI"], fetch=fetch, pause=0, log=lambda *a: None)
         self.assertEqual(got["enrich"]["places"], "teilweise (ohne: DE-NI)")
         self.assertEqual(got["enrich"]["water"], "teilweise (ohne: DE-NI)")
+        self.assertEqual(got["enrich"]["extras"], "teilweise (ohne: DE-NI)")
         self.assertEqual(len(got["places"]), 1)
 
     def test_budget_skips_enrichment_but_never_locations(self):
         fetch, calls = self.fake()
         # Budget (500) wird erst nach der ersten Region überschritten: Region 1 mit Zugaben, Region 2 ohne
-        clock = iter([0, 0, 0, 0, 1000, 1000, 1000]).__next__
+        clock = iter([0, 0, 0, 0, 0, 1000, 1000, 1000, 1000]).__next__
         got = imp.fetch_regions(["DE-NW", "DE-NI"], fetch=fetch, pause=0, log=lambda *a: None, deadline=500, clock=clock)
         self.assertEqual(sum("out meta center" in q for q in calls), 2)       # beide Regionen: Standorte vollständig
-        self.assertEqual(len(calls), 4)                                       # 2 × Standorte + 2 Zugaben (nur NW)
-        self.assertEqual(got["enrich"], {"places": "teilweise (ohne: DE-NI)", "water": "teilweise (ohne: DE-NI)"})
+        self.assertEqual(len(calls), 5)                                       # 2 × Standorte + 3 Zugaben (nur NW)
+        self.assertEqual(got["enrich"], {k: "teilweise (ohne: DE-NI)" for k in ("places", "water", "extras")})
 
     def test_budget_already_spent_gives_failed_status(self):
         fetch, calls = self.fake()
         got = imp.fetch_regions(["DE-NW"], fetch=fetch, pause=0, log=lambda *a: None, deadline=-1)
         self.assertEqual(len(calls), 1)
         self.assertIsNone(got["places"])
-        self.assertEqual(got["enrich"], {"places": "fehlgeschlagen", "water": "fehlgeschlagen"})
+        self.assertEqual(got["enrich"], {"places": "fehlgeschlagen", "water": "fehlgeschlagen", "extras": "fehlgeschlagen"})
 
     def test_enrichment_uses_its_own_fetcher(self):
         main_calls, extra_calls = [], []
@@ -297,7 +300,7 @@ class RegionTests(unittest.TestCase):
             extra_calls.append(q)
             return base(q)
         imp.fetch_regions(["DE-NW"], fetch=fetch, fetch_enrich=fetch_enrich, pause=0, log=lambda *a: None)
-        self.assertEqual((len(main_calls), len(extra_calls)), (1, 2))
+        self.assertEqual((len(main_calls), len(extra_calls)), (1, 3))
 
     @staticmethod
     def answers(*payloads):
@@ -333,8 +336,76 @@ class RegionTests(unittest.TestCase):
         fetch, calls = self.fake()
         got = imp.fetch_regions(["DE-NW", "DE-NI"], enrich=False, fetch=fetch, pause=0, log=lambda *a: None)
         self.assertEqual(len(calls), 2)
-        self.assertEqual(got["enrich"], {"places": "übersprungen", "water": "übersprungen"})
+        self.assertEqual(got["enrich"], {"places": "übersprungen", "water": "übersprungen", "extras": "übersprungen"})
         self.assertIsNone(got["places"])
+        self.assertIsNone(got["extras"])
+
+
+EXTRAS = [
+    {"type": "way", "id": 501, "center": {"lat": 51.40, "lon": 7.10}, "tags": {"waterway": "canal", "lock": "yes", "lock_name": "Schleuse Test", "lock_ref": "S 1", "maxlength": "110 m", "maxwidth": "12,0", "vhf": "20"}},
+    node(502, 51.41, 7.11, {"seamark:type": "bridge", "seamark:bridge:clearance_height": "4.5", "seamark:bridge:clearance_height_closed": "3,2 m", "seamark:bridge:category": "lifting", "name": "Hubbrücke"}),
+    node(503, 51.42, 7.12, {"waterway": "weir", "name": "Wehr Test"}),
+    node(504, 51.43, 7.13, {"canoe": "put_in;egress", "tourism": "camp_site", "name": "Kanu-Rast"}),
+    node(505, 51.44, 7.14, {"amenity": "boat_rental", "name": "Verleih", "opening_hours": "Mo-Su 10:00-18:00", "website": "javascript:alert(1)"}),
+    node(506, 51.45, 7.15, {"amenity": "toilets", "fee": "no", "wheelchair": "yes"}),
+    node(507, 51.46, 7.16, {"amenity": "toilets", "access": "customers"}),                       # nicht öffentlich → weg
+    node(508, 51.47, 7.17, {"amenity": "water_point", "drinking_water": "no"}),
+    node(509, 51.48, 7.18, {"amenity": "drinking_water"}),
+    {"type": "way", "id": 510, "center": {"lat": 51.49, "lon": 7.19}, "tags": {"amenity": "parking", "capacity": "40", "trailer": "yes", "fee": "yes"}},
+    node(511, 51.50, 7.20, {"amenity": "parking", "access": "private"}),                         # privat → weg
+    node(512, 51.51, 7.21, {"amenity": "biergarten", "name": "Am Steg", "cuisine": "german"}),
+    node(513, 51.52, 7.22, {"shop": "kiosk"}),
+    node(514, 51.53, 7.23, {"tourism": "picnic_site"}),
+    node(515, 51.54, 7.24, {"amenity": "toilets", "disused": "yes"}),                            # stillgelegt → weg
+    node(516, 51.55, 7.25, {"amenity": "bench"}),                                                # keine Art → weg
+    node(506, 51.45, 7.15, {"amenity": "toilets"}),                                              # doppelt → einmal
+]
+
+
+class ExtrasTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.feats, cls.counts = imp.build_extras(EXTRAS, log=lambda *a: None)
+        cls.by = {f["id"]: f["properties"] for f in cls.feats}
+
+    def test_counts(self):
+        self.assertEqual(self.counts, {"lock": 1, "bridge": 1, "weir": 1, "canoe": 1, "rental": 1, "toilets": 1,
+                                       "water": 2, "food": 2, "rest": 1, "parking": 1})
+
+    def test_non_public_disused_and_unknown_dropped(self):
+        for fid in ("node/507", "node/511", "node/515", "node/516"):
+            self.assertNotIn(fid, self.by)
+
+    def test_lock_and_bridge_values(self):
+        lock = self.by["way/501"]
+        self.assertEqual((lock["name"], lock["attrs"]["ref"], lock["attrs"]["length"], lock["attrs"]["width"], lock["attrs"]["vhf"]),
+                         ("Schleuse Test", "S 1", 110.0, 12.0, "20"))
+        br = self.by["node/502"]["attrs"]
+        self.assertEqual((br["clearance"], br["clearance_closed"], br["category"]), (4.5, 3.2, "lifting"))
+
+    def test_canoe_beats_camp_site(self):
+        self.assertEqual(self.by["node/504"]["kind"], "canoe")
+        self.assertEqual(self.by["node/504"]["attrs"], {"put_in": True, "egress": True})
+
+    def test_water_point_not_drinkable_is_said(self):
+        self.assertFalse(self.by["node/508"]["attrs"]["drinkable"])
+        self.assertTrue(self.by["node/509"]["attrs"]["drinkable"])
+
+    def test_unknown_stays_unknown_and_bad_url_dropped(self):
+        self.assertNotIn("website", self.by["node/505"])
+        self.assertNotIn("fee", self.by["node/509"])                    # nicht angegeben ≠ kostenlos
+        self.assertIs(self.by["node/506"]["fee"], False)
+
+    def test_parse_meters(self):
+        for raw, want in (("4.5", 4.5), ("4,5 m", 4.5), ("4.5m", 4.5), ("ca. 4", None), ("0", None), ("", None), (None, None), ("150", None)):
+            self.assertEqual(imp.parse_meters(raw), want, raw)
+        self.assertEqual(imp.parse_meters("190 m", max_m=500), 190.0)       # Schleusenkammern sind länger als 100 m
+
+    def test_query_contains_all_parts(self):
+        q = imp.queries("DE-NW")["extras"]
+        for needle in ('"lock"="yes"', "clearance_height", f"around.n:{imp.WEIR_AROUND_M}", '"amenity"="boat_rental"',
+                       f'"amenity"="toilets"](around.n:{imp.EXTRA_AROUND_M})', "out tags center"):
+            self.assertIn(needle, q)
 
 
 class CliTests(unittest.TestCase):
@@ -360,6 +431,38 @@ class CliTests(unittest.TestCase):
             self.assertEqual(meta["total"], sum(c["final"] for c in meta["categories"].values()))
             v = subprocess.run([sys.executable, "-I", str(SCRIPTS / "validate_data.py"), "--data", str(out)], capture_output=True, text=True)
             self.assertEqual(v.returncode, 0, v.stdout)
+
+    def test_extras_written_and_kept_when_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = pathlib.Path(tmp)
+            (tmp / "main.json").write_text(json.dumps({"elements": MAIN}))
+            (tmp / "extras.json").write_text(json.dumps({"elements": EXTRAS}))
+            out = tmp / "data"
+            r = self.run_cli("--input", str(tmp / "main.json"), "--extras-input", str(tmp / "extras.json"), "--out", str(out))
+            self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
+            meta = json.loads((out / "meta.json").read_text())
+            self.assertEqual(meta["files"]["extras"], "osm/extras.geojson")
+            self.assertEqual(meta["extras"]["total"], 12)
+            self.assertEqual(len(json.loads((out / "osm" / "extras.geojson").read_text())["features"]), 12)
+            # Lauf ohne Extras: Datei und Verweis bleiben
+            r = self.run_cli("--input", str(tmp / "main.json"), "--out", str(out))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(len(json.loads((out / "osm" / "extras.geojson").read_text())["features"]), 12)
+            self.assertEqual(json.loads((out / "meta.json").read_text())["files"]["extras"], "osm/extras.geojson")
+
+    def test_extras_collapse_keeps_old_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = pathlib.Path(tmp)
+            out = tmp / "data"
+            (out / "osm").mkdir(parents=True)
+            old = [{"type": "Feature", "id": f"node/{i}", "geometry": {"type": "Point", "coordinates": [7, 51]}, "properties": {"kind": "toilets"}} for i in range(100)]
+            (out / "osm" / "extras.geojson").write_text(json.dumps({"type": "FeatureCollection", "features": old}))
+            (tmp / "main.json").write_text(json.dumps({"elements": MAIN}))
+            (tmp / "extras.json").write_text(json.dumps({"elements": EXTRAS[:2]}))
+            r = self.run_cli("--input", str(tmp / "main.json"), "--extras-input", str(tmp / "extras.json"), "--out", str(out))
+            self.assertEqual(r.returncode, 0, r.stderr)                      # kein Abbruch – Extras sind eine Zugabe
+            self.assertEqual(len(json.loads((out / "osm" / "extras.geojson").read_text())["features"]), 100)
+            self.assertIn("Einbruch", json.loads((out / "meta.json").read_text())["enrichment"]["extras"])
 
     def test_data_loss_guard(self):
         with tempfile.TemporaryDirectory() as tmp:

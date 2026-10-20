@@ -29,6 +29,9 @@ PRICE_MIN, PRICE_MAX = 0.5, 5.0
 FILE_TYPE = {"slip": "slip", "marina": "marina", "fuel": "fuel"}
 
 
+EXTRA_KINDS = {"lock", "bridge", "weir", "canoe", "rental", "toilets", "water", "food", "rest", "parking"}
+
+
 class Report:
     def __init__(self):
         self.errors, self.warnings = [], []
@@ -134,6 +137,29 @@ def main(argv=None) -> int:
             if not props.get("name"):
                 rep.warn(where, "ohne Namen")
 
+    # Extras (Schleusen, Service usw.) – eigene Datei, eigene IDs dürfen sich mit Standorten überschneiden
+    n_extras = 0
+    if files.get("extras"):
+        data = load(d / files["extras"], rep)
+        if data is not None and (data.get("type") != "FeatureCollection" or not isinstance(data.get("features"), list)):
+            rep.err(files["extras"], "ist keine FeatureCollection")
+        elif data is not None:
+            seen_x = set()
+            for i, f in enumerate(data["features"]):
+                fid, props = f.get("id"), f.get("properties") or {}
+                where = f"{files['extras']}[{i}] {fid}"
+                g = (f.get("geometry") or {}).get("coordinates")
+                if not isinstance(fid, str) or not re.match(r"^(node|way|relation)/\d+$", fid) or fid in seen_x:
+                    rep.err(where, "id fehlt, ist ungültig oder doppelt")
+                elif not (isinstance(g, list) and len(g) == 2 and all(finite(x) for x in g) and 47 <= g[1] <= 55.2 and 5.5 <= g[0] <= 15.1):
+                    rep.err(where, "Koordinaten fehlen oder liegen außerhalb Deutschlands")
+                elif props.get("kind") not in EXTRA_KINDS:
+                    rep.err(where, f"unbekannte Art {props.get('kind')!r}")
+                elif props.get("website") and not str(props["website"]).lower().startswith(("http://", "https://")):
+                    rep.err(where, "website ist keine http(s)-Adresse")
+                seen_x.add(fid)
+            n_extras = len(seen_x)
+
     places = load(d / com["places"], rep) or []
     if not isinstance(places, list):
         rep.err(com["places"], "muss eine Liste sein")
@@ -190,7 +216,8 @@ def main(argv=None) -> int:
     if not args.quiet:
         print(f"Geprüft: {sum(counts.values())} OSM-Standorte "
               f"({counts['slip']} Slipanlagen, {counts['marina']} Marinas, {counts['fuel']} Tankstellen), "
-              f"{len(places)} Community-Standorte, {len(prices)} Preismeldungen.")
+              f"{len(places)} Community-Standorte, {len(prices)} Preismeldungen"
+              f"{f', {n_extras} Extras' if n_extras else ''}.")
         unnamed = sum(1 for w in rep.warnings if w.endswith("ohne Namen"))
         other = [w for w in rep.warnings if not w.endswith("ohne Namen")]
         if unnamed:
