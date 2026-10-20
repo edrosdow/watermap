@@ -6,6 +6,11 @@ name: Hafeninfos aktualisieren
 on:
   schedule:
     - cron: "41 4 8 * *"   # am 8. jedes Monats, 04:41 UTC (nach dem OSM-Import am 1.)
+  # Probelauf ohne Veröffentlichung: auf einem claude/-Branch die Datei .github/hafeninfo-probelauf.json ändern
+  # (z. B. {"anzahl": 25}) – die Ergebnisse landen nur auf diesem Branch und damit in der Netlify-Vorschau.
+  push:
+    branches: ["claude/**"]
+    paths: [".github/hafeninfo-probelauf.json"]
   workflow_dispatch:
     inputs:
       anzahl:
@@ -44,6 +49,11 @@ jobs:
           ANZAHL: ${{ inputs.anzahl || '200' }}
           NUR: ${{ inputs.nur || '' }}
         run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            ANZAHL=$(python3 -c "import json;print(int(json.load(open('.github/hafeninfo-probelauf.json')).get('anzahl', 25)))")
+            NUR=$(python3 -c "import json;print(','.join(json.load(open('.github/hafeninfo-probelauf.json')).get('nur', [])))")
+            echo "Probelauf auf ${GITHUB_REF_NAME}: anzahl=$ANZAHL nur=$NUR"
+          fi
           if [ -z "$ANTHROPIC_API_KEY" ]; then
             echo "::error::Secret ANTHROPIC_API_KEY fehlt (Settings → Secrets and variables → Actions)."; exit 1
           fi
