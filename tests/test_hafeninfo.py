@@ -115,6 +115,12 @@ class RuleTests(unittest.TestCase):
                                ("duschen", "WC, Duschen und Waschräume befinden sich im Hauptgebäude neben dem Restaurant.", None),
                                ("duschen", "Für die Duschautomaten benötigen Sie 1 EUR.", 1.0)])
 
+    def test_questions_and_sentence_fragments_skipped(self):
+        got = self.lines("Gibt es Duschen und Toiletten?\nder Nähe unseres Vereins befinden sich einige Restaurants, verschiedene\n"
+                         "Duschen, WC und WLAN inklusive\ninkl. Strom 2,00 € pro Tag")
+        self.assertEqual([(k, v) for k, v, _ in got], [("duschen", "Duschen, WC und WLAN inklusive"), ("toiletten", "Duschen, WC und WLAN inklusive"),
+                                                      ("wlan", "Duschen, WC und WLAN inklusive"), ("strom", "inkl. Strom 2,00 € pro Tag")])
+
     def test_form_boxes_and_dot_leaders_are_removed_but_quote_stays_verbatim(self):
         text = ("Sommerliegeplatz 01.04. - 31.10. Ja: ( ) Nein: ( )\n"
                 "Stromanschluss: 3,70 € Grundgebühr pro Monat Ja: ( ) Nein: ( )\n"

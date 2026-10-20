@@ -453,12 +453,13 @@ def first_price(line: str):
 
 # Nur diese Überschriften geben ihr Stichwort an die Preiszeilen darunter weiter (höchstens HEADING_SPAN Zeilen).
 # „Hund“, „Duschen“, „WLAN“ … stehen oft als einzelnes Wort über ganz anderen Preisen (z. B. Bootsmiete).
-RULES_VERSION = 7          # bei Änderungen an den Regeln erhöhen: dann werden auch unveränderte Websites neu ausgewertet
+RULES_VERSION = 8          # bei Änderungen an den Regeln erhöhen: dann werden auch unveränderte Websites neu ausgewertet
 HEADING_KEYS = {"gast_liegeplatz", "dauerliegeplatz", "strom", "wasser", "faekalien", "diesel", "benzin", "parken",
                 "wohnmobil", "slip", "kran", "winterlager", "entsorgung"}
 HEADING_SPAN = 8
 _CHECKBOX = re.compile(r"\b(?:ja|nein)\s*:?\s*\(\s*\)", re.I)        # PDF-Formular: „Ja: ( ) Nein: ( )“
 _SENTENCE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÄÖÜ„\"])")                       # Absatz → Sätze
+_FRAGMENT = re.compile(r"(?:der|die|das|den|dem|des|und|oder|sowie)\b|Letztere")
 FACILITY = {"toiletten", "duschen", "waschmaschine", "wlan"}                  # „WC, Duschen und Waschräume befinden sich …“
 _ADDRESS = re.compile(r"(^|,\s*)\d{5}\s+[A-ZÄÖÜ][a-zäöüß]")                # „…straße 53a, 28197 Bremen“
 _PRICE_ONLY = re.compile(r"^(?:[\d\s.,|–-]|€|eur\b|euro\b)+$", re.I)                 # Tabellenzelle(n) „15,00 €“, „15,00 € | 90,00 €“
@@ -512,6 +513,10 @@ def extract_rules(pages, per_key=4, total=40) -> list[dict]:
                 continue
             if is_pdf and line[:1].islower():
                 continue                                    # umbrochene Fortsetzungszeile aus einer PDF
+            if price is None and _FRAGMENT.match(line):
+                continue                                    # beginnt mitten im Satz („der Nähe unseres Vereins …“)
+            if line.endswith("?"):
+                continue                                    # Frage aus einer FAQ, keine Angabe
             inherited = False
             if price is not None and heading_key and since <= HEADING_SPAN and set(keys) <= {"max_laenge", "wassertiefe"}:
                 keys, inherited = [heading_key], True       # „Boote bis 8 m: 15,00 €“ unter „Liegegebühren“
