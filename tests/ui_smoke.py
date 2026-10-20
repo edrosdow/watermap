@@ -1,10 +1,12 @@
-"""UI-Smoke-Test mit Playwright + Leaflet-Ersatz. Start: python3 tests/ui_smoke.py [shots_dir]"""
+"""UI-Smoke-Test mit Playwright + Leaflet-Ersatz und festen Testdaten (die 8 Slipanlagen aus V6 in tests/fixtures/v6-data,
+unabhängig vom aktuellen OSM-Import). Start: python3 tests/ui_smoke.py [shots_dir]"""
 import sys, pathlib, json
 from playwright.sync_api import sync_playwright
 
 BASE = 'http://localhost:8765/'
 HERE = pathlib.Path(__file__).parent
 STUB = (HERE / 'stub' / 'leaflet-stub.js').read_text(encoding='utf-8')
+FIXTURE = HERE / 'fixtures' / 'v6-data'
 SHOTS = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else '/tmp/shots'); SHOTS.mkdir(parents=True, exist_ok=True)
 
 def route_libs(ctx):
@@ -17,7 +19,15 @@ def route_libs(ctx):
         if url.endswith('.css'):
             return route.fulfill(status=200, content_type='text/css', body='')
         return route.abort()
-    ctx.route('**/unpkg.com/**', handler); ctx.route('**/cdn.jsdelivr.net/**', handler)
+    ctx.route('**/unpkg.com/**', handler); ctx.route('**/cdn.jsdelivr.net/**', handler); ctx.route('**/vendor/**', handler)
+    def data(route):
+        rel = route.request.url.split('/data/', 1)[1].split('?')[0]
+        f = FIXTURE / rel
+        return route.fulfill(status=200, content_type='application/json', body=f.read_bytes()) if f.is_file() else route.fulfill(status=404, body='')
+    ctx.route('**/data/**', data)
+    # Details laden auch das Wetter (eigener Test: ui_wetter.py) – hier nur leere Antworten
+    ctx.route('**/api/wetter/**', lambda r: r.fulfill(status=200, content_type='application/json',
+              body=json.dumps({'current_weather': {'weather': None}, 'weather': {'weather': []}}.get(r.request.url.split('?')[0].rsplit('/', 1)[1], {'alerts': []}))))
     ctx.route('**/nominatim.openstreetmap.org/**', lambda r: r.fulfill(status=200, content_type='application/json',
         body=json.dumps([{'display_name': 'Möhnesee, Kreis Soest, Nordrhein-Westfalen, Deutschland', 'lat': '51.4817', 'lon': '8.1253', 'boundingbox': ['51.43', '51.53', '8.0', '8.25']}])))
 
@@ -30,7 +40,8 @@ with sync_playwright() as p:
     b = p.chromium.launch()
     for name, vp, mobile in [('desktop', {'width': 1280, 'height': 800}, False), ('mobile', {'width': 390, 'height': 844}, True)]:
         ctx = b.new_context(viewport=vp, device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile, locale='de-DE',
-                            geolocation={'latitude': 50.9, 'longitude': 6.99}, permissions=['geolocation'])
+                            geolocation={'latitude': 50.9, 'longitude': 6.99}, permissions=['geolocation'],
+                            service_workers='block')   # sonst laufen Datenabrufe am Testdaten-Umweg vorbei
         route_libs(ctx)
         pg = ctx.new_page()
         errors = []

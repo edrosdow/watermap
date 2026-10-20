@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fotos freigeben – WaterMap</title><meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="../icons/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../css/page.css">
+<style>
+  .login { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 20px; }
+  .where { width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 15px; border: 1px solid #C9D6DC; border-radius: 10px; margin-top: 6px; }
+  .login input { flex: 1 1 220px; padding: 10px 12px; font-size: 16px; border: 1px solid #C9D6DC; border-radius: 10px; }
+  button { padding: 10px 16px; font-size: 15px; font-weight: 600; border-radius: 10px; border: 1px solid #06667E; background: #fff; color: #06667E; cursor: pointer; }
+  button.ok { background: #06667E; color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  .card { border: 1px solid #DCE6EA; border-radius: 14px; padding: 14px; margin: 0 0 16px; }
+  .card img { display: block; width: 100%; max-height: 420px; object-fit: contain; background: #F1F5F7; border-radius: 10px; }
+  .card h2 { font-size: 18px; margin: 12px 0 4px; }
+  .card p { margin: 4px 0; }
+  .meta { color: #5B6B73; font-size: 14px; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+  .status { font-weight: 600; margin-top: 10px; }
+  .status.err { color: #B3261E; }
+  .warn { color: #8A5300; font-weight: 600; }
+</style></head>
+<body><header><a href="../">WaterMap</a><small>Fotos freigeben</small></header><main>
+<h1>Eingereichte Fotos</h1>
+<p>Prüfen: Rechte bestätigt, keine erkennbaren Personen oder Kennzeichen, passt zum Standort. „Freigeben“ veröffentlicht das Foto; nach etwa einer Minute ist es in der App sichtbar.</p>
+<form class="login" id="login"><input type="password" id="pw" autocomplete="current-password" placeholder="Passwort" required><button class="ok" type="submit">Anzeigen</button></form>
+<p class="status" id="msg" role="status"></p>
+<div id="list"></div>
+<footer><a href="../">← Zurück zur Karte</a></footer></main>
+<script type="module" src="./fotos.js"></script>
+</body></html>

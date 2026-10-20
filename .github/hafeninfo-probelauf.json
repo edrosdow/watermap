@@ -1,0 +1,5 @@
+{
+ "anzahl": 0,
+ "lauf": 15,
+ "hinweis": "Ändern dieser Datei auf einem claude/-Branch startet einen Hafeninfo-Probelauf (kostenlos, nach Regeln) nur auf diesem Branch (Netlify-Vorschau). Auf main löst sie nichts aus. \"anzahl\": 0 = Ruhezustand (nichts wird geprüft); für einen Probelauf z. B. 25 eintragen, optional \"nur\": [IDs]."
+}

@@ -58,6 +58,8 @@ const P = {
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   pin: '<path d="M12 21s7-6.2 7-11.5a7 7 0 1 0-14 0C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  // Pegellatte mit Wellen
+  gauge: '<path d="M9 3v13M9 5h3M9 8.5h2M9 12h3"/><path d="M3 17.5q2-2 4 0t4 0 4 0 4 0 2 0M3 21q2-2 4 0t4 0 4 0 4 0 2 0"/>',
 };
 
 /** UI-Symbol (Linien-Stil, nimmt currentColor). */

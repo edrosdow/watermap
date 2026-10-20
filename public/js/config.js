@@ -1,6 +1,6 @@
 // Zentrale Einstellungen. Hier – und nur hier – werden Dienste und Grenzwerte angepasst.
 export const CONFIG = {
-  VERSION: '7.0.0',
+  VERSION: '7.5.3',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -20,6 +20,26 @@ export const CONFIG = {
   START_MODE: 'data',
   GERMANY_VIEW: { center: [51.1, 10.4], zoom: 6 },
   FALLBACK_VIEW: { center: [51.45, 7.55], zoom: 8 },
+
+  // Pegelstände (PEGELONLINE der WSV). Abruf über die eigene Domain; Netlify leitet weiter (public/_redirects).
+  PEGEL_BASE: '/api/pegel/',
+  PEGEL_REFRESH_MIN: 15,       // so oft misst die WSV
+  PEGEL_STALE_HOURS: 6,        // ältere Messwerte gelten als veraltet
+  PEGEL_HISTORY_DAYS: 7,
+  PEGEL_ATTRIBUTION: 'Pegel: <a href="https://www.pegelonline.wsv.de" target="_blank" rel="noopener noreferrer">WSV/PEGELONLINE</a>',
+
+  // Wetter und Wind (DWD-Daten über Bright Sky). Abruf über die eigene Domain (public/_redirects).
+  WETTER_BASE: '/api/wetter/',
+  WETTER_HOURS: 48,            // Vorhersagezeitraum im Diagramm
+  WETTER_CACHE_MIN: 10,        // gleiche Stelle innerhalb dieser Zeit nicht erneut abfragen
+  WETTER_GUST_HINT_KMH: 39,    // ab 6 Bft Böen ein Hinweis (gerade für kleine Boote)
+
+  // „In der Nähe“ (Schleusen, Toiletten, Parkplätze … aus osm/extras.geojson)
+  NEARBY_EXTRAS_M: 500,
+  NEARBY_EXTRAS_MAX: 12,
+
+  // Hafeninfos von den Websites (data/hafeninfo.json): ab diesem Alter als möglicherweise veraltet markieren
+  HAFENINFO_STALE_DAYS: 365,
 
   // Liste
   LIST_LIMIT: 120,

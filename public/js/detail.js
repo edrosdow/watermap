@@ -11,7 +11,27 @@ import { CONFIG } from './config.js';
 /**
  * actions = { close, share, report, addPhoto, reportPrice, onFavorite }
  */
-export function renderDetail(p, { user, actions }) {
+/** Tabelle der Eigenschaften; Zeilen mit `web` zeigen die wörtlichen Website-Angaben (markiert). */
+export function factList(rows) {
+  return h('dl', { class: 'facts' }, rows.map((f) => {
+    const web = f.web || [];
+    const known = f.value || web.length;
+    return [
+      h('dt', { text: f.label }),
+      h('dd', { class: known ? (web.length ? 'from-web' : '') : 'unknown' },
+        f.value && !web.length ? f.value : null,
+        !f.value && !web.length ? UNKNOWN : null,
+        f.value && f.web && !web.length ? webMark() : null,                 // aus der Website abgeleitet („Ja“)
+        web.map(w => h('span', { class: 'web-line', title: w.quote ? `„${w.quote}“` : null }, w.value, webMark()))),
+    ];
+  }));
+}
+
+function webMark() {
+  return h('span', { class: 'web-mark', html: icon('globe', 13), title: 'laut Website des Hafens', 'aria-label': '(laut Website)', role: 'img' });
+}
+
+export function renderDetail(p, { user, actions, weather, nearby, enrichFacts }) {
   const isFav = favorites.has(p.id);
   const sub = subtitle(p);
   const dist = user ? haversine(user.lat, user.lon, p.lat, p.lon) : null;
@@ -43,6 +63,8 @@ export function renderDetail(p, { user, actions }) {
 
   if (p.description) body.append(h('p', { class: 'desc', text: p.description }));
 
+  if (weather) body.append(weather);
+
   // Preise (nur Bootstankstellen)
   if (p.type === 'fuel') {
     const rows = describePrices(p);
@@ -56,13 +78,13 @@ export function renderDetail(p, { user, actions }) {
       h('button', { type: 'button', class: 'btn btn-outline small', html: icon('plus', 16) + '<span>Preis melden</span>', onclick: actions.reportPrice })));
   }
 
-  // Fakten
+  // Fakten (Hafeninfos von der Website füllen die Tabelle nach, sobald sie geladen sind)
   const facts = describeFacts(p);
-  body.append(h('section', { class: 'block' }, h('h3', { text: 'Eigenschaften' }),
-    h('dl', { class: 'facts' }, facts.map(f => [
-      h('dt', { text: f.label }),
-      h('dd', { class: f.value ? '' : 'unknown', text: f.value || UNKNOWN }),
-    ]))));
+  const factsBlock = h('section', { class: 'block facts-block' }, h('h3', { text: 'Eigenschaften' }), factList(facts));
+  body.append(factsBlock);
+  if (enrichFacts) enrichFacts(factsBlock, facts, factList);
+
+  if (nearby) body.append(nearby);
 
   // Kontakt
   const contacts = [];

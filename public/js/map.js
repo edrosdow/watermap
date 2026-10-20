@@ -1,5 +1,7 @@
 // Kapselt Leaflet (+ MarkerCluster). Der Rest der App kennt nur diese Schnittstelle.
 import { CONFIG } from './config.js';
+import { gaugeMarkerHtml } from './pegel.js';
+import { extraMarkerHtml, extraTitle, KINDS, GROUPS } from './extras.js';
 import { pinSvg } from './icons.js';
 import { displayName, TYPES } from './model.js';
 
@@ -77,6 +79,17 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
     iconSize: [44, 54], iconAnchor: [22, 52],
   });
 
+  // Pegel: eigene Ebene, ohne Cluster, unter den Standort-Pins; bei kleinem Zoom nur Punkte (CSS)
+  let gaugeLayer = null, gaugeMarkers = new Map(), gaugeSel = null;
+  const gaugeIcon = (g, sel) => L.divIcon({ className: 'wm-gauge', html: gaugeMarkerHtml(g, sel), iconSize: null, iconAnchor: [9, 13] });
+  const zoomClass = () => el.classList.toggle('wm-gauges-compact', map.getZoom() < 9);
+  map.on('zoomend', zoomClass); zoomClass();
+
+  // Extras: je Gruppe eine Ebene (mit kleinen Clustern, wenn verfügbar)
+  const extraLayers = {}, extraMarkers = new Map();
+  let extraSel = null;
+  const extraIcon = (x, sel) => L.divIcon({ className: 'wm-extra-icon', html: extraMarkerHtml(x, sel), iconSize: null, iconAnchor: [13, 13] });
+
   map.on('moveend', () => onMoveEnd && onMoveEnd());
   map.on('click', (e) => {
     if (pickHandler) { pickHandler(e.latlng); return; }
@@ -123,6 +136,53 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
     },
 
     flyTo(lat, lon, zoom) { map.flyTo([lat, lon], zoom, { duration: 0.7 }); },
+
+    /** Pegel zeigen (Liste) oder entfernen (null). */
+    setGauges(list, onClick) {
+      if (gaugeLayer) { gaugeLayer.remove(); gaugeLayer = null; gaugeMarkers.clear(); }
+      if (!list) { map.attributionControl.removeAttribution(CONFIG.PEGEL_ATTRIBUTION); return; }
+      gaugeLayer = L.layerGroup().addTo(map);
+      for (const g of list) {
+        const m = L.marker([g.lat, g.lon], { icon: gaugeIcon(g, g.id === gaugeSel), title: `Pegel ${g.name}`, alt: `Pegel ${g.name}`, keyboard: true, zIndexOffset: 500 });
+        m.on('click', () => onClick(g.id));
+        gaugeMarkers.set(g.id, { marker: m, gauge: g });
+        m.addTo(gaugeLayer);
+      }
+      map.attributionControl.addAttribution(CONFIG.PEGEL_ATTRIBUTION);
+    },
+    /** Extras einer Gruppe zeigen (Liste) oder entfernen (null). */
+    setExtras(group, list, onClick) {
+      if (extraLayers[group]) { extraLayers[group].remove(); delete extraLayers[group]; }
+      for (const [id, e] of extraMarkers) if (e.group === group) extraMarkers.delete(id);
+      if (!list) return;
+      const color = GROUPS[group].color;
+      const layer = useCluster
+        ? L.markerClusterGroup({ showCoverageOnHover: false, chunkedLoading: true, maxClusterRadius: 40, disableClusteringAtZoom: 15,
+            iconCreateFunction: (c) => L.divIcon({ html: `<span style="--c:${color}">${c.getChildCount()}</span>`, className: 'wm-extra-cluster', iconSize: [30, 30] }) })
+        : L.layerGroup();
+      const ms = list.map((x) => {
+        const m = L.marker([x.lat, x.lon], { icon: extraIcon(x, x.id === extraSel), title: `${KINDS[x.kind].label}: ${extraTitle(x)}`, alt: extraTitle(x), keyboard: true, zIndexOffset: 400 });
+        m.on('click', () => onClick(x.id));
+        extraMarkers.set(x.id, { marker: m, x, group });
+        return m;
+      });
+      if (layer.addLayers) layer.addLayers(ms); else ms.forEach(m => m.addTo(layer));
+      extraLayers[group] = layer.addTo(map);
+    },
+    selectExtra(id) {
+      const prev = extraMarkers.get(extraSel);
+      if (prev) prev.marker.setIcon(extraIcon(prev.x, false));
+      extraSel = id;
+      const cur = extraMarkers.get(id);
+      if (cur) cur.marker.setIcon(extraIcon(cur.x, true));
+    },
+    selectGauge(id) {
+      const prev = gaugeMarkers.get(gaugeSel);
+      if (prev) { prev.marker.setIcon(gaugeIcon(prev.gauge, false)); prev.marker.setZIndexOffset(500); }
+      gaugeSel = id;
+      const cur = gaugeMarkers.get(id);
+      if (cur) { cur.marker.setIcon(gaugeIcon(cur.gauge, true)); cur.marker.setZIndexOffset(1000); }
+    },
     fitBounds(points, opts = {}) {
       if (!points.length) return;
       map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 12, ...opts });

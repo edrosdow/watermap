@@ -10,6 +10,10 @@ import { buildIndex, searchLocal, geocode } from './search.js';
 import { favorites, prefs } from './favorites.js';
 import { openForm } from './forms.js';
 import { renderDetail } from './detail.js';
+import { loadGauges, loadHistory, renderGaugeDetail } from './pegel.js';
+import { weatherSection } from './wetter.js';
+import { GROUPS, loadExtras, renderExtraDetail, nearbySection, glyph } from './extras.js';
+import { enrichFacts } from './hafeninfo.js';
 
 const state = {
   places: [], byId: new Map(), index: [], meta: null, issues: [], invalid: 0,
@@ -17,6 +21,8 @@ const state = {
   selectedId: null, user: null,
   map: null, mapOk: false,
   filtered: [], loadFailed: false,
+  gaugesOn: false, gauges: null, gaugeById: new Map(), gaugeId: null, gaugeTimer: null,
+  extrasOn: { wasser: false, service: false }, extras: null, extraById: new Map(), extraId: null,
 };
 
 const el = {
@@ -46,7 +52,7 @@ async function init() {
     state.map = createMap(el.mapEl, {
       useCluster: libs.cluster,
       onMoveEnd: debounce(() => { if (state.tab === 'list') renderList(); }, 180),
-      onMapClick: () => { if (state.selectedId) closeDetail(); },
+      onMapClick: () => { if (state.selectedId || state.gaugeId || state.extraId) closeDetail(); },
       onMarkerClick: (id) => selectPlace(id),
     });
     state.mapOk = true;
@@ -65,6 +71,8 @@ async function init() {
   applyFilters();
   renderDatainfo();
   if (state.mapOk && data.ok) startView();
+  if (state.mapOk && prefs.get('gauges') === '1') setGauges(true);
+  if (state.mapOk && hasExtras()) for (const g of Object.keys(GROUPS)) if (prefs.get('extras.' + g) === '1') setExtras(g, true);
   handleHash();
   offerLocation();
   registerServiceWorker();
@@ -146,6 +154,23 @@ function renderFilterbar() {
       onclick: () => { state.cat = key; state.subs.clear(); applyFilters(); } },
       key !== 'all' ? h('span', { class: 'chip-dot', html: glyphSvg(key, 16) }) : null,
       h('span', { text: label }), h('span', { class: 'chip-n', text: String(n) }))));
+  if (state.mapOk) {
+    row1.append(h('button', { type: 'button', class: 'chip chip-gauge' + (state.gaugesOn ? ' is-active' : ''), 'aria-pressed': String(state.gaugesOn),
+      title: state.gaugesOn ? 'Pegelstände ausblenden' : 'Aktuelle Pegelstände der Bundeswasserstraßen einblenden',
+      onclick: () => setGauges(!state.gaugesOn) },
+      h('span', { class: 'chip-dot', html: icon('gauge', 16) }), h('span', { text: 'Pegel' }),
+      state.gaugesOn && state.gauges ? h('span', { class: 'chip-n', text: String(state.gauges.length) }) : null));
+    if (hasExtras()) {
+      for (const [g, def] of Object.entries(GROUPS)) {
+        const on = state.extrasOn[g];
+        const n = on && state.extras ? state.extras.filter(x => def.kinds.includes(x.kind)).length : null;
+        row1.append(h('button', { type: 'button', class: `chip chip-extra chip-extra-${g}` + (on ? ' is-active' : ''), 'aria-pressed': String(on),
+          style: `--c:${def.color}`, title: on ? `${def.label} ausblenden` : `${def.label} einblenden`, onclick: () => setExtras(g, !on) },
+          h('span', { class: 'chip-dot', html: glyph(def.kinds[0], 15) }), h('span', { text: def.label }),
+          n !== null ? h('span', { class: 'chip-n', text: String(n) }) : null));
+      }
+    }
+  }
   bar.append(row1);
   if (state.cat !== 'all') {
     const counts = filterCounts(state.places, state.cat);
@@ -234,6 +259,10 @@ function detailInset() {
 function selectPlace(id, { fly = true, updateHash = true } = {}) {
   const p = state.byId.get(id);
   if (!p) return false;
+  const pick = state.placePick;
+  if (pick && pick.type && p.type !== pick.type) { toast('Bitte eine Bootstankstelle antippen.'); return false; }
+  if (state.gaugeId) { state.gaugeId = null; state.map?.selectGauge(null); }
+  if (state.extraId) { state.extraId = null; state.map?.selectExtra(null); }
   state.selectedId = id;
   if (state.map) { state.map.select(id); }
   showDetail(p);
@@ -241,12 +270,16 @@ function selectPlace(id, { fly = true, updateHash = true } = {}) {
   if (updateHash) history.replaceState(null, '', '#p=' + encodeURIComponent(id));
   $$('.place', el.list).forEach(b => b.classList.toggle('is-selected', b.dataset.id === id));
   announce(`${displayName(p)} ausgewählt`);
+  if (pick) { endPlacePick(); openReport(pick.formName, { ...pick.preset, standort_id: id }); }  // Auswahlmodus aus dem Menü
   return true;
 }
 
 function showDetail(p) {
   const [head, body] = renderDetail(p, {
     user: state.user,
+    enrichFacts: enrichFacts(state.meta, p.id),
+    weather: weatherSection(p.lat, p.lon),
+    nearby: hasExtras() ? nearbySection(extrasList(), p.lat, p.lon, { onSelect: (id) => selectExtra(id) }) : null,
     actions: {
       close: closeDetail,
       onFavorite: () => { favorites.toggle(p.id); showDetail(p); if (state.tab === 'fav' || true) renderList(); updateTabs(); },
@@ -256,6 +289,10 @@ function showDetail(p) {
       reportPrice: () => openReport('tankpreis-melden', { standort_id: p.id }),
     },
   });
+  mountDetail(head, body);
+}
+
+function mountDetail(head, body) {
   const scroll = el.detail.querySelector('.detail-scroll');
   const prev = scroll ? scroll.scrollTop : 0;
   clear(el.detail).append(h('div', { class: 'detail-scroll' }, head, body));
@@ -269,6 +306,8 @@ function showDetail(p) {
 function closeDetail() {
   const prev = state.selectedId;
   state.selectedId = null;
+  if (state.gaugeId) { state.gaugeId = null; state.map?.selectGauge(null); }
+  if (state.extraId) { state.extraId = null; state.map?.selectExtra(null); }
   el.detail.hidden = true; clear(el.detail); delete el.detail.dataset.opened;
   document.body.classList.remove('has-detail');
   if (state.map) state.map.select(null);
@@ -287,7 +326,124 @@ async function shareLink(p) {
   catch { prompt('Link zum Kopieren:', url); }
 }
 
+// ============================================================ Pegel
+async function setGauges(on) {
+  state.gaugesOn = on;
+  prefs.set('gauges', on ? '1' : '0');
+  clearInterval(state.gaugeTimer);
+  if (!on) {
+    if (state.gaugeId) closeDetail();
+    state.map?.setGauges(null);
+    state.gauges = null; state.gaugeById = new Map();   // beim nächsten Einschalten frisch laden
+    renderFilterbar();
+    return;
+  }
+  renderFilterbar();
+  await refreshGauges();
+  state.gaugeTimer = setInterval(refreshGauges, CONFIG.PEGEL_REFRESH_MIN * 60e3);
+}
+
+async function refreshGauges() {
+  try {
+    const list = await loadGauges();
+    if (!state.gaugesOn) return;
+    state.gauges = list;
+    state.gaugeById = new Map(list.map(g => [g.id, g]));
+    state.map?.setGauges(list, (id) => selectGauge(id));
+    if (state.gaugeId) state.map?.selectGauge(state.gaugeId);
+    announce(`${list.length} Pegel eingeblendet`);
+  } catch {
+    toast(state.gauges ? 'Pegeldaten konnten nicht aktualisiert werden.' : 'Pegeldaten sind gerade nicht erreichbar. Bitte später erneut versuchen.');
+    if (!state.gauges) { state.gaugesOn = false; clearInterval(state.gaugeTimer); }
+  }
+  renderFilterbar();
+}
+
+function selectGauge(id, { fly = true } = {}) {
+  const g = state.gaugeById.get(id);
+  if (!g) return false;
+  if (state.selectedId) { state.selectedId = null; state.map?.select(null); $$('.place', el.list).forEach(b => b.classList.remove('is-selected')); }
+  if (state.extraId) { state.extraId = null; state.map?.selectExtra(null); }
+  state.gaugeId = id;
+  state.map?.selectGauge(id);
+  const dist = state.user ? formatDistance(haversine(state.user.lat, state.user.lon, g.lat, g.lon)) : null;
+  const [head, body] = renderGaugeDetail(g, { history: loadHistory(id), close: closeDetail, user: state.user, distance: dist, weather: weatherSection(g.lat, g.lon) });
+  mountDetail(head, body);
+  if (state.map && fly) state.map.reveal(g, { zoom: 12, inset: detailInset() });
+  history.replaceState(null, '', '#g=' + encodeURIComponent(id));
+  announce(`Pegel ${g.name} ausgewählt`);
+  return true;
+}
+
+// ============================================================ Extras (Schleusen, Service …)
+const hasExtras = () => !!state.meta?.files?.extras;
+
+function extrasList() {
+  return loadExtras(state.meta).then((list) => {
+    if (!state.extras) { state.extras = list; state.extraById = new Map(list.map(x => [x.id, x])); }
+    return list;
+  });
+}
+
+const groupOf = (id) => {
+  const x = state.extraById.get(id);
+  return x ? Object.keys(GROUPS).find(g => GROUPS[g].kinds.includes(x.kind)) : null;
+};
+
+async function setExtras(group, on) {
+  state.extrasOn[group] = on;
+  prefs.set('extras.' + group, on ? '1' : '0');
+  if (!on) {
+    if (state.extraId && groupOf(state.extraId) === group) closeDetail();
+    state.map?.setExtras(group, null);
+    renderFilterbar();
+    return;
+  }
+  renderFilterbar();
+  try {
+    const list = await extrasList();
+    if (!state.extrasOn[group]) return;
+    const kinds = new Set(GROUPS[group].kinds);
+    const mine = list.filter(x => kinds.has(x.kind));
+    state.map?.setExtras(group, mine, (id) => selectExtra(id));
+    if (state.extraId) state.map?.selectExtra(state.extraId);
+    announce(`${mine.length} Einträge „${GROUPS[group].label}“ eingeblendet`);
+  } catch {
+    state.extrasOn[group] = false;
+    toast('Die Zusatzdaten konnten nicht geladen werden.');
+  }
+  renderFilterbar();
+}
+
+function selectExtra(id, { fly = true } = {}) {
+  const x = state.extraById.get(id);
+  if (!x) return false;
+  if (state.selectedId) { state.selectedId = null; state.map?.select(null); $$('.place', el.list).forEach(b => b.classList.remove('is-selected')); }
+  if (state.gaugeId) { state.gaugeId = null; state.map?.selectGauge(null); }
+  state.extraId = id;
+  state.map?.selectExtra(id);
+  const [head, body] = renderExtraDetail(x, { close: closeDetail, user: state.user });
+  mountDetail(head, body);
+  if (state.map && fly) state.map.reveal(x, { zoom: 16, inset: detailInset() });
+  history.replaceState(null, '', '#x=' + encodeURIComponent(id));
+  announce(`${x.name || 'Eintrag'} ausgewählt`);
+  return true;
+}
+
 function handleHash() {
+  const xm = location.hash.match(/^#x=(.+)$/);
+  if (xm && hasExtras()) {
+    let id; try { id = decodeURIComponent(xm[1]); } catch { return; }
+    extrasList().then(() => { if (!selectExtra(id)) toast('Dieser Eintrag wurde nicht gefunden.'); }, () => toast('Die Zusatzdaten konnten nicht geladen werden.'));
+    return;
+  }
+  const g = location.hash.match(/^#g=(.+)$/);
+  if (g && state.mapOk) {
+    let id; try { id = decodeURIComponent(g[1]); } catch { return; }
+    (state.gaugesOn && state.gauges ? Promise.resolve() : setGauges(true))
+      .then(() => { if (state.gauges && !selectGauge(id)) toast('Dieser Pegel wurde nicht gefunden.'); });
+    return;
+  }
   const m = location.hash.match(/^#p=(.+)$/);
   if (!m) return;
   let id; try { id = decodeURIComponent(m[1]); } catch { return; }
@@ -345,6 +501,7 @@ function nearestSlips(lat, lon, radius) {
 
 function pickLocation(initial) {
   if (!state.mapOk) { toast('Die Karte ist nicht verfügbar. Nutze „Meine Position“.'); return Promise.resolve(null); }
+  if (state.placePick) endPlacePick();
   const bar = clear(el.pickbar);
   const confirm = h('button', { type: 'button', class: 'btn btn-primary small', text: 'Standort übernehmen', disabled: !initial });
   const cancel = h('button', { type: 'button', class: 'btn btn-outline small', text: 'Abbrechen' });
@@ -363,11 +520,40 @@ function pickLocation(initial) {
   });
 }
 
+// Menü → Meldung zu einem Standort: statt einer Auswahlliste den Standort auf der Karte (oder über die Suche) antippen
+const PLACE_PICK = {
+  'foto-einreichen': { text: 'Tippe auf der Karte auf die Slipanlage, Marina oder Tankstelle, zu der das Foto gehört.' },
+  'fehler-melden': { text: 'Tippe auf der Karte auf den Standort, zu dem du etwas melden möchtest.', general: true },
+  'tankpreis-melden': { text: 'Tippe auf der Karte auf die Bootstankstelle.', type: 'fuel' },
+};
+
+function choosePlaceFor(formName, preset = {}) {
+  const cfg = PLACE_PICK[formName];
+  if (el.dlg?.open) el.dlg.close();
+  closeMenu();
+  const bar = clear(el.pickbar);
+  const cancel = h('button', { type: 'button', class: 'btn btn-outline small', text: 'Abbrechen', onclick: endPlacePick });
+  const general = cfg.general ? h('button', { type: 'button', class: 'btn btn-outline small', text: 'Ohne Standort melden',
+    onclick: () => { endPlacePick(); openReport(formName, { ...preset, standort_id: '__other', art: 'sonstiges' }); } }) : null;
+  bar.append(h('p', { text: `${cfg.text} Du kannst den Ort auch oben suchen.` }), h('div', { class: 'btn-row' }, cancel, general));
+  el.pickbar.hidden = false;
+  document.body.classList.add('is-choosing');
+  state.placePick = { formName, type: cfg.type || null, preset };
+  if (isMobile()) openSheet(false);
+}
+
+function endPlacePick() {
+  state.placePick = null;
+  el.pickbar.hidden = true;
+  document.body.classList.remove('is-choosing');
+}
+
 function openReport(formName, preset = {}) {
   const ctx = {
     dialog: el.dlg, places: state.places,
     requestUserPos, pickLocation, nearestSlips,
     showPlace: (id) => selectPlace(id),
+    choosePlace: (name) => choosePlaceFor(name),
   };
   const p = preset.standort_id && state.byId.get(preset.standort_id);
   if (p && formName === 'tankpreis-melden') preset.standort_id = p.id;
@@ -473,9 +659,9 @@ function buildMenu() {
     h('ul', { class: 'menu-list' },
       item('star', 'Favoriten', () => { state.tab = 'fav'; updateTabs(); renderList(); openSheet(); }, `${favorites.all().length} gespeichert`),
       item('plus', 'Neue Slipanlage melden', () => openReport('slipanlage-melden')),
-      item('plus', 'Kraftstoffpreis melden', () => openReport('tankpreis-melden')),
-      item('camera', 'Foto einreichen', () => openReport('foto-einreichen')),
-      item('flag', 'Fehler oder Hinweis melden', () => openReport('fehler-melden', { standort_id: '__other', art: 'sonstiges' }))),
+      item('plus', 'Kraftstoffpreis melden', () => choosePlaceFor('tankpreis-melden')),
+      item('camera', 'Foto einreichen', () => choosePlaceFor('foto-einreichen')),
+      item('flag', 'Fehler oder Hinweis melden', () => choosePlaceFor('fehler-melden', { art: 'sonstiges' }))),
     h('ul', { class: 'menu-links' },
       h('li', {}, h('a', { href: './ueber.html', text: 'Über WaterMap und Datenquellen' })),
       h('li', {}, h('a', { href: './datenschutz.html', text: 'Datenschutz' })),
@@ -515,7 +701,7 @@ function wireStatic() {
   $$('#tabs button').forEach(b => b.addEventListener('click', () => { state.tab = b.dataset.tab; updateTabs(); renderList(); }));
   $('#sheet-handle').addEventListener('click', () => openSheet(!el.sidebar.classList.contains('is-open')));
   document.addEventListener('favorites-changed', updateTabs);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !el.dlg.open && !$('#menu').open && state.selectedId && !el.suggest.offsetParent) closeDetail(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !el.dlg.open && !$('#menu').open && (state.selectedId || state.gaugeId || state.extraId) && !el.suggest.offsetParent) closeDetail(); });
   window.addEventListener('resize', debounce(() => state.map?.invalidate(), 150));
   window.addEventListener('online', updateOnline); window.addEventListener('offline', updateOnline);
   updateOnline(); updateTabs();
@@ -533,4 +719,4 @@ init().catch((e) => {
 });
 
 // Für Tests und Fehlersuche in der Browser-Konsole
-window.__watermap = { state, selectPlace, applyFilters };
+window.__watermap = { state, selectPlace, applyFilters, setGauges, selectGauge, setExtras, selectExtra };

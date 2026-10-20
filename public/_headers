@@ -21,6 +21,10 @@
 /css/*
   Cache-Control: no-cache
 
+/admin/*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
 /vendor/*
   Cache-Control: public, max-age=31536000, immutable
 

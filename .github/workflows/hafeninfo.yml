@@ -1,0 +1,88 @@
+name: Hafeninfos aktualisieren
+
+# Liest Preise und Service-Angaben von den Websites der Marinas (scripts/hafeninfo.py).
+# Standard: kostenlos nach Regeln (wörtliche Zeilen). Nur mit „mit_ki“ wertet Claude aus – das kostet Geld und
+# braucht das Repository-Secret ANTHROPIC_API_KEY.
+
+on:
+  schedule:
+    - cron: "41 4 8 * *"   # am 8. jedes Monats, 04:41 UTC (nach dem OSM-Import am 1.)
+  # Probelauf ohne Veröffentlichung: auf einem claude/-Branch die Datei .github/hafeninfo-probelauf.json ändern
+  # (z. B. {"anzahl": 25, "lauf": 2}) – die Ergebnisse landen nur auf diesem Branch und damit in der Netlify-Vorschau.
+  # {"anzahl": 0} startet einen leeren Lauf, der nichts ändert.
+  push:
+    branches: ["claude/**"]
+    paths: [".github/hafeninfo-probelauf.json"]
+  workflow_dispatch:
+    inputs:
+      anzahl:
+        description: "Höchstens so viele Häfen in diesem Lauf (1400 = alle fälligen)"
+        type: string
+        default: "1400"
+      nur:
+        description: "Nur bestimmte Häfen, z. B. node/123,way/456 (leer = automatisch die am längsten nicht geprüften)"
+        type: string
+        default: ""
+      mit_ki:
+        description: "Mit Claude auswerten statt nach Regeln (kostenpflichtig, braucht ANTHROPIC_API_KEY)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daten-schreiben          # nie gleichzeitig mit dem OSM-Import committen
+  cancel-in-progress: false
+
+jobs:
+  hafeninfo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tests
+        run: python3 -I -m unittest discover -s tests -p "test_*.py"
+      - name: PDF-Leser installieren (kostenlos)
+        run: python3 -m pip install --quiet "pypdf>=6,<7"
+      - name: Claude-SDK installieren
+        if: ${{ inputs.mit_ki }}
+        run: python3 -m pip install --quiet "anthropic>=1.15,<2"
+      - name: Hafen-Websites auslesen
+        env:
+          PYTHONUNBUFFERED: "1"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANZAHL: ${{ inputs.anzahl || '1400' }}   # monatlich alle, deren Prüfung über 30 Tage her ist (kostenlos, ~20 min)
+          NUR: ${{ inputs.nur || '' }}
+          MIT_KI: ${{ inputs.mit_ki && '1' || '' }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            ANZAHL=$(python3 -c "import json;print(int(json.load(open('.github/hafeninfo-probelauf.json')).get('anzahl', 25)))")
+            NUR=$(python3 -c "import json;print(','.join(json.load(open('.github/hafeninfo-probelauf.json')).get('nur', [])))")
+            echo "Probelauf auf ${GITHUB_REF_NAME}: anzahl=$ANZAHL nur=$NUR"
+          fi
+          KI=""
+          if [ -n "$MIT_KI" ]; then
+            if [ -z "$ANTHROPIC_API_KEY" ]; then
+              echo "::error::„mit_ki“ braucht das Secret ANTHROPIC_API_KEY (Settings → Secrets and variables → Actions)."; exit 1
+            fi
+            KI="--ki"
+          fi
+          if [ -n "$NUR" ]; then python3 -u scripts/hafeninfo.py $KI --only "$NUR" --limit "$ANZAHL"; else python3 -u scripts/hafeninfo.py $KI --limit "$ANZAHL"; fi
+      - name: Daten prüfen
+        run: python3 scripts/validate_data.py
+      - name: Änderungen übernehmen
+        run: |
+          if [ -n "$(git status --porcelain public/data)" ]; then
+            git config user.name "watermap-bot"
+            git config user.email "watermap-bot@users.noreply.github.com"
+            git add public/data/hafeninfo.json public/data/meta.json
+            git commit -m "Hafeninfos aktualisiert ($(date -u +%F))"
+            git pull --rebase
+            git push
+          else
+            echo "Keine Änderungen."
+          fi

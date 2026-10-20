@@ -217,20 +217,19 @@ export function openForm(formName, ctx, preset = {}) {
     const isPrice = formName === 'tankpreis-melden';
     const idName = isPrice ? 'tankstelle_id' : 'standort_id';
     const nameName = isPrice ? 'tankstelle_name' : 'standort_name';
-    const pool = ctx.places.filter(p => (isPrice ? p.type === 'fuel' : true))
-      .sort((a, b) => displayName(a).localeCompare(displayName(b), 'de'));
-    const sel = h('select', { name: idName, 'aria-label': isPrice ? 'Bootstankstelle' : 'Standort' },
-      h('option', { value: '', text: isPrice ? 'Bootstankstelle wählen …' : 'Standort wählen …' }),
-      pool.slice(0, 600).map(p => h('option', { value: p.id, text: displayName(p) + (p.locality ? ` – ${p.locality}` : '') })),
-      h('option', { value: '__other', text: 'Nicht in der Liste' }));
-    const nameIn = h('input', { type: 'text', name: nameName, maxlength: 120, placeholder: 'Name und Ort', hidden: true, 'aria-label': 'Name und Ort' });
-    const sync = () => { nameIn.hidden = sel.value !== '__other'; nameIn.required = sel.value === '__other'; if (sel.value && sel.value !== '__other') nameIn.value = pool.find(p => p.id === sel.value) ? displayName(pool.find(p => p.id === sel.value)) : ''; };
-    sel.addEventListener('change', sync);
-    if (preset.standort_id && (preset.standort_id === '__other' || pool.some(p => p.id === preset.standort_id))) { sel.value = preset.standort_id; sync(); }
-    else if (!pool.length) { sel.value = '__other'; sel.disabled = true; sync(); }
-    controls[idName] = sel; controls[nameName] = nameIn;
-    return h('div', { class: 'field' },
-      h('span', { class: 'field-label', text: isPrice ? 'Bootstankstelle' : 'Standort' }), sel, nameIn);
+    const label = isPrice ? 'Bootstankstelle' : 'Standort';
+    // Keine Auswahlliste: der Standort kommt immer von der Karte (Detailansicht oder Auswahlmodus, main.js)
+    const p = preset.standort_id && ctx.places.find(x => x.id === preset.standort_id && (!isPrice || x.type === 'fuel'));
+    const general = !p && preset.standort_id === '__other' && formName === 'fehler-melden';
+    const idIn = h('input', { type: 'hidden', name: idName, value: p ? p.id : general ? '__other' : '' });
+    const nameIn = h('input', { type: 'hidden', name: nameName, value: p ? displayName(p) : '' });
+    controls[idName] = idIn; controls[nameName] = nameIn;
+    const shown = p ? displayName(p) + (p.locality ? ` – ${p.locality}` : '') : general ? 'Allgemeiner Hinweis (kein bestimmter Standort)' : null;
+    const change = ctx.choosePlace ? h('button', { type: 'button', class: 'btn btn-outline small', text: shown ? 'Anderen Standort wählen' : 'Auf der Karte wählen',
+      onclick: () => ctx.choosePlace(formName) }) : null;
+    return h('div', { class: 'field' }, h('span', { class: 'field-label', text: label }),
+      shown ? h('p', { class: 'fixed-place', text: shown }) : h('p', { class: 'hint', text: isPrice ? 'Bitte die Bootstankstelle auf der Karte antippen.' : 'Bitte den Standort auf der Karte antippen.' }),
+      idIn, nameIn, change);
   }
 
   // Honeypot (für Menschen unsichtbar)
@@ -323,9 +322,9 @@ function validate(formName, form, fd, state, controls) {
     if (!Number.isFinite(price) || price < CONFIG.PRICE_MIN || price > CONFIG.PRICE_MAX) return bad(`Bitte einen Preis zwischen ${CONFIG.PRICE_MIN} und ${CONFIG.PRICE_MAX} € pro Liter eingeben.`, controls.preis);
     const d = String(fd.get('datum'));
     if (d > new Date().toISOString().slice(0, 10)) return bad('Das Datum darf nicht in der Zukunft liegen.', controls.datum);
-    if (!fd.get('tankstelle_id')) return bad('Bitte die Bootstankstelle wählen.', controls.tankstelle_id);
+    if (!fd.get('tankstelle_id')) return bad('Bitte die Bootstankstelle auf der Karte wählen.', controls.tankstelle_id);
   }
-  if ((formName === 'foto-einreichen' || formName === 'fehler-melden') && !fd.get('standort_id')) return bad('Bitte den Standort wählen.', controls.standort_id);
+  if ((formName === 'foto-einreichen' || formName === 'fehler-melden') && !fd.get('standort_id')) return bad('Bitte den Standort auf der Karte wählen.', controls.standort_id);
   if (formName === 'slipanlage-melden') {
     const la = Number(fd.get('lat')), lo = Number(fd.get('lon'));
     if (!(la >= 47 && la <= 55.2 && lo >= 5.5 && lo <= 15.1)) return bad('Der Standort liegt außerhalb von Deutschland. Bitte erneut auf der Karte wählen.', null);

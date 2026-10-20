@@ -6,12 +6,24 @@ on:
   workflow_dispatch:
     inputs:
       ohne_zuordnung:
-        description: "Nur Standorte holen, ohne Ort/Gewässer (deutlich schneller, z. B. für den ersten Lauf)"
+        description: "Nur Standorte holen, ohne Ort/Gewässer/Extras (deutlich schneller, z. B. für den ersten Lauf)"
+        type: boolean
+        default: false
+      bereich:
+        description: "Region: DE = ganz Deutschland; zum Ausprobieren ein Bundesland, z. B. DE-NW (Achtung: überschreibt die Daten dann nur mit diesem Bundesland, daher nur zusammen mit „nur_pruefen“)"
+        type: string
+        default: "DE"
+      nur_pruefen:
+        description: "Nur abrufen und berichten, nichts übernehmen (Dry-Run)"
         type: boolean
         default: false
 
 permissions:
   contents: write
+
+concurrency:
+  group: daten-schreiben          # nie gleichzeitig mit den Hafeninfos committen
+  cancel-in-progress: false
 
 jobs:
   update:
@@ -27,7 +39,8 @@ jobs:
       - name: Import aus OpenStreetMap
         env:
           PYTHONUNBUFFERED: "1"
-        run: python3 -u scripts/import_osm.py ${{ inputs.ohne_zuordnung && '--no-enrich' || '' }}
+          BEREICH: ${{ inputs.bereich || 'DE' }}
+        run: python3 -u scripts/import_osm.py --area "$BEREICH" ${{ inputs.ohne_zuordnung && '--no-enrich' || '' }} ${{ inputs.nur_pruefen && '--dry-run' || '' }}
       - name: Daten prüfen
         run: python3 scripts/validate_data.py
       - name: Änderungen übernehmen
@@ -37,6 +50,7 @@ jobs:
             git config user.email "watermap-bot@users.noreply.github.com"
             git add public/data/osm public/data/meta.json
             git commit -m "OSM-Daten aktualisiert ($(date -u +%F))"
+            git pull --rebase
             git push
           else
             echo "Keine Änderungen."
