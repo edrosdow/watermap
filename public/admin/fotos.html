@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fotos verwalten – WaterMap</title><meta name="robots" content="noindex, nofollow">
+<title>Verwaltung – WaterMap</title><meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="../icons/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../css/page.css">
 <style>
   main { max-width: 900px; }
@@ -37,15 +37,23 @@
   .log .what { font-weight: 700; }
   .log .detail { grid-column: 2; color: #5B6B73; }
   .a-freigegeben { color: #1E7B3A; } .a-abgelehnt { color: #5B6B73; } .a-entfernt { color: #B3261E; } .a-meldung { color: #06667E; }
+  .facts { display: grid; grid-template-columns: minmax(110px, 35%) 1fr; gap: 4px 12px; margin: 8px 0; font-size: 14px; }
+  .facts dt { color: #5B6B73; } .facts dd { margin: 0; }
+  .near { padding: 8px 10px; border-radius: 8px; background: #FFF4E5; color: #8A5300; font-size: 14px; }
+  .near.ok { background: #EAF6EE; color: #1E7B3A; }
+  .tag { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 99px; background: #EEF3F5; color: #0B3045; font-size: 12px; font-weight: 600; }
   @media (max-width: 560px) { .log li { grid-template-columns: 1fr; } .log .detail { grid-column: 1; } }
 </style></head>
-<body><header><a href="../">WaterMap</a><small>Fotos verwalten</small></header><main>
-<h1>Fotos verwalten</h1>
+<body><header><a href="../">WaterMap</a><small>Verwaltung</small></header><main>
+<h1>WaterMap verwalten</h1>
 <form class="login" id="login"><input type="password" id="pw" autocomplete="current-password" placeholder="Passwort" required><button class="ok" type="submit">Anmelden</button></form>
 <p class="status" id="msg" role="status"></p>
 <nav class="tabs" id="tabs" hidden role="tablist" aria-label="Bereiche">
-  <button type="button" role="tab" data-tab="neu">Eingereicht <span class="n" id="n-neu"></span></button>
-  <button type="button" role="tab" data-tab="gemeldet">Gemeldet <span class="n" id="n-gemeldet"></span></button>
+  <button type="button" role="tab" data-tab="neu">Fotos <span class="n" id="n-neu"></span></button>
+  <button type="button" role="tab" data-tab="gemeldet">Gemeldete Fotos <span class="n" id="n-gemeldet"></span></button>
+  <button type="button" role="tab" data-tab="slips">Slipanlagen <span class="n" id="n-slips"></span></button>
+  <button type="button" role="tab" data-tab="preise">Preise <span class="n" id="n-preise"></span></button>
+  <button type="button" role="tab" data-tab="hinweise">Hinweise <span class="n" id="n-hinweise"></span></button>
   <button type="button" role="tab" data-tab="veroeffentlicht">Veröffentlicht <span class="n" id="n-veroeffentlicht"></span></button>
   <button type="button" role="tab" data-tab="verlauf">Verlauf</button>
 </nav>
@@ -56,6 +64,18 @@
 <section id="tab-gemeldet" hidden>
   <p class="meta">Über „Foto melden“ in der App gemeldete Fotos. „Foto entfernen“ nimmt es aus der App und erledigt die Meldung; „Meldung verwerfen“ lässt das Foto stehen.</p>
   <div id="reports"></div>
+</section>
+<section id="tab-slips" hidden>
+  <p class="meta">Neu gemeldete Slipanlagen. „Freigeben“ nimmt sie in die Karte auf (mit Foto, wenn eines mitgeschickt wurde und die Rechte bestätigt sind). Vorher Lage auf der Karte und Dubletten prüfen.</p>
+  <div id="slips"></div>
+</section>
+<section id="tab-preise" hidden>
+  <p class="meta">Gemeldete Kraftstoffpreise. Freigegebene Preise erscheinen mit Datum an der Tankstelle; ältere bleiben gespeichert.</p>
+  <div id="preise"></div>
+</section>
+<section id="tab-hinweise" hidden>
+  <p class="meta">Fehler und Hinweise zu Standorten. Die Korrektur selbst machst du von Hand (am besten direkt in OpenStreetMap); hier schließt du den Hinweis ab.</p>
+  <div id="hinweise"></div>
 </section>
 <section id="tab-veroeffentlicht" hidden>
   <p class="meta">Alle Fotos, die gerade in der App zu sehen sind.</p>

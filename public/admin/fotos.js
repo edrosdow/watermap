@@ -1,12 +1,12 @@
-// Fotos verwalten: Eingereicht · Gemeldet · Veröffentlicht · Verlauf (netlify/functions/fotos.mjs).
+// Verwaltung: Fotos · Gemeldete Fotos · Slipanlagen · Preise · Hinweise · Veröffentlicht · Verlauf (netlify/functions/fotos.mjs).
 const API = '/.netlify/functions/fotos';
 const $ = (s) => document.querySelector(s);
 const el = (tag, props = {}, ...kids) => {
   const n = Object.assign(document.createElement(tag), props);
-  n.append(...kids.flat().filter(k => k !== null && k !== undefined && k !== false));
+  n.append(...kids.flat(Infinity).filter(k => k !== null && k !== undefined && k !== false));
   return n;
 };
-const ID = /^(node|way|relation|community)\/[A-Za-z0-9_-]{1,40}$/;
+const ID = /^(node|way|relation|community|c)\/[A-Za-z0-9_-]{1,80}$/;
 const parseStandort = (t) => { const m = String(t).trim().match(/[#&]p=([^&\s]+)/); const id = m ? decodeURIComponent(m[1]) : String(t).trim(); return ID.test(id) ? id : null; };
 const when = (iso) => iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '';
 const placeLink = (id, name) => ID.test(id || '') ? el('a', { href: `../#p=${encodeURIComponent(id)}`, target: '_blank', rel: 'noopener', textContent: name || id }) : el('span', { textContent: name || 'ohne Standort' });
@@ -59,10 +59,13 @@ async function act(button, body, done, confirmText) {
 }
 
 async function loadAll() {
-  const [neu, gemeldet, veroeffentlicht, verlauf] = await Promise.allSettled([
+  const all = await Promise.allSettled([
     call('GET').then(r => r.json()), call('GET', '?meldungen=1').then(r => r.json()),
-    call('GET', '?veroeffentlicht=1').then(r => r.json()), call('GET', '?verlauf=1').then(r => r.json())]);
-  const failed = [neu, gemeldet, veroeffentlicht, verlauf].find(x => x.status === 'rejected');
+    call('GET', '?veroeffentlicht=1').then(r => r.json()), call('GET', '?verlauf=1').then(r => r.json()),
+    call('GET', '?form=slipanlage-melden').then(r => r.json()), call('GET', '?form=tankpreis-melden').then(r => r.json()),
+    call('GET', '?form=fehler-melden').then(r => r.json())]);
+  const [neu, gemeldet, veroeffentlicht, verlauf, slips, preise, hinweise] = all;
+  const failed = all.find(x => x.status === 'rejected');
   if (failed && /Passwort/.test(failed.reason?.message)) throw failed.reason;
   try { sessionStorage.setItem('wm.fotoPw', pw); } catch { /* privat */ }
   $('#login').hidden = true; $('#tabs').hidden = false;
@@ -70,6 +73,9 @@ async function loadAll() {
   renderReports(gemeldet.status === 'fulfilled' ? gemeldet.value.meldungen : null, gemeldet.reason);
   renderPublished(veroeffentlicht.status === 'fulfilled' ? veroeffentlicht.value.fotos : null, veroeffentlicht.reason);
   renderLog(verlauf.status === 'fulfilled' ? verlauf.value.verlauf : null, verlauf.reason);
+  renderSlips(slips.status === 'fulfilled' ? slips.value.slips : null, slips.reason);
+  renderPrices(preise.status === 'fulfilled' ? preise.value.preise : null, preise.reason);
+  renderHints(hinweise.status === 'fulfilled' ? hinweise.value.hinweise : null, hinweise.reason);
   showTab(tab);
 }
 
@@ -146,7 +152,8 @@ function renderPublished(list, err) {
 
 // ---------------------------------------------------------------- Verlauf
 const LABEL = { freigegeben: ['Freigegeben', 'a-freigegeben'], abgelehnt: ['Abgelehnt', 'a-abgelehnt'], entfernt: ['Entfernt', 'a-entfernt'],
-  'meldung verworfen': ['Meldung verworfen', 'a-meldung'] };
+  'meldung verworfen': ['Meldung verworfen', 'a-meldung'], erledigt: ['Erledigt', 'a-freigegeben'], verworfen: ['Verworfen', 'a-abgelehnt'] };
+const BEREICH = { foto: 'Foto', slip: 'Slipanlage', preis: 'Preis', hinweis: 'Hinweis' };
 
 function renderLog(list, err) {
   const box = $('#log');
@@ -157,8 +164,104 @@ function renderLog(list, err) {
     const [label, cls] = LABEL[e.aktion] || [e.aktion, ''];
     const detail = [e.beschreibung ? `„${e.beschreibung}“` : '', e.grund ? `Grund: ${e.grund}` : '', e.foto || ''].filter(Boolean).join(' · ');
     box.append(el('li', {}, el('time', { dateTime: e.zeit, textContent: when(e.zeit) }),
-      el('span', {}, el('span', { className: `what ${cls}`, textContent: label }), ' – ', placeLink(e.standort_id, e.standort_name || e.standort_id)),
+      el('span', {}, el('span', { className: 'tag', textContent: BEREICH[e.bereich || 'foto'] || e.bereich }),
+        el('span', { className: `what ${cls}`, textContent: label }), ' – ', placeLink(e.standort_id, e.standort_name || e.standort_id)),
       detail ? el('span', { className: 'detail', textContent: detail }) : null));
+  }
+}
+
+// ---------------------------------------------------------------- Slipanlagen
+const ZUGANG = { oeffentlich: 'Öffentlich', privat: 'Privat / Verein', kunden: 'Nur Kunden / Gäste' };
+const JN = { ja: 'Ja', nein: 'Nein' };
+const facts = (rows) => el('dl', { className: 'facts' }, rows.filter(([, v]) => v).map(([k, v]) => [el('dt', { textContent: k }), el('dd', {}, v)]));
+
+/** Bekannte Slipanlagen (OSM und Community) für die Dublettenprüfung – einmal laden. */
+let known = null;
+function knownSlips() {
+  known ||= Promise.all([
+    fetch('../data/osm/slip.geojson').then(r => r.json()).then(j => j.features.map(f => ({ id: f.id, name: f.properties?.name, lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0] }))),
+    fetch('../data/community/places.json').then(r => r.json()).catch(() => []).then(a => a.filter(p => p.type === 'slip' && p.status === 'approved')),
+  ]).then(([a, b]) => [...a, ...b]).catch(() => []);
+  return known;
+}
+const dist = (a, b, c, d) => { const R = 6371000, r = Math.PI / 180, x = (d - b) * r * Math.cos((a + c) / 2 * r), y = (c - a) * r; return Math.sqrt(x * x + y * y) * R; };
+
+function renderSlips(list, err) {
+  const box = $('#slips');
+  box.replaceChildren();
+  setCount('slips', list ? list.length : 0, true);
+  if (!list) { box.append(failNote(err)); return; }
+  if (!list.length) { box.append(el('p', { className: 'empty', textContent: 'Keine neuen Slipanlagen.' })); return; }
+  for (const s of list) {
+    const okCoords = Number.isFinite(s.lat) && Number.isFinite(s.lon);
+    const near = el('p', { className: 'near', textContent: okCoords ? 'Prüfe Dubletten …' : 'Koordinaten fehlen – nicht freigebbar.' });
+    if (okCoords) knownSlips().then((all) => {
+      let best = null;
+      for (const k of all) { const m = dist(s.lat, s.lon, k.lat, k.lon); if (!best || m < best.m) best = { ...k, m }; }
+      if (best && best.m < 300) near.replaceChildren(`Achtung: bekannte Slipanlage ${Math.round(best.m)} m entfernt – `, placeLink(best.id, best.name || 'ohne Namen'));
+      else { near.classList.add('ok'); near.textContent = best ? `Keine bekannte Slipanlage im Umkreis von 300 m (nächste: ${(best.m / 1000).toFixed(1)} km).` : 'Dublettenprüfung nicht möglich.'; }
+    });
+    const yes = el('button', { className: 'ok', type: 'button', textContent: 'Freigeben', disabled: !okCoords });
+    const no = el('button', { type: 'button', textContent: 'Ablehnen' });
+    yes.addEventListener('click', () => act(yes, { form: 'slipanlage-melden', aktion: 'freigeben', id: s.id }, 'Slipanlage freigegeben – in etwa einer Minute in der Karte.'));
+    no.addEventListener('click', () => act(no, { form: 'slipanlage-melden', aktion: 'ablehnen', id: s.id }, 'Slipanlage abgelehnt.', 'Meldung wirklich ablehnen? Sie wird gelöscht.'));
+    const mapLink = okCoords ? el('a', { href: `https://www.openstreetmap.org/?mlat=${s.lat}&mlon=${s.lon}#map=17/${s.lat}/${s.lon}`, target: '_blank', rel: 'noopener', textContent: `${s.lat.toFixed(5)}, ${s.lon.toFixed(5)} (Karte)` }) : 'fehlt';
+    box.append(el('section', { className: 'card' },
+      s.hat_foto ? image(`?form=slipanlage-melden&bild=${encodeURIComponent(s.id)}`, s.name) : null,
+      el('h2', { textContent: s.name || 'Ohne Namen' }),
+      el('p', { className: 'meta', textContent: `Gemeldet ${when(s.created)}` }),
+      facts([['Gewässer', s.gewaesser], ['Lage', mapLink], ['Zugang', ZUGANG[s.zugang]], ['Gebühr', [s.gebuehr === 'kostenlos' ? 'Kostenlos' : s.gebuehr === 'kostenpflichtig' ? 'Kostenpflichtig' : '', s.gebuehr_betrag].filter(Boolean).join(' – ')],
+        ['Parkplatz', JN[s.parkplatz]], ['Trailerparkplatz', JN[s.trailerparkplatz]], ['Beschreibung', s.beschreibung],
+        ['Rückfragen', s.kontakt ? el('a', { href: `mailto:${s.kontakt}`, textContent: s.kontakt }) : '']]),
+      s.dublette ? el('p', { className: 'warn', textContent: 'Der Melder hat bestätigt, dass in der Nähe schon eine Slipanlage ist.' }) : null,
+      s.hat_foto && !s.rechte ? el('p', { className: 'warn', textContent: 'Rechte am Foto nicht bestätigt – das Foto wird nicht übernommen.' }) : null,
+      near, el('div', { className: 'actions' }, yes, no)));
+  }
+}
+
+// ---------------------------------------------------------------- Preise
+function renderPrices(list, err) {
+  const box = $('#preise');
+  box.replaceChildren();
+  setCount('preise', list ? list.length : 0, true);
+  if (!list) { box.append(failNote(err)); return; }
+  if (!list.length) { box.append(el('p', { className: 'empty', textContent: 'Keine neuen Preise.' })); return; }
+  for (const pr of list) {
+    const inList = ID.test(pr.tankstelle_id), plausible = Number.isFinite(pr.preis) && pr.preis >= 0.5 && pr.preis <= 5;
+    const yes = el('button', { className: 'ok', type: 'button', textContent: 'Freigeben', disabled: !(inList && plausible) });
+    const no = el('button', { type: 'button', textContent: 'Ablehnen' });
+    yes.addEventListener('click', () => act(yes, { form: 'tankpreis-melden', aktion: 'freigeben', id: pr.id }, 'Preis freigegeben – in etwa einer Minute in der App.'));
+    no.addEventListener('click', () => act(no, { form: 'tankpreis-melden', aktion: 'ablehnen', id: pr.id }, 'Preis abgelehnt.', 'Preismeldung wirklich ablehnen?'));
+    box.append(el('section', { className: 'card' },
+      el('h2', {}, placeLink(inList ? pr.tankstelle_id : '', pr.tankstelle_name || pr.tankstelle_id)),
+      el('p', { className: 'meta', textContent: `Gemeldet ${when(pr.created)}` }),
+      facts([['Kraftstoff', pr.kraftstoff === 'benzin' ? 'Benzin' : 'Diesel'], ['Preis', Number.isFinite(pr.preis) ? `${pr.preis.toFixed(3).replace('.', ',')} €/l` : 'ungültig'],
+        ['Beobachtet am', pr.datum], ['Kommentar', pr.kommentar]]),
+      inList ? null : el('p', { className: 'warn', textContent: 'Tankstelle nicht in der Liste – nicht zuzuordnen.' }),
+      plausible ? null : el('p', { className: 'warn', textContent: 'Preis außerhalb 0,50–5,00 €/l – nicht freigebbar.' }),
+      pr.hat_beleg ? image(`?form=tankpreis-melden&bild=${encodeURIComponent(pr.id)}`, 'Belegfoto') : null,
+      el('div', { className: 'actions' }, yes, no)));
+  }
+}
+
+// ---------------------------------------------------------------- Hinweise
+function renderHints(list, err) {
+  const box = $('#hinweise');
+  box.replaceChildren();
+  setCount('hinweise', list ? list.length : 0, true);
+  if (!list) { box.append(failNote(err)); return; }
+  if (!list.length) { box.append(el('p', { className: 'empty', textContent: 'Keine offenen Hinweise.' })); return; }
+  for (const x of list) {
+    const done = el('button', { className: 'ok', type: 'button', textContent: 'Erledigt' });
+    const drop = el('button', { type: 'button', textContent: 'Verwerfen' });
+    done.addEventListener('click', () => act(done, { form: 'fehler-melden', aktion: 'erledigt', id: x.id }, 'Hinweis als erledigt abgeschlossen.'));
+    drop.addEventListener('click', () => act(drop, { form: 'fehler-melden', aktion: 'verwerfen', id: x.id }, 'Hinweis verworfen.', 'Hinweis wirklich verwerfen?'));
+    box.append(el('section', { className: 'card' },
+      el('h2', {}, placeLink(x.standort_id, x.standort_name || (x.standort_id === '__other' ? 'Allgemeiner Hinweis' : x.standort_id))),
+      el('p', { className: 'meta', textContent: `${x.art_text} · gemeldet ${when(x.created)}` }),
+      el('p', { textContent: x.details }),
+      x.kontakt ? el('p', { className: 'meta' }, 'Rückfragen: ', el('a', { href: `mailto:${x.kontakt}`, textContent: x.kontakt })) : null,
+      el('div', { className: 'actions' }, done, drop)));
   }
 }
 

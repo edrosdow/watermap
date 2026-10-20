@@ -1,6 +1,6 @@
 // Tests für netlify/functions/fotos.mjs mit nachgebauter Netlify- und GitHub-API (node tests/fotos_function_test.mjs).
 import assert from 'node:assert/strict';
-import { handle, imageType, addPhoto, passwordOk, fileUrl, standortAus, addHistory, photoReport } from '../netlify/functions/fotos.mjs';
+import { handle, imageType, addPhoto, passwordOk, fileUrl, standortAus, addHistory, photoReport, slug, slipFromSubmission, priceFromSubmission } from '../netlify/functions/fotos.mjs';
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
 const env = { FOTO_ADMIN_PASSWORT: 'geheim-123', NETLIFY_API_TOKEN: 'nf', GITHUB_TOKEN: 'gh' };
@@ -8,26 +8,29 @@ const OV = 'public/data/community/overrides.json', HIST = 'admin/verlauf.json';
 const NOW = new Date('2026-10-20T12:34:56Z');
 
 /** Nachgebaute Welt: Netlify-Formulare + ein Git-Zweig „main“ (Dateien als Buffer). */
-function fakeWorld({ photo = JPEG, rights = 'ja', standort = 'node/632876845', overrides = [], files = {}, reports = [], raceOnce = false } = {}) {
+function fakeWorld({ photo = JPEG, rights = 'ja', standort = 'node/632876845', overrides = [], files = {}, reports = [], slips = [], prices = [], raceOnce = false } = {}) {
   const repo = { [OV]: Buffer.from(JSON.stringify(overrides)) };
   for (const [k, v] of Object.entries(files)) repo[k] = Buffer.from(v);
   const state = {
     subs: [{ id: 's1', created_at: '2026-10-20T12:00:00Z', data: {
       standort_id: standort, standort_name: 'Slip Vössen', beschreibung: 'Rampe bei Niedrigwasser', foto_rechte: rights,
       foto: { filename: 'x.jpg', url: 'https://files.netlify.example/s1/x.jpg' } } }],
-    reports, repo, commits: { c0: { files: repo } }, head: 'c0', n: 0, blobs: {}, trees: {}, messages: [], deleted: [], calls: [], raceOnce,
+    reports, slips, prices, repo, commits: { c0: { files: repo } }, head: 'c0', n: 0, blobs: {}, trees: {}, messages: [], deleted: [], calls: [], raceOnce,
   };
   const json = (body, status = 200) => new Response(body === null ? null : JSON.stringify(body), { status });
   const fetchFn = async (url, init = {}) => {
     const method = init.method || 'GET';
     state.calls.push(`${method} ${url}`);
     const nf = 'https://api.netlify.com/api/v1';
-    if (url === `${nf}/sites/site-1/forms`) return json([{ id: 'f9', name: 'foto-einreichen' }, { id: 'f1', name: 'fehler-melden' }]);
+    if (url === `${nf}/sites/site-1/forms`) return json([{ id: 'f9', name: 'foto-einreichen' }, { id: 'f1', name: 'fehler-melden' }, { id: 'f2', name: 'slipanlage-melden' }, { id: 'f3', name: 'tankpreis-melden' }]);
     if (url.startsWith(`${nf}/forms/f9/submissions`)) return json(state.subs);
     if (url.startsWith(`${nf}/forms/f1/submissions`)) return json(state.reports);
+    if (url.startsWith(`${nf}/forms/f2/submissions`)) return json(state.slips);
+    if (url.startsWith(`${nf}/forms/f3/submissions`)) return json(state.prices);
     if (url.startsWith(`${nf}/submissions/`) && method === 'DELETE') {
       const id = url.split('/').pop();
-      state.deleted.push(id); state.subs = state.subs.filter(s => s.id !== id); state.reports = state.reports.filter(s => s.id !== id);
+      state.deleted.push(id);
+      for (const k of ['subs', 'reports', 'slips', 'prices']) state[k] = state[k].filter(s => s.id !== id);
       return new Response(null, { status: 204 });
     }
     if (url === 'https://files.netlify.example/s1/x.jpg') return new Response(photo, { status: 200 });
@@ -121,7 +124,7 @@ assert.equal(photoReport({ id: 'r3', data: { art: 'sonstiges', details: 'Foto un
   assert.deepEqual([...w.file(path)], [...JPEG]);
   const ov = w.jsonAt(OV);
   assert.deepEqual(ov[1], { id: 'node/632876845', status: 'approved', photos: [{ url: j.foto.url, credit: 'WaterMap-Community', alt: 'Rampe bei Niedrigwasser' }], updated: '2026-10-20' });
-  assert.deepEqual(w.jsonAt(HIST), [{ zeit: NOW.toISOString(), aktion: 'freigegeben', standort_id: 'node/632876845', standort_name: 'Slip Vössen', foto: j.foto.url, beschreibung: 'Rampe bei Niedrigwasser' }]);
+  assert.deepEqual(w.jsonAt(HIST), [{ zeit: NOW.toISOString(), bereich: 'foto', aktion: 'freigegeben', standort_id: 'node/632876845', standort_name: 'Slip Vössen', foto: j.foto.url, beschreibung: 'Rampe bei Niedrigwasser' }]);
   assert.deepEqual(w.state.deleted, ['s1']); }
 
 // Gleichzeitige Änderung am Zweig: neu aufbauen, nichts geht verloren
@@ -166,7 +169,7 @@ for (const [opts, msg] of [[{ rights: '' }, /Rechte/], [{ standort: '../../etc' 
   assert.equal((await run(req('POST', '', { aktion: 'entfernen', standort_id: 'node/5', url: 'photos/a.jpg' }), w)).status, 200);
   assert.deepEqual(w.jsonAt(OV)[0].photos.map(p => p.url), ['photos/b.jpg']);
   assert.equal(w.file('public/photos/a.jpg'), undefined);
-  assert.deepEqual(w.jsonAt(HIST)[0], { zeit: NOW.toISOString(), aktion: 'entfernt', standort_id: 'node/5', foto: 'photos/a.jpg', beschreibung: 'Babybett', grund: '' });
+  assert.deepEqual(w.jsonAt(HIST)[0], { zeit: NOW.toISOString(), bereich: 'foto', aktion: 'entfernt', standort_id: 'node/5', foto: 'photos/a.jpg', beschreibung: 'Babybett', grund: '' });
   await run(req('POST', '', { aktion: 'entfernen', standort_id: 'node/6', url: 'photos/c.jpg' }), w);
   assert.equal((await run(req('POST', '', { aktion: 'entfernen', standort_id: 'node/7', url: 'photos/d.jpg' }), w)).status, 200, 'fehlende Datei: Eintrag trotzdem entfernen');
   assert.deepEqual(w.jsonAt(OV).map(o => o.id), ['node/5', 'node/7']);
@@ -195,5 +198,60 @@ for (const [opts, msg] of [[{ rights: '' }, /Rechte/], [{ standort: '../../etc' 
   assert.deepEqual(w.jsonAt(OV)[0].photos.map(p => p.url), ['photos/b.jpg'], 'verworfene Meldung: Foto bleibt');
   assert.deepEqual(w.jsonAt(HIST).map(e => e.aktion), ['meldung verworfen', 'entfernt']);
   assert.equal((await run(req('POST', '', { aktion: 'meldung_verwerfen', id: 'r3' }), w)).status, 404, 'keine Foto-Meldung'); }
+
+// Neue Slipanlagen
+assert.equal(slug('Slip „Großer Müggelsee“ – Nord'), 'slip-grosser-muggelsee-nord');
+{ const sub = { id: 'abcdef123456', created_at: '2026-10-19T08:00:00Z', data: { name: 'Slip Nord', gewaesser: 'Weser', lat: '52,20528', lon: '8.85582',
+    zugang: 'oeffentlich', gebuehr: 'kostenpflichtig', gebuehr_betrag: '5 €', parkplatz: 'ja', trailerparkplatz: '', beschreibung: 'Betonrampe', kontakt: 'a@b.de' } };
+  assert.deepEqual(slipFromSubmission(sub, '2026-10-20'), { id: 'c/slip-nord-20261019-123456', status: 'approved', type: 'slip', name: 'Slip Nord',
+    lat: 52.20528, lon: 8.85582, water: { name: 'Weser', approx: false }, access: 'public', fee: true, fee_note: '5 €', description: 'Betonrampe',
+    attrs: { parking: true, trailer_parking: null }, submitted: '2026-10-19', updated: '2026-10-20' });
+  assert.throws(() => slipFromSubmission({ id: 'x', data: { name: 'A', lat: '', lon: '8' } }, '2026-10-20'), /Koordinaten/);
+  const w = fakeWorld({ slips: [{ ...sub, data: { ...sub.data, foto: { url: 'https://files.netlify.example/s1/x.jpg' }, foto_rechte: 'ja' } },
+    { id: 'z9', data: { name: 'Doppelt', lat: '52', lon: '8' } }], files: { 'public/data/community/places.json': '[]' } });
+  const list = (await (await run(req('GET', '?form=slipanlage-melden'), w)).json()).slips;
+  assert.deepEqual(list.map(x => [x.id, x.name, x.lat, x.hat_foto, x.rechte, x.kontakt]), [['abcdef123456', 'Slip Nord', 52.20528, true, true, 'a@b.de'], ['z9', 'Doppelt', 52, false, false, '']]);
+  assert.equal((await run(req('GET', '?form=slipanlage-melden&bild=abcdef123456'), w)).headers.get('content-type'), 'image/jpeg');
+  const r = await run(req('POST', '', { form: 'slipanlage-melden', aktion: 'freigeben', id: 'abcdef123456' }), w);
+  assert.equal(r.status, 200, await r.clone().text());
+  assert.deepEqual(w.state.messages, ['Slipanlage freigegeben: c/slip-nord-20261019-123456'], 'ein Commit');
+  assert.equal(w.jsonAt('public/data/community/places.json')[0].id, 'c/slip-nord-20261019-123456');
+  const ov = w.jsonAt(OV)[0];
+  assert.equal(ov.id, 'c/slip-nord-20261019-123456'); assert.ok(w.file('public/' + ov.photos[0].url), 'Foto der Meldung übernommen');
+  assert.deepEqual(w.jsonAt(HIST)[0], { zeit: NOW.toISOString(), bereich: 'slip', aktion: 'freigegeben', standort_id: 'c/slip-nord-20261019-123456', standort_name: 'Slip Nord', beschreibung: 'Weser · mit Foto' });
+  assert.ok(!JSON.stringify(w.jsonAt(HIST)).includes('a@b.de'), 'keine E-Mail im Verlauf');
+  assert.equal((await run(req('POST', '', { form: 'slipanlage-melden', aktion: 'ablehnen', id: 'z9' }), w)).status, 200);
+  assert.deepEqual(w.state.deleted, ['abcdef123456', 'z9']);
+  assert.deepEqual(w.state.messages.at(-1), 'Slipanlage abgelehnt: Doppelt');
+  assert.equal(w.jsonAt('public/data/community/places.json').length, 1); }
+
+// Preise
+{ assert.throws(() => priceFromSubmission({ id: 'p', data: { tankstelle_id: '__other', kraftstoff: 'diesel', preis: '2' } }, '2026-10-20'), /nicht in der Liste/);
+  assert.throws(() => priceFromSubmission({ id: 'p', data: { tankstelle_id: 'node/7', kraftstoff: 'diesel', preis: '25' } }, '2026-10-20'), /außerhalb/);
+  assert.deepEqual(priceFromSubmission({ id: 'p', created_at: '2026-10-20T09:00:00Z', data: { tankstelle_id: 'node/7', kraftstoff: 'benzin', preis: '2,1899', datum: '2026-10-30' } }, '2026-10-20'),
+    { station_id: 'node/7', fuel: 'petrol', price: 2.19, observed: '2026-10-20', status: 'approved', submitted: '2026-10-20' }, 'Datum nie in der Zukunft');
+  const w = fakeWorld({ prices: [{ id: 'p1', created_at: '2026-10-20T09:00:00Z', data: { tankstelle_id: 'node/7000', tankstelle_name: 'Tanke', kraftstoff: 'diesel', preis: '2,189', datum: '2026-10-19', kommentar: 'Schild', beleg: { url: 'https://files.netlify.example/s1/x.jpg' } } },
+    { id: 'p2', data: { tankstelle_id: '__other', tankstelle_name: 'Irgendwo', kraftstoff: 'diesel', preis: '2' } }], files: { 'public/data/community/prices.json': '[{"station_id":"node/7000","fuel":"diesel","price":2.1,"observed":"2026-10-01","status":"approved"}]' } });
+  const list = (await (await run(req('GET', '?form=tankpreis-melden'), w)).json()).preise;
+  assert.deepEqual(list.map(x => [x.id, x.preis, x.hat_beleg]), [['p1', 2.189, true], ['p2', 2, false]]);
+  assert.equal((await run(req('GET', '?form=tankpreis-melden&bild=p1'), w)).status, 200, 'Belegfoto ansehbar');
+  assert.equal((await run(req('POST', '', { form: 'tankpreis-melden', aktion: 'freigeben', id: 'p1' }), w)).status, 200);
+  assert.deepEqual(w.jsonAt('public/data/community/prices.json').map(x => x.price), [2.1, 2.189], 'nur anhängen');
+  assert.equal(w.jsonAt(HIST)[0].beschreibung, 'Diesel 2,189 €/l, beobachtet 2026-10-19');
+  const bad = await run(req('POST', '', { form: 'tankpreis-melden', aktion: 'freigeben', id: 'p2' }), w);
+  assert.equal(bad.status, 502); assert.deepEqual(w.state.deleted, ['p1'], 'unzuordenbarer Preis bleibt liegen');
+  assert.equal((await run(req('POST', '', { form: 'tankpreis-melden', aktion: 'ablehnen', id: 'p2' }), w)).status, 200);
+  assert.equal(w.state.messages.at(-1), 'Preis abgelehnt: __other'); }
+
+// Hinweise (Fehler melden ohne Foto)
+{ const w = fakeWorld({ reports: [
+    { id: 'h1', created_at: '2026-10-20T10:00:00Z', data: { art: 'oeffnungszeiten', standort_id: 'node/5', standort_name: 'Hafen', details: 'Mo zu', kontakt: 'x@y.de' } },
+    { id: 'r1', data: { art: 'foto', standort_id: 'node/5', details: 'Foto unpassend: photos/a.jpg\nGrund: x' } }] });
+  const list = (await (await run(req('GET', '?form=fehler-melden'), w)).json()).hinweise;
+  assert.deepEqual(list.map(x => [x.id, x.art_text, x.details, x.kontakt]), [['h1', 'Falsche Öffnungszeiten', 'Mo zu', 'x@y.de']], 'Foto-Meldungen nicht unter Hinweisen');
+  assert.equal((await run(req('POST', '', { form: 'fehler-melden', aktion: 'erledigt', id: 'h1' }), w)).status, 200);
+  assert.deepEqual(w.jsonAt(HIST)[0], { zeit: NOW.toISOString(), bereich: 'hinweis', aktion: 'erledigt', standort_id: 'node/5', standort_name: 'Hafen', beschreibung: 'Falsche Öffnungszeiten: Mo zu' });
+  assert.equal(w.state.messages.at(-1), 'Hinweis erledigt: node/5');
+  assert.equal((await run(req('POST', '', { form: 'unbekannt', aktion: 'erledigt', id: 'h1' }), w)).status, 400); }
 
 console.log('fotos.mjs: alle Tests OK');

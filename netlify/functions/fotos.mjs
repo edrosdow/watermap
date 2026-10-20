@@ -16,9 +16,19 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 const FORM = 'foto-einreichen';
 const REPORT_FORM = 'fehler-melden';
 const MAX_BYTES = 6 * 1024 * 1024;
-const ID_RE = /^(node|way|relation|community)\/[A-Za-z0-9_-]{1,40}$/;
+const ID_RE = /^(node|way|relation|community|c)\/[A-Za-z0-9_-]{1,80}$/;
 const OVERRIDES = 'public/data/community/overrides.json';
 const HISTORY = 'admin/verlauf.json';
+const PLACES = 'public/data/community/places.json';
+const PRICES = 'public/data/community/prices.json';
+const SLIP_FORM = 'slipanlage-melden', PRICE_FORM = 'tankpreis-melden';
+const FILE_FIELD = { [FORM]: 'foto', [SLIP_FORM]: 'foto', [PRICE_FORM]: 'beleg' };   // Datei-Feld je Formular
+const ACCESS = { oeffentlich: 'public', privat: 'private', kunden: 'customers' };
+const YNU = { ja: true, nein: false };
+const FUEL = { diesel: 'diesel', benzin: 'petrol' };
+const PRICE_MIN = 0.5, PRICE_MAX = 5;
+const ART = { 'existiert-nicht': 'Existiert nicht mehr', koordinaten: 'Falsche Koordinaten', 'nicht-oeffentlich': 'Nicht öffentlich',
+  preis: 'Falscher Preis', oeffnungszeiten: 'Falsche Öffnungszeiten', foto: 'Unpassendes Foto', sonstiges: 'Sonstiges' };
 const MAX_HISTORY = 500;
 
 const json = (status, body) => new Response(JSON.stringify(body), {
@@ -78,6 +88,69 @@ export function removePhoto(overrides, id, url) {
 export function publishedPhotos(overrides) {
   return (Array.isArray(overrides) ? overrides : []).filter(o => o && o.status === 'approved')
     .flatMap(o => (o.photos || []).map(ph => ({ standort_id: o.id, url: ph.url, alt: ph.alt || '', credit: ph.credit || '' })));
+}
+
+const text = (v, max = 500) => String(v ?? '').trim().slice(0, max);
+const num = (v) => { const n = Number(String(v ?? '').trim().replace(',', '.')); return String(v ?? '').trim() && Number.isFinite(n) ? n : null; };
+
+export function slug(t) {
+  return String(t || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'ohne-name';
+}
+
+/** Gemeldete Slipanlage → Eintrag für community/places.json (wie scripts/submissions_to_json.py, aber freigegeben). */
+export function slipFromSubmission(sub, today) {
+  const d = sub.data || {};
+  const lat = num(d.lat), lon = num(d.lon);
+  if (lat === null || lon === null || Math.abs(lat) > 90 || Math.abs(lon) > 180) throw new Error('Koordinaten fehlen oder sind ungültig');
+  const name = text(d.name, 120);
+  const day = String(sub.created_at || today).slice(0, 10);
+  const fee = text(d.gebuehr);
+  return {
+    id: `c/${slug(name)}-${day.replace(/-/g, '')}-${String(sub.id).replace(/[^A-Za-z0-9]/g, '').slice(-6) || 'x'}`,
+    status: 'approved', type: 'slip', name: name || null,
+    lat: Math.round(lat * 1e6) / 1e6, lon: Math.round(lon * 1e6) / 1e6,
+    water: text(d.gewaesser, 120) ? { name: text(d.gewaesser, 120), approx: false } : null,
+    access: ACCESS[text(d.zugang)] || null,
+    fee: fee === 'kostenlos' ? false : fee === 'kostenpflichtig' ? true : null,
+    fee_note: text(d.gebuehr_betrag, 80) || null,
+    description: text(d.beschreibung, 1000) || null,
+    attrs: { parking: YNU[text(d.parkplatz)] ?? null, trailer_parking: YNU[text(d.trailerparkplatz)] ?? null },
+    submitted: day, updated: today,
+  };
+}
+
+/** Preismeldung → Eintrag für community/prices.json (nur plausible Preise an bekannten Tankstellen). */
+export function priceFromSubmission(sub, today) {
+  const d = sub.data || {};
+  const sid = text(d.tankstelle_id);
+  if (!ID_RE.test(sid)) throw new Error('Tankstelle nicht in der Liste – nicht zuzuordnen');
+  const price = num(d.preis), fuel = FUEL[text(d.kraftstoff)];
+  if (!fuel) throw new Error('Kraftstoff ungültig');
+  if (price === null || price < PRICE_MIN || price > PRICE_MAX) throw new Error(`Preis außerhalb ${PRICE_MIN}–${PRICE_MAX} €/l`);
+  const observed = /^\d{4}-\d{2}-\d{2}/.test(text(d.datum)) ? text(d.datum).slice(0, 10) : today;
+  return { station_id: sid, fuel, price: Math.round(price * 1000) / 1000, observed: observed > today ? today : observed,
+    status: 'approved', submitted: String(sub.created_at || today).slice(0, 10) };
+}
+
+export function slipView(s) {
+  const d = s.data || {};
+  return { id: s.id, created: s.created_at || null, name: text(d.name, 120), gewaesser: text(d.gewaesser, 120), lat: num(d.lat), lon: num(d.lon),
+    zugang: text(d.zugang), gebuehr: text(d.gebuehr), gebuehr_betrag: text(d.gebuehr_betrag, 80), parkplatz: text(d.parkplatz),
+    trailerparkplatz: text(d.trailerparkplatz), beschreibung: text(d.beschreibung, 1000), kontakt: text(d.kontakt, 120),
+    hat_foto: Boolean(fileUrl(d.foto)), rechte: Boolean(d.foto_rechte), dublette: Boolean(d.dublette_bestaetigt) };
+}
+
+export function priceView(s) {
+  const d = s.data || {};
+  return { id: s.id, created: s.created_at || null, tankstelle_id: text(d.tankstelle_id), tankstelle_name: text(d.tankstelle_name, 120),
+    kraftstoff: text(d.kraftstoff), preis: num(d.preis), datum: text(d.datum, 10), kommentar: text(d.kommentar), hat_beleg: Boolean(fileUrl(d.beleg)) };
+}
+
+export function hintView(s) {
+  const d = s.data || {};
+  return { id: s.id, created: s.created_at || null, standort_id: text(d.standort_id), standort_name: text(d.standort_name, 120),
+    art: text(d.art), art_text: ART[text(d.art)] || text(d.art), details: text(d.details, 1000), kontakt: text(d.kontakt, 120) };
 }
 
 export function submissionView(s) {
@@ -241,7 +314,7 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
         const alt = (ov.find(o => o && o.id === body.standort_id)?.photos || []).find(ph => cleanPath(ph.url) === path)?.alt || '';
         return [jsonFile(OVERRIDES, removePhoto(ov, body.standort_id, body.url)),
           ...(await exists(`public/${path}`) ? [{ path: `public/${path}`, content: null }] : []),
-          await history({ aktion: 'entfernt', standort_id: body.standort_id, foto: path, beschreibung: alt,
+          await history({ bereich: 'foto', aktion: 'entfernt', standort_id: body.standort_id, foto: path, beschreibung: alt,
             grund: report ? photoReport(report)?.grund || '' : '' })(read)];
       });
       if (report) await nf(`/submissions/${report.id}`, { method: 'DELETE' });
@@ -252,15 +325,18 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
       const m = report && photoReport(report);
       if (!m) return json(404, { fehler: 'Meldung nicht gefunden (schon erledigt?).' });
       await commitChanges(gh, branch, `Foto-Meldung verworfen: ${m.standort_id}`, async (read) => [
-        await history({ aktion: 'meldung verworfen', standort_id: m.standort_id, foto: m.foto, grund: m.grund })(read)]);
+        await history({ bereich: 'foto', aktion: 'meldung verworfen', standort_id: m.standort_id, foto: m.foto, grund: m.grund })(read)]);
       await nf(`/submissions/${report.id}`, { method: 'DELETE' });
       return json(200, { ok: true });
     }
 
-    const subs = await formSubmissions(nf, siteId, FORM);
+    // Einreichungen eines Formulars: auflisten, Datei zeigen, freigeben/ablehnen/erledigen
+    const formName = body.form || q.get('form') || FORM;
+    if (![FORM, SLIP_FORM, PRICE_FORM, REPORT_FORM].includes(formName)) return json(400, { fehler: 'Unbekanntes Formular.' });
+    const subs = await formSubmissions(nf, siteId, formName);
     if (req.method === 'GET' && q.has('bild')) {
       const sub = subs.find(s => s.id === q.get('bild'));
-      const src = sub && fileUrl((sub.data || {}).foto);
+      const src = sub && FILE_FIELD[formName] && fileUrl((sub.data || {})[FILE_FIELD[formName]]);
       if (!src) return json(404, { fehler: 'Foto nicht gefunden.' });
       const res = await fetchFn(src);
       const bytes = new Uint8Array(await res.arrayBuffer());
@@ -268,11 +344,69 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
       if (!res.ok || !type || bytes.length > MAX_BYTES) return json(422, { fehler: 'Datei ist kein gültiges Bild.' });
       return new Response(bytes, { headers: { 'content-type': type.mime, 'cache-control': 'no-store' } });
     }
-    if (req.method === 'GET') return json(200, { fotos: subs.map(submissionView) });
+    if (req.method === 'GET') {
+      if (formName === SLIP_FORM) return json(200, { slips: subs.map(slipView) });
+      if (formName === PRICE_FORM) return json(200, { preise: subs.map(priceView) });
+      if (formName === REPORT_FORM) return json(200, { hinweise: subs.filter(s => !photoReport(s)).map(hintView) });
+      return json(200, { fotos: subs.map(submissionView) });
+    }
     if (req.method !== 'POST') return json(405, { fehler: 'Nicht erlaubt.' });
     const sub = subs.find(s => s.id === body.id);
     if (!sub) return json(404, { fehler: 'Einreichung nicht gefunden (schon erledigt?).' });
     const d = sub.data || {};
+    const finish = async (message, files) => {
+      await commitChanges(gh, branch, message, files);
+      await nf(`/submissions/${sub.id}`, { method: 'DELETE' });
+    };
+
+    if (formName === SLIP_FORM) {
+      if (body.aktion === 'freigeben') {
+        const place = slipFromSubmission(sub, today);
+        // Foto aus der Meldung nur mit bestätigten Rechten übernehmen
+        const pic = fileUrl(d.foto) && d.foto_rechte ? await fetchPhoto(sub, fetchFn) : null;
+        const name = pic ? `${place.id.replace('/', '-')}-${now.getTime().toString(36)}.${pic.type.ext}` : null;
+        await finish(`Slipanlage freigegeben: ${place.id}`, async (read) => {
+          const places = await read(PLACES, []);
+          if (places.some(x => x && x.id === place.id)) throw new Error('Diese Slipanlage ist schon eingetragen.');
+          return [jsonFile(PLACES, [...places, place]),
+            ...(pic ? [{ path: `public/photos/${name}`, content: pic.bytes },
+              jsonFile(OVERRIDES, addPhoto(await read(OVERRIDES, []), place.id, { url: `photos/${name}`, credit: 'WaterMap-Community', alt: text(d.beschreibung, 200) }, today))] : []),
+            await history({ bereich: 'slip', aktion: 'freigegeben', standort_id: place.id, standort_name: place.name || '',
+              beschreibung: [place.water?.name, pic ? 'mit Foto' : (fileUrl(d.foto) ? 'Foto ohne Rechte nicht übernommen' : '')].filter(Boolean).join(' · ') })(read)];
+        });
+        return json(200, { ok: true, standort_id: place.id });
+      }
+      if (body.aktion === 'ablehnen') {
+        await finish(`Slipanlage abgelehnt: ${text(d.name, 60) || 'ohne Namen'}`, async (read) => [
+          await history({ bereich: 'slip', aktion: 'abgelehnt', standort_id: '', standort_name: text(d.name, 120), beschreibung: text(d.gewaesser, 120) })(read)]);
+        return json(200, { ok: true });
+      }
+    }
+    if (formName === PRICE_FORM) {
+      const label = `${text(d.kraftstoff) === 'benzin' ? 'Benzin' : 'Diesel'} ${text(d.preis, 10)} €/l`;
+      if (body.aktion === 'freigeben') {
+        const entry = priceFromSubmission(sub, today);
+        await finish(`Preis freigegeben: ${entry.station_id}`, async (read) => [
+          jsonFile(PRICES, [...await read(PRICES, []), entry]),
+          await history({ bereich: 'preis', aktion: 'freigegeben', standort_id: entry.station_id, standort_name: text(d.tankstelle_name, 120),
+            beschreibung: `${label}, beobachtet ${entry.observed}` })(read)]);
+        return json(200, { ok: true });
+      }
+      if (body.aktion === 'ablehnen') {
+        await finish(`Preis abgelehnt: ${text(d.tankstelle_id) || 'ohne Tankstelle'}`, async (read) => [
+          await history({ bereich: 'preis', aktion: 'abgelehnt', standort_id: text(d.tankstelle_id), standort_name: text(d.tankstelle_name, 120), beschreibung: label })(read)]);
+        return json(200, { ok: true });
+      }
+    }
+    if (formName === REPORT_FORM && (body.aktion === 'erledigt' || body.aktion === 'verwerfen')) {
+      const v = hintView(sub);
+      await finish(`Hinweis ${body.aktion === 'erledigt' ? 'erledigt' : 'verworfen'}: ${v.standort_id || 'ohne Standort'}`, async (read) => [
+        await history({ bereich: 'hinweis', aktion: body.aktion === 'erledigt' ? 'erledigt' : 'verworfen', standort_id: v.standort_id,
+          standort_name: v.standort_name, beschreibung: `${v.art_text}: ${v.details}`.slice(0, 300) })(read)]);   // ohne E-Mail
+      return json(200, { ok: true });
+    }
+    if (formName !== FORM) return json(400, { fehler: 'Unbekannte Aktion.' });
+
     if (body.aktion === 'freigeben') {
       // Standort nachtragen, wenn bei der Einreichung „Anderer Standort“ gewählt wurde
       const standort = body.standort ? standortAus(body.standort) : null;
@@ -282,18 +416,16 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
       const { bytes, type } = await fetchPhoto(sub, fetchFn);
       const name = `${id.replace('/', '-')}-${now.getTime().toString(36)}.${type.ext}`;
       const photo = { url: `photos/${name}`, credit: 'WaterMap-Community', alt: String(d.beschreibung || '').trim().slice(0, 200) };
-      await commitChanges(gh, branch, `Foto freigegeben: ${id}`, async (read) => [
+      await finish(`Foto freigegeben: ${id}`, async (read) => [
         { path: `public/photos/${name}`, content: bytes },
         jsonFile(OVERRIDES, addPhoto(await read(OVERRIDES, []), id, photo, today)),
-        await history({ aktion: 'freigegeben', standort_id: id, standort_name: String(d.standort_name || ''), foto: photo.url, beschreibung: photo.alt })(read)]);
-      await nf(`/submissions/${sub.id}`, { method: 'DELETE' });
+        await history({ bereich: 'foto', aktion: 'freigegeben', standort_id: id, standort_name: String(d.standort_name || ''), foto: photo.url, beschreibung: photo.alt })(read)]);
       return json(200, { ok: true, foto: photo, standort_id: id });
     }
     if (body.aktion === 'ablehnen') {
-      await commitChanges(gh, branch, `Foto abgelehnt: ${d.standort_id || 'ohne Standort'}`, async (read) => [
-        await history({ aktion: 'abgelehnt', standort_id: String(d.standort_id || ''), standort_name: String(d.standort_name || ''),
+      await finish(`Foto abgelehnt: ${d.standort_id || 'ohne Standort'}`, async (read) => [
+        await history({ bereich: 'foto', aktion: 'abgelehnt', standort_id: String(d.standort_id || ''), standort_name: String(d.standort_name || ''),
           beschreibung: String(d.beschreibung || '').slice(0, 200) })(read)]);
-      await nf(`/submissions/${sub.id}`, { method: 'DELETE' });
       return json(200, { ok: true });
     }
     return json(400, { fehler: 'Unbekannte Aktion.' });

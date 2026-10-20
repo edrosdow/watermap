@@ -29,6 +29,17 @@ PUBLISHED = [{'standort_id': 'node/1937154973', 'url': 'photos/a.jpg', 'alt': 'B
 LOG = [{'zeit': '2026-10-20T16:00:00Z', 'aktion': 'entfernt', 'standort_id': 'node/5', 'foto': 'photos/z.jpg', 'beschreibung': 'Brot', 'grund': 'kein Slip'},
        {'zeit': '2026-10-20T15:30:00Z', 'aktion': 'freigegeben', 'standort_id': 'node/632876845', 'standort_name': 'Slip Vössen', 'foto': 'photos/b.jpg', 'beschreibung': '<img src=x>'},
        {'zeit': '2026-10-20T15:00:00Z', 'aktion': 'abgelehnt', 'standort_id': '__other', 'standort_name': 'Irgendwo', 'beschreibung': 'unscharf'}]
+SLIP0 = json.loads((ROOT / 'data/osm/slip.geojson').read_text(encoding='utf-8'))['features'][0]
+SLIPS = [{'id': 'n1', 'created': '2026-10-20T09:00:00Z', 'name': 'Doppelt', 'gewaesser': 'See', 'lat': SLIP0['geometry']['coordinates'][1], 'lon': SLIP0['geometry']['coordinates'][0],
+          'zugang': 'oeffentlich', 'gebuehr': 'kostenlos', 'gebuehr_betrag': '', 'parkplatz': 'ja', 'trailerparkplatz': '', 'beschreibung': '<b>Beton</b>', 'kontakt': 'a@b.de',
+          'hat_foto': True, 'rechte': False, 'dublette': True},
+         {'id': 'n2', 'created': '2026-10-20T09:30:00Z', 'name': 'Neu am Meer', 'gewaesser': 'Nordsee', 'lat': 54.9, 'lon': 2.0, 'zugang': '', 'gebuehr': '',
+          'gebuehr_betrag': '', 'parkplatz': '', 'trailerparkplatz': '', 'beschreibung': '', 'kontakt': '', 'hat_foto': False, 'rechte': False, 'dublette': False}]
+PREISE = [{'id': 'p1', 'created': '2026-10-20T10:00:00Z', 'tankstelle_id': 'node/7000', 'tankstelle_name': 'Tanke', 'kraftstoff': 'diesel', 'preis': 2.189, 'datum': '2026-10-19', 'kommentar': 'Schild', 'hat_beleg': True},
+          {'id': 'p2', 'created': '2026-10-20T10:30:00Z', 'tankstelle_id': '__other', 'tankstelle_name': 'Irgendwo', 'kraftstoff': 'benzin', 'preis': 2.0, 'datum': '2026-10-19', 'kommentar': '', 'hat_beleg': False}]
+HINWEISE = [{'id': 'h1', 'created': '2026-10-20T11:00:00Z', 'standort_id': 'node/5', 'standort_name': 'Hafen', 'art': 'oeffnungszeiten', 'art_text': 'Falsche Öffnungszeiten',
+             'details': 'Montags <u>zu</u>', 'kontakt': 'x@y.de'}]
+LOG.append({'zeit': '2026-10-20T14:00:00Z', 'bereich': 'slip', 'aktion': 'freigegeben', 'standort_id': 'c/neu-20261020-abc', 'standort_name': 'Neue Rampe', 'beschreibung': 'Weser'})
 posted = []
 
 def api(route):
@@ -41,6 +52,9 @@ def api(route):
         if 'veroeffentlicht' in r.url: return j({'fotos': PUBLISHED})
         if 'verlauf' in r.url: return j({'verlauf': LOG})
         if 'bild=' in r.url or 'datei=' in r.url: return route.fulfill(status=200, content_type='image/png', body=PNG)
+        if 'form=slipanlage-melden' in r.url: return j({'slips': SLIPS})
+        if 'form=tankpreis-melden' in r.url: return j({'preise': PREISE})
+        if 'form=fehler-melden' in r.url: return j({'hinweise': HINWEISE})
         return j({'fotos': FOTOS})
     posted.append(json.loads(r.post_data))
     j({'ok': True})
@@ -68,6 +82,7 @@ with sync_playwright() as p:
     check(pg.locator('#login').is_hidden() and pg.inner_text('#n-neu') == '3' and pg.inner_text('#n-gemeldet') == '1' and pg.inner_text('#n-veroeffentlicht') == '2',
           'Reiter mit Anzahlen (3 eingereicht, 1 gemeldet, 2 veröffentlicht)')
     check('hot' in pg.get_attribute('#n-gemeldet', 'class'), 'Meldungen sind hervorgehoben')
+    check(pg.inner_text('#n-slips') == '2' and pg.inner_text('#n-preise') == '2' and pg.inner_text('#n-hinweise') == '1', 'Reiter Slipanlagen, Preise, Hinweise mit Anzahlen')
 
     # Eingereicht
     cards = pg.locator('#tab-neu .card')
@@ -113,10 +128,44 @@ with sync_playwright() as p:
     pg.locator('#tab-veroeffentlicht .card >> nth=0').locator('button', has_text='Entfernen').click(); pg.locator('#msg', has_text='Foto entfernt').wait_for()
     check(posted == [{'aktion': 'entfernen', 'standort_id': 'node/1937154973', 'url': 'photos/a.jpg'}], f'Entfernen gesendet ({posted})')
 
+    posted.clear()
+    # Slipanlagen
+    pg.click('#tabs [data-tab=slips]')
+    sl = pg.locator('#tab-slips .card')
+    sl.nth(0).locator('.near', has_text='Achtung').wait_for(timeout=15000); sl.nth(1).locator('.near.ok').wait_for()
+    t0 = sl.nth(0).inner_text()
+    check('<b>Beton</b>' in t0 and sl.nth(0).locator('b').count() == 0 and 'Öffentlich' in t0 and 'a@b.de' in t0, 'Slip-Meldung mit Angaben (Text bleibt Text)')
+    check('bestätigt, dass in der Nähe' in t0 and 'Foto wird nicht übernommen' in t0, 'Hinweise: Dublette bestätigt, Foto ohne Rechte')
+    check('Achtung: bekannte Slipanlage 0 m' in t0 and 'Keine bekannte Slipanlage im Umkreis' in sl.nth(1).inner_text(), 'Dublettenprüfung gegen bekannte Slipanlagen')
+    check(sl.nth(0).locator('a[href*="openstreetmap.org/?mlat="]').count() == 1, 'Lage mit Kartenlink')
+    sl.nth(1).locator('button.ok').click(); pg.locator('#msg', has_text='Slipanlage freigegeben').wait_for()
+    check(posted == [{'form': 'slipanlage-melden', 'aktion': 'freigeben', 'id': 'n2'}], f'Slipanlage freigeben ({posted})')
+    posted.clear()
+    pg.once('dialog', lambda d: d.accept())
+    pg.locator('#tab-slips .card >> nth=0').locator('button', has_text='Ablehnen').click(); pg.locator('#msg', has_text='Slipanlage abgelehnt').wait_for()
+    check(posted == [{'form': 'slipanlage-melden', 'aktion': 'ablehnen', 'id': 'n1'}], f'Slipanlage ablehnen ({posted})')
+    posted.clear()
+    pg.screenshot(path=str(SHOTS / 'verwaltung_slips.png'), full_page=True)
+    # Preise
+    pg.click('#tabs [data-tab=preise]')
+    pr = pg.locator('#tab-preise .card')
+    check('2,189 €/l' in pr.nth(0).inner_text() and not pr.nth(0).locator('button.ok').is_disabled(), 'Preis mit Betrag, freigebbar')
+    check(pr.nth(1).locator('button.ok').is_disabled() and 'nicht in der Liste' in pr.nth(1).inner_text(), 'unbekannte Tankstelle nicht freigebbar')
+    pr.nth(0).locator('button.ok').click(); pg.locator('#msg', has_text='Preis freigegeben').wait_for()
+    check(posted == [{'form': 'tankpreis-melden', 'aktion': 'freigeben', 'id': 'p1'}], f'Preis freigeben ({posted})')
+    posted.clear()
+    # Hinweise
+    pg.click('#tabs [data-tab=hinweise]')
+    hi = pg.locator('#tab-hinweise .card')
+    check('Montags <u>zu</u>' in hi.inner_text() and hi.locator('u').count() == 0 and 'Falsche Öffnungszeiten' in hi.inner_text()
+          and hi.locator('a[href="mailto:x@y.de"]').count() == 1, 'Hinweis mit Art, Text und Rückfrage-Adresse')
+    hi.locator('button', has_text='Erledigt').click(); pg.locator('#msg', has_text='erledigt').wait_for()
+    check(posted == [{'form': 'fehler-melden', 'aktion': 'erledigt', 'id': 'h1'}], f'Hinweis erledigt ({posted})')
     # Verlauf
     pg.click('#tabs [data-tab=verlauf]')
     log = pg.inner_text('#log')
-    check(pg.locator('#log li').count() == 3 and log.index('Entfernt') < log.index('Freigegeben') < log.index('Abgelehnt'), 'Verlauf: alle Aktionen, neueste zuerst')
+    check(pg.locator('#log li').count() == 4 and log.index('Entfernt') < log.index('Freigegeben') < log.index('Abgelehnt'), 'Verlauf: alle Aktionen in Reihenfolge')
+    check('Slipanlage' in log and 'Neue Rampe' in log and log.count('Foto') >= 3, 'Verlauf zeigt den Bereich (Foto, Slipanlage …)')
     check('Grund: kein Slip' in log and '„Brot“' in log and 'Slip Vössen' in log and 'Irgendwo' in log, 'Verlauf mit Standort, Beschreibung und Grund')
     check('<img src=x>' in log and pg.locator('#log img').count() == 0, 'Verlauf: Text bleibt Text')
     pg.screenshot(path=str(SHOTS / 'fotos_verlauf.png'), full_page=True)
