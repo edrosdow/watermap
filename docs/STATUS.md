@@ -22,7 +22,7 @@ Stand: Oktober 2026. Ehrliche Übersicht gegenüber dem Master-Prompt.
 ## Nicht gemacht oder nicht geprüft
 | Punkt | Stand |
 |---|---|
-| **Import Deutschland (alle 16 Bundesländer)** | **Hier nicht ausgeführt** (Overpass gesperrt). Der Importer ist gegen ein synthetisches Fixture und simulierte Server-Antworten getestet. Ein Lauf nur für NRW (Vorversion) lief per GitHub Action erfolgreich (582 Standorte). Der Deutschland-Lauf ist neu und hat bei dir noch nicht stattgefunden. Im Ordner sind weiterhin nur die 8 Slipanlagen aus V6; die echten Daten entstehen beim ersten Lauf. Danach Ergebnisse stichprobenartig mit OSM vergleichen. |
+| **Import Deutschland (alle 16 Bundesländer)** | Gelaufen (GitHub Action, 19.10.2026): 6045 Standorte, Ort und Gewässer für alle Bundesländer zugeordnet. Leere Server-Antworten gelten als Fehler, bei Ausfall aller Server gibt es eine zweite Runde, sonst Abbruch ohne Datenverlust. Ergebnisse stichprobenartig mit OSM vergleichen. |
 | **Echte Kartendarstellung** | Mit echtem Leaflet 1.9.4 + MarkerCluster 1.5.3 in Chromium (Desktop + Mobil) getestet: Clustering, Marker-Klick, Detail, Deep-Link, Standort. Kacheln nur als Platzhalter (OSM-Kachelserver im Test nicht erreichbar). Auf echtem Gerät und in Safari/Firefox noch durchklicken. |
 | CSP | Strenge Richtlinie, ohne CDNs. Mit echtem Leaflet und exakt diesen Headern getestet: keine Verstöße. Echte Kacheln und Nominatim nicht live geprüft. Falls nach dem Deploy die Karte leer bleibt: Browser-Konsole öffnen, geblockte Domains in `public/_headers` ergänzen. |
 | Kartenlibraries selbst gehostet | Erledigt: `public/vendor/`, `USE_LOCAL_LIBS: true`. |

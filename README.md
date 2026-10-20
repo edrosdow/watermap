@@ -1,6 +1,6 @@
 # WaterMap V7 – Dein Revier. Deine Karte.
 
-Interaktive Karte für Slipanlagen, Marinas und Bootstankstellen in Nordrhein-Westfalen.
+Interaktive Karte für Slipanlagen, Marinas und Bootstankstellen in ganz Deutschland.
 Statische Web-App (HTML/CSS/JavaScript, Leaflet), kostenlos auf Netlify betreibbar, installierbar als PWA.
 
 ## In 3 Schritten online
@@ -10,14 +10,14 @@ Statische Web-App (HTML/CSS/JavaScript, Leaflet), kostenlos auf Netlify betreibb
 
 Details: [docs/INSTALLATION.md](docs/INSTALLATION.md)
 
-## Daten: wichtigster offener Punkt
-Im ZIP stecken **nur die 8 echten Slipanlagen aus V6**. Der Import für **ganz Deutschland** (16 Bundesländer, 30 bis 90 Minuten) konnte in der Entwicklungsumgebung nicht ausgeführt werden (kein Zugriff auf die Overpass-API). Auf deinem Rechner oder per GitHub Action läuft er mit einem Klick (ein erster Lauf nur für NRW lief per GitHub Action erfolgreich: 582 Standorte):
+## Daten
+Die Standorte für **ganz Deutschland** (16 Bundesländer) kommen per Import aus OpenStreetMap – Stand Oktober 2026: 6045 Standorte (3301 Slipanlagen, 2602 Marinas, 142 Bootstankstellen), mit Ort und Gewässer. Der Import dauert etwa 1,5 Stunden und läuft so:
 
 - Windows: Doppelklick auf `Daten-aktualisieren.bat`
 - Mac/Linux: `sh daten-aktualisieren.sh`
 - Automatisch jeden Monat: [GitHub Action](.github/workflows/update-osm-data.yml)
 
-Details: [docs/DATEN-AKTUALISIEREN.md](docs/DATEN-AKTUALISIEREN.md). Solange der Import nicht lief, zeigt die App das offen an – es werden keine Daten erfunden.
+Details: [docs/DATEN-AKTUALISIEREN.md](docs/DATEN-AKTUALISIEREN.md). Fehlt ein Bundesland, weil die Overpass-Server ausfallen, bricht der Import ab und die alten Daten bleiben.
 
 ## Ordner
 | Pfad | Inhalt |

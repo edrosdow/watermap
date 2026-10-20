@@ -85,7 +85,7 @@ def lib_routes(ctx, block_libs=False):
         if url.endswith('leaflet.js'): return route.fulfill(status=200, content_type='application/javascript', body=STUB)
         if url.endswith('.css'): return route.fulfill(status=200, content_type='text/css', body='')
         return route.abort()
-    ctx.route('**/unpkg.com/**', handler); ctx.route('**/cdn.jsdelivr.net/**', handler)
+    ctx.route('**/unpkg.com/**', handler); ctx.route('**/cdn.jsdelivr.net/**', handler); ctx.route('**/vendor/**', handler)
     ctx.route('**/nominatim.openstreetmap.org/**', lambda r: r.fulfill(status=200, content_type='application/json', body='[]'))
 
 def new_page(b, mobile=False, geo=True, block_libs=False, **kw):
