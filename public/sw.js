@@ -3,7 +3,7 @@
 //  * eigene Dateien (Seite, Skripte, Daten): erst Netzwerk, bei Ausfall Zwischenspeicher → Updates kommen sofort an
 //  * Bibliotheken von CDN und bereits gesehene Kartenkacheln: Zwischenspeicher zuerst (mit Obergrenze)
 // Offline heißt deshalb: Standortliste und Details funktionieren; Kartenkacheln nur dort, wo man vorher war.
-const VERSION = 'v7.5.0';
+const VERSION = 'v7.5.1';
 const SHELL = `watermap-shell-${VERSION}`;
 const TILES = `watermap-tiles-${VERSION}`;
 const LIBS = `watermap-libs-${VERSION}`;
@@ -45,6 +45,8 @@ self.addEventListener('fetch', (event) => {
   if (url.origin === location.origin) {
     // Nie zwischenspeichern: Formular-Endpunkte und der Service Worker selbst
     if (url.pathname.endsWith('/sw.js')) return;
+    // Foto-Freigabe: nie zwischenspeichern (passwortgeschützt, eingereichte Bilder sind privat)
+    if (url.pathname.startsWith('/.netlify/functions/') || url.pathname.startsWith('/admin/')) return;
     // Pegel-Verläufe nicht speichern (je Pegel eine Datei, nach 15 Minuten veraltet); die Pegelliste schon (offline mit Zeitstempel)
     if (url.pathname.includes('/api/pegel/') && url.pathname.includes('/measurements')) return;
     // Wetter nie aus dem Zwischenspeicher zeigen – veraltete Warnungen wären schlimmer als keine

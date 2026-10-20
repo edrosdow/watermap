@@ -3,3 +3,8 @@
 [build]
   publish = "public"
   # Kein Build-Schritt nötig: reine statische Seite.
+
+# Foto-Freigabe (/admin/fotos.html → netlify/functions/fotos.mjs). Braucht die Umgebungsvariablen
+# FOTO_ADMIN_PASSWORT, NETLIFY_API_TOKEN und GITHUB_TOKEN (siehe docs/MODERATION.md).
+[functions]
+  directory = "netlify/functions"
