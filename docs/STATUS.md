@@ -20,6 +20,7 @@ Stand: Oktober 2026. Ehrliche Übersicht gegenüber dem Master-Prompt.
 - Rechtstexte als Vorlagen, OSM-Namensnennung.
 - Pegelstände (PEGELONLINE, Bundeswasserstraßen): zuschaltbare Ebene mit Zustandsfarben, Wert und Trend am Marker, Detail mit Einordnung MNW/MW/MHW/HSW und 7-Tage-Verlauf. Abruf über `/api/pegel/` (Netlify-Weiterleitung in `public/_redirects`). Test: `tests/ui_pegel.py`.
 - Wetter und Wind (DWD-Daten über Bright Sky) in jeder Detailansicht: amtliche Warnungen nach Schwere, aktueller Wind mit Beaufort und Richtung, Hinweis bei Böen ab 6 Bft, 48-Stunden-Winddiagramm, 3-Stunden-Übersicht. Abruf über `/api/wetter/` (Netlify-Weiterleitung). Test: `tests/ui_wetter.py`.
+- OSM-Extras (`osm/extras.geojson`, vom Import erzeugt): Ebenen „Schleusen & Brücken“ (Schleusen, Wehre, Brücken mit Durchfahrtshöhe) und „Service“ (Kanu-Ein-/Ausstiege, Bootsverleih, Toiletten, Wasserstellen, Gastronomie, Rast-/Zeltplätze, Parkplätze), eigene Detailansicht, Liste „In der Nähe“ (500 m) bei jedem Standort. Erscheint erst, wenn der Import die Datei geschrieben hat. Test: `tests/ui_extras.py`.
 
 ## Nicht gemacht oder nicht geprüft
 | Punkt | Stand |

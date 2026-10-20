@@ -1,6 +1,6 @@
 // Zentrale Einstellungen. Hier – und nur hier – werden Dienste und Grenzwerte angepasst.
 export const CONFIG = {
-  VERSION: '7.2.0',
+  VERSION: '7.3.0',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -33,6 +33,10 @@ export const CONFIG = {
   WETTER_HOURS: 48,            // Vorhersagezeitraum im Diagramm
   WETTER_CACHE_MIN: 10,        // gleiche Stelle innerhalb dieser Zeit nicht erneut abfragen
   WETTER_GUST_HINT_KMH: 39,    // ab 6 Bft Böen ein Hinweis (gerade für kleine Boote)
+
+  // „In der Nähe“ (Schleusen, Toiletten, Parkplätze … aus osm/extras.geojson)
+  NEARBY_EXTRAS_M: 500,
+  NEARBY_EXTRAS_MAX: 12,
 
   // Liste
   LIST_LIMIT: 120,

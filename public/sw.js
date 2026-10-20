@@ -3,7 +3,7 @@
 //  * eigene Dateien (Seite, Skripte, Daten): erst Netzwerk, bei Ausfall Zwischenspeicher → Updates kommen sofort an
 //  * Bibliotheken von CDN und bereits gesehene Kartenkacheln: Zwischenspeicher zuerst (mit Obergrenze)
 // Offline heißt deshalb: Standortliste und Details funktionieren; Kartenkacheln nur dort, wo man vorher war.
-const VERSION = 'v7.2.0';
+const VERSION = 'v7.3.0';
 const SHELL = `watermap-shell-${VERSION}`;
 const TILES = `watermap-tiles-${VERSION}`;
 const LIBS = `watermap-libs-${VERSION}`;
@@ -12,7 +12,7 @@ const MAX_TILES = 400;
 const SHELL_FILES = [
   './', './index.html', './css/app.css', './manifest.webmanifest',
   './js/main.js', './js/config.js', './js/dom.js', './js/icons.js', './js/model.js', './js/data.js',
-  './js/map.js', './js/search.js', './js/favorites.js', './js/forms.js', './js/detail.js', './js/pegel.js', './js/wetter.js', './js/chart.js',
+  './js/map.js', './js/search.js', './js/favorites.js', './js/forms.js', './js/detail.js', './js/pegel.js', './js/wetter.js', './js/chart.js', './js/extras.js',
   './icons/icon-192.png', './icons/favicon.svg',
   './vendor/leaflet/leaflet.js', './vendor/leaflet/leaflet.css',
   './vendor/markercluster/leaflet.markercluster.js', './vendor/markercluster/MarkerCluster.css',

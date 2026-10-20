@@ -11,7 +11,7 @@ import { CONFIG } from './config.js';
 /**
  * actions = { close, share, report, addPhoto, reportPrice, onFavorite }
  */
-export function renderDetail(p, { user, actions, weather }) {
+export function renderDetail(p, { user, actions, weather, nearby }) {
   const isFav = favorites.has(p.id);
   const sub = subtitle(p);
   const dist = user ? haversine(user.lat, user.lon, p.lat, p.lon) : null;
@@ -65,6 +65,8 @@ export function renderDetail(p, { user, actions, weather }) {
       h('dt', { text: f.label }),
       h('dd', { class: f.value ? '' : 'unknown', text: f.value || UNKNOWN }),
     ]))));
+
+  if (nearby) body.append(nearby);
 
   // Kontakt
   const contacts = [];
