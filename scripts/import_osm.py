@@ -67,7 +67,7 @@ MIN_KEEP_RATIO = 0.5
 # hätte Hunderttausende Parkplätze. Wehre im weiteren Umkreis, weil sie für die Fahrt auf dem Wasser zählen.
 EXTRAS_FILE = "osm/extras.geojson"
 EXTRA_AROUND_M = 400
-WEIR_AROUND_M = 2000
+WEIR_AROUND_M = 1000
 EXTRA_KINDS = ("lock", "bridge", "weir", "canoe", "rental", "toilets", "water", "food", "rest", "parking")
 
 
@@ -141,13 +141,17 @@ def queries(iso: str) -> dict[str, str]:
     a = area_clause(iso)
     objects = f"({OBJECT_FILTERS})"
     r = EXTRA_AROUND_M
-    extras = (f"[out:json][timeout:300];{a}({OBJECT_FILTERS})->.s;({ANCHOR_FILTERS})->.k;(.s;.k;)->.n;("
-              f'way["lock"="yes"]["waterway"](area.a);'
-              f'nwr["seamark:type"="lock_basin"](area.a);'
-              f'nwr["seamark:bridge:clearance_height"](area.a);'
-              f'nwr["seamark:bridge:clearance_height_closed"](area.a);'
-              f'nwr["waterway"="weir"](around.n:{WEIR_AROUND_M});'
-              f".k;"
+    # Extras in drei kleinen Abfragen statt einer großen: die öffentlichen Server brechen lange Abfragen nach
+    # wenigen Minuten ab (504). Jede darf einzeln fehlen.
+    extras_infra = (f"[out:json][timeout:180];{a}("
+                    f'way["lock"="yes"]["waterway"](area.a);'
+                    f'nwr["seamark:type"="lock_basin"](area.a);'
+                    f'nwr["seamark:bridge:clearance_height"](area.a);'
+                    f'nwr["seamark:bridge:clearance_height_closed"](area.a);'
+                    f"{ANCHOR_FILTERS});out tags center qt;")
+    extras_weir = (f"[out:json][timeout:240];{a}({OBJECT_FILTERS})->.s;"
+                   f'nwr["waterway"="weir"](around.s:{WEIR_AROUND_M});out tags center qt;')
+    extras_near = (f"[out:json][timeout:240];{a}({OBJECT_FILTERS}{ANCHOR_FILTERS})->.n;("
               f'nwr["amenity"="toilets"](around.n:{r});'
               f'nwr["amenity"~"^(drinking_water|water_point)$"](around.n:{r});'
               f'nwr["amenity"~"^(restaurant|cafe|biergarten|fast_food|pub)$"](around.n:{r});'
@@ -167,8 +171,8 @@ def queries(iso: str) -> dict[str, str]:
                  f"(way[\"natural\"=\"water\"][\"name\"](around.s:{WATER_MAX_M});"
                  f"way[\"waterway\"~\"^(river|canal|stream|riverbank|dock)$\"][\"name\"](around.s:{WATER_MAX_M});"
                  f"rel[\"natural\"=\"water\"][\"name\"](around.s:{WATER_MAX_M}););out geom;",
-        # Extras (Schleusen, Brücken, Wehre, Kanu, Verleih, Service in der Nähe)
-        "extras": extras,
+        # Extras (Schleusen, Brücken, Kanu, Verleih | Service in der Nähe | Wehre)
+        "extras_infra": extras_infra, "extras_near": extras_near, "extras_weir": extras_weir,
     }
 
 
@@ -640,6 +644,11 @@ def overpass(query: str, log=print, servers=SERVERS, attempts=2, allow_empty=Tru
     raise FetchError(last)
 
 
+# Zugaben je Region (Reihenfolge = Abrufreihenfolge); die Extras kommen in drei Teilen
+EXTRA_ADDONS = {"extras_infra": "Schleusen/Brücken/Kanu/Verleih", "extras_near": "Service", "extras_weir": "Wehre"}
+ADDONS = ("places", "water", *EXTRA_ADDONS)
+
+
 def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3, fetch_enrich=None, deadline=None,
                   clock=time.monotonic, retry_wait=120):
     """Ruft Standorte (+ Orte, Gewässer) Region für Region ab und führt die Antworten zusammen.
@@ -650,8 +659,9 @@ def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3, fetch_
     """
     fetch_enrich = fetch_enrich or fetch
     started = clock()
-    mains, places, waters, extras, stamps = [], [], [], [], []
-    failed = {"places": [], "water": [], "extras": []}
+    mains, stamps = [], []
+    buckets = {k: [] for k in ADDONS}
+    failed = {k: [] for k in ADDONS}
     for i, area in enumerate(areas, 1):
         qs = queries(area)
         log(f"[{i}/{len(areas)}] {area}  (nach {(clock() - started) / 60:.0f} min)")
@@ -673,7 +683,7 @@ def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3, fetch_
             stamps.append(ts)
         if not enrich or not mains[-1]:
             continue    # leere Region: keine Zuordnung nötig
-        for key, bucket in (("places", places), ("water", waters), ("extras", extras)):
+        for key, bucket in buckets.items():
             if deadline is not None and clock() > deadline:
                 failed[key].append(area)
                 log(f"  ! Zeitbudget aufgebraucht – '{key}' für {area} übersprungen")
@@ -685,7 +695,7 @@ def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3, fetch_
                 failed[key].append(area)
                 log(f"  ! Zuordnung '{key}' für {area} übersprungen: {exc}")
     status = {}
-    for key, bucket in (("places", places), ("water", waters), ("extras", extras)):
+    for key, bucket in buckets.items():
         if not enrich:
             status[key] = "übersprungen"
         elif not failed[key]:
@@ -694,13 +704,22 @@ def fetch_regions(areas, enrich=True, log=print, fetch=overpass, pause=3, fetch_
             status[key] = f"teilweise (ohne: {', '.join(failed[key])})"
         else:
             status[key] = "fehlgeschlagen"
+    extra_chunks = [c for k in EXTRA_ADDONS for c in buckets[k]]
     return {
         "main": {"osm3s": {"timestamp_osm_base": min(stamps) if stamps else None}, "elements": merge_elements(mains)},
-        "places": merge_elements(places) if places else None,
-        "water": merge_elements(waters) if waters else None,
-        "extras": merge_elements(extras) if extras else None,
-        "enrich": status,
+        "places": merge_elements(buckets["places"]) if buckets["places"] else None,
+        "water": merge_elements(buckets["water"]) if buckets["water"] else None,
+        "extras": merge_elements(extra_chunks) if extra_chunks else None,
+        "enrich": {"places": status["places"], "water": status["water"], "extras": combine_status(status)},
     }
+
+
+def combine_status(status: dict) -> str:
+    """Ein Status für die drei Extras-Abfragen: gleich → dieser; sonst „teilweise (…)“ mit den Abweichungen."""
+    vals = [status[k] for k in EXTRA_ADDONS]
+    if len(set(vals)) == 1:
+        return vals[0]
+    return "teilweise (" + "; ".join(f"{EXTRA_ADDONS[k]}: {status[k]}" for k in EXTRA_ADDONS if status[k] != "ok") + ")"
 
 
 # --------------------------------------------------------------------------- Verarbeitung (ohne Netzwerk/Dateien)
@@ -839,12 +858,14 @@ def main(argv=None) -> int:
             problems.append(f"{kind}: nur {len(feats)} statt bisher {len(old)} Datensätze")
     if not any(built["collections"].values()):
         problems.append("Ergebnis ist komplett leer")
+    if args.dry_run:
+        if problems:
+            print("Hinweis (Dry-Run): ein echter Lauf würde abbrechen – mögliche Datenverluste:", *problems, sep="\n  ")
+        print("Dry-Run: nichts geschrieben.")
+        return 0
     if problems and not args.force:
         print("Abbruch – mögliche Datenverluste (mit --force übergehen):", *problems, sep="\n  ", file=sys.stderr)
         return 3
-    if args.dry_run:
-        print("Dry-Run: nichts geschrieben.")
-        return 0
 
     meta_path = out_dir / "meta.json"
     try:

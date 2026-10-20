@@ -234,10 +234,10 @@ class RegionTests(unittest.TestCase):
     def test_fetch_regions_merges_and_reports(self):
         fetch, calls = self.fake()
         got = imp.fetch_regions(["DE-NW", "DE-NI"], fetch=fetch, pause=0, log=lambda *a: None)
-        self.assertEqual(len(calls), 8)                                  # 2 Regionen × (Standorte, Orte, Gewässer, Extras)
+        self.assertEqual(len(calls), 12)                                 # 2 Regionen × (Standorte, Orte, Gewässer, 3 × Extras)
         self.assertEqual(len(got["main"]["elements"]), 1)                # Randobjekt nur einmal
         self.assertEqual(len(got["places"]), 2)
-        self.assertEqual(len(got["extras"]), 2)
+        self.assertEqual(len(got["extras"]), 2)                          # drei Teilabfragen, gleiche Objekte nur einmal
         self.assertEqual(got["main"]["osm3s"]["timestamp_osm_base"], "2026-01-01T00:00:00Z")   # älterer Stand
         self.assertEqual(got["enrich"], {"places": "ok", "water": "ok", "extras": "ok"})
 
@@ -275,10 +275,10 @@ class RegionTests(unittest.TestCase):
     def test_budget_skips_enrichment_but_never_locations(self):
         fetch, calls = self.fake()
         # Budget (500) wird erst nach der ersten Region überschritten: Region 1 mit Zugaben, Region 2 ohne
-        clock = iter([0, 0, 0, 0, 0, 1000, 1000, 1000, 1000]).__next__
+        clock = iter([0, 0, 0, 0, 0, 0, 0, 1000, 1000, 1000, 1000, 1000, 1000]).__next__
         got = imp.fetch_regions(["DE-NW", "DE-NI"], fetch=fetch, pause=0, log=lambda *a: None, deadline=500, clock=clock)
         self.assertEqual(sum("out meta center" in q for q in calls), 2)       # beide Regionen: Standorte vollständig
-        self.assertEqual(len(calls), 5)                                       # 2 × Standorte + 3 Zugaben (nur NW)
+        self.assertEqual(len(calls), 7)                                       # 2 × Standorte + 5 Zugaben (nur NW)
         self.assertEqual(got["enrich"], {k: "teilweise (ohne: DE-NI)" for k in ("places", "water", "extras")})
 
     def test_budget_already_spent_gives_failed_status(self):
@@ -300,7 +300,7 @@ class RegionTests(unittest.TestCase):
             extra_calls.append(q)
             return base(q)
         imp.fetch_regions(["DE-NW"], fetch=fetch, fetch_enrich=fetch_enrich, pause=0, log=lambda *a: None)
-        self.assertEqual((len(main_calls), len(extra_calls)), (1, 3))
+        self.assertEqual((len(main_calls), len(extra_calls)), (1, 5))
 
     @staticmethod
     def answers(*payloads):
@@ -401,11 +401,21 @@ class ExtrasTests(unittest.TestCase):
             self.assertEqual(imp.parse_meters(raw), want, raw)
         self.assertEqual(imp.parse_meters("190 m", max_m=500), 190.0)       # Schleusenkammern sind länger als 100 m
 
-    def test_query_contains_all_parts(self):
-        q = imp.queries("DE-NW")["extras"]
-        for needle in ('"lock"="yes"', "clearance_height", f"around.n:{imp.WEIR_AROUND_M}", '"amenity"="boat_rental"',
-                       f'"amenity"="toilets"](around.n:{imp.EXTRA_AROUND_M})', "out tags center"):
-            self.assertIn(needle, q)
+    def test_queries_split_in_three(self):
+        q = imp.queries("DE-NW")
+        self.assertIn('"lock"="yes"', q["extras_infra"])
+        self.assertIn("clearance_height", q["extras_infra"])
+        self.assertIn('"amenity"="boat_rental"', q["extras_infra"])
+        self.assertNotIn("around", q["extras_infra"])                         # nur Tag-Filter: schnell
+        self.assertIn(f'"amenity"="toilets"](around.n:{imp.EXTRA_AROUND_M})', q["extras_near"])
+        self.assertIn(f'"waterway"="weir"](around.s:{imp.WEIR_AROUND_M})', q["extras_weir"])
+        for k in imp.EXTRA_ADDONS:
+            self.assertIn("out tags center", q[k])
+
+    def test_partial_extras_status(self):
+        self.assertEqual(imp.combine_status({"extras_infra": "ok", "extras_near": "ok", "extras_weir": "ok"}), "ok")
+        self.assertEqual(imp.combine_status({"extras_infra": "ok", "extras_near": "teilweise (ohne: DE-NW)", "extras_weir": "ok"}),
+                         "teilweise (Service: teilweise (ohne: DE-NW))")
 
 
 class CliTests(unittest.TestCase):
@@ -484,6 +494,20 @@ class CliTests(unittest.TestCase):
         self.assertIn("--bbox", r.stderr)
         r = self.run_cli("--area", "Deutschland", "--dry-run")
         self.assertEqual(r.returncode, 2)
+
+    def test_dry_run_reports_loss_but_does_not_fail(self):
+        # Probelauf für ein Bundesland gegen Deutschland-Daten: Hinweis statt Abbruch
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = pathlib.Path(tmp)
+            out = tmp / "data"
+            (out / "osm").mkdir(parents=True)
+            old = [{"type": "Feature", "id": f"node/{i}", "geometry": {"type": "Point", "coordinates": [7, 51]}, "properties": {}} for i in range(100)]
+            (out / "osm" / "slip.geojson").write_text(json.dumps({"type": "FeatureCollection", "features": old}))
+            (tmp / "tiny.json").write_text(json.dumps({"elements": [MAIN[0]]}))
+            r = self.run_cli("--input", str(tmp / "tiny.json"), "--out", str(out), "--dry-run")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("würde abbrechen", r.stdout)
+            self.assertEqual(len(json.loads((out / "osm" / "slip.geojson").read_text())["features"]), 100)
 
     def test_dry_run_writes_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:
