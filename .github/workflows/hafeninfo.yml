@@ -8,16 +8,17 @@ on:
   schedule:
     - cron: "41 4 8 * *"   # am 8. jedes Monats, 04:41 UTC (nach dem OSM-Import am 1.)
   # Probelauf ohne Veröffentlichung: auf einem claude/-Branch die Datei .github/hafeninfo-probelauf.json ändern
-  # (z. B. {"anzahl": 25}) – die Ergebnisse landen nur auf diesem Branch und damit in der Netlify-Vorschau.
+  # (z. B. {"anzahl": 25, "lauf": 2}) – die Ergebnisse landen nur auf diesem Branch und damit in der Netlify-Vorschau.
+  # {"anzahl": 0} startet einen leeren Lauf, der nichts ändert.
   push:
     branches: ["claude/**"]
     paths: [".github/hafeninfo-probelauf.json"]
   workflow_dispatch:
     inputs:
       anzahl:
-        description: "Höchstens so viele Häfen in diesem Lauf (1400 = alle)"
+        description: "Höchstens so viele Häfen in diesem Lauf (1400 = alle fälligen)"
         type: string
-        default: "25"
+        default: "1400"
       nur:
         description: "Nur bestimmte Häfen, z. B. node/123,way/456 (leer = automatisch die am längsten nicht geprüften)"
         type: string
@@ -54,7 +55,7 @@ jobs:
         env:
           PYTHONUNBUFFERED: "1"
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ANZAHL: ${{ inputs.anzahl || '200' }}
+          ANZAHL: ${{ inputs.anzahl || '1400' }}   # monatlich alle, deren Prüfung über 30 Tage her ist (kostenlos, ~20 min)
           NUR: ${{ inputs.nur || '' }}
           MIT_KI: ${{ inputs.mit_ki && '1' || '' }}
         run: |

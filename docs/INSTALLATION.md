@@ -44,7 +44,7 @@ Die Ebene „Pegel“ lädt Daten von PEGELONLINE über die eigene Domain: `publ
 
 ### Hafeninfos (Preise und Leistungen der Marinas)
 Die GitHub Action „Hafeninfos aktualisieren“ liest die Websites der Marinas aus (`scripts/hafeninfo.py`) und schreibt `public/data/hafeninfo.json`.
-- **Standard, kostenlos:** Zeilen mit passendem Stichwort und Preis bzw. kurzer Angabe werden wörtlich übernommen („0,50 € Frischwasser / 70L“). Kein Schlüssel nötig. Monatlich (am 8.) laufen automatisch bis zu 200 Häfen, deren letzte Prüfung über 30 Tage zurückliegt.
+- **Standard, kostenlos:** Zeilen mit passendem Stichwort und Preis bzw. kurzer Angabe werden wörtlich übernommen („0,50 € Frischwasser / 70L“). Kein Schlüssel nötig. Monatlich (am 8.) laufen automatisch alle Häfen, deren letzte Prüfung über 30 Tage zurückliegt (etwa 20 Minuten). Manuell gestartet sind es ebenfalls alle fälligen; über „anzahl“ lässt sich das begrenzen.
 - **Optional mit KI** (Haken „mit_ki“ beim Starten): Claude fasst die Angaben einheitlich zusammen. Kostet Geld (grob 0,04 US-$ je Hafen beim ersten Lesen) und braucht das Repository-Secret `ANTHROPIC_API_KEY`.
 - **Probelauf nur in der Vorschau:** Auf einem `claude/…`-Branch `.github/hafeninfo-probelauf.json` ändern – die Ergebnisse landen nur auf diesem Branch.
 
