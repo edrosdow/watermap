@@ -67,7 +67,8 @@ MIN_KEEP_RATIO = 0.5
 # hätte Hunderttausende Parkplätze. Wehre im weiteren Umkreis, weil sie für die Fahrt auf dem Wasser zählen.
 EXTRAS_FILE = "osm/extras.geojson"
 EXTRA_AROUND_M = 400
-WEIR_AROUND_M = 1000
+EXTRA_AROUND_DENSE_M = 250    # Parkplätze und Gastronomie: in Städten sehr viele – kleinerer Umkreis
+WEIR_AROUND_M = 1000          # Wehre: per Tag-Filter geholt, Umkreis wird hier im Importer geprüft (Overpass-„around“ war zu langsam)
 EXTRA_KINDS = ("lock", "bridge", "weir", "canoe", "rental", "toilets", "water", "food", "rest", "parking")
 
 
@@ -149,16 +150,15 @@ def queries(iso: str) -> dict[str, str]:
                     f'nwr["seamark:bridge:clearance_height"](area.a);'
                     f'nwr["seamark:bridge:clearance_height_closed"](area.a);'
                     f"{ANCHOR_FILTERS});out tags center qt;")
-    extras_weir = (f"[out:json][timeout:240];{a}({OBJECT_FILTERS})->.s;"
-                   f'nwr["waterway"="weir"](around.s:{WEIR_AROUND_M});out tags center qt;')
+    extras_weir = f'[out:json][timeout:180];{a}nwr["waterway"="weir"](area.a);out tags center qt;'
     extras_near = (f"[out:json][timeout:240];{a}({OBJECT_FILTERS}{ANCHOR_FILTERS})->.n;("
               f'nwr["amenity"="toilets"](around.n:{r});'
               f'nwr["amenity"~"^(drinking_water|water_point)$"](around.n:{r});'
-              f'nwr["amenity"~"^(restaurant|cafe|biergarten|fast_food|pub)$"](around.n:{r});'
+              f'nwr["amenity"~"^(restaurant|cafe|biergarten|fast_food|pub)$"](around.n:{EXTRA_AROUND_DENSE_M});'
               f'nwr["shop"="kiosk"](around.n:{r});'
               f'nwr["tourism"~"^(camp_site|picnic_site)$"](around.n:{r});'
               f'nwr["leisure"="picnic_site"](around.n:{r});'
-              f'nwr["amenity"="parking"](around.n:{r});'
+              f'nwr["amenity"="parking"](around.n:{EXTRA_AROUND_DENSE_M});'
               ");out tags center qt;")
     return {
         # Hauptabfrage: alle Standorte in einem Rutsch (spart Wartezeit auf den öffentlichen Servern)
@@ -442,11 +442,33 @@ def transform_extra(el: dict, kind: str | None = None, bbox=GERMANY_BBOX) -> dic
             "properties": {k: v for k, v in props.items() if v not in (None, {})}}
 
 
-def build_extras(elements, bbox=GERMANY_BBOX, log=print) -> tuple[list[dict], dict]:
+def near_any(points, radius_m):
+    """Prüffunktion „liegt (lat, lon) höchstens radius_m von einem der Punkte entfernt?“ – mit Raster, schnell."""
+    cell = radius_m / 111_000 * 1.5
+    grid: dict[tuple, list] = {}
+    for lat, lon in points:
+        grid.setdefault((int(lat // cell), int(lon // cell)), []).append((lat, lon))
+
+    def test(lat, lon):
+        ci, cj = int(lat // cell), int(lon // cell)
+        for di in (-1, 0, 1):
+            for dj in (-2, -1, 0, 1, 2):      # Längengrade sind in Deutschland ~0,65 so breit wie Breitengrade
+                for p in grid.get((ci + di, cj + dj), ()):
+                    if haversine_m(lat, lon, p[0], p[1]) <= radius_m:
+                        return True
+        return False
+    return test
+
+
+def build_extras(elements, bbox=GERMANY_BBOX, log=print, anchors=None) -> tuple[list[dict], dict]:
+    """anchors: (lat, lon) der Standorte; Wehre bleiben nur im Umkreis von WEIR_AROUND_M (None = alle behalten)."""
+    near_anchor = near_any(anchors, WEIR_AROUND_M) if anchors is not None else None
     feats, seen, counts = [], set(), {k: 0 for k in EXTRA_KINDS}
     for el in elements:
         f = transform_extra(el, None, bbox)
         if f is None or f["id"] in seen:
+            continue
+        if near_anchor and f["properties"]["kind"] == "weir" and not near_anchor(*reversed(f["geometry"]["coordinates"])):
             continue
         seen.add(f["id"])
         feats.append(f)
@@ -768,10 +790,11 @@ def read_features(path: pathlib.Path) -> list:
         return []
 
 
-def write_json(path: pathlib.Path, data) -> None:
+def write_json(path: pathlib.Path, data, compact=False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    text = json.dumps(data, ensure_ascii=False, separators=(",", ":")) if compact else json.dumps(data, ensure_ascii=False, indent=1)
+    tmp.write_text(text + "\n", encoding="utf-8")
     tmp.replace(path)
 
 
@@ -839,7 +862,8 @@ def main(argv=None) -> int:
     base_ts = (main_payload.get("osm3s") or {}).get("timestamp_osm_base")
     print("Verarbeitung …")
     built = build(main_payload["elements"], places, water, today, bbox=bbox, log=print)
-    extra_feats, extra_counts = build_extras(extras, bbox=bbox, log=print) if extras else (None, None)
+    anchors = [tuple(reversed(f["geometry"]["coordinates"])) for fs in built["collections"].values() for f in fs]
+    extra_feats, extra_counts = build_extras(extras, bbox=bbox, log=print, anchors=anchors) if extras else (None, None)
     if extra_feats is not None:
         size = len(json.dumps({"type": "FeatureCollection", "features": extra_feats}, ensure_ascii=False, separators=(",", ":")))
         print(f"  extras  {len(extra_feats)} Objekte, etwa {size / 1024:.0f} KB (kompakt, vor gzip)")
@@ -875,7 +899,7 @@ def main(argv=None) -> int:
     for kind in CATEGORIES:
         write_json(out_dir / FILES[kind], {"type": "FeatureCollection", "features": built["collections"][kind]})
     if extra_feats is not None:
-        write_json(out_dir / EXTRAS_FILE, {"type": "FeatureCollection", "features": extra_feats})
+        write_json(out_dir / EXTRAS_FILE, {"type": "FeatureCollection", "features": extra_feats}, compact=True)
         meta["extras"] = {"generated": today, "counts": extra_counts, "total": len(extra_feats), "status": enrich["extras"]}
     meta.update({
         "schema_version": SCHEMA_VERSION,

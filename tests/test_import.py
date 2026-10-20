@@ -396,6 +396,19 @@ class ExtrasTests(unittest.TestCase):
         self.assertNotIn("fee", self.by["node/509"])                    # nicht angegeben ≠ kostenlos
         self.assertIs(self.by["node/506"]["fee"], False)
 
+    def test_weirs_only_near_locations(self):
+        far = node(601, 51.43 + 0.02, 7.12, {"waterway": "weir"})            # ≈ 2,2 km nördlich
+        near = node(602, 51.43 + 0.005, 7.12, {"waterway": "weir"})          # ≈ 560 m
+        feats, counts = imp.build_extras([far, near, EXTRAS[0]], log=lambda *a: None, anchors=[(51.43, 7.12)])
+        self.assertEqual({f["id"] for f in feats}, {"node/602", "way/501"})  # andere Arten bleiben unberührt
+        self.assertEqual(counts["weir"], 1)
+
+    def test_near_any_across_cells_and_longitude(self):
+        test = imp.near_any([(51.0, 7.0)], 1000)
+        self.assertTrue(test(51.0, 7.0135))      # ≈ 945 m östlich
+        self.assertFalse(test(51.0, 7.0150))     # ≈ 1050 m östlich
+        self.assertTrue(test(51.0089, 7.0))      # ≈ 990 m nördlich
+
     def test_parse_meters(self):
         for raw, want in (("4.5", 4.5), ("4,5 m", 4.5), ("4.5m", 4.5), ("ca. 4", None), ("0", None), ("", None), (None, None), ("150", None)):
             self.assertEqual(imp.parse_meters(raw), want, raw)
@@ -408,7 +421,9 @@ class ExtrasTests(unittest.TestCase):
         self.assertIn('"amenity"="boat_rental"', q["extras_infra"])
         self.assertNotIn("around", q["extras_infra"])                         # nur Tag-Filter: schnell
         self.assertIn(f'"amenity"="toilets"](around.n:{imp.EXTRA_AROUND_M})', q["extras_near"])
-        self.assertIn(f'"waterway"="weir"](around.s:{imp.WEIR_AROUND_M})', q["extras_weir"])
+        self.assertIn('"waterway"="weir"](area.a)', q["extras_weir"])
+        self.assertNotIn("around", q["extras_weir"])                          # Umkreis prüft der Importer selbst
+        self.assertIn(f'"amenity"="parking"](around.n:{imp.EXTRA_AROUND_DENSE_M})', q["extras_near"])
         for k in imp.EXTRA_ADDONS:
             self.assertIn("out tags center", q[k])
 
@@ -452,12 +467,13 @@ class CliTests(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
             meta = json.loads((out / "meta.json").read_text())
             self.assertEqual(meta["files"]["extras"], "osm/extras.geojson")
-            self.assertEqual(meta["extras"]["total"], 12)
-            self.assertEqual(len(json.loads((out / "osm" / "extras.geojson").read_text())["features"]), 12)
+            self.assertEqual(meta["extras"]["total"], 11)                    # 12 minus das Wehr ohne Standort im Umkreis
+            self.assertEqual(meta["extras"]["counts"]["weir"], 0)
+            self.assertEqual(len(json.loads((out / "osm" / "extras.geojson").read_text())["features"]), 11)
             # Lauf ohne Extras: Datei und Verweis bleiben
             r = self.run_cli("--input", str(tmp / "main.json"), "--out", str(out))
             self.assertEqual(r.returncode, 0, r.stderr)
-            self.assertEqual(len(json.loads((out / "osm" / "extras.geojson").read_text())["features"]), 12)
+            self.assertEqual(len(json.loads((out / "osm" / "extras.geojson").read_text())["features"]), 11)
             self.assertEqual(json.loads((out / "meta.json").read_text())["files"]["extras"], "osm/extras.geojson")
 
     def test_extras_collapse_keeps_old_file(self):
