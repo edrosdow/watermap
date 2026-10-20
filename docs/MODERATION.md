@@ -35,7 +35,7 @@ Seite **`/admin/fotos.html`** (z. B. `https://watermaps.netlify.app/admin/fotos.
 ## Besondere Fälle
 - **Doppelte Slipanlage:** Existiert sie schon in OSM, trage die neuen Angaben als Override zur OSM-ID ein statt einen neuen Standort anzulegen. Besser noch: in OpenStreetMap selbst ergänzen – dann profitieren alle.
 - **„Standort existiert nicht mehr“:** Erst prüfen (mehrere Meldungen? Luftbild?). Dann in OSM korrigieren; beim nächsten Import verschwindet er. Bis dahin Hinweis per `description` im Override.
-- **Fehlende Tankstelle bei Preismeldung:** `tankstelle_id` ist `__other` → Standort erst anlegen, dann Preis zuordnen.
+- **Standort bei Meldungen:** Foto, Korrektur und Preis beziehen sich immer auf einen Standort, den man in der App auf der Karte antippt (keine Auswahlliste). Nur „Fehler oder Hinweis melden“ geht auch ohne Standort (`standort_id` = `__other`). Ältere Meldungen können noch `__other` mit freiem Namen enthalten.
 - **Fotos:** Nur mit Urheberangabe (`credit`) veröffentlichen. Die App entfernt GPS/EXIF schon vor dem Senden; Dateinamen nach dem Muster `node-123-1.jpg` vergeben.
 
 ## Grenzen von Phase 1 (bewusst)

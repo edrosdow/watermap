@@ -259,6 +259,8 @@ function detailInset() {
 function selectPlace(id, { fly = true, updateHash = true } = {}) {
   const p = state.byId.get(id);
   if (!p) return false;
+  const pick = state.placePick;
+  if (pick && pick.type && p.type !== pick.type) { toast('Bitte eine Bootstankstelle antippen.'); return false; }
   if (state.gaugeId) { state.gaugeId = null; state.map?.selectGauge(null); }
   if (state.extraId) { state.extraId = null; state.map?.selectExtra(null); }
   state.selectedId = id;
@@ -268,6 +270,7 @@ function selectPlace(id, { fly = true, updateHash = true } = {}) {
   if (updateHash) history.replaceState(null, '', '#p=' + encodeURIComponent(id));
   $$('.place', el.list).forEach(b => b.classList.toggle('is-selected', b.dataset.id === id));
   announce(`${displayName(p)} ausgewählt`);
+  if (pick) { endPlacePick(); openReport(pick.formName, { ...pick.preset, standort_id: id }); }  // Auswahlmodus aus dem Menü
   return true;
 }
 
@@ -498,6 +501,7 @@ function nearestSlips(lat, lon, radius) {
 
 function pickLocation(initial) {
   if (!state.mapOk) { toast('Die Karte ist nicht verfügbar. Nutze „Meine Position“.'); return Promise.resolve(null); }
+  if (state.placePick) endPlacePick();
   const bar = clear(el.pickbar);
   const confirm = h('button', { type: 'button', class: 'btn btn-primary small', text: 'Standort übernehmen', disabled: !initial });
   const cancel = h('button', { type: 'button', class: 'btn btn-outline small', text: 'Abbrechen' });
@@ -516,11 +520,40 @@ function pickLocation(initial) {
   });
 }
 
+// Menü → Meldung zu einem Standort: statt einer Auswahlliste den Standort auf der Karte (oder über die Suche) antippen
+const PLACE_PICK = {
+  'foto-einreichen': { text: 'Tippe auf der Karte auf die Slipanlage, Marina oder Tankstelle, zu der das Foto gehört.' },
+  'fehler-melden': { text: 'Tippe auf der Karte auf den Standort, zu dem du etwas melden möchtest.', general: true },
+  'tankpreis-melden': { text: 'Tippe auf der Karte auf die Bootstankstelle.', type: 'fuel' },
+};
+
+function choosePlaceFor(formName, preset = {}) {
+  const cfg = PLACE_PICK[formName];
+  if (el.dlg?.open) el.dlg.close();
+  closeMenu();
+  const bar = clear(el.pickbar);
+  const cancel = h('button', { type: 'button', class: 'btn btn-outline small', text: 'Abbrechen', onclick: endPlacePick });
+  const general = cfg.general ? h('button', { type: 'button', class: 'btn btn-outline small', text: 'Ohne Standort melden',
+    onclick: () => { endPlacePick(); openReport(formName, { ...preset, standort_id: '__other', art: 'sonstiges' }); } }) : null;
+  bar.append(h('p', { text: `${cfg.text} Du kannst den Ort auch oben suchen.` }), h('div', { class: 'btn-row' }, cancel, general));
+  el.pickbar.hidden = false;
+  document.body.classList.add('is-choosing');
+  state.placePick = { formName, type: cfg.type || null, preset };
+  if (isMobile()) openSheet(false);
+}
+
+function endPlacePick() {
+  state.placePick = null;
+  el.pickbar.hidden = true;
+  document.body.classList.remove('is-choosing');
+}
+
 function openReport(formName, preset = {}) {
   const ctx = {
     dialog: el.dlg, places: state.places,
     requestUserPos, pickLocation, nearestSlips,
     showPlace: (id) => selectPlace(id),
+    choosePlace: (name) => choosePlaceFor(name),
   };
   const p = preset.standort_id && state.byId.get(preset.standort_id);
   if (p && formName === 'tankpreis-melden') preset.standort_id = p.id;
@@ -626,9 +659,9 @@ function buildMenu() {
     h('ul', { class: 'menu-list' },
       item('star', 'Favoriten', () => { state.tab = 'fav'; updateTabs(); renderList(); openSheet(); }, `${favorites.all().length} gespeichert`),
       item('plus', 'Neue Slipanlage melden', () => openReport('slipanlage-melden')),
-      item('plus', 'Kraftstoffpreis melden', () => openReport('tankpreis-melden')),
-      item('camera', 'Foto einreichen', () => openReport('foto-einreichen')),
-      item('flag', 'Fehler oder Hinweis melden', () => openReport('fehler-melden', { standort_id: '__other', art: 'sonstiges' }))),
+      item('plus', 'Kraftstoffpreis melden', () => choosePlaceFor('tankpreis-melden')),
+      item('camera', 'Foto einreichen', () => choosePlaceFor('foto-einreichen')),
+      item('flag', 'Fehler oder Hinweis melden', () => choosePlaceFor('fehler-melden', { art: 'sonstiges' }))),
     h('ul', { class: 'menu-links' },
       h('li', {}, h('a', { href: './ueber.html', text: 'Über WaterMap und Datenquellen' })),
       h('li', {}, h('a', { href: './datenschutz.html', text: 'Datenschutz' })),
