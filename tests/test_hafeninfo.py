@@ -91,6 +91,15 @@ class RuleTests(unittest.TestCase):
     def lines(self, text):
         return [(f["key"], f["value"], f["price_eur"]) for f in hi.extract_rules([{"url": "u", "text": text}])]
 
+    def test_price_in_next_table_cell_is_joined_and_addresses_skipped(self):
+        text = "Preise\nGastlieger bis 6 m\n15,00 €\nGastlieger bis 8 m\n18,00 €\nStromer Landstraße 53a, 28197 Bremen\nStrom 0,50 €/kWh"
+        pages = [{"url": "https://x.de/preise", "text": text}]
+        got = hi.extract_rules(pages)
+        self.assertEqual([(f["key"], f["value"], f["price_eur"]) for f in got],
+                         [("gast_liegeplatz", "Gastlieger bis 6 m 15,00 €", 15.0), ("gast_liegeplatz", "Gastlieger bis 8 m 18,00 €", 18.0),
+                          ("strom", "Strom 0,50 €/kWh", 0.5)])
+        self.assertEqual(hi.verify(got, pages)[1], 0)                        # Zitat über zwei Zeilen ist belegt
+
     def test_form_boxes_and_dot_leaders_are_removed_but_quote_stays_verbatim(self):
         text = ("Sommerliegeplatz 01.04. - 31.10. Ja: ( ) Nein: ( )\n"
                 "Stromanschluss: 3,70 € Grundgebühr pro Monat Ja: ( ) Nein: ( )\n"
@@ -136,7 +145,7 @@ class RuleTests(unittest.TestCase):
         self.assertEqual(self.lines("Kaution 30,- € (Hund auf Anfrage)\n120,- €/bis 3 Stunden*\njede weitere Stunde 35,- €*"), [])
         # Preisliste ohne Stichwort je Zeile (Labussee): Überschrift wird mitgenannt
         got = self.lines("Strom\n0,70 €\nDuschen\n1,00 €")
-        self.assertEqual(got, [("strom", "Strom: 0,70 €", 0.7)])     # „Duschen“ gibt sein Stichwort nicht weiter
+        self.assertEqual(got, [("strom", "Strom 0,70 €", 0.7), ("duschen", "Duschen 1,00 €", 1.0)])   # Preis direkt darunter gehört dazu
         # Überschrift wirkt nur auf die nächsten Zeilen
         self.assertEqual(self.lines("Strom\n" + "Text ohne Angabe\n" * 9 + "4,00 €"), [])
 
@@ -252,10 +261,12 @@ class PickTests(unittest.TestCase):
         def m(i, name, url): return {"id": f"node/{i}", "properties": {"name": name, "website": url}}
         marinas = [m(1, "Marina Wustrow", "https://portal.de/wustrow.html"), m(2, "Stadthafen Rostock", "https://portal.de/rostock.html"),
                    m(3, "Sportboothafen Lathen", "https://sg-lathen.de/"), m(4, "Sportboothafen Lathen", "https://sg-lathen.de/"),
-                   m(5, "Steg A", "https://verein.de/"), m(6, "Steg B", "https://verein.de/")]
+                   m(5, "Steg A", "https://verein.de/"), m(6, "Steg B", "https://verein.de/"),
+                   m(7, "Hafen Timmendorf", "https://portal.de/timmendorf/")]
         page = lambda u: [{"url": u, "text": "x"}]
         crawled = {"node/1": (marinas[0], page("https://portal.de/timmendorf/")), "node/3": (marinas[2], page("https://sg-lathen.de/")),
-                   "node/4": (marinas[3], page("https://sg-lathen.de/")), "node/5": (marinas[4], page("https://verein.de/"))}
+                   "node/4": (marinas[3], page("https://sg-lathen.de/")), "node/5": (marinas[4], page("https://verein.de/")),
+                   "node/7": (marinas[6], page("https://portal.de/timmendorf"))}       # Timmendorf ist dort zu Hause
         store = {"node/2": {"status": "ok", "source": "https://www.portal.de/timmendorf"}, "node/6": {"status": "ok", "source": "https://verein.de/"}}
         self.assertEqual(hi.shared_landings(marinas, store, crawled), {"node/1", "node/2"})
 
