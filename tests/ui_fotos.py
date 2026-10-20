@@ -19,7 +19,9 @@ PNG = bytes.fromhex('89504e470d0a1a0a0000000d4948445200000001000000010806000000'
 FOTOS = [{'id': 's1', 'created': '2026-10-20T12:00:00Z', 'standort_id': 'node/632876845', 'standort_name': 'Slip Vössen',
           'beschreibung': '<b>Rampe</b> bei Niedrigwasser', 'rechte': True, 'hat_foto': True},
          {'id': 's2', 'created': '2026-10-20T13:00:00Z', 'standort_id': 'node/1', 'standort_name': 'Ohne Rechte',
-          'beschreibung': 'x', 'rechte': False, 'hat_foto': True}]
+          'beschreibung': 'x', 'rechte': False, 'hat_foto': True},
+         {'id': 's3', 'created': '2026-10-20T14:00:00Z', 'standort_id': '__other', 'standort_name': 'Porta In Vössen',
+          'beschreibung': 'Slipanlage', 'rechte': True, 'hat_foto': True}]
 posted = []
 
 def api(route):
@@ -49,15 +51,23 @@ with sync_playwright() as p:
     pg.route('**/.netlify/functions/fotos**', api)
     pg.goto(f'http://127.0.0.1:{PORT}/admin/fotos.html')
     pg.fill('#pw', 'falsch'); pg.click('#login button')
-    pg.wait_for_function("document.querySelector('#msg').textContent.includes('Passwort falsch')")
+    pg.locator('#msg', has_text='Passwort falsch').wait_for()     # CSP verbietet eval → keine wait_for_function
     check(pg.locator('.card').count() == 0, 'falsches Passwort: nichts sichtbar')
     pg.fill('#pw', 'geheim'); pg.click('#login button')
     pg.wait_for_selector('.card img[src^="blob:"]')
-    check(pg.locator('.card').count() == 2 and '2 Foto(s)' in pg.inner_text('#msg'), 'Liste mit zwei Einreichungen')
+    check(pg.locator('.card').count() == 3 and '3 Foto(s)' in pg.inner_text('#msg'), 'Liste mit drei Einreichungen')
+    other = pg.locator('.card >> nth=2')
+    check(other.locator('button.ok').is_disabled() and 'Porta In Vössen' in other.inner_text(), 'ohne Standort: Freigeben gesperrt, Hinweis da')
+    other.locator('input.where').fill('https://watermaps.netlify.app/#p=node%2F632876845')
+    check(not other.locator('button.ok').is_disabled(), 'nach Einfügen des Links freigebbar')
+    other.locator('button.ok').click()
+    other.locator('.status', has_text='Freigegeben').wait_for()
+    check(posted == [{'aktion': 'freigeben', 'id': 's3', 'standort': 'node/632876845'}], f'Standort wird mitgeschickt ({posted})')
+    posted.clear()
     check('<b>Rampe</b>' in pg.inner_text('.card >> nth=0') and pg.locator('.card b').count() == 0, 'Beschreibung bleibt Text')
     check(pg.locator('.card >> nth=1').locator('button.ok').is_disabled() and 'nicht freigeben' in pg.inner_text('.card >> nth=1'), 'ohne Rechte nicht freigebbar')
     pg.locator('.card >> nth=0').locator('button.ok').click()
-    pg.wait_for_function("document.querySelector('.card .status').textContent.includes('Freigegeben')")
+    pg.locator('.card >> nth=0').locator('.status', has_text='Freigegeben').wait_for()
     check(posted == [{'aktion': 'freigeben', 'id': 's1'}], f'Freigabe gesendet ({posted})')
     pg.once('dialog', lambda d: d.dismiss())
     pg.locator('.card >> nth=1').locator('button', has_text='Ablehnen').click()

@@ -37,15 +37,23 @@ function card(f) {
   const status = el('p', { className: 'status' });
   const yes = el('button', { className: 'ok', type: 'button', textContent: 'Freigeben' });
   const no = el('button', { type: 'button', textContent: 'Ablehnen' });
-  const valid = f.hat_foto && f.rechte && /^(node|way|relation|community)\//.test(f.standort_id);
-  yes.disabled = !valid;
-  const link = f.standort_id ? el('a', { href: `../#p=${encodeURIComponent(f.standort_id)}`, target: '_blank', rel: 'noopener', textContent: 'in der Karte ansehen' }) : null;
+  const ID = /^(node|way|relation|community)\/[A-Za-z0-9_-]{1,40}$/;
+  const parse = (t) => { const m = String(t).trim().match(/[#&]p=([^&\s]+)/); const id = m ? decodeURIComponent(m[1]) : String(t).trim(); return ID.test(id) ? id : null; };
+  const hasId = ID.test(f.standort_id);
+  // Bei „Anderer Standort“ fehlt die ID: Link zum Standort aus der App einfügen
+  const where = hasId ? null : el('input', { type: 'text', placeholder: 'Link zum Standort aus der App, z. B. …#p=node/632876845', className: 'where' });
+  const valid = () => f.hat_foto && f.rechte && (hasId || Boolean(parse(where.value)));
+  yes.disabled = !valid();
+  where?.addEventListener('input', () => { yes.disabled = !valid(); });
+  const link = hasId ? el('a', { href: `../#p=${encodeURIComponent(f.standort_id)}`, target: '_blank', rel: 'noopener', textContent: 'in der Karte ansehen' }) : null;
   const node = el('section', { className: 'card' }, img,
     el('h2', { textContent: f.standort_name || f.standort_id || 'Ohne Standort' }),
     el('p', { className: 'meta' }, f.created ? new Date(f.created).toLocaleString('de-DE') + ' · ' : '', link),
     el('p', { textContent: f.beschreibung || '(keine Beschreibung)' }),
     f.rechte ? null : el('p', { className: 'warn', textContent: 'Rechte am Foto nicht bestätigt – nicht freigeben.' }),
     f.hat_foto ? null : el('p', { className: 'warn', textContent: 'Kein Foto in der Einreichung.' }),
+    hasId ? null : el('p', { className: 'warn', textContent: `Kein Standort aus der Liste gewählt („${f.standort_name || 'ohne Namen'}“). Standort in der App öffnen, Link kopieren und hier einfügen:` }),
+    where,
     el('div', { className: 'actions' }, yes, no), status);
   if (f.hat_foto) {
     call('GET', `?bild=${encodeURIComponent(f.id)}`).then(r => r.blob()).then(b => { img.src = URL.createObjectURL(b); })
@@ -56,12 +64,12 @@ function card(f) {
     yes.disabled = no.disabled = true;
     status.textContent = aktion === 'freigeben' ? 'Wird veröffentlicht …' : 'Wird gelöscht …';
     try {
-      await call('POST', '', { aktion, id: f.id });
+      await call('POST', '', { aktion, id: f.id, ...(aktion === 'freigeben' && where ? { standort: parse(where.value) } : {}) });
       status.textContent = aktion === 'freigeben' ? 'Freigegeben – in etwa einer Minute in der App sichtbar.' : 'Abgelehnt und gelöscht.';
       status.classList.remove('err');
     } catch (e) {
       status.textContent = e.message; status.classList.add('err');
-      yes.disabled = !valid; no.disabled = false;
+      yes.disabled = !valid(); no.disabled = false;
     }
   };
   yes.addEventListener('click', act('freigeben'));

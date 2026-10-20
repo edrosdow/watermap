@@ -1,6 +1,6 @@
 // Tests für netlify/functions/fotos.mjs mit nachgebauter Netlify- und GitHub-API (node tests/fotos_function_test.mjs).
 import assert from 'node:assert/strict';
-import { handle, imageType, addPhoto, passwordOk, fileUrl } from '../netlify/functions/fotos.mjs';
+import { handle, imageType, addPhoto, passwordOk, fileUrl, standortAus } from '../netlify/functions/fotos.mjs';
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
 const env = { FOTO_ADMIN_PASSWORT: 'geheim-123', NETLIFY_API_TOKEN: 'nf', GITHUB_TOKEN: 'gh' };
@@ -84,6 +84,20 @@ for (const [opts, msg] of [[{ rights: '' }, /Rechte/], [{ standort: '../../etc' 
   assert.equal(r.status, 502); assert.match((await r.json()).fehler, msg);
   assert.deepEqual(Object.keys(w.state.files), []); assert.deepEqual(w.state.deleted, [], 'bei Fehler nichts löschen');
 }
+
+// „Anderer Standort“: Standort beim Freigeben als App-Link nachtragen
+assert.equal(standortAus('https://watermaps.netlify.app/#p=node%2F632876845'), 'node/632876845');
+assert.equal(standortAus('way/12'), 'way/12');
+assert.equal(standortAus('https://x/#p=..%2F..%2Fetc'), null);
+{ const w = fakeWorld({ standort: '__other' });
+  const bad = await run(req('POST', '', { aktion: 'freigeben', id: 's1' }), w);
+  assert.equal(bad.status, 502);
+  const wrong = await run(req('POST', '', { aktion: 'freigeben', id: 's1', standort: 'irgendwas' }), w);
+  assert.equal(wrong.status, 400);
+  const r = await run(req('POST', '', { aktion: 'freigeben', id: 's1', standort: 'https://watermaps.netlify.app/#p=node%2F632876845' }), w);
+  assert.equal(r.status, 200);
+  assert.match(Object.keys(w.state.files)[0], /^public\/photos\/node-632876845-/);
+  assert.equal(JSON.parse(w.state.overrides)[0].id, 'node/632876845'); }
 
 // Ablehnen löscht nur die Einreichung
 { const w = fakeWorld(); const r = await run(req('POST', '', { aktion: 'ablehnen', id: 's1' }), w);

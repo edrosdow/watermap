@@ -83,9 +83,17 @@ async function submissions(nf, siteId) {
   return (await nf(`/forms/${form.id}/submissions?per_page=100`)) || [];
 }
 
-async function publish(gh, env, sub, fetchFn, today) {
+/** Standort aus einer ID oder einem App-Link („…/#p=node%2F123“) lesen. */
+export function standortAus(text) {
+  const s = String(text || '').trim();
+  const m = s.match(/[#&]p=([^&\s]+)/);
+  const id = m ? decodeURIComponent(m[1]) : s;
+  return ID_RE.test(id) ? id : null;
+}
+
+async function publish(gh, env, sub, fetchFn, today, standort) {
   const d = sub.data || {};
-  const id = String(d.standort_id || '');
+  const id = standort || String(d.standort_id || '');
   if (!ID_RE.test(id)) throw new Error('Standort-ID fehlt oder ist ungültig');
   if (!d.foto_rechte) throw new Error('Rechte am Foto nicht bestätigt');
   const url = fileUrl(d.foto);
@@ -145,9 +153,12 @@ export async function handle(req, { env, siteId, fetchFn = fetch, today = new Da
     const sub = subs.find(s => s.id === body.id);
     if (!sub) return json(404, { fehler: 'Einreichung nicht gefunden (schon erledigt?).' });
     if (body.aktion === 'freigeben') {
-      const photo = await publish(gh, env, sub, fetchFn, today);
+      // Standort nachtragen, wenn bei der Einreichung „Anderer Standort“ gewählt wurde
+      const standort = body.standort ? standortAus(body.standort) : null;
+      if (body.standort && !standort) return json(400, { fehler: 'Standort nicht erkannt – Link aus der App (…#p=node/123) oder ID einfügen.' });
+      const photo = await publish(gh, env, sub, fetchFn, today, standort);
       await nf(`/submissions/${sub.id}`, { method: 'DELETE' });
-      return json(200, { ok: true, foto: photo, standort_id: (sub.data || {}).standort_id });
+      return json(200, { ok: true, foto: photo, standort_id: standort || (sub.data || {}).standort_id });
     }
     if (body.aktion === 'ablehnen') {
       await nf(`/submissions/${sub.id}`, { method: 'DELETE' });
