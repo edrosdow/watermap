@@ -43,11 +43,10 @@ Die Ebene „Pegel“ lädt Daten von PEGELONLINE über die eigene Domain: `publ
 `/api/wetter/*` wird ebenso an `https://api.brightsky.dev/` weitergeleitet (Daten des Deutschen Wetterdienstes, Namensnennung „Datenbasis: Deutscher Wetterdienst“ steht in der App).
 
 ### Hafeninfos (Preise und Leistungen der Marinas)
-Die GitHub Action „Hafeninfos aktualisieren“ liest die Websites der Marinas aus (`scripts/hafeninfo.py`) und schreibt `public/data/hafeninfo.json`. Dafür einmalig einen API-Schlüssel hinterlegen:
-1. Auf https://console.anthropic.com einen API-Schlüssel anlegen (Guthaben nötig).
-2. Im GitHub-Repository: Settings → Secrets and variables → Actions → New repository secret, Name `ANTHROPIC_API_KEY`.
-3. Actions → „Hafeninfos aktualisieren“ → Run workflow (Anzahl z. B. 25 für einen Probelauf).
-Kosten: grob 0,04 US-$ je Hafen beim ersten Lesen (Claude Opus 5.5 über die Batches API zum halben Preis); unveränderte Websites werden nicht erneut ausgewertet. Monatlich (am 8.) laufen automatisch bis zu 200 Häfen, deren letzte Prüfung über 30 Tage zurückliegt.
+Die GitHub Action „Hafeninfos aktualisieren“ liest die Websites der Marinas aus (`scripts/hafeninfo.py`) und schreibt `public/data/hafeninfo.json`.
+- **Standard, kostenlos:** Zeilen mit passendem Stichwort und Preis bzw. kurzer Angabe werden wörtlich übernommen („0,50 € Frischwasser / 70L“). Kein Schlüssel nötig. Monatlich (am 8.) laufen automatisch bis zu 200 Häfen, deren letzte Prüfung über 30 Tage zurückliegt.
+- **Optional mit KI** (Haken „mit_ki“ beim Starten): Claude fasst die Angaben einheitlich zusammen. Kostet Geld (grob 0,04 US-$ je Hafen beim ersten Lesen) und braucht das Repository-Secret `ANTHROPIC_API_KEY`.
+- **Probelauf nur in der Vorschau:** Auf einem `claude/…`-Branch `.github/hafeninfo-probelauf.json` ändern – die Ergebnisse landen nur auf diesem Branch.
 
 ## 7. Kartenkacheln
 Der Standard-Kachelserver von OpenStreetMap (`tile.openstreetmap.org`) ist nur für geringe Last gedacht ([Nutzungsrichtlinie](https://operations.osmfoundation.org/policies/tiles/)). Bei wachsender Nutzung einen Anbieter in `public/js/config.js` (`TILE_URL`) eintragen. Passe dann auch `img-src` in `public/_headers` an.

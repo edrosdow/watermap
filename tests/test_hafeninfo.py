@@ -87,6 +87,34 @@ class VerifyTests(unittest.TestCase):
             self.assertEqual(hi._price_in(price, quote), want, (price, quote))
 
 
+class RuleTests(unittest.TestCase):
+    def lines(self, text):
+        return [(f["key"], f["value"], f["price_eur"]) for f in hi.extract_rules([{"url": "u", "text": text}])]
+
+    def test_example_price_list(self):
+        text, _ = hi.html_to_text(HAFEN_HTML)
+        got = self.lines(text)
+        self.assertIn(("gast_liegeplatz", "3,00 € / lfd. Meter / Tag (Berechnung mind. 7m) inkl. Strom", 3.0), got)
+        self.assertIn(("faekalien", "15,00 € Fäkalienabsaugung pro Tank (bis 300L)", 15.0), got)
+        self.assertIn(("diesel", "Diesel nach Tagespreis", None), got)
+        self.assertIn(("parken", "5,00 € für PKW / Tag", 5.0), got)        # Tabellenzeile bleibt eine Angabe
+        self.assertFalse(any(v.startswith("Tankstelle - Wasser") for _, v, _ in got))   # Überschrift ist keine Angabe
+
+    def test_heading_passes_key_to_bare_price_lines(self):
+        got = self.lines("Liegegebühren\nBoote bis 8 m: 15,00 € / Nacht\nBoote über 8 m: 20,00 € / Nacht\nParken\n4,00 € pro Tag")
+        self.assertEqual([(k, p) for k, _, p in got], [("gast_liegeplatz", 15.0), ("gast_liegeplatz", 20.0), ("parken", 4.0)])
+
+    def test_offtopic_and_prose_ignored(self):
+        got = self.lines("Ferienwohnung mit Strom und WLAN: 89,00 € pro Nacht\n"
+                         + "Unser Hafen bietet seit vielen Jahren einen schönen Blick über den See, Strom gibt es an jedem Steg und vieles mehr, was das Herz begehrt." )
+        self.assertEqual(got, [])
+
+    def test_first_price(self):
+        for s, want in (("3,00 €", 3.0), ("1.200,00 €", 1200.0), ("1.200 €", 1200.0), ("€ 12", 12.0), ("5 EUR", 5.0),
+                        ("3,- €", 3.0), ("12.50 €", 12.5), ("ohne Preis", None)):
+            self.assertEqual(hi.first_price(s), want, s)
+
+
 class FakeResp(io.BytesIO):
     def __init__(self, url, body, ctype="text/html; charset=utf-8"):
         super().__init__(body.encode("utf-8"))
@@ -158,7 +186,7 @@ class MainTests(unittest.TestCase):
             batches = FakeBatches(answer)
             client = types.SimpleNamespace(messages=types.SimpleNamespace(batches=batches))
             fetcher = hi.Fetcher(opener=open_, pause=0, log=lambda *a: None)
-            self.assertEqual(hi.main(["--data", str(data)], client=client, fetcher=fetcher), 0)
+            self.assertEqual(hi.main(["--data", str(data), "--ki"], client=client, fetcher=fetcher), 0)
             doc = json.loads((data / "hafeninfo.json").read_text())
             place = doc["places"]["node/1"]
             self.assertEqual([f["key"] for f in place["facts"]], ["faekalien"])    # Duschen: Zitat steht nirgends
@@ -168,7 +196,7 @@ class MainTests(unittest.TestCase):
             self.assertEqual(req["model"], "claude-opus-5-5")
             self.assertEqual(req["output_config"]["format"]["type"], "json_schema")
             # Zweiter Lauf (z. B. --only): Seite unverändert → keine neue Anfrage
-            self.assertEqual(hi.main(["--data", str(data), "--only", "node/1"], client=client, fetcher=fetcher), 0)
+            self.assertEqual(hi.main(["--data", str(data), "--ki", "--only", "node/1"], client=client, fetcher=fetcher), 0)
             self.assertEqual(len(batches.created), 1)
 
     def test_refusal_or_bad_json_is_not_used(self):
@@ -186,10 +214,29 @@ class MainTests(unittest.TestCase):
                     yield types.SimpleNamespace(custom_id=req["custom_id"], result=types.SimpleNamespace(type="succeeded", message=msg))
             batches.results = results
             client = types.SimpleNamespace(messages=types.SimpleNamespace(batches=batches))
-            hi.main(["--data", str(data)], client=client, fetcher=hi.Fetcher(opener=open_, pause=0, log=lambda *a: None))
+            hi.main(["--data", str(data), "--ki"], client=client, fetcher=hi.Fetcher(opener=open_, pause=0, log=lambda *a: None))
             place = json.loads((data / "hafeninfo.json").read_text())["places"]["node/2"]
             self.assertTrue(place["status"].startswith("fehler"))
             self.assertNotIn("facts", place)
+
+    def test_free_mode_needs_no_client_and_finds_lines(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data = pathlib.Path(tmp)
+            (data / "osm").mkdir()
+            marina = {"type": "Feature", "id": "node/3", "geometry": {"type": "Point", "coordinates": [12.7, 53.5]},
+                      "properties": {"name": "Marina Test", "website": "https://www.marina-test.de/"}}
+            (data / "osm" / "marina.geojson").write_text(json.dumps({"type": "FeatureCollection", "features": [marina]}))
+            open_, _ = opener({"https://www.marina-test.de/": HAFEN_HTML})
+            boom = types.SimpleNamespace(messages=None)          # würde bei jedem KI-Aufruf scheitern
+            self.assertEqual(hi.main(["--data", str(data)], client=boom, fetcher=hi.Fetcher(opener=open_, pause=0, log=lambda *a: None)), 0)
+            doc = json.loads((data / "hafeninfo.json").read_text())
+            place = doc["places"]["node/3"]
+            self.assertEqual((doc["method"], place["method"]), ("regeln", "regeln"))
+            got = {f["key"]: f["value"] for f in place["facts"]}
+            self.assertEqual(got["wasser"], "0,50 € Frischwasser / 70L")
+            self.assertEqual(got["parken"], "5,00 € für PKW / Tag")
+            self.assertIn("diesel", got)
+            self.assertIn("wlan", got)
 
     def test_schema_keys_match_app(self):
         js = (ROOT / "public" / "js" / "hafeninfo.js").read_text(encoding="utf-8")

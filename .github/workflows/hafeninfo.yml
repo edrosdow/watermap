@@ -1,7 +1,8 @@
 name: Hafeninfos aktualisieren
 
-# Liest Preise und Service-Angaben von den Websites der Marinas (scripts/hafeninfo.py) – mit Claude, über die
-# Message Batches API. Braucht das Repository-Secret ANTHROPIC_API_KEY (Settings → Secrets and variables → Actions).
+# Liest Preise und Service-Angaben von den Websites der Marinas (scripts/hafeninfo.py).
+# Standard: kostenlos nach Regeln (wörtliche Zeilen). Nur mit „mit_ki“ wertet Claude aus – das kostet Geld und
+# braucht das Repository-Secret ANTHROPIC_API_KEY.
 
 on:
   schedule:
@@ -14,13 +15,17 @@ on:
   workflow_dispatch:
     inputs:
       anzahl:
-        description: "Höchstens so viele Häfen in diesem Lauf (grob 0,04 US-$ je Hafen beim ersten Lesen; 1400 = alle)"
+        description: "Höchstens so viele Häfen in diesem Lauf (1400 = alle)"
         type: string
         default: "25"
       nur:
         description: "Nur bestimmte Häfen, z. B. node/123,way/456 (leer = automatisch die am längsten nicht geprüften)"
         type: string
         default: ""
+      mit_ki:
+        description: "Mit Claude auswerten statt nach Regeln (kostenpflichtig, braucht ANTHROPIC_API_KEY)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -41,6 +46,7 @@ jobs:
       - name: Tests
         run: python3 -I -m unittest discover -s tests -p "test_*.py"
       - name: Claude-SDK installieren
+        if: ${{ inputs.mit_ki }}
         run: python3 -m pip install --quiet "anthropic>=1.15,<2"
       - name: Hafen-Websites auslesen
         env:
@@ -48,16 +54,21 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ANZAHL: ${{ inputs.anzahl || '200' }}
           NUR: ${{ inputs.nur || '' }}
+          MIT_KI: ${{ inputs.mit_ki && '1' || '' }}
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             ANZAHL=$(python3 -c "import json;print(int(json.load(open('.github/hafeninfo-probelauf.json')).get('anzahl', 25)))")
             NUR=$(python3 -c "import json;print(','.join(json.load(open('.github/hafeninfo-probelauf.json')).get('nur', [])))")
             echo "Probelauf auf ${GITHUB_REF_NAME}: anzahl=$ANZAHL nur=$NUR"
           fi
-          if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "::error::Secret ANTHROPIC_API_KEY fehlt (Settings → Secrets and variables → Actions)."; exit 1
+          KI=""
+          if [ -n "$MIT_KI" ]; then
+            if [ -z "$ANTHROPIC_API_KEY" ]; then
+              echo "::error::„mit_ki“ braucht das Secret ANTHROPIC_API_KEY (Settings → Secrets and variables → Actions)."; exit 1
+            fi
+            KI="--ki"
           fi
-          if [ -n "$NUR" ]; then python3 -u scripts/hafeninfo.py --only "$NUR"; else python3 -u scripts/hafeninfo.py --limit "$ANZAHL"; fi
+          if [ -n "$NUR" ]; then python3 -u scripts/hafeninfo.py $KI --only "$NUR"; else python3 -u scripts/hafeninfo.py $KI --limit "$ANZAHL"; fi
       - name: Daten prüfen
         run: python3 scripts/validate_data.py
       - name: Änderungen übernehmen

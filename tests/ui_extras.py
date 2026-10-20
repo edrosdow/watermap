@@ -125,7 +125,7 @@ with sync_playwright() as p:
         check('darf nicht erscheinen' not in hi, f'{name}: unbekannte Schlüssel werden nicht gezeigt')
         check('marina-test.de' in hi and 'ohne gewähr' in hi.lower() and '20.10.2026' in hi, f'{name}: Quelle, Datum und Hinweis')
         check('<img' in hi and not pg.evaluate('window.__xss') and pg.locator('#detail .hi-block img').count() == 0, f'{name}: HTML in Daten bleibt Text')
-        pg.locator('#detail .hi-proof summary').click()
+        pg.locator('#detail .hi-proof summary').click()   # Testdaten ohne method → Auswertung mit Belegen
         check('„3,00 € / lfd. Meter / Tag' in pg.inner_text('#detail .hi-proof'), f'{name}: Belege aufklappbar')
         pg.locator('#detail .hi-block').scroll_into_view_if_needed(); pg.screenshot(path=str(SHOTS / f'{name}_0_hafeninfo.png'))
 

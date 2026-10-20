@@ -65,14 +65,15 @@ function render(entry, facts) {
       ])));
   }
   const src = safeHttpUrl(entry.source);
-  out.push(h('details', { class: 'hi-proof' }, h('summary', { text: 'Belege von der Website' }),
+  const verbatim = entry.method === 'regeln';          // Werte sind wörtliche Zeilen der Website – Belege wären doppelt
+  if (!verbatim) out.push(h('details', { class: 'hi-proof' }, h('summary', { text: 'Belege von der Website' }),
     h('ul', {}, facts.map(f => {
       const u = safeHttpUrl(f.url);
       return h('li', {}, h('strong', { text: `${LABELS[f.key]}: ` }), `„${f.quote}“ `,
         u ? h('a', { href: u, target: '_blank', rel: 'noopener noreferrer', text: host(u) + (new URL(u).pathname.length > 1 ? new URL(u).pathname : '') }) : null);
     }))));
   out.push(h('div', { class: 'note ' + (age !== null && age > CONFIG.HAFENINFO_STALE_DAYS ? 'note-warn' : 'note-info'), html: icon(age !== null && age > CONFIG.HAFENINFO_STALE_DAYS ? 'alert' : 'info', 18) },
-    h('span', {}, 'Automatisch von der Website des Hafens ausgelesen',
+    h('span', {}, verbatim ? 'Wörtliche Auszüge, automatisch von der Website des Hafens übernommen' : 'Automatisch von der Website des Hafens ausgelesen',
       src ? [' (', h('a', { href: src, target: '_blank', rel: 'noopener noreferrer', text: host(src) }), ')'] : '',
       `, Stand ${formatDate(entry.checked) || 'unbekannt'}. Ohne Gewähr – Preise und Leistungen können sich geändert haben; im Zweifel beim Hafen nachfragen.`)));
   return out;

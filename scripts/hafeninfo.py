@@ -1,22 +1,28 @@
 #!/usr/bin/env python3
 """WaterMap – Hafeninfos von den Websites der Marinas auslesen (Preise, Service, Ausstattung).
 
-  python3 scripts/hafeninfo.py --limit 25            # 25 Häfen, deren Infos am längsten nicht geprüft wurden
+  python3 scripts/hafeninfo.py --limit 25            # 25 Häfen, deren Infos am längsten nicht geprüft wurden (kostenlos)
   python3 scripts/hafeninfo.py --only node/123,way/4 # bestimmte Häfen
-  python3 scripts/hafeninfo.py --crawl-only          # nur Websites abrufen und berichten, kein KI-Aufruf
+  python3 scripts/hafeninfo.py --crawl-only          # nur Websites abrufen und berichten
+  python3 scripts/hafeninfo.py --ki                  # statt Regeln Claude auswerten lassen (kostenpflichtig, API-Schlüssel nötig)
+
+Zwei Auswertungen
+  * Standard, kostenlos: Regeln. Zeilen der Website mit passendem Stichwort („Frischwasser“, „Strom“,
+    „Liegegebühr“ …) und Preis bzw. kurzer Angabe werden wörtlich übernommen – keine KI, kein Schlüssel.
+  * --ki: Claude überträgt die Angaben in kurze, einheitliche Sätze (Batches API, kostet Geld).
 
 Ablauf
   1. Für jede Marina mit Website (aus public/data/osm/marina.geojson): Startseite und passende Unterseiten
      („Hafen“, „Preise“, „Liegeplatz“, „Service“ …) abrufen – robots.txt wird beachtet, höchstens 5 Seiten,
      eine Anfrage pro Sekunde und Website.
   2. Unveränderte Seiten (gleicher Inhalt wie beim letzten Lauf) werden nicht erneut ausgewertet.
-  3. Claude liest die Seiten (Message Batches API, halber Preis) und liefert Angaben in einem festen Schema –
-     zu JEDER Angabe ein wörtliches Zitat von der Seite.
+  3. Auswertung nach Regeln (Standard) oder mit --ki durch Claude (Message Batches API) – zu JEDER Angabe
+     ein wörtliches Zitat von der Seite.
   4. Prüfung: Eine Angabe bleibt nur, wenn ihr Zitat tatsächlich im abgerufenen Seitentext steht und ein
      genannter Preis im Zitat vorkommt. Alles andere wird verworfen – erfunden wird nichts.
   5. Ergebnis: public/data/hafeninfo.json (Quelle und Abrufdatum je Angabe), Verweis in meta.json.
 
-Braucht: Python 3.10+, `pip install anthropic`, Umgebungsvariable ANTHROPIC_API_KEY (außer bei --crawl-only).
+Braucht: Python 3.10+. Nur für --ki zusätzlich `pip install anthropic` und ANTHROPIC_API_KEY.
 """
 from __future__ import annotations
 
@@ -127,7 +133,7 @@ Regeln:
 class _Text(html.parser.HTMLParser):
     """Sichtbarer Text und Links einer HTML-Seite (nur Standardbibliothek)."""
     SKIP = {"script", "style", "noscript", "svg", "template", "head"}
-    BLOCK = {"p", "div", "br", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6", "section", "article", "table", "ul", "ol", "dt", "dd", "td", "th"}
+    BLOCK = {"p", "div", "br", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6", "section", "article", "table", "ul", "ol", "dt", "dd"}
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
@@ -139,7 +145,7 @@ class _Text(html.parser.HTMLParser):
         if tag in self.BLOCK:
             self.parts.append("\n")
         if tag == "td" or tag == "th":
-            self.parts.append(" | ")
+            self.parts.append(" | ")                        # Tabellenzeile bleibt eine Zeile
         if tag == "a":
             self._href, self._atext = dict(attrs).get("href"), []
 
@@ -329,6 +335,97 @@ def verify(facts, pages) -> tuple[list[dict], int]:
     return out, dropped
 
 
+# --------------------------------------------------------------------------- Regeln (kostenlos)
+# Stichwörter je Angabe. Eine Zeile zählt, wenn ein Stichwort passt und sie einen Preis enthält – oder, ohne
+# Preis, kurz ist (≤ 100 Zeichen, also eher „WLAN – kostenlos“ als Fließtext).
+RULES = {
+    "gast_liegeplatz": r"gastlieg|gastplatz|liegegeb|liegegeld|hafengeb|hafengeld|(lfd|laufende[rn]?)\.?\s*(boots)?meter|je\s*meter\s*boots|pro\s*meter\s*und\s*(tag|nacht)|übernachtung\s+(im\s+hafen|am\s+steg)",
+    "dauerliegeplatz": r"saisonlieg|dauerlieg|jahreslieg|sommerlieg|saisonplatz",
+    "max_laenge": r"max(imale|\.)?\s*(boots)?länge|boote\s+bis\s+\d",
+    "wassertiefe": r"wassertiefe|tiefgang",
+    "strom": r"\bstrom|landstrom|kwh",
+    "wasser": r"frischwasser|trinkwasser|wasseranschluss|wasser\s*(je|pro|/)\s*\d",
+    "faekalien": r"fäkal|absaug|schmutzwasser|pump.?out",
+    "diesel": r"\bdiesel",
+    "benzin": r"\bbenzin|super\s*(95|98|e10|plus)",
+    "duschen": r"dusch",
+    "toiletten": r"\bwc\b|toilette|sanitär",
+    "waschmaschine": r"waschmaschine|trockner",
+    "wlan": r"\bw-?lan\b|wi-?fi|internetzugang",
+    "restaurant": r"restaurant|imbiss|gaststätte|bistro|\bcafé|\bcafe\b|kiosk",
+    "einkauf": r"brötchen|einkaufsmöglich|lebensmittel",
+    "parken": r"parkplatz|parken|\bpkw\b",
+    "wohnmobil": r"wohnmobil|womo|reisemobil",
+    "slip": r"\bslip(anlage|wagen|pen)?\b|trailern",
+    "kran": r"\bkran",
+    "winterlager": r"winterlager|winterstell|hallenplatz|hallenstell|freilager",
+    "werkstatt": r"werkstatt|reparatur|motorservice|bootsservice",
+    "entsorgung": r"altöl|bilge|ölfilter|batterien|müllentsorg",
+    "bootsverleih": r"bootsverleih|bootsvermietung|boot\s+mieten|kanuverleih",
+    "hafenmeister": r"hafenmeister",
+    "funk": r"\bukw\b|\bvhf\b|ukw-?kanal",
+    "haustiere": r"\bhunde?\b|haustier",
+}
+_RULES = {k: re.compile(v, re.I) for k, v in RULES.items()}
+_NUM = r"(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)"
+_PRICE = re.compile(_NUM + r"\s*(?:,-|,–)?\s*(?:€|eur\b|euro\b)|(?:€|eur)\s*" + _NUM, re.I)
+# Kurze Zeilen ohne Preis zählen nur mit einer echten Angabe – sonst sind es Überschriften
+_INFO = re.compile(r"kostenlos|gratis|kostenfrei|\bfrei\b|inkl|inklusive|vorhanden|verfügbar|möglich|tagespreis|\buhr\b|\bja\b|\bnein\b|\d", re.I)
+_OFFTOPIC = re.compile(r"ferienwohn|ferienhaus|appartement|apartment|hausboot|zimmer|frühstück|hochzeit|gutschein|newsletter|cookie|datenschutz|impressum", re.I)
+
+
+def first_price(line: str):
+    m = _PRICE.search(line)
+    if not m:
+        return None
+    s = m.group(1) or m.group(2)
+    if "," in s:
+        s = s.replace(".", "").replace(",", ".")              # 1.200,50 → 1200.50
+    elif re.fullmatch(r"\d{1,3}(?:\.\d{3})+", s):
+        s = s.replace(".", "")                                # 1.200 → 1200
+    v = float(s)
+    return v if 0 < v < 100_000 else None
+
+
+def extract_rules(pages, per_key=4, total=40) -> list[dict]:
+    """Wörtliche Zeilen mit Stichwort und Preis (oder kurzer Angabe). Eine Zeile mit Preis, aber ohne Stichwort,
+    erbt das Stichwort einer kurzen Überschrift direkt darüber (typisch für Preislisten)."""
+    out, count, seen = [], {}, set()
+    for p in pages:
+        heading_key = None
+        for raw in p["text"].split("\n"):
+            line = raw.strip(" |-–•\t")
+            if not line or len(line) > 240:
+                heading_key = None
+                continue
+            keys = [k for k, rx in _RULES.items() if rx.search(line)]
+            price = first_price(line)
+            informative = price is not None or bool(_INFO.search(line))
+            if not informative:
+                if len(line) <= 60:
+                    heading_key = keys[0] if keys else None  # Überschrift, z. B. „Parkplatz“ – gilt für die Zeilen darunter
+                continue
+            # Preiszeile ohne eigenes (oder nur mit schwachem) Stichwort gehört zur Überschrift darüber,
+            # z. B. „Boote bis 8 m: 15,00 €“ unter „Liegegebühren“
+            if price is not None and heading_key and set(keys) <= {"max_laenge", "wassertiefe"}:
+                keys = [heading_key]
+            if not keys or _OFFTOPIC.search(line):
+                continue
+            if price is None and len(line) > 100:
+                continue
+            key = keys[0]
+            norm = re.sub(r"\s+", " ", line).casefold()
+            if norm in seen or count.get(key, 0) >= per_key:
+                continue
+            seen.add(norm)
+            count[key] = count.get(key, 0) + 1
+            value = re.sub(r"\s*\|\s*", " ", line).strip()       # Tabellenzellen: Trenner nur fürs Zitat
+            out.append({"key": key, "value": value, "price_eur": price, "quote": line, "page": pages.index(p) + 1})
+            if len(out) >= total:
+                return out
+    return out
+
+
 # --------------------------------------------------------------------------- Claude (Batches)
 def build_request(custom_id: str, name: str, pages) -> dict:
     """Eine Batch-Anfrage (entspricht den TypedDicts Request/MessageCreateParamsNonStreaming des SDK)."""
@@ -403,14 +500,16 @@ def main(argv=None, client=None, fetcher=None) -> int:
     ap.add_argument("--limit", type=int, default=25, help="höchstens so viele Häfen pro Lauf (Standard 25)")
     ap.add_argument("--only", help="nur diese IDs, z. B. node/123,way/456")
     ap.add_argument("--max-age-days", type=int, default=30, help="Häfen erst nach so vielen Tagen erneut prüfen")
-    ap.add_argument("--crawl-only", action="store_true", help="nur Websites abrufen und berichten (kein KI-Aufruf, nichts geschrieben)")
+    ap.add_argument("--crawl-only", action="store_true", help="nur Websites abrufen und berichten (nichts geschrieben)")
+    ap.add_argument("--ki", action="store_true", help="mit Claude auswerten statt nach Regeln (kostenpflichtig, braucht ANTHROPIC_API_KEY)")
     ap.add_argument("--workers", type=int, default=8)
     args = ap.parse_args(argv)
     data = pathlib.Path(args.data)
     today = dt.date.today()
     marinas = load_json(data / "osm" / "marina.geojson", {}).get("features", [])
     out_path = data / OUT_REL
-    store_doc = load_json(out_path, {"generated": None, "model": MODEL, "places": {}})
+    method = "claude" if args.ki else "regeln"
+    store_doc = load_json(out_path, {"generated": None, "places": {}})
     store = store_doc.setdefault("places", {})
     only = {s.strip() for s in args.only.split(",")} if args.only else None
     todo = pick(marinas, store, args.limit, only, args.max_age_days, today)
@@ -442,8 +541,13 @@ def main(argv=None, client=None, fetcher=None) -> int:
             store[fid] = {**old, "checked": stamp, "status": "nicht erreichbar"}
             continue
         h = pages_hash(pages)
-        if old.get("hash") == h and old.get("status") == "ok":
+        if old.get("hash") == h and old.get("status") == "ok" and old.get("method") == method:
             store[fid] = {**old, "checked": stamp}             # unverändert: keine neue Auswertung nötig
+            continue
+        if method == "regeln":
+            facts, dropped = verify(extract_rules(pages), pages)
+            store[fid] = {"checked": stamp, "status": "ok", "method": method, "hash": h, "source": pages[0]["url"],
+                          "pages": [p["url"] for p in pages], "facts": facts}
             continue
         cid = f"h{i}"
         ids[cid] = (fid, pages, h)
@@ -463,11 +567,14 @@ def main(argv=None, client=None, fetcher=None) -> int:
             facts, dropped = verify(payload.get("facts"), pages)
             kept_total += len(facts)
             dropped_total += dropped
-            store[fid] = {"checked": stamp, "status": "ok", "hash": h, "source": pages[0]["url"],
+            store[fid] = {"checked": stamp, "status": "ok", "method": method, "hash": h, "source": pages[0]["url"],
                           "pages": [p["url"] for p in pages], "facts": facts}
         print(f"Angaben übernommen: {kept_total}, verworfen (ohne Beleg): {dropped_total}")
 
-    store_doc.update({"generated": stamp, "model": MODEL, "schema": {k: v for k, v in FACTS.items()}})
+    n_facts = sum(len((store.get(fid) or {}).get("facts") or []) for fid in crawled)
+    print(f"Auswertung: {method}; {n_facts} Angaben bei {sum(1 for fid in crawled if (store.get(fid) or {}).get('facts'))} von {len(crawled)} Häfen.")
+    store_doc.update({"generated": stamp, "method": method, "model": MODEL if method == "claude" else None,
+                      "schema": {k: v for k, v in FACTS.items()}})
     out_path.write_text(json.dumps(store_doc, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     meta_path = data / "meta.json"
     meta = load_json(meta_path, {})
