@@ -106,6 +106,15 @@ class RuleTests(unittest.TestCase):
         got = self.lines("20,00 € Wohnmobil inkl. Strom / Tag\n3,00 € / lfd. Meter / Tag inkl. Strom\nStrom 0,70 € pro kWh")
         self.assertEqual([k for k, *_ in got], ["wohnmobil", "gast_liegeplatz", "strom"])
 
+    def test_prose_paragraph_is_read_sentence_by_sentence(self):
+        # Marina Eldenburg, „WC / Duschen“: ein Absatz, mehrere Sätze
+        got = self.lines("WC / Duschen\nWC, Duschen und Waschräume befinden sich im Hauptgebäude neben dem Restaurant. "
+                         "Für die Duschautomaten benötigen Sie 1 EUR. Duschplatz wählen und dann bei grüner Leuchtdiode den "
+                         "Duschplatz durch Einwurf bestätigen. In der Kabine haben Sie eine Bank zum umziehen.")
+        self.assertEqual(got, [("toiletten", "WC, Duschen und Waschräume befinden sich im Hauptgebäude neben dem Restaurant.", None),
+                               ("duschen", "WC, Duschen und Waschräume befinden sich im Hauptgebäude neben dem Restaurant.", None),
+                               ("duschen", "Für die Duschautomaten benötigen Sie 1 EUR.", 1.0)])
+
     def test_form_boxes_and_dot_leaders_are_removed_but_quote_stays_verbatim(self):
         text = ("Sommerliegeplatz 01.04. - 31.10. Ja: ( ) Nein: ( )\n"
                 "Stromanschluss: 3,70 € Grundgebühr pro Monat Ja: ( ) Nein: ( )\n"

@@ -431,6 +431,7 @@ _PRICE = re.compile(_NUM + r"\s*(?:,-|,–)?\s*(?:€|eur\b|euro\b)|(?:€|eur)\
 # Zahlen zählen nur mit Einheit (2,20 m · 16 A · 230 V · 8 Uhr · Kanal 72) oder als Telefonnummer – nicht Jahreszahlen,
 # Aufzählungen („1. Hafenmeister“) oder Zähler („555.509 kWh“ ohne Preis ist kein Strompreis)
 _INFO = re.compile(r"kostenlos|gratis|kostenfrei|\bfrei\b|inkl|inklusive|vorhanden|verfügbar|möglich|tagespreis|\bja\b|\bnein\b"
+                   r"|befinde[nt]?\s+sich|gibt\s+es|zur\s+verfügung|stehen\s+bereit"
                    r"|\d+(?:[.,]\d+)?\s*(?:m\b|cm\b|meter\b|t\b|tonnen|a\b|amp|ampere|ampère|v\b|volt|uhr\b|h\b|std)"
                    r"|kanal\s*\d+|(?:\+49|\b0\d{2,5})[\s/()-]*\d[\d\s/-]{4,}", re.I)
 _OFFTOPIC = re.compile(r"ferienwohn|ferienhaus|appartement|apartment|hausboot|zimmer|frühstück|hochzeit|gutschein|newsletter|cookie|datenschutz|impressum|"
@@ -452,11 +453,13 @@ def first_price(line: str):
 
 # Nur diese Überschriften geben ihr Stichwort an die Preiszeilen darunter weiter (höchstens HEADING_SPAN Zeilen).
 # „Hund“, „Duschen“, „WLAN“ … stehen oft als einzelnes Wort über ganz anderen Preisen (z. B. Bootsmiete).
-RULES_VERSION = 6          # bei Änderungen an den Regeln erhöhen: dann werden auch unveränderte Websites neu ausgewertet
+RULES_VERSION = 7          # bei Änderungen an den Regeln erhöhen: dann werden auch unveränderte Websites neu ausgewertet
 HEADING_KEYS = {"gast_liegeplatz", "dauerliegeplatz", "strom", "wasser", "faekalien", "diesel", "benzin", "parken",
                 "wohnmobil", "slip", "kran", "winterlager", "entsorgung"}
 HEADING_SPAN = 8
 _CHECKBOX = re.compile(r"\b(?:ja|nein)\s*:?\s*\(\s*\)", re.I)        # PDF-Formular: „Ja: ( ) Nein: ( )“
+_SENTENCE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÄÖÜ„\"])")                       # Absatz → Sätze
+FACILITY = {"toiletten", "duschen", "waschmaschine", "wlan"}                  # „WC, Duschen und Waschräume befinden sich …“
 _ADDRESS = re.compile(r"(^|,\s*)\d{5}\s+[A-ZÄÖÜ][a-zäöüß]")                # „…straße 53a, 28197 Bremen“
 _PRICE_ONLY = re.compile(r"^(?:[\d\s.,|–-]|€|eur\b|euro\b)+$", re.I)                 # Tabellenzelle(n) „15,00 €“, „15,00 € | 90,00 €“
 _LEADER = re.compile(r"\s*(?:\.\s?){4,}\s*|\s*…{2,}\s*")               # Punkt-Leitern in Preislisten
@@ -480,7 +483,9 @@ def extract_rules(pages, per_key=4, total=40) -> list[dict]:
             continue
         is_pdf = p["url"].lower().split("?")[0].endswith(".pdf")
         heading_key, heading_text, since = None, "", 0
-        raws = p["text"].split("\n")
+        raws = []
+        for r in p["text"].split("\n"):
+            raws += _SENTENCE.split(r) if len(r) > 160 else [r]    # Fließtext: jeder Satz für sich
         skip_next = False
         for n, raw in enumerate(raws):
             if skip_next:
@@ -514,18 +519,20 @@ def extract_rules(pages, per_key=4, total=40) -> list[dict]:
                 continue
             if (price is None and len(line) > 100) or len(line) > 160:
                 continue                                    # Fließtext
-            key = keys[0]
             norm = re.sub(r"\s+", " ", line).casefold()
-            if norm in seen or count.get(key, 0) >= per_key:
-                continue
-            seen.add(norm)
-            count[key] = count.get(key, 0) + 1
             value = re.sub(r"\s*\|\s*", " ", line).strip()       # Tabellenzellen: Trenner nur fürs Zitat
             if inherited and len(value) <= 30 and heading_text:
                 value = f"{heading_text}: {value}"                  # „0,70 €“ allein sagt nichts
-            out.append({"key": key, "value": value, "price_eur": price, "quote": quote, "page": pages.index(p) + 1})
-            if len(out) >= total:
-                return out
+            # ohne Preis darf eine Zeile mehrere Ausstattungen belegen („WC, Duschen und Waschräume befinden sich …“)
+            targets = [keys[0]] + ([k for k in keys[1:] if k in FACILITY] if price is None else [])
+            for key in targets:
+                if (key, norm) in seen or count.get(key, 0) >= per_key:
+                    continue
+                seen.add((key, norm))
+                count[key] = count.get(key, 0) + 1
+                out.append({"key": key, "value": value, "price_eur": price, "quote": quote, "page": pages.index(p) + 1})
+                if len(out) >= total:
+                    return out
     return out
 
 
