@@ -1,0 +1,4 @@
+# Netlify-Weiterleitungen. Gilt auch bei „Ordner hochladen“ (Drag & Drop).
+# Pegelstände: Die App fragt nur die eigene Domain an, Netlify holt die Daten bei PEGELONLINE (WSV).
+# Status 200 = Weiterleitung im Hintergrund (Proxy); Abfrageparameter werden mitgegeben.
+/api/pegel/*  https://www.pegelonline.wsv.de/webservices/rest-api/v2/:splat  200

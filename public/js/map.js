@@ -1,5 +1,6 @@
 // Kapselt Leaflet (+ MarkerCluster). Der Rest der App kennt nur diese Schnittstelle.
 import { CONFIG } from './config.js';
+import { gaugeMarkerHtml } from './pegel.js';
 import { pinSvg } from './icons.js';
 import { displayName, TYPES } from './model.js';
 
@@ -77,6 +78,12 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
     iconSize: [44, 54], iconAnchor: [22, 52],
   });
 
+  // Pegel: eigene Ebene, ohne Cluster, unter den Standort-Pins; bei kleinem Zoom nur Punkte (CSS)
+  let gaugeLayer = null, gaugeMarkers = new Map(), gaugeSel = null;
+  const gaugeIcon = (g, sel) => L.divIcon({ className: 'wm-gauge', html: gaugeMarkerHtml(g, sel), iconSize: null, iconAnchor: [9, 13] });
+  const zoomClass = () => el.classList.toggle('wm-gauges-compact', map.getZoom() < 9);
+  map.on('zoomend', zoomClass); zoomClass();
+
   map.on('moveend', () => onMoveEnd && onMoveEnd());
   map.on('click', (e) => {
     if (pickHandler) { pickHandler(e.latlng); return; }
@@ -123,6 +130,27 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
     },
 
     flyTo(lat, lon, zoom) { map.flyTo([lat, lon], zoom, { duration: 0.7 }); },
+
+    /** Pegel zeigen (Liste) oder entfernen (null). */
+    setGauges(list, onClick) {
+      if (gaugeLayer) { gaugeLayer.remove(); gaugeLayer = null; gaugeMarkers.clear(); }
+      if (!list) { map.attributionControl.removeAttribution(CONFIG.PEGEL_ATTRIBUTION); return; }
+      gaugeLayer = L.layerGroup().addTo(map);
+      for (const g of list) {
+        const m = L.marker([g.lat, g.lon], { icon: gaugeIcon(g, g.id === gaugeSel), title: `Pegel ${g.name}`, alt: `Pegel ${g.name}`, keyboard: true, zIndexOffset: 500 });
+        m.on('click', () => onClick(g.id));
+        gaugeMarkers.set(g.id, { marker: m, gauge: g });
+        m.addTo(gaugeLayer);
+      }
+      map.attributionControl.addAttribution(CONFIG.PEGEL_ATTRIBUTION);
+    },
+    selectGauge(id) {
+      const prev = gaugeMarkers.get(gaugeSel);
+      if (prev) { prev.marker.setIcon(gaugeIcon(prev.gauge, false)); prev.marker.setZIndexOffset(500); }
+      gaugeSel = id;
+      const cur = gaugeMarkers.get(id);
+      if (cur) { cur.marker.setIcon(gaugeIcon(cur.gauge, true)); cur.marker.setZIndexOffset(1000); }
+    },
     fitBounds(points, opts = {}) {
       if (!points.length) return;
       map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 12, ...opts });

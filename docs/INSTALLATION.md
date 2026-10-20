@@ -36,11 +36,14 @@ python3 scripts/vendor_libs.py
 ```
 Das lädt die Dateien nach `public/vendor/` und stellt `USE_LOCAL_LIBS` in `public/js/config.js` um. Zurück auf CDN: Flag auf `false` und unpkg.com/cdn.jsdelivr.net wieder in `public/_headers` (script-src, style-src, img-src) sowie in die Datenschutzerklärung aufnehmen.
 
-## 6. Kartenkacheln
+## 6. Pegelstände
+Die Ebene „Pegel“ lädt Daten von PEGELONLINE über die eigene Domain: `public/_redirects` leitet `/api/pegel/*` auf Netlify an `https://www.pegelonline.wsv.de/webservices/rest-api/v2/` weiter. Ohne Netlify (z. B. lokal) braucht es eine entsprechende Weiterleitung, sonst meldet die App, dass die Pegeldaten nicht erreichbar sind. Lizenz der Daten: Datenlizenz Deutschland – Zero – 2.0.
+
+## 7. Kartenkacheln
 Der Standard-Kachelserver von OpenStreetMap (`tile.openstreetmap.org`) ist nur für geringe Last gedacht ([Nutzungsrichtlinie](https://operations.osmfoundation.org/policies/tiles/)). Bei wachsender Nutzung einen Anbieter in `public/js/config.js` (`TILE_URL`) eintragen. Passe dann auch `img-src` in `public/_headers` an.
 
-## 7. Sicherheits-Header (CSP)
+## 8. Sicherheits-Header (CSP)
 `public/_headers` enthält eine strenge Content-Security-Policy. Wenn du neue externe Dienste einbindest (anderer Kachelserver, Analyse, Werbung), müssen deren Domains dort ergänzt werden – sonst blockiert der Browser sie.
 
-## 8. Eigene Domain, PWA
+## 9. Eigene Domain, PWA
 Netlify → *Domain management*. Die App ist als PWA installierbar (Manifest + Service Worker; nur über HTTPS). Offline funktionieren Standortliste und Details; Kartenkacheln nur für bereits angesehene Bereiche.

@@ -175,6 +175,61 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -.01em; margin: 0; }
 .leaflet-container { font-family: inherit; }
 .leaflet-control-attribution { font-size: 11px; }
 
+/* ---------------------------------------------------------------- Pegel */
+.chip-gauge .chip-dot { background: #1F6FB2; color: #fff; }
+.chip-gauge.is-active { background: #1F6FB2; border-color: #1F6FB2; }
+.wm-gauge { background: none; border: 0; }
+.wm-gauge-pill {
+  display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 8px 0 4px; border-radius: 13px;
+  background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(11, 48, 69, .32);
+  font-size: 12.5px; font-weight: 650; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.wm-gauge-pill b { width: 10px; height: 10px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px #fff; }
+.wm-gauge-pill i { font-style: normal; color: var(--muted); font-weight: 700; }
+.wm-gauge-pill.is-selected { box-shadow: 0 0 0 2px var(--navy), 0 3px 8px rgba(11, 48, 69, .4); }
+.wm-gauges-compact .wm-gauge-pill { background: transparent; box-shadow: none; padding-right: 2px; }
+.wm-gauges-compact .wm-gauge-pill > span, .wm-gauges-compact .wm-gauge-pill i { display: none; }
+.wm-gauges-compact .wm-gauge-pill b { width: 14px; height: 14px; box-shadow: 0 0 0 2px #fff, 0 1px 3px rgba(0, 0, 0, .35); }
+.wm-gauges-compact .wm-gauge-pill.is-selected b { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--navy); }
+.badge-gauge { background: #1F6FB2; }
+.gauge-now p { margin: 0; }
+.gauge-label { font-size: 13px; font-weight: 650; color: var(--muted); }
+.gauge-value strong { font-size: 48px; font-weight: 650; letter-spacing: -.02em; line-height: 1.05; }
+.gauge-value span { font-size: 18px; font-weight: 600; color: var(--muted); }
+.gauge-value .gauge-trend { color: var(--ink); }
+.gauge-time { font-size: 13px; color: var(--muted); margin-top: 2px !important; }
+.gauge-state { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px !important; padding: 5px 10px 5px 8px; border-radius: 99px; background: var(--bg); font-size: 14px; font-weight: 600; }
+.gauge-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.gauge-state .ico { display: block; }
+.gauge-meter { padding: 6px 0 0; }
+.gm-track { position: relative; height: 10px; border-radius: 5px; background: #E7EEF2; margin: 0 6px; }
+.gm-normal { position: absolute; top: 0; bottom: 0; background: #CFE2F2; border-radius: 5px; }
+.gm-tick { position: absolute; top: -3px; width: 2px; height: 16px; margin-left: -1px; background: #8AA0AE; border-radius: 1px; }
+.gm-tick.is-hsw { background: #D03B3B; }
+.gm-now { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; box-shadow: 0 0 0 3px #fff, 0 1px 4px rgba(0, 0, 0, .35); }
+.gm-labels { position: relative; height: 40px; margin: 6px 6px 0; font-size: 11.5px; color: var(--muted); }
+.gm-labels > span { position: absolute; top: 0; transform: translateX(-50%); text-align: center; line-height: 1.2; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gm-labels > span:nth-child(even) { top: 20px; }
+.gm-labels b { color: var(--ink); margin-right: 3px; }
+.gauge-chart { min-height: 60px; }
+.gc-wrap { position: relative; padding-top: 30px; }   /* Platz für den Tooltip, damit er nichts verdeckt */
+.gc-svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.gc-grid { stroke: #E6EDF1; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.gc-axis, .gc-reflabel { font-size: 10.5px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.gc-reflabel { font-weight: 700; }
+.gc-ref { stroke: #9DB0BC; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.gc-ref.is-hsw { stroke: #D03B3B; }
+.gc-line { fill: none; stroke: #1F6FB2; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.gc-area { fill: #1F6FB2; opacity: .1; }
+.gc-dot { fill: #1F6FB2; stroke: #fff; stroke-width: 2; }
+.gc-cross { stroke: var(--muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.gc-tip { position: absolute; top: 0; transform: translateX(-50%); background: var(--navy); color: #fff; font-size: 12px; font-weight: 600; padding: 5px 9px; border-radius: 8px; white-space: nowrap; pointer-events: none; font-variant-numeric: tabular-nums; }
+.gc-table { font-size: 13px; margin-top: 6px; }
+.gc-table summary { cursor: pointer; color: #06667E; font-weight: 600; padding: 6px 0; }
+.gc-table table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.gc-table th, .gc-table td { text-align: left; padding: 5px 4px; border-bottom: 1px solid #EEF3F5; }
+.gc-table th { color: var(--muted); font-weight: 600; }
+
 /* ---------------------------------------------------------------- Details */
 .detail { position: absolute; z-index: 1100; top: 12px; right: 12px; bottom: 12px; width: 400px; background: #fff; border-radius: 18px; box-shadow: var(--shadow-lg); overflow: hidden; }
 .detail:focus { outline: none; }
@@ -182,7 +237,7 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -.01em; margin: 0; }
 .detail-head { display: grid; grid-template-columns: 44px 1fr 44px; gap: 8px; align-items: start; padding: 12px 12px 8px; position: sticky; top: 0; background: #fff; z-index: 2; border-bottom: 1px solid #EEF3F5; }
 .detail-head > .icon-btn:first-child { order: 3; }
 .detail-title { order: 1; padding: 4px 0 4px 6px; min-width: 0; }
-.detail-head .fav { order: 2; }
+.detail-head .fav, .detail-head .detail-spacer { order: 2; }
 .detail-head { grid-template-columns: 1fr 44px 44px; }
 .detail-title h2 { font-size: 21px; margin: 6px 0 2px; overflow-wrap: anywhere; }
 .detail-sub { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
