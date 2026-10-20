@@ -17,7 +17,7 @@ import { enrichFacts } from './hafeninfo.js';
 
 const state = {
   places: [], byId: new Map(), index: [], meta: null, issues: [], invalid: 0,
-  cat: 'all', subs: new Set(), tab: 'list',
+  cats: new Set(), subs: new Set(), tab: 'list',   // cats: sichtbare Kategorien (Start: keine – der Nutzer wählt)
   selectedId: null, user: null,
   map: null, mapOk: false,
   filtered: [], loadFailed: false,
@@ -40,6 +40,9 @@ async function init() {
   $('#btn-menu').innerHTML = icon('menu', 24);
   $('#btn-locate').innerHTML = icon('locate', 22);
   if (window.matchMedia('(max-width: 520px)').matches) el.q.placeholder = 'Suchen …';
+  $('#list-close').innerHTML = icon('close', 20);
+  state.cats = new Set((prefs.get('cats') || '').split(',').filter(t => TYPE_KEYS.includes(t)));
+  if (prefs.get('listOpen') === '1') document.body.classList.add('list-open');
   renderSkeleton();
   wireStatic();
 
@@ -137,9 +140,20 @@ function renderDatainfo() {
 }
 
 // ============================================================ Filter
+/** Die eine gewählte Kategorie (für Unterfilter und Leerzustände) – oder null bei keiner/mehreren. */
+function singleCat() { return state.cats.size === 1 ? [...state.cats][0] : null; }
+
+function toggleCat(type, on = !state.cats.has(type)) {
+  if (on) state.cats.add(type); else state.cats.delete(type);
+  state.subs.clear();
+  prefs.set('cats', [...state.cats].join(','));
+  applyFilters();
+}
+
 function applyFilters() {
-  const defs = state.cat === 'all' ? [] : FILTERS[state.cat].filter(d => state.subs.has(d.id));
-  state.filtered = state.places.filter(p => (state.cat === 'all' || p.type === state.cat) && defs.every(d => d.test(p)));
+  const one = singleCat();
+  const defs = one ? FILTERS[one].filter(d => state.subs.has(d.id)) : [];
+  state.filtered = state.places.filter(p => state.cats.has(p.type) && defs.every(d => d.test(p)));
   renderFilterbar();
   if (state.map) state.map.setPlaces(state.filtered);
   if (state.map && state.selectedId) state.map.select(state.selectedId);
@@ -148,12 +162,15 @@ function applyFilters() {
 
 function renderFilterbar() {
   const bar = clear(el.filterbar);
-  const cats = [['all', 'Alle', state.places.length], ...TYPE_KEYS.map(t => [t, TYPES[t].plural, state.places.filter(p => p.type === t).length])];
-  const row1 = h('div', { class: 'chips', role: 'group', 'aria-label': 'Kategorie' }, cats.map(([key, label, n]) =>
-    h('button', { type: 'button', class: `chip chip-${key}` + (state.cat === key ? ' is-active' : ''), 'aria-pressed': String(state.cat === key),
-      onclick: () => { state.cat = key; state.subs.clear(); applyFilters(); } },
-      key !== 'all' ? h('span', { class: 'chip-dot', html: glyphSvg(key, 16) }) : null,
-      h('span', { text: label }), h('span', { class: 'chip-n', text: String(n) }))));
+  // Kategorien einzeln ein- und ausschalten (Start: keine, die Auswahl wird gemerkt)
+  const cats = TYPE_KEYS.map(t => [t, TYPES[t].plural, state.places.filter(p => p.type === t).length]);
+  const row1 = h('div', { class: 'chips', role: 'group', 'aria-label': 'Auf der Karte zeigen' }, cats.map(([key, label, n]) => {
+    const on = state.cats.has(key);
+    return h('button', { type: 'button', class: `chip chip-${key}` + (on ? ' is-active' : ''), 'aria-pressed': String(on),
+      title: on ? `${label} ausblenden` : `${label} auf der Karte zeigen`, onclick: () => toggleCat(key) },
+      h('span', { class: 'chip-dot', html: glyphSvg(key, 16) }),
+      h('span', { text: label }), h('span', { class: 'chip-n', text: String(n) }));
+  }));
   if (state.mapOk) {
     row1.append(h('button', { type: 'button', class: 'chip chip-gauge' + (state.gaugesOn ? ' is-active' : ''), 'aria-pressed': String(state.gaugesOn),
       title: state.gaugesOn ? 'Pegelstände ausblenden' : 'Aktuelle Pegelstände der Bundeswasserstraßen einblenden',
@@ -172,8 +189,11 @@ function renderFilterbar() {
     }
   }
   bar.append(row1);
-  if (state.cat !== 'all') {
-    const counts = filterCounts(state.places, state.cat);
+  if (!state.cats.size && state.places.length) {
+    bar.append(h('p', { class: 'filter-hint', text: 'Tippe oben auf Slipanlagen, Marinas oder Tankstellen, um sie auf der Karte zu zeigen.' }));
+  }
+  if (singleCat()) {
+    const counts = filterCounts(state.places, singleCat());
     bar.append(h('div', { class: 'chips chips-sub', role: 'group', 'aria-label': 'Weitere Filter' }, counts.map(d => {
       const on = state.subs.has(d.id), none = d.count === 0;
       return h('button', { type: 'button', class: 'chip chip-sub' + (on ? ' is-active' : '') + (none && !on ? ' is-empty' : ''), 'aria-pressed': String(on),
@@ -232,7 +252,7 @@ function renderList() {
         h('span', { class: `place-ico bg-${p.type}`, html: glyphSvg(p.type, 24) }),
         h('span', { class: 'place-text' },
           h('span', { class: 'place-name', text: displayName(p) }),
-          h('span', { class: 'place-sub', text: [state.cat === 'all' ? TYPES[p.type].label : null, sub].filter(Boolean).join(' · ') || TYPES[p.type].label })),
+          h('span', { class: 'place-sub', text: [singleCat() ? null : TYPES[p.type].label, sub].filter(Boolean).join(' · ') || TYPES[p.type].label })),
         favorites.has(p.id) ? h('span', { class: 'place-fav', html: icon('star', 16, true), 'aria-label': 'Favorit' }) : null,
         d !== null && state.tab === 'list' ? h('span', { class: 'place-dist', text: formatDistance(d) }) : null)));
   }
@@ -241,10 +261,12 @@ function renderList() {
 function emptyState() {
   if (state.tab === 'fav') return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Noch keine Favoriten' }), h('p', { class: 'muted', text: 'Tippe in einer Standortansicht auf den Stern, um einen Ort hier zu speichern.' }));
   if (!state.places.length) return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Noch keine Standorte in der Datenbank' }), h('p', { class: 'muted', text: 'Du kannst trotzdem Slipanlagen melden. Sie erscheinen nach Prüfung.' }));
-  if (state.cat !== 'all' && !state.places.some(p => p.type === state.cat)) {
-    return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: `Noch keine ${TYPES[state.cat].plural} in der Datenbank` }),
+  if (!state.cats.size) return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Keine Kategorie gewählt' }), h('p', { class: 'muted', text: 'Tippe oben auf der Karte auf Slipanlagen, Marinas oder Tankstellen.' }));
+  const one = singleCat();
+  if (one && !state.places.some(p => p.type === one)) {
+    return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: `Noch keine ${TYPES[one].plural} in der Datenbank` }),
       h('p', { class: 'muted', text: 'Für diese Kategorie steht der Import aus OpenStreetMap noch aus. Es werden keine Standorte erfunden.' }),
-      state.cat === 'slip' ? h('button', { class: 'btn btn-outline', type: 'button', text: 'Slipanlage melden', onclick: () => openReport('slipanlage-melden') }) : null);
+      one === 'slip' ? h('button', { class: 'btn btn-outline', type: 'button', text: 'Slipanlage melden', onclick: () => openReport('slipanlage-melden') }) : null);
   }
   if (state.subs.size) return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Keine Treffer für diese Filter' }), h('p', { class: 'muted', text: 'Nur Standorte mit bestätigter Angabe werden gezeigt. Nimm einen Filter heraus.' }), h('button', { class: 'btn btn-outline', type: 'button', text: 'Filter zurücksetzen', onclick: () => { state.subs.clear(); applyFilters(); } }));
   return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Hier ist nichts in der Nähe' }), h('p', { class: 'muted', text: 'Verschiebe oder verkleinere die Karte, um weitere Standorte zu sehen.' }));
@@ -263,6 +285,7 @@ function selectPlace(id, { fly = true, updateHash = true } = {}) {
   if (pick && pick.type && p.type !== pick.type) { toast('Bitte eine Bootstankstelle antippen.'); return false; }
   if (state.gaugeId) { state.gaugeId = null; state.map?.selectGauge(null); }
   if (state.extraId) { state.extraId = null; state.map?.selectExtra(null); }
+  if (!state.cats.has(p.type)) toggleCat(p.type, true);   // z. B. Link oder Suche: Kategorie des Standorts einblenden
   state.selectedId = id;
   if (state.map) { state.map.select(id); }
   showDetail(p);
@@ -657,7 +680,8 @@ function buildMenu() {
     h('h2', { id: 'menu-title', text: 'WaterMap' }),
     h('p', { class: 'muted', text: 'Dein Revier. Deine Karte.' }),
     h('ul', { class: 'menu-list' },
-      item('star', 'Favoriten', () => { state.tab = 'fav'; updateTabs(); renderList(); openSheet(); }, `${favorites.all().length} gespeichert`),
+      item('list', 'Standortliste', () => setListOpen(true, 'list'), 'Standorte im Kartenausschnitt'),
+      item('star', 'Favoriten', () => setListOpen(true, 'fav'), `${favorites.all().length} gespeichert`),
       item('plus', 'Neue Slipanlage melden', () => openReport('slipanlage-melden')),
       item('plus', 'Kraftstoffpreis melden', () => choosePlaceFor('tankpreis-melden')),
       item('camera', 'Foto einreichen', () => choosePlaceFor('foto-einreichen')),
@@ -672,11 +696,20 @@ function buildMenu() {
 // ============================================================ Tabs, Sheet, Hilfen
 function updateTabs() {
   const n = favorites.all().length;
-  $$('#tabs button').forEach(b => { const on = b.dataset.tab === state.tab; b.classList.toggle('is-active', on); b.setAttribute('aria-selected', String(on)); });
+  $$('#tabs button[data-tab]').forEach(b => { const on = b.dataset.tab === state.tab; b.classList.toggle('is-active', on); b.setAttribute('aria-selected', String(on)); });
   $('#tab-fav-n').textContent = n ? String(n) : '';
 }
 
 function openSheet(open = true) { el.sidebar.classList.toggle('is-open', open); $('#sheet-handle').setAttribute('aria-expanded', String(open)); }
+
+/** Standortliste nur bei Bedarf (Menü → Standortliste/Favoriten); der Zustand wird gemerkt. */
+function setListOpen(open, tab) {
+  if (tab) { state.tab = tab; updateTabs(); renderList(); }
+  document.body.classList.toggle('list-open', open);
+  prefs.set('listOpen', open ? '1' : '0');
+  if (isMobile()) openSheet(open);
+  setTimeout(() => state.map?.invalidate(), 0);
+}
 
 let toastTimer;
 function toast(text) {
@@ -698,7 +731,8 @@ function wireStatic() {
   $('#dlg-close').addEventListener('click', () => el.dlg.close());
   for (const d of [$('#menu'), el.dlg]) d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
   $('#btn-locate').addEventListener('click', () => locate().catch(() => {}));
-  $$('#tabs button').forEach(b => b.addEventListener('click', () => { state.tab = b.dataset.tab; updateTabs(); renderList(); }));
+  $$('#tabs button[data-tab]').forEach(b => b.addEventListener('click', () => { state.tab = b.dataset.tab; updateTabs(); renderList(); }));
+  $('#list-close').addEventListener('click', () => setListOpen(false));
   $('#sheet-handle').addEventListener('click', () => openSheet(!el.sidebar.classList.contains('is-open')));
   document.addEventListener('favorites-changed', updateTabs);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !el.dlg.open && !$('#menu').open && (state.selectedId || state.gaugeId || state.extraId) && !el.suggest.offsetParent) closeDetail(); });
@@ -719,4 +753,4 @@ init().catch((e) => {
 });
 
 // Für Tests und Fehlersuche in der Browser-Konsole
-window.__watermap = { state, selectPlace, applyFilters, setGauges, selectGauge, setExtras, selectExtra };
+window.__watermap = { state, selectPlace, applyFilters, toggleCat, setListOpen, setGauges, selectGauge, setExtras, selectExtra };

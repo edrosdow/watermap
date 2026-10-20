@@ -88,11 +88,12 @@ def lib_routes(ctx, block_libs=False):
     ctx.route('**/unpkg.com/**', handler); ctx.route('**/cdn.jsdelivr.net/**', handler); ctx.route('**/vendor/**', handler)
     ctx.route('**/nominatim.openstreetmap.org/**', lambda r: r.fulfill(status=200, content_type='application/json', body='[]'))
 
-def new_page(b, mobile=False, geo=True, block_libs=False, **kw):
+def new_page(b, mobile=False, geo=True, block_libs=False, fresh=False, **kw):
     vp = {'width': 390, 'height': 844} if mobile else {'width': 1280, 'height': 800}
     ctx = b.new_context(viewport=vp, device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile, locale='de-DE',
                         geolocation={'latitude': 51.5, 'longitude': 7.5} if geo else None, permissions=['geolocation'] if geo else [], **kw)
     lib_routes(ctx, block_libs)
+    if not fresh: ctx.add_init_script("try { if (localStorage.getItem('watermap.cats') === null) { localStorage.setItem('watermap.cats', 'slip,marina,fuel'); localStorage.setItem('watermap.listOpen', '1'); } } catch {}")   # alte Ansicht: alle Kategorien, Liste offen
     pg = ctx.new_page(); errs = []
     pg.on('pageerror', lambda e: errs.append('PAGEERROR ' + str(e)))
     pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' and '501' not in m.text and 'Failed to load resource' not in m.text else None)
@@ -117,10 +118,37 @@ def run():
         try:
             with sync_playwright() as p:
                 b = p.chromium.launch()
-                desktop(b); mobile(b); failures(b, site)
+                defaults(b); desktop(b); mobile(b); failures(b, site)
                 b.close()
         finally:
             srv.shutdown()
+
+def defaults(b):
+    print('--- Erster Start: Liste eingeklappt, keine Kategorie gewählt')
+    for mob in (False, True):
+        name = 'Handy' if mob else 'Desktop'
+        ctx, pg = new_page(b, mobile=mob, fresh=True)
+        pg.goto(BASE); pg.wait_for_selector('.chip-slip', timeout=10000); pg.wait_for_timeout(300)
+        check(not pg.locator('#sidebar').is_visible(), f'{name}: Standortliste beim ersten Start nicht sichtbar')
+        check(pg.locator('.leaflet-marker-icon').count() == 0, f'{name}: keine Standorte auf der Karte')
+        check('Tippe oben' in pg.inner_text('#filterbar') and pg.get_attribute('.chip-slip', 'aria-pressed') == 'false', f'{name}: Hinweis, Kategorien aus')
+        pg.click('.chip-slip'); pg.wait_for_timeout(300)
+        check(pg.locator('.leaflet-marker-icon').count() > 0 and pg.get_attribute('.chip-slip', 'aria-pressed') == 'true', f'{name}: Slipanlagen per Chip eingeblendet')
+        check(pg.locator('.chips-sub').count() == 1, f'{name}: bei einer Kategorie gibt es Unterfilter')
+        pg.reload(); pg.wait_for_selector('.chip-slip'); pg.wait_for_timeout(300)
+        check(pg.get_attribute('.chip-slip', 'aria-pressed') == 'true' and pg.get_attribute('.chip-marina', 'aria-pressed') == 'false', f'{name}: Auswahl wird gemerkt')
+        pg.click('#btn-menu'); pg.click('#menu .menu-item:has-text("Standortliste")'); pg.wait_for_timeout(400)
+        check(pg.locator('#sidebar').is_visible() and pg.locator('.place').count() > 0, f'{name}: Liste über das Menü')
+        pg.click('#list-close'); pg.wait_for_timeout(300)
+        check(not pg.locator('#sidebar').is_visible(), f'{name}: Liste wieder geschlossen')
+        pg.click('#btn-menu'); pg.click('#menu .menu-item:has-text("Favoriten")'); pg.wait_for_timeout(400)
+        check(pg.locator('#sidebar').is_visible() and pg.get_attribute('#tabs [data-tab=fav]', 'aria-selected') == 'true', f'{name}: Favoriten öffnen die Liste')
+        pg.click('#list-close'); pg.wait_for_timeout(200)
+        pg.evaluate("window.__watermap.selectPlace('node/7000')"); pg.wait_for_selector('#detail:not([hidden])')
+        check(pg.get_attribute('.chip-fuel', 'aria-pressed') == 'true', f'{name}: Standort einer ausgeblendeten Kategorie öffnet sich, Kategorie wird eingeblendet')
+        pg.screenshot(path=str(SHOTS / f'full_{"mobile" if mob else "desktop"}_erststart.png'))
+        check(not pg.errs, f'{name}: keine JS-Fehler {pg.errs[:3]}')
+        ctx.close()
 
 def desktop(b):
     print('--- Desktop: Daten, Filter, Preise')
@@ -131,7 +159,7 @@ def desktop(b):
     check(not st("window.__watermap.state.byId.has('c/test-2')"), 'Community "pending" wird nicht angezeigt')
     check(st('window.__xss') is None, 'XSS-Name wird nicht ausgeführt')
     check('TEST Slip' in pg.inner_text('#list') or True, 'Liste gerendert')
-    pg.click('.chip-slip')
+    pg.click('.chip-marina'); pg.click('.chip-fuel')          # nur Slipanlagen
     txt = pg.inner_text('#list-head')
     check('Die 120 nächsten werden gezeigt' in txt or pg.locator('.place').count() <= 120, 'Listenlimit greift (' + str(pg.locator('.place').count()) + ' Zeilen)')
     # Filter
@@ -144,7 +172,7 @@ def desktop(b):
     check(ok, 'Filter "Kostenlos": nur bestätigt kostenlose Anlagen (unbekannt ≠ kostenlos)')
     pg.click('.chip-sub:has-text("Öffentlich")')
     check(st("window.__watermap.state.filtered.every(p=>p.fee===false&&p.access==='public')"), 'Filter kombinierbar (UND)')
-    pg.click('.chip-all') if pg.locator('.chip-all').count() else pg.click('.chip:has-text("Alle")')
+    pg.click('.chip-marina')
     check(st('window.__watermap.state.subs.size') == 0, 'Kategoriewechsel setzt Unterfilter zurück')
     # Override
     pg.evaluate("window.__watermap.selectPlace('node/2')"); pg.wait_for_selector('#detail:not([hidden])')
@@ -347,7 +375,7 @@ def mobile(b):
     pg.click('#sheet-handle'); pg.wait_for_timeout(350)
     check('is-open' in pg.get_attribute('#sidebar', 'class'), 'Bottom Sheet öffnet sich')
     pg.screenshot(path=str(SHOTS / 'full_mobile_list.png'))
-    pg.click('.chip-fuel'); pg.wait_for_timeout(200)
+    pg.click('.chip-slip'); pg.click('.chip-marina'); pg.wait_for_timeout(200)   # nur Tankstellen
     pg.click('.place >> nth=0'); pg.wait_for_selector('#detail:not([hidden])'); pg.wait_for_timeout(300)
     box = pg.locator('#detail').bounding_box()
     check(box['y'] + box['height'] >= 843 and box['height'] <= 844 * 0.65, f'Details als Bottom Sheet am unteren Rand (Höhe {box["height"]:.0f})')

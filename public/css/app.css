@@ -80,6 +80,11 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -.01em; margin: 0; }
 .map-wrap { position: relative; min-width: 0; }
 #map { position: absolute; inset: 0; background: #DCE9E5; }
 .sheet-handle { display: none; }
+/* Standortliste nur bei Bedarf (Menü → Standortliste/Favoriten) */
+body:not(.list-open) .shell { grid-template-columns: 1fr; }
+body:not(.list-open) .sidebar { display: none; }
+.tabs .list-close { margin-left: auto; align-self: center; width: 40px; height: 40px; min-height: 40px; padding: 0; border-bottom: 0; margin-bottom: 0; color: var(--muted); }
+.filter-hint { margin: 0; align-self: flex-start; max-width: 420px; padding: 8px 12px; background: #fff; border-radius: 12px; box-shadow: var(--shadow); font-size: 14px; color: var(--navy); pointer-events: auto; }
 
 .tabs { display: flex; gap: 4px; padding: 10px 12px 0; border-bottom: 1px solid var(--line); }
 .tabs button { border: 0; background: none; padding: 10px 14px; font-weight: 650; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; min-height: 44px; }
@@ -424,6 +429,9 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -.01em; margin: 0; }
   .toast { bottom: calc(100px + env(safe-area-inset-bottom)); }
   .has-detail .toast { bottom: calc(64dvh + 12px); }
   .is-picking .sidebar { display: none; }
+  body:not(.list-open):not(.has-detail) .fab { bottom: calc(24px + env(safe-area-inset-bottom)); }
+  body:not(.list-open):not(.has-detail) .banner { bottom: calc(20px + env(safe-area-inset-bottom)); }
+  body:not(.list-open):not(.has-detail) .toast { bottom: calc(24px + env(safe-area-inset-bottom)); }
   .dialog { width: 100vw; max-width: 100vw; max-height: 94dvh; margin: auto 0 0; border-radius: 20px 20px 0 0; }
   .row2 { grid-template-columns: 1fr 1fr; }
   .facts { grid-template-columns: minmax(100px, 40%) 1fr; }

@@ -43,6 +43,7 @@ with sync_playwright() as p:
                             geolocation={'latitude': 50.9, 'longitude': 6.99}, permissions=['geolocation'],
                             service_workers='block')   # sonst laufen Datenabrufe am Testdaten-Umweg vorbei
         route_libs(ctx)
+        ctx.add_init_script("try { if (localStorage.getItem('watermap.cats') === null) { localStorage.setItem('watermap.cats', 'slip,marina,fuel'); localStorage.setItem('watermap.listOpen', '1'); } } catch {}")   # alte Ansicht: alle Kategorien, Liste offen
         pg = ctx.new_page()
         errors = []
         pg.on('pageerror', lambda e: errors.append(str(e)))
@@ -54,9 +55,9 @@ with sync_playwright() as p:
         pg.screenshot(path=str(SHOTS / f'{name}_start.png'))
         # Kategorie ohne Daten
         if mobile: pg.click('#sheet-handle'); pg.wait_for_timeout(350)
-        pg.click('.chip-marina'); pg.wait_for_timeout(150)
+        pg.click('.chip-slip'); pg.click('.chip-fuel'); pg.wait_for_timeout(150)      # nur Marinas
         check('Noch keine Marinas' in pg.inner_text('#list'), f'{name}: Leerzustand Marinas ehrlich')
-        pg.click('.chip-slip'); pg.wait_for_timeout(150)
+        pg.click('.chip-marina'); pg.click('.chip-slip'); pg.wait_for_timeout(150)    # nur Slipanlagen
         # Unterfilter ohne Daten ist deaktiviert und blendet nichts aus
         chip = pg.locator('.chip-sub:has-text("Kostenlos")')
         check(chip.get_attribute('aria-disabled') == 'true', f'{name}: Filter "Kostenlos" ohne Daten ist als deaktiviert markiert')
