@@ -62,7 +62,7 @@ export const FORMS = {
       { name: 'art', label: 'Was stimmt nicht?', type: 'select', required: true, options: [
         ['existiert-nicht', 'Standort existiert nicht mehr'], ['koordinaten', 'Falsche Koordinaten'],
         ['nicht-oeffentlich', 'Nicht öffentlich zugänglich'], ['preis', 'Falscher Preis'],
-        ['oeffnungszeiten', 'Falsche Öffnungszeiten'], ['sonstiges', 'Sonstiges']] },
+        ['oeffnungszeiten', 'Falsche Öffnungszeiten'], ['foto', 'Unpassendes Foto'], ['sonstiges', 'Sonstiges']] },
       { name: 'details', label: 'Details', type: 'textarea', required: true, max: 1000, placeholder: 'Wie ist es richtig?' },
       { name: 'kontakt', label: 'E-Mail für Rückfragen (optional)', type: 'email', max: 120 },
     ],

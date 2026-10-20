@@ -88,7 +88,8 @@ with sync_playwright() as p:
         # Foto melden
         pg.click('#detail .ph-report'); pg.wait_for_selector('#dlg[open]')
         check('Foto unpassend: photos/t-2.png' in pg.input_value('#dlg textarea[name=details]')
-              and pg.locator('#dlg input[name=standort_id]').get_attribute('value') == MANY, f'{name}: „Foto melden“ füllt die Meldung vor')
+              and pg.locator('#dlg input[name=standort_id]').get_attribute('value') == MANY and pg.input_value('#dlg select[name=art]') == 'foto',
+              f'{name}: „Foto melden“ füllt die Meldung vor')
         pg.click('#dlg-close')
         # Standort mit einem Foto: keine Pfeile, kein Zähler
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ONE)})"); pg.locator('#detail .ph-caption', has_text='Einzelfoto').wait_for()

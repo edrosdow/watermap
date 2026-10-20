@@ -21,10 +21,14 @@ Meldungen gehen über **Netlify Forms** ein. Sie sind **nie automatisch sichtbar
 5. **Prüfen und veröffentlichen:** `python3 scripts/validate_data.py`, dann `public` bei Netlify neu hochladen (oder committen).
 6. **Abgelehnte Meldungen** in Netlify löschen (Datenschutz: nicht länger speichern als nötig; Frist in der Datenschutzerklärung festlegen).
 
-## Fotos per Klick freigeben
-Seite **`/admin/fotos.html`** (z. B. `https://watermaps.netlify.app/admin/fotos.html`): Passwort eingeben, Foto ansehen, **Freigeben** oder **Ablehnen**. Freigeben legt das Bild in `public/photos/` ab, trägt es in `community/overrides.json` ein (Urheber „WaterMap-Community“, Beschreibung als Alternativtext) und löscht die Einreichung; nach etwa einer Minute ist das Foto in der App. Ablehnen löscht die Einreichung. Ohne bestätigte Rechte lässt sich nicht freigeben.
+## Fotos verwalten (per Klick)
+Seite **`/admin/fotos.html`** (z. B. `https://watermaps.netlify.app/admin/fotos.html`), Passwort eingeben. Vier Reiter:
+- **Eingereicht:** Foto ansehen, **Freigeben** oder **Ablehnen**. Freigeben legt das Bild in `public/photos/` ab und trägt es in `community/overrides.json` ein (Urheber „WaterMap-Community“, Beschreibung als Alternativtext); nach etwa einer Minute ist es in der App. Ohne bestätigte Rechte lässt sich nicht freigeben. Fehlt der Standort („Anderer Standort“), wird der Link aus der App eingefügt.
+- **Gemeldet:** Fotos, die Nutzer über „Foto melden“ gemeldet haben (Formular „Fehler melden“, Art „Unpassendes Foto“), mit Grund. **Foto entfernen** nimmt es aus der App und erledigt die Meldung; **Meldung verwerfen** lässt das Foto stehen.
+- **Veröffentlicht:** alle Fotos in der App, jeweils mit **Entfernen**.
+- **Verlauf:** alle Aktionen (freigegeben, abgelehnt, entfernt, Meldung verworfen) mit Zeit, Standort, Beschreibung und Grund, die neuesten 500. Gespeichert in `admin/verlauf.json` im Repository – außerhalb von `public/`, also nicht über die Website abrufbar.
 
-Darunter stehen die **veröffentlichten Fotos** mit **Entfernen**: Das Foto wird aus `overrides.json` genommen und die Datei aus `public/photos/` gelöscht. In der App melden Nutzer unpassende Fotos über „Foto melden“ (kommt als „Fehler melden“ mit „Foto unpassend: photos/…“ an).
+Jede Aktion ist **ein** Commit (Foto, `overrides.json` und Verlauf zusammen). Commits, die nur den Verlauf ändern („Foto abgelehnt: …“, „Foto-Meldung verworfen: …“), lösen keinen Netlify-Deploy aus (`netlify.toml`, `ignore`). Erledigte Einreichungen und Meldungen werden in Netlify Forms gelöscht.
 
 **Einmalig einrichten** (Netlify → *Site configuration* → *Environment variables*, danach einmal neu veröffentlichen):
 | Variable | Wert |

@@ -1,7 +1,9 @@
-// Foto-Freigabe per Klick (Seite /admin/fotos.html).
-// Liest eingereichte Fotos aus Netlify Forms („foto-einreichen“) und veröffentlicht ein freigegebenes Foto, indem es
-// public/photos/<datei> und public/data/community/overrides.json im GitHub-Repository aktualisiert. Netlify baut die
-// Seite danach automatisch neu (≈ 1 Minute).
+// Foto-Verwaltung (Seite /admin/fotos.html): eingereichte Fotos freigeben oder ablehnen, gemeldete und veröffentlichte
+// Fotos entfernen, Verlauf aller Aktionen.
+// Eingereichte und gemeldete Fotos kommen aus Netlify Forms („foto-einreichen“, „fehler-melden“ mit art=foto). Jede
+// Aktion ist genau ein Commit im GitHub-Repository: public/photos/<datei>, public/data/community/overrides.json und
+// der Verlauf admin/verlauf.json (liegt außerhalb von public/ und wird nicht veröffentlicht). Netlify baut die Seite
+// danach automatisch neu (≈ 1 Minute); reine Verlaufs-Commits lösen keinen Deploy aus (netlify.toml, ignore).
 //
 // Einstellungen (Netlify → Site configuration → Environment variables):
 //   FOTO_ADMIN_PASSWORT  frei gewähltes, langes Passwort für die Freigabe-Seite
@@ -12,9 +14,12 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 
 const FORM = 'foto-einreichen';
+const REPORT_FORM = 'fehler-melden';
 const MAX_BYTES = 6 * 1024 * 1024;
 const ID_RE = /^(node|way|relation|community)\/[A-Za-z0-9_-]{1,40}$/;
 const OVERRIDES = 'public/data/community/overrides.json';
+const HISTORY = 'admin/verlauf.json';
+const MAX_HISTORY = 500;
 
 const json = (status, body) => new Response(JSON.stringify(body), {
   status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
@@ -102,38 +107,69 @@ function api(env, fetchFn) {
 
 const PHOTO_PATH = /^photos\/[A-Za-z0-9._-]{1,120}$/;
 const b64 = (data) => Buffer.from(data).toString('base64');
+const cleanPath = (u) => String(u || '').replace(/^\.?\//, '');
 
-async function readOverrides(gh, branch) {
-  const cur = await gh(`/contents/${OVERRIDES}?ref=${encodeURIComponent(branch)}`);
-  if (!cur.ok) throw new Error(`GitHub: overrides.json nicht lesbar (${cur.status})`);
-  const file = await cur.json();
-  return { sha: file.sha, list: JSON.parse(Buffer.from(file.content, 'base64').toString('utf8') || '[]') };
+/** Verlaufseintrag vorne anfügen (neueste zuerst, höchstens MAX_HISTORY). */
+export function addHistory(list, entry) {
+  return [entry, ...(Array.isArray(list) ? list : [])].slice(0, MAX_HISTORY);
 }
 
-/** overrides.json ändern; bei gleichzeitiger Änderung (409) neu lesen und erneut versuchen. */
-async function updateOverrides(gh, branch, message, change) {
+/** „Fehler melden“-Einreichung als Foto-Meldung lesen – oder null, wenn sie kein Foto betrifft. */
+export function photoReport(s) {
+  const d = s.data || {};
+  const details = String(d.details || '');
+  const m = details.match(/photos\/[A-Za-z0-9._-]{1,120}/);
+  if (!m || (d.art !== 'foto' && !/Foto unpassend/i.test(details))) return null;
+  const grund = details.replace(/^.*photos\/[A-Za-z0-9._-]+\s*/s, '').replace(/^Grund:\s*/i, '').trim();
+  return { id: s.id, created: s.created_at || null, standort_id: String(d.standort_id || ''), standort_name: String(d.standort_name || ''),
+    foto: m[0], grund: grund.slice(0, 500) };
+}
+
+/** Datei aus dem Repository als Text (oder null, wenn es sie nicht gibt). */
+async function readText(gh, ref, path) {
+  const res = await gh(`/contents/${path}?ref=${encodeURIComponent(ref)}`, { headers: { accept: 'application/vnd.github.raw' } });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`GitHub: ${path} nicht lesbar (${res.status})`);
+  return res.text();
+}
+const readJson = async (gh, ref, path, fallback) => { const t = await readText(gh, ref, path); return t ? JSON.parse(t) : fallback; };
+
+async function ghJson(gh, path, init) {
+  const res = await gh(path, init);
+  if (!res.ok) throw new Error(`GitHub: ${path.split('?')[0]} (${res.status})`);
+  return res.json();
+}
+
+/**
+ * Ein Commit mit mehreren Dateien (Git-Data-API). build(read, exists) liefert [{path, content}] – content null löscht.
+ * Ändert jemand gleichzeitig den Zweig, wird mit dem neuen Stand neu gebaut (bis zu 3 Versuche).
+ */
+async function commitChanges(gh, branch, message, build) {
   for (let attempt = 0; attempt < 3; attempt++) {
-    const { sha, list } = await readOverrides(gh, branch);
-    const upd = await gh(`/contents/${OVERRIDES}`, { method: 'PUT', body: JSON.stringify({
-      message, branch, sha, content: b64(JSON.stringify(change(list), null, 2) + '\n') }) });
-    if (upd.ok) return;
-    if (upd.status !== 409) throw new Error(`GitHub: overrides.json nicht gespeichert (${upd.status})`);
+    const head = (await ghJson(gh, `/git/ref/heads/${encodeURIComponent(branch)}`)).object.sha;
+    const base = (await ghJson(gh, `/git/commits/${head}`)).tree.sha;
+    const exists = async (path) => (await gh(`/contents/${path}?ref=${head}`)).ok;
+    const files = await build((path, fallback) => readJson(gh, head, path, fallback), exists);
+    const tree = [];
+    for (const f of files) {
+      if (f.content === null) { tree.push({ path: f.path, mode: '100644', type: 'blob', sha: null }); continue; }
+      const blob = await ghJson(gh, '/git/blobs', { method: 'POST', body: JSON.stringify({ content: b64(f.content), encoding: 'base64' }) });
+      tree.push({ path: f.path, mode: '100644', type: 'blob', sha: blob.sha });
+    }
+    const t = await ghJson(gh, '/git/trees', { method: 'POST', body: JSON.stringify({ base_tree: base, tree }) });
+    const c = await ghJson(gh, '/git/commits', { method: 'POST', body: JSON.stringify({ message, tree: t.sha, parents: [head] }) });
+    const upd = await gh(`/git/refs/heads/${encodeURIComponent(branch)}`, { method: 'PATCH', body: JSON.stringify({ sha: c.sha, force: false }) });
+    if (upd.ok) return c.sha;
+    if (upd.status !== 422 && upd.status !== 409) throw new Error(`GitHub: Commit nicht gespeichert (${upd.status})`);
   }
-  throw new Error('GitHub: overrides.json wurde gleichzeitig geändert, bitte noch einmal versuchen');
+  throw new Error('GitHub: Daten wurden gleichzeitig geändert, bitte noch einmal versuchen');
 }
 
-async function deleteFile(gh, branch, path, message) {
-  const cur = await gh(`/contents/${path}?ref=${encodeURIComponent(branch)}`);
-  if (cur.status === 404) return;                                   // schon weg
-  if (!cur.ok) throw new Error(`GitHub: Datei nicht lesbar (${cur.status})`);
-  const { sha } = await cur.json();
-  const del = await gh(`/contents/${path}`, { method: 'DELETE', body: JSON.stringify({ message, sha, branch }) });
-  if (!del.ok) throw new Error(`GitHub: Datei nicht gelöscht (${del.status})`);
-}
+const jsonFile = (path, data) => ({ path, content: JSON.stringify(data, null, 2) + '\n' });
 
-async function submissions(nf, siteId) {
+async function formSubmissions(nf, siteId, name) {
   const forms = await nf(`/sites/${siteId}/forms`);
-  const form = (forms || []).find(f => f.name === FORM);
+  const form = (forms || []).find(f => f.name === name);
   if (!form) return [];
   return (await nf(`/forms/${form.id}/submissions?per_page=100`)) || [];
 }
@@ -146,10 +182,8 @@ export function standortAus(text) {
   return ID_RE.test(id) ? id : null;
 }
 
-async function publish(gh, env, sub, fetchFn, today, standort) {
+async function fetchPhoto(sub, fetchFn) {
   const d = sub.data || {};
-  const id = standort || String(d.standort_id || '');
-  if (!ID_RE.test(id)) throw new Error('Standort-ID fehlt oder ist ungültig');
   if (!d.foto_rechte) throw new Error('Rechte am Foto nicht bestätigt');
   const url = fileUrl(d.foto);
   if (!url) throw new Error('Kein Foto in der Einreichung');
@@ -159,19 +193,10 @@ async function publish(gh, env, sub, fetchFn, today, standort) {
   if (bytes.length > MAX_BYTES) throw new Error('Foto größer als 6 MB');
   const type = imageType(bytes);
   if (!type) throw new Error('Keine JPEG-, PNG- oder WebP-Datei');
-
-  const branch = env.FOTO_BRANCH || 'main';
-  const name = `${id.replace('/', '-')}-${Date.now().toString(36)}.${type.ext}`;
-  const put = await gh(`/contents/public/photos/${name}`, { method: 'PUT', body: JSON.stringify({
-    message: `Foto freigegeben: ${id}`, branch, content: Buffer.from(bytes).toString('base64') }) });
-  if (!put.ok) throw new Error(`GitHub: Foto nicht gespeichert (${put.status})`);
-
-  const photo = { url: `photos/${name}`, credit: 'WaterMap-Community', alt: String(d.beschreibung || '').trim().slice(0, 200) };
-  await updateOverrides(gh, branch, `Foto freigegeben: ${id}`, (list) => addPhoto(list, id, photo, today));
-  return photo;
+  return { bytes, type };
 }
 
-export async function handle(req, { env, siteId, fetchFn = fetch, today = new Date().toISOString().slice(0, 10) }) {
+export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date() }) {
   const missing = ['FOTO_ADMIN_PASSWORT', 'NETLIFY_API_TOKEN', 'GITHUB_TOKEN'].filter(k => !env[k]);
   if (missing.length) {
     return json(503, { fehler: `Foto-Freigabe ist noch nicht eingerichtet – in diesem Deploy fehlt: ${missing.join(', ')}. ` +
@@ -180,32 +205,61 @@ export async function handle(req, { env, siteId, fetchFn = fetch, today = new Da
   if (!passwordOk(req.headers.get('x-passwort'), env.FOTO_ADMIN_PASSWORT)) return json(401, { fehler: 'Passwort falsch.' });
   const { nf, gh } = api(env, fetchFn);
   const url = new URL(req.url);
+  const q = url.searchParams;
   const branch = env.FOTO_BRANCH || 'main';
+  const zeit = now.toISOString(), today = zeit.slice(0, 10);
   const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+  const history = (entry) => async (read) => jsonFile(HISTORY, addHistory(await read(HISTORY, []), { zeit, ...entry }));
   try {
-    // Veröffentlichte Fotos: auflisten, Bild ausliefern, entfernen
-    if (req.method === 'GET' && url.searchParams.has('veroeffentlicht')) {
-      return json(200, { fotos: publishedPhotos((await readOverrides(gh, branch)).list) });
+    if (req.method === 'GET') {
+      if (q.has('veroeffentlicht')) return json(200, { fotos: publishedPhotos(await readJson(gh, branch, OVERRIDES, [])) });
+      if (q.has('verlauf')) return json(200, { verlauf: await readJson(gh, branch, HISTORY, []) });
+      if (q.has('datei')) {
+        const path = cleanPath(q.get('datei'));
+        if (!PHOTO_PATH.test(path)) return json(400, { fehler: 'Ungültiger Dateiname.' });
+        const res = await gh(`/contents/public/${path}?ref=${encodeURIComponent(branch)}`, { headers: { accept: 'application/vnd.github.raw' } });
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        const type = imageType(bytes);
+        if (!res.ok || !type) return json(404, { fehler: 'Foto nicht gefunden.' });
+        return new Response(bytes, { headers: { 'content-type': type.mime, 'cache-control': 'no-store' } });
+      }
+      if (q.has('meldungen')) {
+        const published = new Set(publishedPhotos(await readJson(gh, branch, OVERRIDES, [])).map(f => cleanPath(f.url)));
+        const meldungen = (await formSubmissions(nf, siteId, REPORT_FORM)).map(photoReport).filter(Boolean)
+          .map(m => ({ ...m, veroeffentlicht: published.has(m.foto) }));
+        return json(200, { meldungen });
+      }
     }
-    if (req.method === 'GET' && url.searchParams.has('datei')) {
-      const path = url.searchParams.get('datei').replace(/^\.?\//, '');
-      if (!PHOTO_PATH.test(path)) return json(400, { fehler: 'Ungültiger Dateiname.' });
-      const res = await gh(`/contents/public/${path}?ref=${encodeURIComponent(branch)}`, { headers: { accept: 'application/vnd.github.raw' } });
-      const bytes = new Uint8Array(await res.arrayBuffer());
-      const type = imageType(bytes);
-      if (!res.ok || !type) return json(404, { fehler: 'Foto nicht gefunden.' });
-      return new Response(bytes, { headers: { 'content-type': type.mime, 'cache-control': 'no-store' } });
-    }
+
+    // Veröffentlichtes Foto entfernen (auch aus einer Meldung heraus: dann wird die Meldung mit erledigt)
     if (req.method === 'POST' && body.aktion === 'entfernen') {
-      const path = String(body.url || '').replace(/^\.?\//, '');
+      const path = cleanPath(body.url);
       if (!ID_RE.test(String(body.standort_id || '')) || !PHOTO_PATH.test(path)) return json(400, { fehler: 'Ungültige Angaben.' });
-      await updateOverrides(gh, branch, `Foto entfernt: ${body.standort_id}`, (list) => removePhoto(list, body.standort_id, body.url));
-      await deleteFile(gh, branch, `public/${path}`, `Foto entfernt: ${body.standort_id}`);
+      const report = body.meldung ? (await formSubmissions(nf, siteId, REPORT_FORM)).find(s => s.id === body.meldung) : null;
+      await commitChanges(gh, branch, `Foto entfernt: ${body.standort_id}`, async (read, exists) => {
+        const ov = await read(OVERRIDES, []);
+        const alt = (ov.find(o => o && o.id === body.standort_id)?.photos || []).find(ph => cleanPath(ph.url) === path)?.alt || '';
+        return [jsonFile(OVERRIDES, removePhoto(ov, body.standort_id, body.url)),
+          ...(await exists(`public/${path}`) ? [{ path: `public/${path}`, content: null }] : []),
+          await history({ aktion: 'entfernt', standort_id: body.standort_id, foto: path, beschreibung: alt,
+            grund: report ? photoReport(report)?.grund || '' : '' })(read)];
+      });
+      if (report) await nf(`/submissions/${report.id}`, { method: 'DELETE' });
       return json(200, { ok: true });
     }
-    const subs = await submissions(nf, siteId);
-    if (req.method === 'GET' && url.searchParams.has('bild')) {
-      const sub = subs.find(s => s.id === url.searchParams.get('bild'));
+    if (req.method === 'POST' && body.aktion === 'meldung_verwerfen') {
+      const report = (await formSubmissions(nf, siteId, REPORT_FORM)).find(s => s.id === body.id);
+      const m = report && photoReport(report);
+      if (!m) return json(404, { fehler: 'Meldung nicht gefunden (schon erledigt?).' });
+      await commitChanges(gh, branch, `Foto-Meldung verworfen: ${m.standort_id}`, async (read) => [
+        await history({ aktion: 'meldung verworfen', standort_id: m.standort_id, foto: m.foto, grund: m.grund })(read)]);
+      await nf(`/submissions/${report.id}`, { method: 'DELETE' });
+      return json(200, { ok: true });
+    }
+
+    const subs = await formSubmissions(nf, siteId, FORM);
+    if (req.method === 'GET' && q.has('bild')) {
+      const sub = subs.find(s => s.id === q.get('bild'));
       const src = sub && fileUrl((sub.data || {}).foto);
       if (!src) return json(404, { fehler: 'Foto nicht gefunden.' });
       const res = await fetchFn(src);
@@ -218,15 +272,27 @@ export async function handle(req, { env, siteId, fetchFn = fetch, today = new Da
     if (req.method !== 'POST') return json(405, { fehler: 'Nicht erlaubt.' });
     const sub = subs.find(s => s.id === body.id);
     if (!sub) return json(404, { fehler: 'Einreichung nicht gefunden (schon erledigt?).' });
+    const d = sub.data || {};
     if (body.aktion === 'freigeben') {
       // Standort nachtragen, wenn bei der Einreichung „Anderer Standort“ gewählt wurde
       const standort = body.standort ? standortAus(body.standort) : null;
       if (body.standort && !standort) return json(400, { fehler: 'Standort nicht erkannt – Link aus der App (…#p=node/123) oder ID einfügen.' });
-      const photo = await publish(gh, env, sub, fetchFn, today, standort);
+      const id = standort || String(d.standort_id || '');
+      if (!ID_RE.test(id)) throw new Error('Standort-ID fehlt oder ist ungültig');
+      const { bytes, type } = await fetchPhoto(sub, fetchFn);
+      const name = `${id.replace('/', '-')}-${now.getTime().toString(36)}.${type.ext}`;
+      const photo = { url: `photos/${name}`, credit: 'WaterMap-Community', alt: String(d.beschreibung || '').trim().slice(0, 200) };
+      await commitChanges(gh, branch, `Foto freigegeben: ${id}`, async (read) => [
+        { path: `public/photos/${name}`, content: bytes },
+        jsonFile(OVERRIDES, addPhoto(await read(OVERRIDES, []), id, photo, today)),
+        await history({ aktion: 'freigegeben', standort_id: id, standort_name: String(d.standort_name || ''), foto: photo.url, beschreibung: photo.alt })(read)]);
       await nf(`/submissions/${sub.id}`, { method: 'DELETE' });
-      return json(200, { ok: true, foto: photo, standort_id: standort || (sub.data || {}).standort_id });
+      return json(200, { ok: true, foto: photo, standort_id: id });
     }
     if (body.aktion === 'ablehnen') {
+      await commitChanges(gh, branch, `Foto abgelehnt: ${d.standort_id || 'ohne Standort'}`, async (read) => [
+        await history({ aktion: 'abgelehnt', standort_id: String(d.standort_id || ''), standort_name: String(d.standort_name || ''),
+          beschreibung: String(d.beschreibung || '').slice(0, 200) })(read)]);
       await nf(`/submissions/${sub.id}`, { method: 'DELETE' });
       return json(200, { ok: true });
     }

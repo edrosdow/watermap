@@ -3,6 +3,8 @@
 [build]
   publish = "public"
   # Kein Build-Schritt nötig: reine statische Seite.
+  # Commits der Foto-Verwaltung, die nur den Verlauf (admin/verlauf.json) ändern, brauchen keinen neuen Deploy.
+  ignore = "git log -1 --pretty=%s | grep -qE '^(Foto abgelehnt|Foto-Meldung verworfen):'"
 
 # Foto-Freigabe (/admin/fotos.html → netlify/functions/fotos.mjs). Braucht die Umgebungsvariablen
 # FOTO_ADMIN_PASSWORT, NETLIFY_API_TOKEN und GITHUB_TOKEN (siehe docs/MODERATION.md).

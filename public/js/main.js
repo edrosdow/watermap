@@ -309,7 +309,7 @@ function showDetail(p) {
       share: () => shareLink(p),
       report: () => openReport('fehler-melden', { standort_id: p.id }),
       addPhoto: () => openReport('foto-einreichen', { standort_id: p.id }),
-      reportPhoto: (ph) => openReport('fehler-melden', { standort_id: p.id, art: 'sonstiges', details: `Foto unpassend: ${ph.url}\nGrund: ` }),
+      reportPhoto: (ph) => openReport('fehler-melden', { standort_id: p.id, art: 'foto', details: `Foto unpassend: ${ph.url}\nGrund: ` }),
       reportPrice: () => openReport('tankpreis-melden', { standort_id: p.id }),
     },
   });
