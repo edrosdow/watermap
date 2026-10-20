@@ -50,6 +50,7 @@ const P = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>',
   back: '<path d="m15 6-6 6 6 6"/>',
+  next: '<path d="m9 6 6 6-6 6"/>',
   external: '<path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/>',
   alert: '<path d="M12 3 22 21H2zM12 10v5M12 18h.01"/>',
   check: '<path d="m5 12 5 5 9-10"/>',

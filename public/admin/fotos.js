@@ -29,7 +29,40 @@ async function load() {
     try { sessionStorage.setItem('wm.fotoPw', pw); } catch { /* privat */ }
     say(fotos.length ? `${fotos.length} Foto(s) warten auf Freigabe.` : 'Keine Fotos zu prüfen.');
     for (const f of fotos) list.append(card(f));
+    loadPublished();
   } catch (e) { say(e.message, true); }
+}
+
+// Veröffentlichte Fotos – mit „Entfernen“
+async function loadPublished() {
+  const box = $('#published'), msg = $('#pub-msg');
+  $('#pub-section').hidden = false;
+  box.replaceChildren();
+  msg.textContent = 'Lade …'; msg.classList.remove('err');
+  try {
+    const { fotos } = await (await call('GET', '?veroeffentlicht=1')).json();
+    msg.textContent = fotos.length ? `${fotos.length} Foto(s) veröffentlicht.` : 'Noch keine Fotos veröffentlicht.';
+    for (const f of fotos) box.append(publishedCard(f));
+  } catch (e) { msg.textContent = e.message; msg.classList.add('err'); }
+}
+
+function publishedCard(f) {
+  const img = el('img', { alt: f.alt || 'Veröffentlichtes Foto', loading: 'lazy' });
+  const status = el('p', { className: 'status' });
+  const rm = el('button', { type: 'button', textContent: 'Entfernen' });
+  call('GET', `?datei=${encodeURIComponent(f.url)}`).then(r => r.blob()).then(b => { img.src = URL.createObjectURL(b); })
+    .catch(() => { img.replaceWith(el('p', { className: 'warn', textContent: `Bild fehlt: ${f.url}` })); });
+  rm.addEventListener('click', async () => {
+    if (!confirm('Dieses Foto wirklich aus der App entfernen?')) return;
+    rm.disabled = true; status.textContent = 'Wird entfernt …'; status.classList.remove('err');
+    try {
+      await call('POST', '', { aktion: 'entfernen', standort_id: f.standort_id, url: f.url });
+      status.textContent = 'Entfernt – in etwa einer Minute aus der App verschwunden.';
+    } catch (e) { status.textContent = e.message; status.classList.add('err'); rm.disabled = false; }
+  });
+  return el('div', { className: 'pub' }, img,
+    el('p', {}, el('a', { href: `../#p=${encodeURIComponent(f.standort_id)}`, target: '_blank', rel: 'noopener', textContent: f.standort_id })),
+    f.alt ? el('p', { textContent: f.alt }) : null, rm, status);
 }
 
 function card(f) {

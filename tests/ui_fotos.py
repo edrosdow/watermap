@@ -22,13 +22,17 @@ FOTOS = [{'id': 's1', 'created': '2026-10-20T12:00:00Z', 'standort_id': 'node/63
           'beschreibung': 'x', 'rechte': False, 'hat_foto': True},
          {'id': 's3', 'created': '2026-10-20T14:00:00Z', 'standort_id': '__other', 'standort_name': 'Porta In Vössen',
           'beschreibung': 'Slipanlage', 'rechte': True, 'hat_foto': True}]
+PUBLISHED = [{'standort_id': 'node/5', 'url': 'photos/a.jpg', 'alt': 'Babybett', 'credit': 'WaterMap-Community'},
+             {'standort_id': 'node/5', 'url': 'photos/b.jpg', 'alt': '', 'credit': 'WaterMap-Community'}]
 posted = []
 
 def api(route):
     r = route.request
     if r.headers.get('x-passwort') != 'geheim':
         return route.fulfill(status=401, content_type='application/json', body='{"fehler":"Passwort falsch."}')
-    if r.method == 'GET' and 'bild=' in r.url:
+    if r.method == 'GET' and 'veroeffentlicht' in r.url:
+        return route.fulfill(status=200, content_type='application/json', body=json.dumps({'fotos': PUBLISHED}))
+    if r.method == 'GET' and ('bild=' in r.url or 'datei=' in r.url):
         return route.fulfill(status=200, content_type='image/png', body=PNG)
     if r.method == 'GET':
         return route.fulfill(status=200, content_type='application/json', body=json.dumps({'fotos': FOTOS}))
@@ -73,6 +77,14 @@ with sync_playwright() as p:
     pg.locator('.card >> nth=1').locator('button', has_text='Ablehnen').click()
     pg.wait_for_timeout(300)
     check(len(posted) == 1, 'Ablehnen erst nach Bestätigung')
+    # Veröffentlichte Fotos entfernen
+    pg.locator('.pub img[src^="blob:"] >> nth=1').wait_for()
+    check(pg.locator('.pub').count() == 2 and 'Babybett' in pg.inner_text('#published'), 'veröffentlichte Fotos mit Bild und Beschreibung')
+    n = len(posted)
+    pg.once('dialog', lambda d: d.accept())
+    pg.locator('.pub >> nth=0').locator('button', has_text='Entfernen').click()
+    pg.locator('.pub >> nth=0').locator('.status', has_text='Entfernt').wait_for()
+    check(posted[n:] == [{'aktion': 'entfernen', 'standort_id': 'node/5', 'url': 'photos/a.jpg'}], f'Entfernen gesendet ({posted[n:]})')
     pg.screenshot(path=str(SHOTS / 'fotos_freigabe.png'), full_page=True)
     check(not errors, f'keine JS-/CSP-Fehler {errors}')
     b.close()

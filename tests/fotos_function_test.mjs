@@ -21,6 +21,17 @@ function fakeWorld({ photo = JPEG, rights = 'ja', standort = 'node/632876845', o
     }
     if (url === 'https://files.netlify.example/s1/x.jpg') return new Response(photo, { status: 200 });
     const gh = 'https://api.github.com/repos/edrosdow/watermap/contents/';
+    if (url.startsWith(gh + 'public/photos/') && method === 'GET') {
+      const path = url.slice(gh.length).split('?')[0];
+      if (!(path in state.files)) return new Response('{}', { status: 404 });
+      if (init.headers.accept === 'application/vnd.github.raw') return new Response(state.files[path], { status: 200 });
+      return ok({ sha: 'f-' + path });
+    }
+    if (url.startsWith(gh + 'public/photos/') && method === 'DELETE') {
+      const path = url.slice(gh.length);
+      assert.equal(JSON.parse(init.body).sha, 'f-' + path);
+      delete state.files[path]; state.deletedFiles = [...(state.deletedFiles || []), path]; return ok({});
+    }
     if (url.startsWith(gh + 'public/photos/') && method === 'PUT') {
       const b = JSON.parse(init.body); assert.equal(b.branch, 'main'); assert.equal(init.headers.authorization, 'Bearer gh');
       state.files[url.slice(gh.length)] = Buffer.from(b.content, 'base64'); return ok({}, 201);
@@ -98,6 +109,34 @@ assert.equal(standortAus('https://x/#p=..%2F..%2Fetc'), null);
   assert.equal(r.status, 200);
   assert.match(Object.keys(w.state.files)[0], /^public\/photos\/node-632876845-/);
   assert.equal(JSON.parse(w.state.overrides)[0].id, 'node/632876845'); }
+
+// Veröffentlichte Fotos: auflisten, Bild ausliefern, entfernen
+{ const w = fakeWorld({ overrides: [
+    { id: 'node/5', status: 'approved', photos: [{ url: 'photos/a.jpg', credit: 'X', alt: 'Babybett' }, { url: 'photos/b.jpg', credit: 'X', alt: 'Rampe' }], updated: '2026-10-01' },
+    { id: 'node/6', status: 'approved', photos: [{ url: 'photos/c.jpg', credit: 'X' }], updated: '2026-10-01' },
+    { id: 'node/7', status: 'approved', fields: { name: 'Neu' }, photos: [{ url: 'photos/d.jpg' }] }] });
+  w.state.files = { 'public/photos/a.jpg': JPEG, 'public/photos/c.jpg': JPEG, 'public/photos/d.jpg': JPEG };
+  const list = (await (await run(req('GET', '?veroeffentlicht=1'), w)).json()).fotos;
+  assert.deepEqual(list.map(f => [f.standort_id, f.url]), [['node/5', 'photos/a.jpg'], ['node/5', 'photos/b.jpg'], ['node/6', 'photos/c.jpg'], ['node/7', 'photos/d.jpg']]);
+  const img = await run(req('GET', '?datei=photos/a.jpg'), w);
+  assert.equal(img.headers.get('content-type'), 'image/jpeg');
+  assert.equal((await run(req('GET', '?datei=../../netlify.toml'), w)).status, 400);
+  assert.equal((await run(req('GET', '?datei=photos/fehlt.jpg'), w)).status, 404);
+  // eins von zweien: Eintrag bleibt mit dem anderen Foto
+  assert.equal((await run(req('POST', '', { aktion: 'entfernen', standort_id: 'node/5', url: 'photos/a.jpg' }), w)).status, 200);
+  let ov = JSON.parse(w.state.overrides);
+  assert.deepEqual(ov[0].photos.map(p => p.url), ['photos/b.jpg']);
+  assert.deepEqual(w.state.deletedFiles, ['public/photos/a.jpg']);
+  // einziges Foto: Eintrag fällt weg; mit sonstigen Änderungen bleibt er (ohne photos)
+  await run(req('POST', '', { aktion: 'entfernen', standort_id: 'node/6', url: 'photos/c.jpg' }), w);
+  await run(req('POST', '', { aktion: 'entfernen', standort_id: 'node/7', url: 'photos/d.jpg' }), w);
+  ov = JSON.parse(w.state.overrides);
+  assert.deepEqual(ov.map(o => o.id), ['node/5', 'node/7']);
+  assert.deepEqual(ov[1], { id: 'node/7', status: 'approved', fields: { name: 'Neu' } });
+  const gone = await run(req('POST', '', { aktion: 'entfernen', standort_id: 'node/6', url: 'photos/c.jpg' }), w);
+  assert.equal(gone.status, 502); assert.match((await gone.json()).fehler, /nicht \(mehr\) veröffentlicht/);
+  assert.equal((await run(req('POST', '', { aktion: 'entfernen', standort_id: 'node/5', url: '../x.jpg' }), w)).status, 400);
+  assert.equal(w.state.calls.filter(c => c.includes('api.netlify.com')).length, 0, 'Entfernen braucht kein Netlify-Formular'); }
 
 // Ablehnen löscht nur die Einreichung
 { const w = fakeWorld(); const r = await run(req('POST', '', { aktion: 'ablehnen', id: 's1' }), w);

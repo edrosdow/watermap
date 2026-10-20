@@ -24,6 +24,8 @@ Meldungen gehen über **Netlify Forms** ein. Sie sind **nie automatisch sichtbar
 ## Fotos per Klick freigeben
 Seite **`/admin/fotos.html`** (z. B. `https://watermaps.netlify.app/admin/fotos.html`): Passwort eingeben, Foto ansehen, **Freigeben** oder **Ablehnen**. Freigeben legt das Bild in `public/photos/` ab, trägt es in `community/overrides.json` ein (Urheber „WaterMap-Community“, Beschreibung als Alternativtext) und löscht die Einreichung; nach etwa einer Minute ist das Foto in der App. Ablehnen löscht die Einreichung. Ohne bestätigte Rechte lässt sich nicht freigeben.
 
+Darunter stehen die **veröffentlichten Fotos** mit **Entfernen**: Das Foto wird aus `overrides.json` genommen und die Datei aus `public/photos/` gelöscht. In der App melden Nutzer unpassende Fotos über „Foto melden“ (kommt als „Fehler melden“ mit „Foto unpassend: photos/…“ an).
+
 **Einmalig einrichten** (Netlify → *Site configuration* → *Environment variables*, danach einmal neu veröffentlichen):
 | Variable | Wert |
 |---|---|

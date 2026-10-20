@@ -7,9 +7,10 @@ import {
 } from './model.js';
 import { favorites } from './favorites.js';
 import { CONFIG } from './config.js';
+import { photoCarousel } from './photos.js';
 
 /**
- * actions = { close, share, report, addPhoto, reportPrice, onFavorite }
+ * actions = { close, share, report, addPhoto, reportPhoto, reportPrice, onFavorite }
  */
 /** Tabelle der Eigenschaften; Zeilen mit `web` zeigen die wörtlichen Website-Angaben (markiert). */
 export function factList(rows) {
@@ -50,11 +51,7 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts })
   const body = h('div', { class: 'detail-body' });
 
   // Fotos
-  if (p.photos.length) {
-    body.append(h('div', { class: 'photos' }, p.photos.map(ph => h('figure', {},
-      h('img', { src: ph.url, alt: ph.alt || `Foto: ${displayName(p)}`, loading: 'lazy', decoding: 'async' }),
-      ph.credit ? h('figcaption', { text: `Foto: ${ph.credit}` }) : null))));
-  }
+  if (p.photos.length) body.append(photoCarousel(p.photos, { name: displayName(p), onReport: actions.reportPhoto }));
 
   // Herkunfts-Hinweis
   body.append(p.source === 'community'

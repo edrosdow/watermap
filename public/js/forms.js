@@ -156,6 +156,7 @@ export function openForm(formName, ctx, preset = {}) {
       node = labelWrap(f, control);
     } else if (f.type === 'textarea') {
       control = h('textarea', { name: f.name, required: f.required, maxlength: f.max, placeholder: f.placeholder, rows: 4 });
+      if (f.name === 'details' && preset.details) control.value = preset.details;   // z. B. „Foto melden“
       node = labelWrap(f, control);
     } else if (f.type === 'select') {
       control = h('select', { name: f.name, required: f.required }, f.options.map(([v, t]) => h('option', { value: v, text: t })));

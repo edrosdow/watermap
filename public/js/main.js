@@ -309,6 +309,7 @@ function showDetail(p) {
       share: () => shareLink(p),
       report: () => openReport('fehler-melden', { standort_id: p.id }),
       addPhoto: () => openReport('foto-einreichen', { standort_id: p.id }),
+      reportPhoto: (ph) => openReport('fehler-melden', { standort_id: p.id, art: 'sonstiges', details: `Foto unpassend: ${ph.url}\nGrund: ` }),
       reportPrice: () => openReport('tankpreis-melden', { standort_id: p.id }),
     },
   });
@@ -735,7 +736,7 @@ function wireStatic() {
   $('#list-close').addEventListener('click', () => setListOpen(false));
   $('#sheet-handle').addEventListener('click', () => openSheet(!el.sidebar.classList.contains('is-open')));
   document.addEventListener('favorites-changed', updateTabs);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !el.dlg.open && !$('#menu').open && (state.selectedId || state.gaugeId || state.extraId) && !el.suggest.offsetParent) closeDetail(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !el.dlg.open && !$('#menu').open && !$('dialog.lightbox[open]') && (state.selectedId || state.gaugeId || state.extraId) && !el.suggest.offsetParent) closeDetail(); });
   window.addEventListener('resize', debounce(() => state.map?.invalidate(), 150));
   window.addEventListener('online', updateOnline); window.addEventListener('offline', updateOnline);
   updateOnline(); updateTabs();

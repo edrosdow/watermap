@@ -51,6 +51,30 @@ export function addPhoto(overrides, id, photo, today) {
   return list;
 }
 
+/** Foto aus overrides.json nehmen; ein Eintrag ohne Fotos und ohne sonstige Änderungen fällt ganz weg. */
+export function removePhoto(overrides, id, url) {
+  const out = [];
+  let found = false;
+  for (const o of Array.isArray(overrides) ? overrides : []) {
+    if (o && o.id === id && Array.isArray(o.photos) && o.photos.some(ph => ph.url === url)) {
+      found = true;
+      const rest = { ...o, photos: o.photos.filter(ph => ph.url !== url) };
+      if (!rest.photos.length) delete rest.photos;
+      if (Object.keys(rest).some(k => !['id', 'status', 'updated'].includes(k))) out.push(rest);
+      continue;
+    }
+    out.push(o);
+  }
+  if (!found) throw new Error('Foto ist nicht (mehr) veröffentlicht.');
+  return out;
+}
+
+/** Alle freigegebenen Fotos aus overrides.json. */
+export function publishedPhotos(overrides) {
+  return (Array.isArray(overrides) ? overrides : []).filter(o => o && o.status === 'approved')
+    .flatMap(o => (o.photos || []).map(ph => ({ standort_id: o.id, url: ph.url, alt: ph.alt || '', credit: ph.credit || '' })));
+}
+
 export function submissionView(s) {
   const d = s.data || s;
   return {
@@ -74,6 +98,37 @@ function api(env, fetchFn) {
     return res;
   };
   return { nf, gh };
+}
+
+const PHOTO_PATH = /^photos\/[A-Za-z0-9._-]{1,120}$/;
+const b64 = (data) => Buffer.from(data).toString('base64');
+
+async function readOverrides(gh, branch) {
+  const cur = await gh(`/contents/${OVERRIDES}?ref=${encodeURIComponent(branch)}`);
+  if (!cur.ok) throw new Error(`GitHub: overrides.json nicht lesbar (${cur.status})`);
+  const file = await cur.json();
+  return { sha: file.sha, list: JSON.parse(Buffer.from(file.content, 'base64').toString('utf8') || '[]') };
+}
+
+/** overrides.json ändern; bei gleichzeitiger Änderung (409) neu lesen und erneut versuchen. */
+async function updateOverrides(gh, branch, message, change) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { sha, list } = await readOverrides(gh, branch);
+    const upd = await gh(`/contents/${OVERRIDES}`, { method: 'PUT', body: JSON.stringify({
+      message, branch, sha, content: b64(JSON.stringify(change(list), null, 2) + '\n') }) });
+    if (upd.ok) return;
+    if (upd.status !== 409) throw new Error(`GitHub: overrides.json nicht gespeichert (${upd.status})`);
+  }
+  throw new Error('GitHub: overrides.json wurde gleichzeitig geändert, bitte noch einmal versuchen');
+}
+
+async function deleteFile(gh, branch, path, message) {
+  const cur = await gh(`/contents/${path}?ref=${encodeURIComponent(branch)}`);
+  if (cur.status === 404) return;                                   // schon weg
+  if (!cur.ok) throw new Error(`GitHub: Datei nicht lesbar (${cur.status})`);
+  const { sha } = await cur.json();
+  const del = await gh(`/contents/${path}`, { method: 'DELETE', body: JSON.stringify({ message, sha, branch }) });
+  if (!del.ok) throw new Error(`GitHub: Datei nicht gelöscht (${del.status})`);
 }
 
 async function submissions(nf, siteId) {
@@ -112,18 +167,8 @@ async function publish(gh, env, sub, fetchFn, today, standort) {
   if (!put.ok) throw new Error(`GitHub: Foto nicht gespeichert (${put.status})`);
 
   const photo = { url: `photos/${name}`, credit: 'WaterMap-Community', alt: String(d.beschreibung || '').trim().slice(0, 200) };
-  for (let attempt = 0; attempt < 3; attempt++) {                // bei gleichzeitigen Freigaben neu versuchen
-    const cur = await gh(`/contents/${OVERRIDES}?ref=${encodeURIComponent(branch)}`);
-    if (!cur.ok) throw new Error(`GitHub: overrides.json nicht lesbar (${cur.status})`);
-    const file = await cur.json();
-    const list = addPhoto(JSON.parse(Buffer.from(file.content, 'base64').toString('utf8') || '[]'), id, photo, today);
-    const upd = await gh(`/contents/${OVERRIDES}`, { method: 'PUT', body: JSON.stringify({
-      message: `Foto freigegeben: ${id}`, branch, sha: file.sha,
-      content: Buffer.from(JSON.stringify(list, null, 2) + '\n').toString('base64') }) });
-    if (upd.ok) return photo;
-    if (upd.status !== 409) throw new Error(`GitHub: overrides.json nicht gespeichert (${upd.status})`);
-  }
-  throw new Error('GitHub: overrides.json wurde gleichzeitig geändert, bitte noch einmal versuchen');
+  await updateOverrides(gh, branch, `Foto freigegeben: ${id}`, (list) => addPhoto(list, id, photo, today));
+  return photo;
 }
 
 export async function handle(req, { env, siteId, fetchFn = fetch, today = new Date().toISOString().slice(0, 10) }) {
@@ -135,7 +180,29 @@ export async function handle(req, { env, siteId, fetchFn = fetch, today = new Da
   if (!passwordOk(req.headers.get('x-passwort'), env.FOTO_ADMIN_PASSWORT)) return json(401, { fehler: 'Passwort falsch.' });
   const { nf, gh } = api(env, fetchFn);
   const url = new URL(req.url);
+  const branch = env.FOTO_BRANCH || 'main';
+  const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
   try {
+    // Veröffentlichte Fotos: auflisten, Bild ausliefern, entfernen
+    if (req.method === 'GET' && url.searchParams.has('veroeffentlicht')) {
+      return json(200, { fotos: publishedPhotos((await readOverrides(gh, branch)).list) });
+    }
+    if (req.method === 'GET' && url.searchParams.has('datei')) {
+      const path = url.searchParams.get('datei').replace(/^\.?\//, '');
+      if (!PHOTO_PATH.test(path)) return json(400, { fehler: 'Ungültiger Dateiname.' });
+      const res = await gh(`/contents/public/${path}?ref=${encodeURIComponent(branch)}`, { headers: { accept: 'application/vnd.github.raw' } });
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      const type = imageType(bytes);
+      if (!res.ok || !type) return json(404, { fehler: 'Foto nicht gefunden.' });
+      return new Response(bytes, { headers: { 'content-type': type.mime, 'cache-control': 'no-store' } });
+    }
+    if (req.method === 'POST' && body.aktion === 'entfernen') {
+      const path = String(body.url || '').replace(/^\.?\//, '');
+      if (!ID_RE.test(String(body.standort_id || '')) || !PHOTO_PATH.test(path)) return json(400, { fehler: 'Ungültige Angaben.' });
+      await updateOverrides(gh, branch, `Foto entfernt: ${body.standort_id}`, (list) => removePhoto(list, body.standort_id, body.url));
+      await deleteFile(gh, branch, `public/${path}`, `Foto entfernt: ${body.standort_id}`);
+      return json(200, { ok: true });
+    }
     const subs = await submissions(nf, siteId);
     if (req.method === 'GET' && url.searchParams.has('bild')) {
       const sub = subs.find(s => s.id === url.searchParams.get('bild'));
@@ -149,7 +216,6 @@ export async function handle(req, { env, siteId, fetchFn = fetch, today = new Da
     }
     if (req.method === 'GET') return json(200, { fotos: subs.map(submissionView) });
     if (req.method !== 'POST') return json(405, { fehler: 'Nicht erlaubt.' });
-    const body = await req.json().catch(() => ({}));
     const sub = subs.find(s => s.id === body.id);
     if (!sub) return json(404, { fehler: 'Einreichung nicht gefunden (schon erledigt?).' });
     if (body.aktion === 'freigeben') {

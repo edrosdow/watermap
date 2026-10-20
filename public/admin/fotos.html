@@ -18,6 +18,12 @@
   .status { font-weight: 600; margin-top: 10px; }
   .status.err { color: #B3261E; }
   .warn { color: #8A5300; font-weight: 600; }
+  #pub-section { margin-top: 32px; }
+  .pub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .pub { border: 1px solid #DCE6EA; border-radius: 12px; padding: 10px; }
+  .pub img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #F1F5F7; border-radius: 8px; }
+  .pub p { margin: 6px 0; font-size: 14px; }
+  .pub button { width: 100%; }
 </style></head>
 <body><header><a href="../">WaterMap</a><small>Fotos freigeben</small></header><main>
 <h1>Eingereichte Fotos</h1>
@@ -25,6 +31,12 @@
 <form class="login" id="login"><input type="password" id="pw" autocomplete="current-password" placeholder="Passwort" required><button class="ok" type="submit">Anzeigen</button></form>
 <p class="status" id="msg" role="status"></p>
 <div id="list"></div>
+<section id="pub-section" hidden>
+  <h2>Veröffentlichte Fotos</h2>
+  <p>Unpassende Fotos lassen sich hier wieder entfernen; nach etwa einer Minute sind sie aus der App verschwunden.</p>
+  <p class="status" id="pub-msg" role="status"></p>
+  <div id="published" class="pub-grid"></div>
+</section>
 <footer><a href="../">← Zurück zur Karte</a></footer></main>
 <script type="module" src="./fotos.js"></script>
 </body></html>
