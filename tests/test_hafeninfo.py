@@ -182,6 +182,13 @@ class FetchTests(unittest.TestCase):
         open_, _ = opener({})
         self.assertEqual(hi.Fetcher(opener=open_, pause=0, log=lambda *a: None).site("https://weg.example/"), [])
 
+    def test_links_with_spaces_are_encoded_and_bad_urls_do_not_crash(self):
+        self.assertEqual(hi.safe_url("https://v.de/ueber uns/kontaktformular"), "https://v.de/ueber%20uns/kontaktformular")
+        self.assertEqual(hi.safe_url("https://v.de/a%20b?x=1&y=ä"), "https://v.de/a%20b?x=1&y=%C3%A4")
+        def broken(req):
+            raise hi.http.client.InvalidURL("URL can't contain control characters")
+        self.assertEqual(hi.Fetcher(opener=broken, pause=0, log=lambda *a: None).site("https://v.de/"), [])
+
 
 class PdfTests(unittest.TestCase):
     def test_pdf_links_only_price_lists_on_same_site(self):

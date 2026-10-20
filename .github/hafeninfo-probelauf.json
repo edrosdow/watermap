@@ -1,5 +1,5 @@
 {
  "anzahl": 200,
- "lauf": 5,
+ "lauf": 6,
  "hinweis": "Ändern dieser Datei auf einem claude/-Branch startet einen Hafeninfo-Probelauf (kostenlos, nach Regeln) nur auf diesem Branch (Netlify-Vorschau). Auf main löst sie nichts aus."
 }

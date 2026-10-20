@@ -32,6 +32,7 @@ import datetime as dt
 import hashlib
 import html
 import html.parser
+import http.client
 import json
 import pathlib
 import re
@@ -238,6 +239,11 @@ def pdf_to_text(data: bytes) -> str:
     return re.sub(r"\s*\n\s*", "\n", text).strip()
 
 
+def safe_url(url: str) -> str:
+    """Leerzeichen und Umlaute in Links (kommt auf Vereinsseiten vor) kodieren; bereits Kodiertes bleibt."""
+    return urllib.parse.quote(url.strip(), safe=":/?#[]@!$&'()*+,;=%~")
+
+
 class Fetcher:
     """Höflicher Abruf: robots.txt, Zeitlimit, Größenlimit, Pause je Website."""
 
@@ -257,6 +263,7 @@ class Fetcher:
 
     def _get(self, url, pdf=False) -> tuple[str, str | bytes] | None:
         """(endgültige URL, HTML) – bzw. bei pdf=True (URL, Bytes) – oder None."""
+        url = safe_url(url)
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,*/*;q=0.5", "Accept-Language": "de"})
         try:
             with self.open(req) as resp:
@@ -271,7 +278,7 @@ class Fetcher:
                 data = resp.read(MAX_BYTES + 1)[:MAX_BYTES]
                 charset = resp.headers.get_content_charset() or "utf-8"
                 return resp.geturl(), data.decode(charset, errors="replace")
-        except (urllib.error.URLError, OSError, ValueError, LookupError):
+        except (urllib.error.URLError, http.client.HTTPException, OSError, ValueError, LookupError):
             return None
 
     def allowed(self, url) -> bool:
@@ -612,7 +619,11 @@ def main(argv=None, client=None, fetcher=None) -> int:
     crawled = {}
 
     def crawl(f):
-        return f, fetcher.site(f["properties"]["website"])
+        try:
+            return f, fetcher.site(f["properties"]["website"])
+        except Exception as e:  # noqa: BLE001 – eine kaputte Website darf den Lauf nicht beenden
+            print(f"  {f['id']}: Fehler beim Abruf ({type(e).__name__}: {e})")
+            return f, []
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as ex:
         for f, pages in ex.map(crawl, todo):
             crawled[f["id"]] = (f, pages)
