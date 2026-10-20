@@ -61,6 +61,12 @@ LINK_HINT = re.compile(
     r"marina|anleger|steg|sanitär|sanitaer|tankstelle|wohnmobil|stellplatz|winterlager|kran|slip|info|kontakt",
     re.I)
 SKIP_EXT = re.compile(r"\.(pdf|jpe?g|png|gif|webp|svg|zip|docx?|xlsx?|mp4|mp3)(\?|#|$)", re.I)
+# Preislisten als PDF (z. B. „Gebührenordnung.pdf“): höchstens 2 je Website, gelesen mit pypdf, falls installiert
+PDF_HINT = re.compile(r"preis|gebühr|gebuehr|tarif|entgelt|liegepl|liegegeb|hafengeld|kosten|leistung", re.I)
+MAX_PDFS = 2
+MAX_PDF_BYTES = 5_000_000
+MAX_PDF_PAGES = 10
+
 
 # Feste Liste der Angaben (Schlüssel → Anzeige). Das Modell darf nur diese Schlüssel verwenden.
 FACTS = {
@@ -202,6 +208,36 @@ def candidate_links(base: str, links, limit=MAX_PAGES - 1) -> list[str]:
     return [u for *_, u in sorted(scored)[:limit]]
 
 
+def pdf_links(base: str, links) -> list[str]:
+    """PDF-Dateien derselben Website, deren Name oder Linktext nach Preisliste aussieht."""
+    root_host = (urllib.parse.urlsplit(base).hostname or "").removeprefix("www.")
+    out = []
+    for href, text in links:
+        if not href:
+            continue
+        url = urllib.parse.urljoin(base, href.strip()).split("#")[0]
+        parts = urllib.parse.urlsplit(url)
+        if (parts.scheme in ("http", "https") and (parts.hostname or "").removeprefix("www.") == root_host
+                and parts.path.lower().endswith(".pdf") and PDF_HINT.search(f"{urllib.parse.unquote(parts.path)} {text}")
+                and url not in out):
+            out.append(url)
+    return out
+
+
+def pdf_to_text(data: bytes) -> str:
+    """Text einer PDF (erste Seiten); ohne pypdf oder bei Fehlern leer."""
+    try:
+        import io
+        import pypdf
+        reader = pypdf.PdfReader(io.BytesIO(data))
+        parts = [(page.extract_text() or "") for page in reader.pages[:MAX_PDF_PAGES]]
+    except Exception:  # noqa: BLE001 – kaputte oder verschlüsselte PDF, fehlendes pypdf
+        return ""
+    text = "\n".join(parts)
+    text = re.sub(r"[ \t\r\f\v\u00a0]+", " ", text)
+    return re.sub(r"\s*\n\s*", "\n", text).strip()
+
+
 class Fetcher:
     """Höflicher Abruf: robots.txt, Zeitlimit, Größenlimit, Pause je Website."""
 
@@ -219,12 +255,17 @@ class Fetcher:
         if delay > 0:
             time.sleep(delay)
 
-    def _get(self, url) -> tuple[str, str] | None:
-        """(endgültige URL, HTML) oder None."""
+    def _get(self, url, pdf=False) -> tuple[str, str | bytes] | None:
+        """(endgültige URL, HTML) – bzw. bei pdf=True (URL, Bytes) – oder None."""
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,*/*;q=0.5", "Accept-Language": "de"})
         try:
             with self.open(req) as resp:
                 ctype = resp.headers.get("Content-Type", "")
+                if pdf:
+                    if "pdf" not in ctype:
+                        return None
+                    data = resp.read(MAX_PDF_BYTES + 1)
+                    return (resp.geturl(), data) if len(data) <= MAX_PDF_BYTES else None
                 if "html" not in ctype and "text" not in ctype:
                     return None
                 data = resp.read(MAX_BYTES + 1)[:MAX_BYTES]
@@ -247,12 +288,12 @@ class Fetcher:
         rp = self.robots[key]
         return rp is None or rp.can_fetch(USER_AGENT, url)
 
-    def page(self, url):
+    def page(self, url, pdf=False):
         if not self.allowed(url):
             self.log(f"    robots.txt verbietet {url}")
             return None
         self._wait(urllib.parse.urlsplit(url).hostname or "")
-        return self._get(url)
+        return self._get(url, pdf=pdf)
 
     def site(self, start: str) -> list[dict]:
         """Startseite + passende Unterseiten → [{url, text}] (gekürzt)."""
@@ -262,14 +303,24 @@ class Fetcher:
         final, raw = first
         text, links = html_to_text(raw)
         pages = [{"url": final, "text": text[:PAGE_CHARS]}]
+        pdfs = pdf_links(final, links)
         for url in candidate_links(final, links):
             got = self.page(url)
             if got:
-                t, _ = html_to_text(got[1])
+                t, sub_links = html_to_text(got[1])
+                pdfs += [u for u in pdf_links(got[0], sub_links) if u not in pdfs]
                 if t and all(t[:PAGE_CHARS] != p["text"] for p in pages):
                     pages.append({"url": got[0], "text": t[:PAGE_CHARS]})
             if sum(len(p["text"]) for p in pages) >= TOTAL_CHARS:
                 break
+        # Preislisten als PDF kommen nach vorn: dort stehen die Preise meist kompakt
+        pdf_pages = []
+        for url in pdfs[:MAX_PDFS]:
+            got = self.page(url, pdf=True)
+            t = pdf_to_text(got[1]) if got else ""
+            if t:
+                pdf_pages.append({"url": got[0], "text": t[:PAGE_CHARS]})
+        pages = pages[:1] + pdf_pages + pages[1:]
         total, out = 0, []
         for p in pages:
             room = TOTAL_CHARS - total
@@ -343,7 +394,7 @@ RULES = {
     "dauerliegeplatz": r"saisonlieg|dauerlieg|jahreslieg|sommerlieg|saisonplatz",
     "max_laenge": r"max(imale|\.)?\s*(boots)?länge|boote\s+bis\s+\d",
     "wassertiefe": r"wassertiefe|tiefgang",
-    "strom": r"\bstrom|landstrom|kwh",
+    "strom": r"\bstrom|landstrom",
     "wasser": r"frischwasser|trinkwasser|wasseranschluss|wasser\s*(je|pro|/)\s*\d",
     "faekalien": r"fäkal|absaug|schmutzwasser|pump.?out",
     "diesel": r"\bdiesel",
@@ -370,7 +421,11 @@ _RULES = {k: re.compile(v, re.I) for k, v in RULES.items()}
 _NUM = r"(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)"
 _PRICE = re.compile(_NUM + r"\s*(?:,-|,–)?\s*(?:€|eur\b|euro\b)|(?:€|eur)\s*" + _NUM, re.I)
 # Kurze Zeilen ohne Preis zählen nur mit einer echten Angabe – sonst sind es Überschriften
-_INFO = re.compile(r"kostenlos|gratis|kostenfrei|\bfrei\b|inkl|inklusive|vorhanden|verfügbar|möglich|tagespreis|\buhr\b|\bja\b|\bnein\b|\d", re.I)
+# Zahlen zählen nur mit Einheit (2,20 m · 16 A · 230 V · 8 Uhr · Kanal 72) oder als Telefonnummer – nicht Jahreszahlen,
+# Aufzählungen („1. Hafenmeister“) oder Zähler („555.509 kWh“ ohne Preis ist kein Strompreis)
+_INFO = re.compile(r"kostenlos|gratis|kostenfrei|\bfrei\b|inkl|inklusive|vorhanden|verfügbar|möglich|tagespreis|\bja\b|\bnein\b"
+                   r"|\d+(?:[.,]\d+)?\s*(?:m\b|cm\b|meter\b|t\b|tonnen|a\b|amp|ampere|ampère|v\b|volt|uhr\b|h\b|std)"
+                   r"|kanal\s*\d+|(?:\+49|\b0\d{2,5})[\s/()-]*\d[\d\s/-]{4,}", re.I)
 _OFFTOPIC = re.compile(r"ferienwohn|ferienhaus|appartement|apartment|hausboot|zimmer|frühstück|hochzeit|gutschein|newsletter|cookie|datenschutz|impressum", re.I)
 
 
@@ -490,8 +545,18 @@ def pick(marinas, store, limit, only, max_age_days, today):
         last = (store.get(f["id"]) or {}).get("checked") or ""
         if only or last < cutoff:
             cands.append((last, f["id"], f))
-    cands.sort(key=lambda c: (c[0], c[1]))
+    cands.sort(key=lambda c: (c[0], priority(c[2]["properties"].get("name")), c[1]))
     return [f for *_, f in cands[:limit]]
+
+
+_COMMERCIAL = re.compile(r"marina|yachthafen|sportboothafen|stadthafen|bootshafen|hafen\b|port\b|charter|wassersportzentrum|bootsverleih", re.I)
+_CLUB = re.compile(r"e\.\s?v\.|verein|club|klub|\b(sc|yc|sv|mc|myc|wsv|ksv)\b|segelgemeinschaft|ruder|kanu|gemeinschaft", re.I)
+
+
+def priority(name) -> int:
+    """0 = gewerblicher Hafen (veröffentlicht eher Gastpreise), 1 = unklar, 2 = Verein."""
+    n = name or ""
+    return 2 if _CLUB.search(n) else 0 if _COMMERCIAL.search(n) else 1
 
 
 def main(argv=None, client=None, fetcher=None) -> int:

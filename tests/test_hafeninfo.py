@@ -109,6 +109,17 @@ class RuleTests(unittest.TestCase):
                          + "Unser Hafen bietet seit vielen Jahren einen schönen Blick über den See, Strom gibt es an jedem Steg und vieles mehr, was das Herz begehrt." )
         self.assertEqual(got, [])
 
+    def test_junk_from_trial_run_rejected(self):
+        # Zeilen aus dem ersten Probelauf, die keine Hafenangaben sind
+        got = self.lines("555.509 kWh\nReparatur Slipanlage 2011\n1. Hafenmeister\nKranen Herbst 2026\nTelefon Restaurant: 030 / 809 436 71")
+        self.assertEqual([k for k, *_ in got], ["restaurant"])          # Telefonnummer ist eine echte Angabe
+
+    def test_useful_lines_from_trial_run_kept(self):
+        got = self.lines("Wassertiefe an einzelnen Stegen bis ca. 2, 20 m\n"
+                         "zu jedem Liegeplatz gehört ein mit 16 Ampère abgesicherter Stromanschluss\n"
+                         "Hafenmeister NPorts Herr Bröcker: 0171-7325304")
+        self.assertEqual([k for k, *_ in got], ["wassertiefe", "strom", "hafenmeister"])
+
     def test_first_price(self):
         for s, want in (("3,00 €", 3.0), ("1.200,00 €", 1200.0), ("1.200 €", 1200.0), ("€ 12", 12.0), ("5 EUR", 5.0),
                         ("3,- €", 3.0), ("12.50 €", 12.5), ("ohne Preis", None)):
@@ -152,6 +163,43 @@ class FetchTests(unittest.TestCase):
     def test_unreachable_site_gives_no_pages(self):
         open_, _ = opener({})
         self.assertEqual(hi.Fetcher(opener=open_, pause=0, log=lambda *a: None).site("https://weg.example/"), [])
+
+
+class PdfTests(unittest.TestCase):
+    def test_pdf_links_only_price_lists_on_same_site(self):
+        links = [("/downloads/Preisliste_2026.pdf", "Preise"), ("/files/flyer.pdf", "Flyer"), ("/x/gebuehrenordnung.pdf", ""),
+                 ("https://fremd.de/preise.pdf", "Preise")]
+        self.assertEqual(hi.pdf_links("https://www.marina-test.de/", links),
+                         ["https://www.marina-test.de/downloads/Preisliste_2026.pdf", "https://www.marina-test.de/x/gebuehrenordnung.pdf"])
+
+    def test_pdf_text_used_and_placed_after_start_page(self):
+        sites = {"https://www.marina-test.de/": '<p>Willkommen</p><a href="/preisliste.pdf">Preisliste</a>',
+                 "https://www.marina-test.de/preisliste.pdf": "%PDF-1.4 …"}
+        def open_(req):
+            body = sites.get(req.full_url)
+            if body is None:
+                raise hi.urllib.error.HTTPError(req.full_url, 404, "nicht da", None, None)
+            return FakeResp(req.full_url, body, "application/pdf" if req.full_url.endswith(".pdf") else "text/html; charset=utf-8")
+        orig = hi.pdf_to_text
+        hi.pdf_to_text = lambda data: "Gastliegeplatz 2,00 € je Meter und Nacht" if data.startswith(b"%PDF") else ""
+        try:
+            pages = hi.Fetcher(opener=open_, pause=0, log=lambda *a: None).site("https://www.marina-test.de/")
+        finally:
+            hi.pdf_to_text = orig
+        self.assertEqual([p["url"] for p in pages], ["https://www.marina-test.de/", "https://www.marina-test.de/preisliste.pdf"])
+        facts, _ = hi.verify(hi.extract_rules(pages), pages)
+        self.assertEqual((facts[0]["key"], facts[0]["price_eur"], facts[0]["url"]), ("gast_liegeplatz", 2.0, "https://www.marina-test.de/preisliste.pdf"))
+
+    def test_broken_pdf_gives_no_text(self):
+        self.assertEqual(hi.pdf_to_text(b"kein pdf"), "")
+
+
+class PickTests(unittest.TestCase):
+    def test_commercial_harbours_first_among_unchecked(self):
+        def m(i, name): return {"id": f"node/{i}", "properties": {"name": name, "website": "https://x.de/"}}
+        marinas = [m(1, "Segelverein Musterstadt e.V."), m(2, "Marina Eldenburg"), m(3, "Steg Nord"), m(4, "Stadthafen Waren")]
+        got = hi.pick(marinas, {"node/4": {"checked": "2026-10-01"}}, 3, None, 30, hi.dt.date(2026, 10, 20))
+        self.assertEqual([f["id"] for f in got], ["node/2", "node/3", "node/1"])     # node/4 vor kurzem geprüft
 
 
 class FakeBatches:

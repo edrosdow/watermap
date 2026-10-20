@@ -17,8 +17,7 @@
    "places": "community/places.json",
    "overrides": "community/overrides.json",
    "prices": "community/prices.json"
-  },
-  "hafeninfo": "hafeninfo.json"
+  }
  },
  "categories": {
   "slip": {

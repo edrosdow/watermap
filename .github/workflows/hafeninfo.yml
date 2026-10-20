@@ -45,6 +45,8 @@ jobs:
           python-version: "3.12"
       - name: Tests
         run: python3 -I -m unittest discover -s tests -p "test_*.py"
+      - name: PDF-Leser installieren (kostenlos)
+        run: python3 -m pip install --quiet "pypdf>=6,<7"
       - name: Claude-SDK installieren
         if: ${{ inputs.mit_ki }}
         run: python3 -m pip install --quiet "anthropic>=1.15,<2"
