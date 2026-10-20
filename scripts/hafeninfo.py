@@ -426,7 +426,8 @@ _PRICE = re.compile(_NUM + r"\s*(?:,-|,–)?\s*(?:€|eur\b|euro\b)|(?:€|eur)\
 _INFO = re.compile(r"kostenlos|gratis|kostenfrei|\bfrei\b|inkl|inklusive|vorhanden|verfügbar|möglich|tagespreis|\bja\b|\bnein\b"
                    r"|\d+(?:[.,]\d+)?\s*(?:m\b|cm\b|meter\b|t\b|tonnen|a\b|amp|ampere|ampère|v\b|volt|uhr\b|h\b|std)"
                    r"|kanal\s*\d+|(?:\+49|\b0\d{2,5})[\s/()-]*\d[\d\s/-]{4,}", re.I)
-_OFFTOPIC = re.compile(r"ferienwohn|ferienhaus|appartement|apartment|hausboot|zimmer|frühstück|hochzeit|gutschein|newsletter|cookie|datenschutz|impressum", re.I)
+_OFFTOPIC = re.compile(r"ferienwohn|ferienhaus|appartement|apartment|hausboot|zimmer|frühstück|hochzeit|gutschein|newsletter|cookie|datenschutz|impressum|"
+                       r"charter|kaution|endreinigung|reisezeit|bettwäsche|wäschepaket|motorbetriebsstunde|mietboot|fahrrad", re.I)
 
 
 def first_price(line: str):
@@ -442,14 +443,35 @@ def first_price(line: str):
     return v if 0 < v < 100_000 else None
 
 
+# Nur diese Überschriften geben ihr Stichwort an die Preiszeilen darunter weiter (höchstens HEADING_SPAN Zeilen).
+# „Hund“, „Duschen“, „WLAN“ … stehen oft als einzelnes Wort über ganz anderen Preisen (z. B. Bootsmiete).
+RULES_VERSION = 2          # bei Änderungen an den Regeln erhöhen: dann werden auch unveränderte Websites neu ausgewertet
+HEADING_KEYS = {"gast_liegeplatz", "dauerliegeplatz", "strom", "wasser", "faekalien", "diesel", "benzin", "parken",
+                "wohnmobil", "slip", "kran", "winterlager", "entsorgung"}
+HEADING_SPAN = 8
+# Seiten, die vor allem Charter, Bootsmiete oder Ferienwohnungen bepreisen, werden ganz übersprungen
+_RENTAL_PAGE = re.compile(r"charter|reisezeit|kaution|endreinigung|bettwäsche|wäschepaket|hausboot|ferienwohn|ferienhaus|"
+                          r"mietboot|bootsmiete|motorbetriebsstunde|führerscheinfrei|wochenmiete", re.I)
+_HARBOUR_PAGE = re.compile(r"liegeplatz|liegegeb|gastlieg|hafengeld|hafengeb|stegmeter|lfd\.?\s*meter|sportboothafen", re.I)
+
+
+def is_rental_page(text: str) -> bool:
+    rental = len(_RENTAL_PAGE.findall(text))
+    return rental >= 4 and rental >= len(_HARBOUR_PAGE.findall(text))
+
+
 def extract_rules(pages, per_key=4, total=40) -> list[dict]:
-    """Wörtliche Zeilen mit Stichwort und Preis (oder kurzer Angabe). Eine Zeile mit Preis, aber ohne Stichwort,
-    erbt das Stichwort einer kurzen Überschrift direkt darüber (typisch für Preislisten)."""
+    """Wörtliche Zeilen mit Stichwort und Preis (oder kurzer Angabe). Eine Preiszeile ohne eigenes Stichwort erbt
+    das Stichwort einer kurzen Überschrift darüber (typisch für Preislisten), z. B. „Strom: 0,70 €“."""
     out, count, seen = [], {}, set()
     for p in pages:
-        heading_key = None
+        if is_rental_page(p["text"]):
+            continue
+        is_pdf = p["url"].lower().split("?")[0].endswith(".pdf")
+        heading_key, heading_text, since = None, "", 0
         for raw in p["text"].split("\n"):
             line = raw.strip(" |-–•\t")
+            since += 1
             if not line or len(line) > 240:
                 heading_key = None
                 continue
@@ -457,17 +479,19 @@ def extract_rules(pages, per_key=4, total=40) -> list[dict]:
             price = first_price(line)
             informative = price is not None or bool(_INFO.search(line))
             if not informative:
-                if len(line) <= 60:
-                    heading_key = keys[0] if keys else None  # Überschrift, z. B. „Parkplatz“ – gilt für die Zeilen darunter
+                if len(line) <= 60:                          # Überschrift, z. B. „Parkplatz“ – gilt für die Zeilen darunter
+                    heading_key = keys[0] if keys and keys[0] in HEADING_KEYS else None
+                    heading_text, since = line.rstrip(":"), 0
                 continue
-            # Preiszeile ohne eigenes (oder nur mit schwachem) Stichwort gehört zur Überschrift darüber,
-            # z. B. „Boote bis 8 m: 15,00 €“ unter „Liegegebühren“
-            if price is not None and heading_key and set(keys) <= {"max_laenge", "wassertiefe"}:
-                keys = [heading_key]
+            if is_pdf and line[:1].islower():
+                continue                                    # umbrochene Fortsetzungszeile aus einer PDF
+            inherited = False
+            if price is not None and heading_key and since <= HEADING_SPAN and set(keys) <= {"max_laenge", "wassertiefe"}:
+                keys, inherited = [heading_key], True       # „Boote bis 8 m: 15,00 €“ unter „Liegegebühren“
             if not keys or _OFFTOPIC.search(line):
                 continue
-            if price is None and len(line) > 100:
-                continue
+            if (price is None and len(line) > 100) or len(line) > 160:
+                continue                                    # Fließtext
             key = keys[0]
             norm = re.sub(r"\s+", " ", line).casefold()
             if norm in seen or count.get(key, 0) >= per_key:
@@ -475,6 +499,8 @@ def extract_rules(pages, per_key=4, total=40) -> list[dict]:
             seen.add(norm)
             count[key] = count.get(key, 0) + 1
             value = re.sub(r"\s*\|\s*", " ", line).strip()       # Tabellenzellen: Trenner nur fürs Zitat
+            if inherited and len(value) <= 30 and heading_text:
+                value = f"{heading_text}: {value}"                  # „0,70 €“ allein sagt nichts
             out.append({"key": key, "value": value, "price_eur": price, "quote": line, "page": pages.index(p) + 1})
             if len(out) >= total:
                 return out
@@ -573,7 +599,7 @@ def main(argv=None, client=None, fetcher=None) -> int:
     today = dt.date.today()
     marinas = load_json(data / "osm" / "marina.geojson", {}).get("features", [])
     out_path = data / OUT_REL
-    method = "claude" if args.ki else "regeln"
+    method = "claude" if args.ki else f"regeln-{RULES_VERSION}"
     store_doc = load_json(out_path, {"generated": None, "places": {}})
     store = store_doc.setdefault("places", {})
     only = {s.strip() for s in args.only.split(",")} if args.only else None
@@ -609,7 +635,7 @@ def main(argv=None, client=None, fetcher=None) -> int:
         if old.get("hash") == h and old.get("status") == "ok" and old.get("method") == method:
             store[fid] = {**old, "checked": stamp}             # unverändert: keine neue Auswertung nötig
             continue
-        if method == "regeln":
+        if method.startswith("regeln"):
             facts, dropped = verify(extract_rules(pages), pages)
             store[fid] = {"checked": stamp, "status": "ok", "method": method, "hash": h, "source": pages[0]["url"],
                           "pages": [p["url"] for p in pages], "facts": facts}

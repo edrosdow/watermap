@@ -1,1 +1,32 @@
-{"anzahl": 25, "lauf": 3, "hinweis": "Ändern dieser Datei auf einem claude/-Branch startet einen Hafeninfo-Probelauf (kostenlos, nach Regeln) nur auf diesem Branch (Netlify-Vorschau). Auf main löst sie nichts aus."}
+{
+ "anzahl": 25,
+ "lauf": 4,
+ "nur": [
+  "node/10007278355",
+  "node/11104737028",
+  "node/1139768305",
+  "node/1219940359",
+  "node/12595085951",
+  "node/12607553514",
+  "node/1274381986",
+  "node/1298693678",
+  "node/1312753539",
+  "node/1314526554",
+  "node/13310972323",
+  "node/1346046327",
+  "node/1349422288",
+  "node/1353947285",
+  "node/1368372643",
+  "node/1380650602",
+  "node/1393985093",
+  "node/14087924989",
+  "node/14130614004",
+  "node/1443441540",
+  "node/1446067390",
+  "node/1483625039",
+  "node/1531084348",
+  "node/1574518467",
+  "node/1606722302"
+ ],
+ "hinweis": "Ändern dieser Datei auf einem claude/-Branch startet einen Hafeninfo-Probelauf (kostenlos, nach Regeln) nur auf diesem Branch (Netlify-Vorschau). Auf main löst sie nichts aus."
+}

@@ -120,6 +120,24 @@ class RuleTests(unittest.TestCase):
                          "Hafenmeister NPorts Herr Bröcker: 0171-7325304")
         self.assertEqual([k for k, *_ in got], ["wassertiefe", "strom", "hafenmeister"])
 
+    def test_findings_from_trial_run_3(self):
+        # Bootsmiete unter der Überschrift „Hund“ (Sport-Boot-Center) – keine Hafenangabe
+        self.assertEqual(self.lines("Kaution 30,- € (Hund auf Anfrage)\n120,- €/bis 3 Stunden*\njede weitere Stunde 35,- €*"), [])
+        # Preisliste ohne Stichwort je Zeile (Labussee): Überschrift wird mitgenannt
+        got = self.lines("Strom\n0,70 €\nDuschen\n1,00 €")
+        self.assertEqual(got, [("strom", "Strom: 0,70 €", 0.7)])     # „Duschen“ gibt sein Stichwort nicht weiter
+        # Überschrift wirkt nur auf die nächsten Zeilen
+        self.assertEqual(self.lines("Strom\n" + "Text ohne Angabe\n" * 9 + "4,00 €"), [])
+
+    def test_rental_price_list_page_skipped(self):
+        page = {"url": "https://m.de/preise.pdf", "text": "Charter 2026\nReisezeit A B C\nKaution 500 €\nEndreinigung 80 €\n"
+                "Bettwäsche 15 €\ninkl. W-LAN\nDuschen 50,- €"}
+        self.assertEqual(hi.extract_rules([page]), [])
+
+    def test_pdf_continuation_fragment_skipped(self):
+        page = {"url": "https://m.de/ordnung.pdf", "text": "aktuellem Strompreis inklusive Umsatzsteuer spätestens 5 €\nStrom 0,45 € je kWh"}
+        self.assertEqual([f["value"] for f in hi.extract_rules([page])], ["Strom 0,45 € je kWh"])
+
     def test_first_price(self):
         for s, want in (("3,00 €", 3.0), ("1.200,00 €", 1200.0), ("1.200 €", 1200.0), ("€ 12", 12.0), ("5 EUR", 5.0),
                         ("3,- €", 3.0), ("12.50 €", 12.5), ("ohne Preis", None)):
@@ -279,7 +297,7 @@ class MainTests(unittest.TestCase):
             self.assertEqual(hi.main(["--data", str(data)], client=boom, fetcher=hi.Fetcher(opener=open_, pause=0, log=lambda *a: None)), 0)
             doc = json.loads((data / "hafeninfo.json").read_text())
             place = doc["places"]["node/3"]
-            self.assertEqual((doc["method"], place["method"]), ("regeln", "regeln"))
+            self.assertEqual((doc["method"], place["method"]), (f"regeln-{hi.RULES_VERSION}",) * 2)
             got = {f["key"]: f["value"] for f in place["facts"]}
             self.assertEqual(got["wasser"], "0,50 € Frischwasser / 70L")
             self.assertEqual(got["parken"], "5,00 € für PKW / Tag")

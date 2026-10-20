@@ -65,7 +65,7 @@ function render(entry, facts) {
       ])));
   }
   const src = safeHttpUrl(entry.source);
-  const verbatim = entry.method === 'regeln';          // Werte sind wörtliche Zeilen der Website – Belege wären doppelt
+  const verbatim = String(entry.method || '').startsWith('regeln');          // Werte sind wörtliche Zeilen der Website – Belege wären doppelt
   if (!verbatim) out.push(h('details', { class: 'hi-proof' }, h('summary', { text: 'Belege von der Website' }),
     h('ul', {}, facts.map(f => {
       const u = safeHttpUrl(f.url);
