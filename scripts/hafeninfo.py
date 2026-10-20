@@ -452,13 +452,13 @@ def first_price(line: str):
 
 # Nur diese Überschriften geben ihr Stichwort an die Preiszeilen darunter weiter (höchstens HEADING_SPAN Zeilen).
 # „Hund“, „Duschen“, „WLAN“ … stehen oft als einzelnes Wort über ganz anderen Preisen (z. B. Bootsmiete).
-RULES_VERSION = 4          # bei Änderungen an den Regeln erhöhen: dann werden auch unveränderte Websites neu ausgewertet
+RULES_VERSION = 5          # bei Änderungen an den Regeln erhöhen: dann werden auch unveränderte Websites neu ausgewertet
 HEADING_KEYS = {"gast_liegeplatz", "dauerliegeplatz", "strom", "wasser", "faekalien", "diesel", "benzin", "parken",
                 "wohnmobil", "slip", "kran", "winterlager", "entsorgung"}
 HEADING_SPAN = 8
 _CHECKBOX = re.compile(r"\b(?:ja|nein)\s*:?\s*\(\s*\)", re.I)        # PDF-Formular: „Ja: ( ) Nein: ( )“
 _ADDRESS = re.compile(r"(^|,\s*)\d{5}\s+[A-ZÄÖÜ][a-zäöüß]")                # „…straße 53a, 28197 Bremen“
-_PRICE_ONLY = re.compile(r"^[\d\s.,–-]*(?:€|eur|euro)?[\d\s.,–-]*(?:€|eur|euro)?$", re.I)  # Tabellenzelle „15,00 €“
+_PRICE_ONLY = re.compile(r"^(?:[\d\s.,|–-]|€|eur\b|euro\b)+$", re.I)                 # Tabellenzelle(n) „15,00 €“, „15,00 € | 90,00 €“
 _LEADER = re.compile(r"\s*(?:\.\s?){4,}\s*|\s*…{2,}\s*")               # Punkt-Leitern in Preislisten
 # Seiten, die vor allem Charter, Bootsmiete oder Ferienwohnungen bepreisen, werden ganz übersprungen
 _RENTAL_PAGE = re.compile(r"charter|reisezeit|kaution|endreinigung|bettwäsche|wäschepaket|hausboot|ferienwohn|ferienhaus|"
@@ -489,7 +489,7 @@ def extract_rules(pages, per_key=4, total=40) -> list[dict]:
             quote = raw.strip(" |-–•\t")
             line = _LEADER.sub(" ", _CHECKBOX.sub("", quote)).strip(" |-–•\t")
             nxt = raws[n + 1].strip() if n + 1 < len(raws) else ""
-            if first_price(line) is None and nxt and len(nxt) <= 25 and _PRICE_ONLY.match(nxt) and first_price(nxt) is not None \
+            if first_price(line) is None and nxt and len(nxt) <= 40 and _PRICE_ONLY.match(nxt) and first_price(nxt) is not None \
                     and any(rx.search(line) for rx in _RULES.values()):
                 quote, line, skip_next = f"{quote} {nxt}", f"{line} {nxt}", True   # „Gastlieger bis 6 m“ + Zelle „15,00 €“
             since += 1

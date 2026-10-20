@@ -99,6 +99,8 @@ class RuleTests(unittest.TestCase):
                          [("gast_liegeplatz", "Gastlieger bis 6 m 15,00 €", 15.0), ("gast_liegeplatz", "Gastlieger bis 8 m 18,00 €", 18.0),
                           ("strom", "Strom 0,50 €/kWh", 0.5)])
         self.assertEqual(hi.verify(got, pages)[1], 0)                        # Zitat über zwei Zeilen ist belegt
+        got = hi.extract_rules([{"url": "u", "text": "Gastlieger bis 6 m\n15,00 € | 90,00 €\nGastlieger bis 8 m\nauf Anfrage"}])
+        self.assertEqual([(f["value"], f["price_eur"]) for f in got], [("Gastlieger bis 6 m 15,00 € 90,00 €", 15.0), ("Gastlieger bis 8 m", None)])
 
     def test_form_boxes_and_dot_leaders_are_removed_but_quote_stays_verbatim(self):
         text = ("Sommerliegeplatz 01.04. - 31.10. Ja: ( ) Nein: ( )\n"
