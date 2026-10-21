@@ -94,23 +94,13 @@ function normalize(f) {
 }
 
 // ------------------------------------------------------------------ „In der Nähe“ live aus OpenStreetMap
-// Beim Öffnen eines Standorts fragt die App den Umkreis bei Overpass ab – über die eigene Domain
-// (/api/overpass/… → Netlify leitet weiter, siehe public/_redirects): keine IP-Adressen der Besucher bei Dritten,
-// der Import bleibt klein. Klappt das nicht (offline, Overpass überlastet), bleiben die importierten Daten.
+// Beim Öffnen eines Standorts fragt die App den Umkreis über die eigene Netlify-Funktion ab
+// (netlify/functions/umgebung.mjs → Overpass API): keine IP-Adressen der Besucher bei Dritten, der Import bleibt klein.
+// Klappt das nicht (offline, Overpass überlastet), bleiben die importierten Daten.
 const LIVE_KINDS = new Set(['lock', 'toilets', 'water', 'food', 'rest', 'parking', 'shop']);   // diese Arten deckt die Abfrage ab
-const LIVE_TIMEOUT_MS = 10000;
+const LIVE_TIMEOUT_MS = 20000;   // die Funktion versucht bis zu drei Overpass-Server
 const NOT_PUBLIC = new Set(['private', 'no', 'customers', 'permit', 'military', 'agricultural', 'forestry', 'delivery']);
 const liveCache = new Map();
-
-export function liveQuery(lat, lon, radius) {
-  const a = `(around:${radius},${lat.toFixed(5)},${lon.toFixed(5)})`;
-  return `[out:json][timeout:15];(`
-    + `nwr["tourism"~"^(camp_site|caravan_site|picnic_site)$"]${a};nwr["leisure"="picnic_site"]${a};`
-    + `nwr["amenity"~"^(parking|toilets|drinking_water|water_point|restaurant|cafe|fast_food|biergarten|pub)$"]${a};`
-    + `nwr["shop"~"^(supermarket|convenience|kiosk)$"]${a};`
-    + `way["lock"="yes"]["waterway"]${a};nwr["seamark:type"="lock_basin"]${a};`
-    + `);out tags center;`;
-}
 
 const tri = (v) => (v === 'yes' ? true : v === 'no' ? false : null);
 
@@ -150,7 +140,7 @@ export function liveNearby(lat, lon, radius, { fetchFn = fetch } = {}) {
   if (liveCache.has(key)) return liveCache.get(key);
   const ctl = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = ctl && setTimeout(() => ctl.abort(), LIVE_TIMEOUT_MS);
-  const p = fetchFn(`${CONFIG.OVERPASS_BASE}interpreter?data=${encodeURIComponent(liveQuery(lat, lon, radius))}`, { signal: ctl?.signal, headers: { Accept: 'application/json' } })
+  const p = fetchFn(`${CONFIG.UMGEBUNG_API}?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}`, { signal: ctl?.signal, headers: { Accept: 'application/json' } })
     .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
     .then(j => (Array.isArray(j?.elements) ? j.elements : []).map(fromOsm).filter(Boolean))
     .finally(() => timer && clearTimeout(timer));

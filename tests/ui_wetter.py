@@ -103,7 +103,7 @@ with sync_playwright() as p:
                             timezone_id='Europe/Berlin', service_workers='block',
                             geolocation={'latitude': 48.1, 'longitude': 11.6}, permissions=['geolocation'])
         ctx.route('**/api/wetter/**', api)
-        ctx.route('**/api/overpass/**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"elements": []}'))   # „In der Nähe“ live
+        ctx.route('**/.netlify/functions/umgebung*', lambda r: r.fulfill(status=200, content_type='application/json', body='{"elements": []}'))   # „In der Nähe“ live
         ctx.route('**/api/pegel/**', gauges)
         ctx.route(re.compile(r'https://([a-c]\.)?tile\.openstreetmap\.org/.*'), lambda r: r.fulfill(status=200, content_type='image/png', body=TILE))
         ctx.route(re.compile(r'https://(?!([a-c]\.)?tile\.openstreetmap\.org).*'), lambda r: (foreign.append(r.request.url), r.abort()))

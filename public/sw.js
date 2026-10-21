@@ -3,7 +3,7 @@
 //  * eigene Dateien (Seite, Skripte, Daten): erst Netzwerk, bei Ausfall Zwischenspeicher → Updates kommen sofort an
 //  * Bibliotheken von CDN und bereits gesehene Kartenkacheln: Zwischenspeicher zuerst (mit Obergrenze)
 // Offline heißt deshalb: Standortliste und Details funktionieren; Kartenkacheln nur dort, wo man vorher war.
-const VERSION = 'v7.13.0';
+const VERSION = 'v7.14.0';
 const SHELL = `watermap-shell-${VERSION}`;
 const TILES = `watermap-tiles-${VERSION}`;
 const LIBS = `watermap-libs-${VERSION}`;
@@ -51,8 +51,6 @@ self.addEventListener('fetch', (event) => {
     if (url.pathname.includes('/api/pegel/') && url.pathname.includes('/measurements')) return;
     // Wetter nie aus dem Zwischenspeicher zeigen – veraltete Warnungen wären schlimmer als keine
     if (url.pathname.includes('/api/wetter/')) return;
-    // „In der Nähe“ live: nicht speichern (je Standort eine Antwort; offline gelten die importierten Daten)
-    if (url.pathname.includes('/api/overpass/')) return;
     event.respondWith((async () => {
       try {
         const res = await fetch(req);

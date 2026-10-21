@@ -61,7 +61,7 @@ HAFENINFO = json.dumps({'generated': '2026-10-20', 'places': {ANCHOR['id']: {
 extras_calls = []
 mode = {'missing': False}
 
-# „In der Nähe“ live (Overpass über /api/overpass/): standardmäßig überlastet (503) → Rückfall auf den Import
+# „In der Nähe“ live (/.netlify/functions/umgebung): standardmäßig überlastet (503) → Rückfall auf den Import
 def m2deg(dn, de):
     import math
     return LAT + dn / 111_000, LON + de / (111_000 * math.cos(math.radians(LAT)))
@@ -81,7 +81,7 @@ LIVE = [
 live = {'mode': 'down', 'queries': []}
 def overpass(route):
     from urllib.parse import urlparse, parse_qs
-    q = parse_qs(urlparse(route.request.url).query).get('data', [''])[0]; live['queries'].append(q)
+    q = parse_qs(urlparse(route.request.url).query); live['queries'].append(q)
     if live['mode'] == 'down': return route.fulfill(status=503, body='busy')
     els = LIVE if live['mode'] == 'data' else []
     route.fulfill(status=200, content_type='application/json', body=json.dumps({'elements': els}))
@@ -116,7 +116,7 @@ with sync_playwright() as p:
         ctx.route('**/data/osm/extras.geojson', extras)
         ctx.route('**/data/hafeninfo.json', lambda r: r.fulfill(status=200, content_type='application/json', body=HAFENINFO))
         ctx.route('**/api/wetter/**', EMPTY_WX)
-        ctx.route('**/api/overpass/**', overpass)
+        ctx.route('**/.netlify/functions/umgebung*', overpass)
         ctx.route(re.compile(r'https://([a-c]\.)?tile\.openstreetmap\.org/.*'), lambda r: r.fulfill(status=200, content_type='image/png', body=TILE))
         ctx.route(re.compile(r'https://(?!([a-c]\.)?tile\.openstreetmap\.org).*'), lambda r: r.abort())
         ctx.add_init_script("document.addEventListener('securitypolicyviolation', e => (window.__csp = window.__csp || []).push(e.violatedDirective + ' ' + e.blockedURI));")
@@ -213,8 +213,8 @@ with sync_playwright() as p:
         live['mode'] = 'data'; live['queries'].clear()
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])})")
         pg.wait_for_selector('#detail .nearby-item:has-text("Markt Test")', timeout=8000)
-        q = live['queries'][-1] if live['queries'] else ''
-        check('around:500,' in q and 'camp_site' in q and 'supermarket' in q and 'out tags center' in q and 'lock' in q, f'{name}: Overpass-Abfrage 500 m mit Mittelpunkten')
+        q = live['queries'][-1] if live['queries'] else {}
+        check(abs(float(q.get('lat', ['0'])[0]) - LAT) < 1e-4 and abs(float(q.get('lon', ['0'])[0]) - LON) < 1e-4, f'{name}: Abfrage mit den Koordinaten des Standorts')
         txt = pg.inner_text('#detail .nearby-list')
         check('Abenteuercamp Test' in txt and 'Markt Test' in txt and 'Gasthof Test' in txt and 'Wohnmobilstellplatz' in txt and 'Parkplatz' in txt,
               f'{name}: Campingplatz, Supermarkt, Restaurant, Wohnmobilstellplatz, Parkplatz aus OSM')

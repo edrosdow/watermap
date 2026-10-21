@@ -1,0 +1,62 @@
+// „In der Nähe“: Einrichtungen im Umkreis eines Standorts live aus OpenStreetMap (Overpass API).
+// Aufruf: GET /.netlify/functions/umgebung?lat=51.00619&lon=12.98348
+// Die Abfrage baut die Funktion selbst (kein offener Proxy für beliebige Overpass-Abfragen) und schickt sie mit
+// eigener Kennung (User-Agent) – overpass-api.de lehnt weitergeleitete Anfragen ohne Kennung mit 406 ab.
+// Antwortet ein Server nicht, wird der nächste versucht. Antworten werden einen Tag im Netlify-CDN gehalten.
+export const RADIUS_M = 500;
+export const SERVER = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+];
+const TIMEOUT_MS = 9000;
+const USER_AGENT = 'WaterMap/1.0 (+https://watermaps.netlify.app; Karte für Slipanlagen und Häfen)';
+
+/** Overpass-Abfrage: Camping, Rastplätze, Parkplätze, Toiletten, Wasser, Gastronomie, Läden, Schleusen; Flächen mit Mittelpunkt. */
+export function abfrage(lat, lon, radius = RADIUS_M) {
+  const a = `(around:${radius},${lat.toFixed(5)},${lon.toFixed(5)})`;
+  return `[out:json][timeout:15];(`
+    + `nwr["tourism"~"^(camp_site|caravan_site|picnic_site)$"]${a};nwr["leisure"="picnic_site"]${a};`
+    + `nwr["amenity"~"^(parking|toilets|drinking_water|water_point|restaurant|cafe|fast_food|biergarten|pub)$"]${a};`
+    + `nwr["shop"~"^(supermarket|convenience|kiosk)$"]${a};`
+    + `way["lock"="yes"]["waterway"]${a};nwr["seamark:type"="lock_basin"]${a};`
+    + `);out tags center;`;
+}
+
+const json = (status, body, cache) => new Response(JSON.stringify(body), {
+  status,
+  headers: {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': cache ? 'public, max-age=3600' : 'no-store',
+    ...(cache ? { 'netlify-cdn-cache-control': 'public, durable, s-maxage=86400, stale-while-revalidate=86400' } : {}),
+  },
+});
+
+export async function handle(req, { fetchFn = fetch, server = SERVER, timeoutMs = TIMEOUT_MS } = {}) {
+  if (req.method !== 'GET') return json(405, { fehler: 'Nur GET.' });
+  const u = new URL(req.url);
+  const lat = Number(u.searchParams.get('lat')), lon = Number(u.searchParams.get('lon'));
+  // WaterMap deckt Deutschland ab (mit etwas Rand)
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < 46 || lat > 56 || lon < 4 || lon > 17) return json(400, { fehler: 'Ungültige Koordinaten.' });
+  const body = 'data=' + encodeURIComponent(abfrage(lat, lon));
+  const fehler = [];
+  for (const url of server) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), timeoutMs);
+    try {
+      const res = await fetchFn(url, { method: 'POST', body, signal: ctl.signal,
+        headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json', 'user-agent': USER_AGENT, referer: 'https://watermaps.netlify.app/' } });
+      if (!res.ok) { fehler.push(`${new URL(url).host}: ${res.status}`); continue; }
+      const data = await res.json();
+      if (!Array.isArray(data?.elements)) { fehler.push(`${new URL(url).host}: unerwartete Antwort`); continue; }
+      // nur, was die App braucht (keine Geometrien, keine Metadaten)
+      const elements = data.elements.map(e => ({ type: e.type, id: e.id, lat: e.lat, lon: e.lon, center: e.center, tags: e.tags }));
+      return json(200, { elements, quelle: new URL(url).host }, true);
+    } catch (e) {
+      fehler.push(`${new URL(url).host}: ${e.name === 'AbortError' ? 'Zeitüberschreitung' : e.message}`);
+    } finally { clearTimeout(timer); }
+  }
+  return json(502, { fehler: 'OpenStreetMap ist gerade nicht erreichbar.', details: fehler });
+}
+
+export default (req) => handle(req);
