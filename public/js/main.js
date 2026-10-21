@@ -312,7 +312,10 @@ function showDetail(p) {
     user: state.user,
     enrichFacts: enrichFacts(state.meta, p.id),
     weather: weatherSection(p.lat, p.lon),
-    nearby: hasExtras() ? nearbySection(extrasList(), p.lat, p.lon, { onSelect: (id) => selectExtra(id) }) : null,
+    nearby: nearbySection(hasExtras() ? extrasList() : Promise.resolve([]), p.lat, p.lon, {
+      exclude: p.id,
+      onSelect: (id, x) => { if (x && !state.extraById.has(id)) state.extraById.set(id, x); selectExtra(id); },   // Live-Einträge sind nicht im Import
+    }),
     actions: {
       close: closeDetail,
       onFavorite: () => { favorites.toggle(p.id); showDetail(p); renderList(); updateTabs(); renderFilterbar(); state.map?.refresh(p.id); },

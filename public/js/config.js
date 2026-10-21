@@ -1,6 +1,6 @@
 // Zentrale Einstellungen. Hier – und nur hier – werden Dienste und Grenzwerte angepasst.
 export const CONFIG = {
-  VERSION: '7.12.0',
+  VERSION: '7.13.0',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -36,6 +36,7 @@ export const CONFIG = {
 
   // „In der Nähe“ (Schleusen, Toiletten, Parkplätze … aus osm/extras.geojson)
   NEARBY_EXTRAS_M: 500,
+  OVERPASS_BASE: '/api/overpass/',   // „In der Nähe“ live aus OSM; Netlify leitet an overpass-api.de weiter (public/_redirects)
   NEARBY_EXTRAS_MAX: 12,
 
   // Hafeninfos von den Websites (data/hafeninfo.json): ab diesem Alter als möglicherweise veraltet markieren

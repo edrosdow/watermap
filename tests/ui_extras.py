@@ -61,6 +61,31 @@ HAFENINFO = json.dumps({'generated': '2026-10-20', 'places': {ANCHOR['id']: {
 extras_calls = []
 mode = {'missing': False}
 
+# „In der Nähe“ live (Overpass über /api/overpass/): standardmäßig überlastet (503) → Rückfall auf den Import
+def m2deg(dn, de):
+    import math
+    return LAT + dn / 111_000, LON + de / (111_000 * math.cos(math.radians(LAT)))
+def osm(t, i, dn, de, tags, area=False):
+    la, lo = m2deg(dn, de)
+    return {'type': t, 'id': 8_000_000 + i, 'tags': tags, **({'center': {'lat': la, 'lon': lo}} if area else {'lat': la, 'lon': lo})}
+LIVE = [
+    osm('way', 1, 300, 0, {'tourism': 'camp_site', 'name': 'Abenteuercamp Test'}, area=True),      # Fläche, Mittelpunkt 300 m
+    osm('node', 2, 0, 200, {'shop': 'supermarket', 'name': 'Markt Test'}),
+    osm('way', 3, -450, 0, {'amenity': 'parking'}, area=True),
+    osm('node', 4, 120, 0, {'amenity': 'restaurant', 'name': 'Gasthof Test'}),
+    osm('way', 5, 0, -600, {'amenity': 'parking', 'name': 'Zu weit'}, area=True),                  # Mittelpunkt > 500 m
+    osm('way', 6, 50, 50, {'amenity': 'parking', 'access': 'private', 'name': 'Privat'}, area=True),
+    osm('way', 7, 250, 250, {'tourism': 'caravan_site'}, area=True),
+    osm('node', 8, 10, 10, {'amenity': 'bench'}),                                                    # nicht gefragt
+]
+live = {'mode': 'down', 'queries': []}
+def overpass(route):
+    from urllib.parse import urlparse, parse_qs
+    q = parse_qs(urlparse(route.request.url).query).get('data', [''])[0]; live['queries'].append(q)
+    if live['mode'] == 'down': return route.fulfill(status=503, body='busy')
+    els = LIVE if live['mode'] == 'data' else []
+    route.fulfill(status=200, content_type='application/json', body=json.dumps({'elements': els}))
+
 def extras(route):
     extras_calls.append(1)
     if mode['missing']: return route.fulfill(status=404, body='')
@@ -91,6 +116,7 @@ with sync_playwright() as p:
         ctx.route('**/data/osm/extras.geojson', extras)
         ctx.route('**/data/hafeninfo.json', lambda r: r.fulfill(status=200, content_type='application/json', body=HAFENINFO))
         ctx.route('**/api/wetter/**', EMPTY_WX)
+        ctx.route('**/api/overpass/**', overpass)
         ctx.route(re.compile(r'https://([a-c]\.)?tile\.openstreetmap\.org/.*'), lambda r: r.fulfill(status=200, content_type='image/png', body=TILE))
         ctx.route(re.compile(r'https://(?!([a-c]\.)?tile\.openstreetmap\.org).*'), lambda r: r.abort())
         ctx.add_init_script("document.addEventListener('securitypolicyviolation', e => (window.__csp = window.__csp || []).push(e.violatedDirective + ' ' + e.blockedURI));")
@@ -99,7 +125,7 @@ with sync_playwright() as p:
         pg = ctx.new_page()
         errors = []
         pg.on('pageerror', lambda e: errors.append('pageerror: ' + str(e)))
-        pg.on('console', lambda m: errors.append(m.text) if m.type == 'error' else None)
+        pg.on('console', lambda m: errors.append(m.text) if m.type == 'error' and 'status of 503' not in m.text else None)   # 503 = Overpass absichtlich überlastet
         pg.goto(BASE); pg.wait_for_selector('.wm-cluster, .wm-pin', timeout=20000)
 
         check(pg.locator('.chip-extra').count() == 2, f'{name}: Chips „Schleusen & Brücken“ und „Service“')
@@ -182,6 +208,33 @@ with sync_playwright() as p:
 
         pg.locator('.chip-extra-wasser').click(); pg.locator('.chip-extra-service').click(); pg.wait_for_timeout(300)
         check(pg.locator('.wm-extra').count() == 0, f'{name}: Ausschalten entfernt die Marker')
+
+        # „In der Nähe“ live aus OSM: Flächen mit Mittelpunkt, Supermarkt, Campingplatz; Import ergänzt Brücken/Wehre/Kanu/Verleih
+        live['mode'] = 'data'; live['queries'].clear()
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])})")
+        pg.wait_for_selector('#detail .nearby-item:has-text("Markt Test")', timeout=8000)
+        q = live['queries'][-1] if live['queries'] else ''
+        check('around:500,' in q and 'camp_site' in q and 'supermarket' in q and 'out tags center' in q and 'lock' in q, f'{name}: Overpass-Abfrage 500 m mit Mittelpunkten')
+        txt = pg.inner_text('#detail .nearby-list')
+        check('Abenteuercamp Test' in txt and 'Markt Test' in txt and 'Gasthof Test' in txt and 'Wohnmobilstellplatz' in txt and 'Parkplatz' in txt,
+              f'{name}: Campingplatz, Supermarkt, Restaurant, Wohnmobilstellplatz, Parkplatz aus OSM')
+        check('Zu weit' not in txt and 'Privat' not in txt, f'{name}: Mittelpunkt über 500 m und private Parkplätze nicht dabei')
+        check('Hubbrücke Test' in txt and 'Wehr Test' in txt and 'Kanuverleih Test' in txt and 'Biergarten am Steg' not in txt,
+              f'{name}: Brücken/Wehre/Kanu aus dem Import, Service nur live (keine Doppelten)')
+        ds = [int(re.sub(r'\D', '', t)) if t.endswith(' m') else 99999 for t in pg.locator('#detail .nearby-dist').all_inner_texts()]
+        check(ds == sorted(ds), f'{name}: nach Entfernung sortiert {ds}')
+        camp = next(t for t in pg.locator('#detail .nearby-item').all_inner_texts() if 'Abenteuercamp' in t)
+        check(re.search(r'\b(29\d|30\d) m', camp) is not None, f'{name}: Entfernung zum Mittelpunkt der Fläche ({camp.splitlines()[-1]})')
+        pg.locator('#detail .nearby-item', has_text='Markt Test').click(); pg.wait_for_timeout(200)
+        check('Markt Test' in pg.inner_text('#detail h2') and 'Supermarkt' in pg.inner_text('#detail'), f'{name}: Live-Eintrag öffnet seine Details')
+        # Nichts gefunden: neuer Text, keine Behauptung über OSM
+        live['mode'] = 'empty'
+        far = next(f for f in slips if abs(f['geometry']['coordinates'][1] - LAT) > 1)
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(far['id'])})")
+        pg.wait_for_selector('#detail .nearby-list:not([aria-busy])'); pg.wait_for_timeout(300)
+        check(pg.inner_text('#detail .nearby-list').strip() == 'Keine weiteren Einrichtungen in unseren Daten gefunden.', f'{name}: Text bei leerem Ergebnis')
+        live['mode'] = 'down'
+        pg.keyboard.press('Escape')
 
         csp = pg.evaluate('window.__csp || []')
         check(not csp, f'{name}: keine CSP-Verstöße {csp[:3]}')

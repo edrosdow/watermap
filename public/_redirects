@@ -4,5 +4,7 @@
 /api/pegel/*  https://www.pegelonline.wsv.de/webservices/rest-api/v2/:splat  200
 # Wetter, Wind und Warnungen: Daten des Deutschen Wetterdienstes über Bright Sky (https://brightsky.dev)
 /api/wetter/*  https://api.brightsky.dev/:splat  200
+# „In der Nähe“: Einrichtungen im Umkreis live aus OpenStreetMap (Overpass API), ebenfalls über die eigene Domain
+/api/overpass/*  https://overpass-api.de/api/:splat  200
 # Pegel-Ampel unter einer kurzen Adresse
 /pegel-ampel  /pegel-ampel.html  200
