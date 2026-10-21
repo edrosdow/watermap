@@ -50,6 +50,13 @@ def measurements(uuid):
     n = DAYS[uuid] * 96
     return [{'timestamp': iso(NOW - dt.timedelta(minutes=15 * (n - i))), 'value': round(v0 - SLOPE[uuid] * (n - i) / 96, 1)} for i in range(n + 1)]
 
+alarm_calls, alarm_fail = [], {'on': False}
+def alarm(route):
+    body = json.loads(route.request.post_data or '{}'); alarm_calls.append(body)
+    if alarm_fail['on']: return route.fulfill(status=429, content_type='application/json', body=json.dumps({'fehler': 'Zu viele Anmeldungen für diese Adresse heute.'}))
+    extra = {'pegelName': 'Kaub', 'min': 40} if body.get('aktion') == 'bestaetigen' else {}
+    return route.fulfill(status=200, content_type='application/json', body=json.dumps({'ok': True, **extra}))
+
 calls = []
 def api(route):
     u = urlparse(route.request.url); calls.append(u.path + '?' + u.query)
@@ -76,16 +83,16 @@ with sync_playwright() as p:
         print(f'--- {name}')
         ctx = b.new_context(viewport=vp, device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile, locale='de-DE',
                             timezone_id='Europe/Berlin', service_workers='block')
-        ctx.route('**/api/pegel/**', api)
+        ctx.route('**/api/pegel/**', api); ctx.route('**/.netlify/functions/pegel-alarm', alarm)
         ctx.route(re.compile(r'https?://(?!127\.0\.0\.1).*'), lambda r: r.abort())
         ctx.add_init_script(SHARE_STUB); ctx.add_init_script(CSP_HOOK)
         pg = ctx.new_page(); errors = []
         pg.on('pageerror', lambda e: errors.append(str(e)))
-        pg.on('console', lambda m: errors.append(m.text) if m.type == 'error' else None)
+        pg.on('console', lambda m: errors.append(m.text) if m.type == 'error' and 'status of 429' not in m.text else None)
 
         pg.goto(BASE + 'pegel-ampel'); pg.locator('#am-q').wait_for()
         check('Pegel-Ampel' in pg.title() and pg.locator('meta[name=description]').get_attribute('content').startswith('Pegel-Ampel'), f'{name}: Title und Meta-Description')
-        check('Passt mein Boot heute aufs Wasser?' in pg.inner_text('main'), f'{name}: Untertitel')
+        check('Passt mein Boot heute aufs Wasser?' in pg.inner_text('body'), f'{name}: Untertitel')
         pg.wait_for_function('() => !document.getElementById("am-msg").textContent') if False else pg.wait_for_timeout(600)
         check(pg.locator('#am-result').is_hidden(), f'{name}: ohne Pegel kein Ergebnis')
 
@@ -96,28 +103,29 @@ with sync_playwright() as p:
         check(pg.locator('#am-list li').count() == 2, f'{name}: Suche über das Gewässer')
         pg.fill('#am-q', 'xyz'); check('Kein Pegel gefunden' in pg.inner_text('#am-list'), f'{name}: Suche ohne Treffer')
         pg.fill('#am-q', 'kaub'); pg.keyboard.press('Enter')
-        pg.locator('#am-result:not([hidden])').wait_for(); pg.locator('#am-chart .gc-line').wait_for(state='attached')
+        pg.locator('#am-result:not([hidden])').wait_for(); pg.locator('#am-chart .am-bars rect').first.wait_for(state='attached')
         check(any('KAUB' not in c and '1d26e504' in c and 'start=P14D' in c for c in calls), f'{name}: 14 Tage Verlauf abgefragt')
-        check(pg.inner_text('#am-status') == 'Mindestpegel eingeben', f'{name}: ohne Mindestpegel keine Ampel')
+        check(pg.inner_text('#am-title') == 'Gib deinen Mindestpegel ein' and 'is-unbekannt' in pg.get_attribute('#am-light', 'class'), f'{name}: ohne Mindestpegel keine Ampel')
         check(pg.evaluate('document.activeElement.id') == 'am-min', f'{name}: Fokus springt zum Mindestpegel')
 
         def setmin(v):
             pg.fill('#am-min', str(v)); pg.wait_for_timeout(400)
-            return pg.inner_text('#am-status')
+            return pg.text_content('#am-status')
         # Kaub 72 cm, fällt 20 cm/Tag
-        check(setmin(100) == 'Nicht befahrbar' and pg.inner_text('#am-res') == '−28 cm', f'{name}: 72 < 100 → rot, Reserve −28')
+        check(setmin(100) == 'Nicht befahrbar', f'{name}: 72 < 100 → rot')
+        check(pg.inner_text('#am-res') == '−28 cm' and pg.locator('#am-hints li.c-bad').count() == 1, f'{name}: Reserve −28, roter Hinweis')
         check('am-light is-rot' in pg.get_attribute('#am-light', 'class'), f'{name}: Ampel rot')
         check(setmin(60) == 'Knapp' and pg.inner_text('#am-res') == '+12 cm', f'{name}: Reserve 12 < 20 → gelb')
         check(setmin(30) == 'Knapp', f'{name}: grün, aber fallend: 72 − 3×20 = 12 < 30 → gelb')
-        check('fällt' in pg.inner_text('#am-hints'), f'{name}: Hinweis zum fallenden Pegel')
-        check('↓ fallend' in pg.inner_text('#am-trend') and '−20 cm pro Tag' in pg.inner_text('#am-trend-sub'), f'{name}: Trend-Kachel')
+        check('sinkt' in pg.inner_text('#am-hints') and pg.locator('#am-hints li.c-warn').count() >= 1, f'{name}: Warnhinweis zum fallenden Pegel')
+        check(pg.inner_text('#am-trend') == 'fallend' and '−20 cm pro Tag' in pg.inner_text('#am-where'), f'{name}: Trend-Kachel')
         check(setmin(0) == 'Heute befahrbar', f'{name}: 72 − 60 = 12 ≥ 0 → grün')
         check(1 <= pg.locator('#am-hints li').count() <= 3, f'{name}: 1–3 Hinweise')
-        check(pg.locator('#am-chart .gc-threshold').count() == 1, f'{name}: Mindestpegel gestrichelt im Diagramm')
-        check('14 Tage' in pg.inner_text('#am-chart-card h2'), f'{name}: Verlauf 14 Tage')
+        check(pg.locator('#am-chart .am-bars .min').count() == 1 and pg.locator('#am-chart .am-bars rect').count() == 14 and 'Minimum' in pg.inner_text('#am-chart'), f'{name}: 14 Tagesbalken, Minimum gestrichelt')
+        check('Tage' in pg.inner_text('#am-chart-card h2') and 'vor ' in pg.inner_text('#am-chart') and 'heute' in pg.inner_text('#am-chart'), f'{name}: Verlauf mit Achse')
         check('null' not in pg.inner_text('main') and 'undefined' not in pg.inner_text('main'), f'{name}: keine „null“/„undefined“ im Text')
         # Bootstyp
-        pg.click('#am-boot label:has-text("Kanu/SUP")'); pg.wait_for_timeout(100)
+        pg.click('#am-boot label:has-text("Kanu")'); pg.wait_for_timeout(100)
         check('Kanu/SUP' in pg.inner_text('#am-where'), f'{name}: Bootstyp wird angezeigt')
 
         # Slipanlagen
@@ -137,27 +145,49 @@ with sync_playwright() as p:
         check(pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), f'{name}: kein seitliches Scrollen')
         if mobile:
             small = pg.evaluate("""() => [...document.querySelectorAll('main button, main input, .am-seg span, #am-slips a')]
-                .filter(e => e.offsetParent && e.type !== 'radio').map(e => e.getBoundingClientRect()).filter(r => r.height < 44).length""")
+                .filter(e => e.offsetParent && e.type !== 'radio' && e.id !== 'am-website').map(e => e.getBoundingClientRect()).filter(r => r.height < 44).length""")
             check(small == 0, f'{name}: Touch-Ziele mindestens 44 px ({small} kleiner)')
 
+        # E-Mail-Alarm (Funktion nachgebildet)
+        alarm_calls.clear()
+        pg.fill('#am-mail', 'kein-mail'); pg.click('#am-alarm-btn'); pg.wait_for_timeout(150)
+        check('gültige' in pg.inner_text('#am-alarm-msg') and not alarm_calls, f'{name}: Alarm prüft die E-Mail-Adresse')
+        pg.fill('#am-mail', 'anna@example.de'); pg.click('#am-alarm-btn'); pg.wait_for_timeout(400)
+        check(alarm_calls and alarm_calls[-1] == {'aktion': 'anmelden', 'email': 'anna@example.de', 'pegel': KAUB, 'min': 0, 'website': ''}, f'{name}: Anmeldung sendet Pegel und Mindestpegel {alarm_calls[-1:]}')
+        check('bestätige' in pg.inner_text('#am-alarm-msg'), f'{name}: Hinweis auf die Bestätigungs-Mail')
+        alarm_fail['on'] = True
+        pg.fill('#am-mail', 'anna@example.de'); pg.click('#am-alarm-btn'); pg.wait_for_timeout(400)
+        check('Zu viele' in pg.inner_text('#am-alarm-msg'), f'{name}: Fehlermeldung der Funktion wird angezeigt')
+        alarm_fail['on'] = False
+        # Höhe über Wasser wird gespeichert und angezeigt
+        pg.fill('#am-hoehe', '2,4'); pg.wait_for_timeout(450)
+        check('Höhe über Wasser 2,40 m' in pg.inner_text('#am-where') and pg.is_visible('#am-hoehe-help'), f'{name}: Höhe über Wasser')
+
         # Wiederkehr: Eingaben aus dem lokalen Speicher
-        pg.goto(BASE + 'pegel-ampel'); pg.locator('#am-chart .gc-line').wait_for(state='attached')
-        check(pg.input_value('#am-min') == '0' and pg.input_value('#am-q') == 'Kaub' and pg.is_checked('#am-boot input[value=kanu]'), f'{name}: Eingaben gespeichert')
+        pg.goto(BASE + 'pegel-ampel'); pg.locator('#am-chart .am-bars rect').first.wait_for(state='attached')
+        check(pg.input_value('#am-hoehe') == '2,40', f'{name}: Höhe über Wasser gespeichert')
+        check(pg.input_value('#am-min') == '0' and pg.input_value('#am-q') == 'Rhein · Pegel Kaub' and pg.is_checked('#am-boot input[value=kanu]'), f'{name}: Eingaben gespeichert')
 
         # Geteilter Link in einem neuen Browser: zeigt das Ergebnis, überschreibt eigene Einstellungen nicht
-        ctx2 = b.new_context(viewport=vp, service_workers='block', locale='de-DE'); ctx2.route('**/api/pegel/**', api)
+        ctx2 = b.new_context(viewport=vp, service_workers='block', locale='de-DE'); ctx2.route('**/api/pegel/**', api); ctx2.route('**/.netlify/functions/pegel-alarm', alarm)
         ctx2.route(re.compile(r'https?://(?!127\.0\.0\.1).*'), lambda r: r.abort())
         pg2 = ctx2.new_page()
         pg2.goto(BASE + 'pegel-ampel'); pg2.evaluate("localStorage.setItem('watermap.ampel', JSON.stringify({pegel: null, min: 55, boot: 'segel'}))")
-        pg2.goto(BASE + f'pegel-ampel?pegel={KOELN}&min=280'); pg2.locator('#am-chart .gc-line').wait_for(state='attached')
-        check(pg2.inner_text('#am-status') == 'Heute befahrbar' and pg2.inner_text('#am-res') == '+32 cm', f'{name}: geteilter Link zeigt das Ergebnis direkt')
+        pg2.goto(BASE + f'pegel-ampel?pegel={KOELN}&min=280'); pg2.locator('#am-chart .am-bars rect').first.wait_for(state='attached')
+        check(pg2.text_content('#am-status') == 'Heute befahrbar' and pg2.inner_text('#am-res') == '+32 cm', f'{name}: geteilter Link zeigt das Ergebnis direkt')
         check(json.loads(pg2.evaluate("localStorage.getItem('watermap.ampel')"))['min'] == 55, f'{name}: geteilter Link überschreibt eigene Einstellungen nicht')
         pg2.goto(BASE + 'pegel-ampel?pegel=gibtsnicht&min=10'); pg2.wait_for_timeout(800)
         check('nicht gefunden' in pg2.inner_text('#am-msg'), f'{name}: unbekannter Pegel im Link: klare Meldung')
         # Kurzer Verlauf (Dresden: 5 Tage)
-        pg2.goto(BASE + 'pegel-ampel?pegel=70272185-b2b3-4178-96b8-43bea330dcae&min=150'); pg2.locator('#am-chart .gc-line').wait_for(state='attached')
+        pg2.goto(BASE + 'pegel-ampel?pegel=70272185-b2b3-4178-96b8-43bea330dcae&min=150'); pg2.locator('#am-chart .am-bars rect').first.wait_for(state='attached')
         check('Nur 5 Tage Verlauf verfügbar' in pg2.inner_text('#am-chart-card'), f'{name}: Hinweis bei kürzerem Verlauf')
-        check('→ gleich' in pg2.inner_text('#am-trend'), f'{name}: gleichbleibender Trend')
+        check(pg2.inner_text('#am-trend') == 'gleich', f'{name}: gleichbleibender Trend')
+        # Links aus den Mails
+        pg2.goto(BASE + f'pegel-ampel?pegel={KAUB}&min=40&alarm-bestaetigen=abcdefghijklmnopqrstuvwx'); pg2.wait_for_timeout(800)
+        check('ist aktiv' in pg2.inner_text('#am-alarm-msg') and alarm_calls[-1] == {'aktion': 'bestaetigen', 'token': 'abcdefghijklmnopqrstuvwx'}, f'{name}: Bestätigungs-Link')
+        check('alarm-bestaetigen' not in pg2.url, f'{name}: Token verschwindet aus der Adresse')
+        pg2.goto(BASE + 'pegel-ampel?alarm-abmelden=abcdefghijklmnopqrstuvwx'); pg2.wait_for_timeout(800)
+        check('abbestellt' in pg2.inner_text('#am-alarm-msg'), f'{name}: Abmelde-Link')
         ctx2.close()
 
         # Pegel nicht erreichbar

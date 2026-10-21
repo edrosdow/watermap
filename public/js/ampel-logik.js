@@ -9,10 +9,10 @@ export const PROGNOSE_TAGE = 3;       // so weit wird der Trend linear fortgesch
 const MIN_SPANNE_STUNDEN = 6;         // kürzere Messreihen ergeben keinen belastbaren Trend
 
 export const STATUS = {
-  gruen:     { label: 'Heute befahrbar', rang: 0 },
-  gelb:      { label: 'Knapp', rang: 1 },
-  rot:       { label: 'Nicht befahrbar', rang: 2 },
-  unbekannt: { label: 'Keine Bewertung möglich', rang: -1 },
+  gruen:     { label: 'Heute befahrbar', titel: 'Gute Bedingungen für dein Boot', rang: 0 },
+  gelb:      { label: 'Knapp', titel: 'Es wird knapp – plane mit Vorsicht', rang: 1 },
+  rot:       { label: 'Nicht befahrbar', titel: 'Heute besser nicht aufs Wasser', rang: 2 },
+  unbekannt: { label: 'Keine Bewertung', titel: 'Mindestpegel eingeben', rang: -1 },
 };
 
 export const BOOTSTYPEN = { motor: 'Motorboot', segel: 'Segelboot', kanu: 'Kanu/SUP' };
@@ -46,29 +46,37 @@ export function pruefePegel({ pegel, mindest, trend: tr = null, puffer = PUFFER_
   }
   const reserve = pegel.value - mindest;
   const hinweise = [];
+  const ok = (text) => hinweise.push({ typ: 'ok', text });
+  const warn = (text) => hinweise.push({ typ: 'warn', text });
+  const bad = (text) => hinweise.push({ typ: 'bad', text });
   let status;
   if (reserve < 0) {
     status = 'rot';
-    hinweise.push(`Der Pegel liegt ${fmt(reserve)} cm unter deinem Mindestpegel.`);
-    if (tr?.richtung === 'steigend') {
-      const tage = -reserve / tr.cmProTag;
-      if (tage <= PROGNOSE_TAGE) hinweise.push(`Der Pegel steigt. Bleibt der Trend so, ist dein Mindestpegel in etwa ${tageText(tage)} erreicht.`);
-    }
+    bad(`Pegel ${fmt(reserve)} cm unter deinem Mindestpegel`);
   } else if (reserve < puffer) {
     status = 'gelb';
-    hinweise.push(`Nur ${fmt(reserve)} cm über deinem Mindestpegel – weniger als ${puffer} cm Reserve.`);
+    warn(`Nur ${fmt(reserve)} cm über deinem Mindestpegel`);
   } else {
     status = 'gruen';
-    hinweise.push(`${fmt(reserve)} cm Reserve über deinem Mindestpegel.`);
+    ok(`${fmt(reserve)} cm über deinem Mindestpegel`);
   }
+  const rate = tr ? tr.cmProTag : 0;
   if (tr?.richtung === 'fallend' && reserve >= 0) {
-    const prognose = pegel.value + tr.cmProTag * PROGNOSE_TAGE;
-    if (prognose < mindest) {
+    const bisMin = reserve / -rate;
+    if (bisMin <= PROGNOSE_TAGE) {
       if (status === 'gruen') status = 'gelb';
-      hinweise.push(`Der Pegel fällt um etwa ${fmt(tr.cmProTag)} cm pro Tag. Bleibt das so, unterschreitet er deinen Mindestpegel in etwa ${tageText(reserve / -tr.cmProTag)}.`);
+      warn(`Pegel sinkt – in ca. ${tageText(bisMin)} unter deinem Minimum`);
+    } else if (status === 'gruen' && (reserve - puffer) / -rate <= PROGNOSE_TAGE) {
+      warn(`Pegel sinkt – in ca. ${tageText((reserve - puffer) / -rate)} wird es knapp`);
     } else {
-      hinweise.push(`Der Pegel fällt um etwa ${fmt(tr.cmProTag)} cm pro Tag.`);
+      warn(`Pegel sinkt um etwa ${fmt(rate)} cm pro Tag`);
     }
+  } else if (tr?.richtung === 'steigend') {
+    const bisMin = -reserve / rate;
+    if (status === 'rot' && bisMin <= PROGNOSE_TAGE) warn(`Pegel steigt – in ca. ${tageText(bisMin)} wieder über deinem Minimum`);
+    else ok(`Pegel steigt um etwa ${fmt(rate)} cm pro Tag`);
+  } else if (tr?.richtung === 'gleich') {
+    ok('Pegel bleibt etwa gleich');
   }
   return { status, reserve, hinweise };
 }
@@ -83,7 +91,7 @@ export function bewerte(ctx, pruefungen = PRUEFUNGEN) {
     ? bewertet.reduce((a, t) => (STATUS[t.status].rang > STATUS[a].rang ? t.status : a), 'gruen')
     : 'unbekannt';
   const hinweise = teile.flatMap(t => t.hinweise);
-  if (ctx.pegel?.state === 'old') hinweise.unshift('Achtung: Der letzte Messwert ist älter als einige Stunden.');
+  if (ctx.pegel?.state === 'old') hinweise.unshift({ typ: 'warn', text: 'Letzter Messwert ist mehrere Stunden alt' });
   return { status, reserve: teile[0]?.reserve ?? null, hinweise: hinweise.slice(0, 3) };
 }
 

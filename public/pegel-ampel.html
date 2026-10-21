@@ -1,46 +1,56 @@
 <!doctype html>
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pegel-Ampel – Passt mein Boot heute aufs Wasser? | WaterMap</title>
-<meta name="description" content="Pegel-Ampel für Wassersportler: aktueller Pegelstand, Trend und 14-Tage-Verlauf aller Pegel der Bundeswasserstraßen – mit deinem persönlichen Mindestpegel als Grün, Gelb oder Rot. Kostenlos.">
+<meta name="description" content="Pegel-Ampel für Wassersportler: aktueller Pegelstand, Trend und 14-Tage-Verlauf aller Pegel der Bundeswasserstraßen – mit deinem persönlichen Mindestpegel als Grün, Gelb oder Rot. Mit kostenlosem E-Mail-Alarm.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://watermaps.netlify.app/pegel-ampel">
 <meta property="og:title" content="Pegel-Ampel – Passt mein Boot heute aufs Wasser?">
-<meta property="og:description" content="Aktueller Pegel, Trend und Verlauf – mit deinem Mindestpegel als Ampel.">
+<meta property="og:description" content="Aktueller Pegel, Trend und Verlauf – mit deinem Mindestpegel als Ampel. Kostenloser E-Mail-Alarm.">
 <meta property="og:type" content="website">
-<meta name="theme-color" content="#0B3045">
+<meta name="theme-color" content="#0E2433">
 <link rel="icon" href="./icons/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./css/page.css"><link rel="stylesheet" href="./css/chart.css"><link rel="stylesheet" href="./css/ampel.css">
+<link rel="stylesheet" href="./css/ampel.css">
 </head>
-<body class="ampel-page">
-<header><a href="./">WaterMap</a><small>Pegel-Ampel</small></header>
-<main id="main">
-  <div class="am-head">
-    <h1>Pegel-Ampel</h1>
-    <p class="am-sub">Passt mein Boot heute aufs Wasser?</p>
+<body>
+<header class="am-hero">
+  <div class="am-bar">
+    <a class="am-logo" href="./"><span id="am-logo" aria-hidden="true"></span><span>WaterMap</span></a>
+    <a class="am-back" href="./">Zur Karte</a>
   </div>
+  <h1>Pegel-Ampel</h1>
+  <p>Passt mein Boot heute aufs Wasser? Pegel wählen, Mindestpegel eingeben, fertig.</p>
+</header>
 
-  <section class="am-card am-input" aria-label="Eingaben">
+<main id="main">
+  <section class="am-input" aria-label="Eingaben">
     <div class="am-field am-search">
-      <label for="am-q">Pegel</label>
-      <input id="am-q" type="search" autocomplete="off" placeholder="Pegel oder Gewässer suchen, z. B. Köln, Mosel" role="combobox" aria-expanded="false" aria-controls="am-list" aria-autocomplete="list">
+      <label for="am-q">Gewässer / Pegel</label>
+      <div class="am-searchbox">
+        <input id="am-q" type="search" autocomplete="off" placeholder="z. B. Rhein, Kaub, Mosel" role="combobox" aria-expanded="false" aria-controls="am-list" aria-autocomplete="list">
+        <span class="am-searchico" id="am-searchico" aria-hidden="true"></span>
+      </div>
       <ul id="am-list" class="am-list" role="listbox" hidden></ul>
-      <p class="am-picked" id="am-picked" hidden></p>
     </div>
     <div class="am-row">
       <div class="am-field">
         <label for="am-min">Mindestpegel</label>
-        <div class="am-unit"><input id="am-min" type="number" inputmode="numeric" min="-500" max="2000" step="1" placeholder="z. B. 120"><span>cm</span></div>
+        <div class="am-unit"><input id="am-min" type="number" inputmode="numeric" min="-500" max="2000" step="1" placeholder="z. B. 120" aria-describedby="am-help"><span>cm</span></div>
       </div>
-      <fieldset class="am-field am-boat">
-        <legend>Boot</legend>
-        <div class="am-seg" id="am-boot">
-          <label><input type="radio" name="boot" value="motor" checked><span>Motorboot</span></label>
-          <label><input type="radio" name="boot" value="segel"><span>Segelboot</span></label>
-          <label><input type="radio" name="boot" value="kanu"><span>Kanu/SUP</span></label>
-        </div>
-      </fieldset>
+      <div class="am-field">
+        <label for="am-hoehe">Höhe über Wasser</label>
+        <div class="am-unit"><input id="am-hoehe" type="text" inputmode="decimal" placeholder="optional" aria-describedby="am-hoehe-help"><span>m</span></div>
+      </div>
     </div>
-    <p class="am-help">Mindestpegel = der Pegelstand, ab dem du an dieser Stelle erfahrungsgemäß durchkommst. Der Pegel ist <strong>nicht</strong> die Wassertiefe.</p>
+    <fieldset class="am-boat">
+      <legend class="sr">Boot</legend>
+      <div class="am-seg" id="am-boot">
+        <label><input type="radio" name="boot" value="motor" checked><span>Motorboot</span></label>
+        <label><input type="radio" name="boot" value="segel"><span>Segelboot</span></label>
+        <label><input type="radio" name="boot" value="kanu"><span>Kanu / SUP</span></label>
+      </div>
+    </fieldset>
+    <p class="am-help" id="am-help">Mindestpegel = der Pegelstand, ab dem du an dieser Stelle erfahrungsgemäß durchkommst. Der Pegel ist <strong>nicht</strong> die Wassertiefe.</p>
+    <p class="am-help" id="am-hoehe-help" hidden>Die Höhe über Wasser wird gespeichert und später für den Brücken-Check genutzt.</p>
   </section>
 
   <p class="am-status-msg" id="am-msg" role="status"></p>
@@ -50,23 +60,42 @@
       <div class="am-light" id="am-light" role="img">
         <span class="l-rot"></span><span class="l-gelb"></span><span class="l-gruen"></span>
       </div>
-      <div>
-        <p class="am-status" id="am-status"></p>
-        <p class="am-where" id="am-where"></p>
+      <div class="am-head">
+        <p class="am-kicker" id="am-status"></p>
+        <p class="am-title" id="am-title"></p>
       </div>
     </div>
     <div class="am-tiles">
-      <div class="am-tile"><span>Pegel jetzt</span><strong id="am-now"></strong><small id="am-time"></small></div>
-      <div class="am-tile"><span>Reserve</span><strong id="am-res"></strong><small>zum Mindestpegel</small></div>
-      <div class="am-tile"><span>Trend 24 h</span><strong id="am-trend"></strong><small id="am-trend-sub"></small></div>
+      <div class="am-tile"><span>Pegel jetzt</span><strong id="am-now"></strong></div>
+      <div class="am-tile"><span>Reserve</span><strong id="am-res"></strong></div>
+      <div class="am-tile"><span>Trend</span><strong id="am-trend"></strong></div>
     </div>
-    <ul class="am-hints" id="am-hints"></ul>
-    <button type="button" class="am-btn" id="am-share">Ergebnis teilen</button>
+    <ul class="am-checks" id="am-hints"></ul>
+    <p class="am-meta" id="am-where"></p>
+    <button type="button" class="am-btn am-btn-ghost" id="am-share">Ergebnis teilen</button>
   </section>
 
   <section class="am-card" id="am-chart-card" hidden>
-    <h2>Pegelverlauf</h2>
-    <div id="am-chart" class="gauge-chart"></div>
+    <div class="am-cardhead"><h2 id="am-chart-title">Pegel letzte 14 Tage</h2><small>PEGELONLINE</small></div>
+    <div id="am-chart"></div>
+  </section>
+
+  <section class="am-card am-alarm" id="am-alarm" aria-labelledby="am-alarm-title">
+    <div class="am-alarm-head">
+      <span class="am-bell" id="am-bell" aria-hidden="true"></span>
+      <div>
+        <h2 id="am-alarm-title">Pegel-Alarm aktivieren</h2>
+        <p>Wir melden uns, sobald dein Gewässer wieder passt oder es knapp wird. Kostenlos.</p>
+      </div>
+    </div>
+    <form id="am-alarm-form" novalidate>
+      <label for="am-mail">E-Mail-Adresse</label>
+      <input id="am-mail" type="email" autocomplete="email" placeholder="name@beispiel.de" required>
+      <div class="am-hp" aria-hidden="true"><label for="am-website">Website</label><input id="am-website" name="website" tabindex="-1" autocomplete="off"></div>
+      <button type="submit" class="am-btn am-btn-light" id="am-alarm-btn">Alarm aktivieren</button>
+      <p class="am-alarm-msg" id="am-alarm-msg" role="status"></p>
+      <p class="am-alarm-note">Du bekommst zuerst eine Mail zum Bestätigen. Jede Benachrichtigung enthält einen Link zum Abbestellen. <a href="./datenschutz.html#pegel-alarm">Datenschutz</a></p>
+    </form>
   </section>
 
   <section class="am-card" id="am-slips-card" hidden>
@@ -77,7 +106,7 @@
   <footer class="am-foot">
     <p>Pegeldaten: <a href="https://www.pegelonline.wsv.de" target="_blank" rel="noopener noreferrer">PEGELONLINE</a>, Wasserstraßen- und Schifffahrtsverwaltung des Bundes (WSV), Datenlizenz Deutschland – Zero – 2.0. Slipanlagen: © OpenStreetMap-Mitwirkende, ODbL.</p>
     <p><strong>Ohne Gewähr, vor Ort immer selbst prüfen.</strong></p>
-    <p><a href="./">← Zur Karte</a> · <a href="./ueber.html">Über WaterMap</a> · <a href="./datenschutz.html">Datenschutz</a> · <a href="./impressum.html">Impressum</a></p>
+    <p><a href="./">Zur Karte</a> · <a href="./ueber.html">Über WaterMap</a> · <a href="./datenschutz.html">Datenschutz</a> · <a href="./impressum.html">Impressum</a></p>
   </footer>
 </main>
 <script type="module" src="./js/ampel.js"></script>

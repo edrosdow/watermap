@@ -22,6 +22,8 @@ Details: [docs/DATEN-AKTUALISIEREN.md](docs/DATEN-AKTUALISIEREN.md). Fehlt ein B
 ## Pegel-Ampel
 Eigene Seite unter `/pegel-ampel` (`public/pegel-ampel.html`, `js/ampel.js`, Logik in `js/ampel-logik.js`): Pegel wählen, persönlichen Mindestpegel eingeben → Grün/Gelb/Rot mit Trend, 14-Tage-Verlauf und den nächsten Slipanlagen. Puffer (20 cm), Trendschwelle und Prognosezeitraum stehen als Konstanten oben in `ampel-logik.js`. Weitere Prüfungen (z. B. Brücken) werden an `PRUEFUNGEN` angehängt. Teilbare Links: `/pegel-ampel?pegel=<PEGELONLINE-UUID>&min=<cm>`.
 
+**E-Mail-Alarm:** `netlify/functions/pegel-alarm.mjs` (Anmeldung mit Double-Opt-in) und `pegel-alarm-pruefen.mjs` (stündlich), Mails über Brevo (kostenlos). Einrichtung: [docs/PEGEL-ALARM.md](docs/PEGEL-ALARM.md).
+
 ## Ordner
 | Pfad | Inhalt |
 |---|---|
@@ -29,6 +31,7 @@ Eigene Seite unter `/pegel-ampel` (`public/pegel-ampel.html`, `js/ampel.js`, Log
 | `public/js/` | Programmcode: `main.js` (Ablauf), `map.js` (Leaflet), `data.js`, `model.js`, `forms.js`, `detail.js`, `search.js`, `icons.js`, `config.js` |
 | `public/data/osm/` | Standorte aus OpenStreetMap (GeoJSON, wird vom Import überschrieben) |
 | `public/data/community/` | Geprüfte Community-Daten (wird **nie** vom Import überschrieben) |
+| `netlify/` | Netlify-Funktionen (Foto-Verwaltung, Pegel-Alarm); `package.json` nur dafür |
 | `scripts/` | `import_osm.py`, `validate_data.py`, `submissions_to_json.py`, `vendor_libs.py` |
 | `tests/` | Automatische Tests |
 | `docs/` | Anleitungen, Datenschema, Moderation, Status |

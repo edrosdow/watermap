@@ -1,4 +1,4 @@
-"""Startet die Node-Tests der Pegel-Ampel-Logik (public/js/ampel-logik.js), wenn Node vorhanden ist."""
+"""Startet die Node-Tests der Pegel-Ampel (Logik und E-Mail-Alarm), wenn Node vorhanden ist."""
 import pathlib
 import shutil
 import subprocess
@@ -11,6 +11,11 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 class PegelAmpelLogikTests(unittest.TestCase):
     def test_logik(self):
         res = subprocess.run(["node", str(ROOT / "tests" / "ampel_logik_test.mjs")], capture_output=True, text=True, timeout=60)
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+
+    @unittest.skipUnless((ROOT / "node_modules" / "@netlify" / "blobs").exists(), "npm install fehlt")
+    def test_alarm(self):
+        res = subprocess.run(["node", str(ROOT / "tests" / "pegel_alarm_test.mjs")], capture_output=True, text=True, timeout=60)
         self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
 
 
