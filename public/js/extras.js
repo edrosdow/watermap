@@ -4,7 +4,7 @@
 import { CONFIG } from './config.js';
 import { h } from './dom.js';
 import { icon } from './icons.js';
-import { haversine, formatDistance, navUrl, osmNavUrl, safeHttpUrl, safeTel, UNKNOWN } from './model.js';
+import { haversine, formatDistance, navUrl, safeHttpUrl, safeTel, UNKNOWN } from './model.js';
 
 export const GROUPS = {
   wasser: { label: 'Schleusen & Brücken', color: '#3D4F63', kinds: ['lock', 'bridge', 'weir'] },
@@ -182,8 +182,7 @@ export function renderExtraDetail(x, { close, user }) {
   body.append(h('section', { class: 'block' }, h('h3', { text: 'Lage' }),
     h('p', { class: 'coords', text: `${x.lat.toFixed(5)}, ${x.lon.toFixed(5)}` }),
     h('div', { class: 'btn-row' },
-      h('a', { class: 'btn btn-primary', href: navUrl(x), target: '_blank', rel: 'noopener noreferrer', html: icon('navigate', 18) + '<span>Navigation starten</span>' }),
-      h('a', { class: 'btn btn-outline', href: osmNavUrl(x), target: '_blank', rel: 'noopener noreferrer', text: 'OpenStreetMap-Route' }))));
+      h('a', { class: 'btn btn-primary', href: navUrl(x), target: '_blank', rel: 'noopener noreferrer', html: icon('navigate', 18) + '<span>Navigation starten</span>' }))));
 
   const [type, id] = x.id.split('/');
   body.append(h('footer', { class: 'source' }, h('p', {}, 'Quelle: ',

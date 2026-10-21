@@ -155,9 +155,16 @@ function applyFilters() {
   const defs = one ? FILTERS[one].filter(d => state.subs.has(d.id)) : [];
   state.filtered = state.places.filter(p => state.cats.has(p.type) && defs.every(d => d.test(p)));
   renderFilterbar();
-  if (state.map) state.map.setPlaces(state.filtered);
+  if (state.map) state.map.setPlaces(withFavorites(state.filtered));
   if (state.map && state.selectedId) state.map.select(state.selectedId);
   renderList();
+}
+
+/** Favoriten bleiben auf der Karte sichtbar, auch wenn ihre Kategorie ausgeblendet ist. */
+function withFavorites(list) {
+  const shown = new Set(list.map(p => p.id));
+  const extra = favorites.all().map(id => state.byId.get(id)).filter(p => p && !shown.has(p.id));
+  return extra.length ? list.concat(extra) : list;
 }
 
 function renderFilterbar() {
@@ -188,6 +195,9 @@ function renderFilterbar() {
       }
     }
   }
+  const nFav = favorites.all().filter(id => state.byId.has(id)).length;
+  if (nFav) row1.prepend(h('button', { type: 'button', class: 'chip chip-fav', title: 'Meine Favoriten anzeigen', onclick: () => setListOpen(true, 'fav') },
+    h('span', { class: 'chip-dot', html: icon('star', 15, true) }), h('span', { text: 'Favoriten' }), h('span', { class: 'chip-n', text: String(nFav) })));
   bar.append(row1);
   if (!state.cats.size && state.places.length) {
     bar.append(h('p', { class: 'filter-hint', text: 'Tippe oben auf Slipanlagen, Marinas oder Tankstellen, um sie auf der Karte zu zeigen.' }));
@@ -305,7 +315,7 @@ function showDetail(p) {
     nearby: hasExtras() ? nearbySection(extrasList(), p.lat, p.lon, { onSelect: (id) => selectExtra(id) }) : null,
     actions: {
       close: closeDetail,
-      onFavorite: () => { favorites.toggle(p.id); showDetail(p); if (state.tab === 'fav' || true) renderList(); updateTabs(); },
+      onFavorite: () => { favorites.toggle(p.id); showDetail(p); renderList(); updateTabs(); renderFilterbar(); state.map?.refresh(p.id); },
       share: () => shareLink(p),
       report: () => openReport('fehler-melden', { standort_id: p.id }),
       addPhoto: () => openReport('foto-einreichen', { standort_id: p.id }),

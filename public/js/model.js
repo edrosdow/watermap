@@ -84,10 +84,6 @@ export function navUrl(p) {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.lat + ',' + p.lon)}`;
 }
 
-export function osmNavUrl(p) {
-  return `https://www.openstreetmap.org/directions?route=%3B${encodeURIComponent(p.lat + ',' + p.lon)}`;
-}
-
 // ---------------------------------------------------------------- Filter
 // Ein Filter lässt nur Standorte durch, bei denen die Eigenschaft BESTÄTIGT zutrifft.
 export const FILTERS = {

@@ -26,7 +26,7 @@ with sync_playwright() as p:
     check(pg.locator('.place').count() == online > 0, f'Offline: Standortliste weiterhin vorhanden ({online})')
     check(pg.locator('#offline').is_visible(), 'Offline: Hinweis sichtbar')
     pg.click('.place >> nth=0'); pg.wait_for_selector('#detail:not([hidden])')
-    check('Nicht bekannt' in pg.inner_text('#detail'), 'Offline: Details öffnen')
+    check('Eigenschaften' in pg.inner_text('#detail'), 'Offline: Details öffnen')
     ctx.set_offline(False)
     check(not errs, f'Keine JS-Fehler {errs[:2]}')
     # Manifest

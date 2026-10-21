@@ -67,16 +67,24 @@ with sync_playwright() as p:
         # Detail
         pg.click('.place >> nth=0'); pg.wait_for_selector('#detail:not([hidden])')
         txt = pg.inner_text('#detail')
-        check('Nicht bekannt' in txt, f'{name}: unbekannte Angaben als "Nicht bekannt"')
-        check('keine Wasserroute' in txt, f'{name}: Hinweis Straßenroute ≠ Wasserroute')
-        check('nicht vor Ort geprüft' in txt, f'{name}: OSM-Hinweis')
+        check('Nicht bekannt' not in txt and pg.locator('#detail .facts-more').is_visible(), f'{name}: unbekannte Angaben eingeklappt')
+        pg.click('#detail .facts-more')
+        check('Nicht bekannt' in pg.inner_text('#detail'), f'{name}: aufgeklappt als "Nicht bekannt"')
+        check('keine Wasserroute' in (pg.get_attribute('#detail .act-primary', 'title') or ''), f'{name}: Hinweis Straßenroute ≠ Wasserroute')
+        check(pg.locator('#detail', has_text='OpenStreetMap-Route').count() == 0, f'{name}: keine OpenStreetMap-Route')
+        check('OpenStreetMap · ungeprüft' in txt and 'nicht vor ort geprüft' not in txt.lower(), f'{name}: OSM-Herkunft dezent')
+        pg.click('#detail .trust')
+        check('nicht vor ort geprüft' in pg.inner_text('#detail').lower(), f'{name}: OSM-Hinweis beim Antippen')
         check('#p=' in pg.url, f'{name}: Deep-Link gesetzt')
         pg.screenshot(path=str(SHOTS / f'{name}_detail.png'))
         # Favorit
         pg.click('#detail .fav'); pg.wait_for_timeout(100)
         check(pg.locator('#detail .fav.is-on').count() == 1, f'{name}: Favorit gesetzt')
+        check(pg.locator('.chip-fav .chip-n').inner_text() == '1', f'{name}: Chip „Favoriten“ mit Anzahl')
+        pg.evaluate('window.__watermap.applyFilters()')   # Stub zeichnet setIcon in Gruppen nicht neu
+        check(pg.locator('.wm-pin.is-fav .wm-fav').count() >= 1, f'{name}: Favorit-Pin mit Stern')
         # Formular Fehler melden
-        pg.click('#detail button:has-text("Fehler melden")'); pg.wait_for_selector('#dlg[open]')
+        pg.click('#detail button[title="Fehler melden"]'); pg.wait_for_selector('#dlg[open]')
         pg.screenshot(path=str(SHOTS / f'{name}_form.png'))
         pg.click('#dlg .btn-primary'); pg.wait_for_timeout(100)
         check('Pflichtfelder' in pg.inner_text('#dlg') or 'Standort' in pg.inner_text('#dlg'), f'{name}: Validierung meldet fehlende Angaben')
