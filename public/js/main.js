@@ -692,6 +692,7 @@ function buildMenu() {
     h('p', { class: 'muted', text: 'Dein Revier. Deine Karte.' }),
     h('ul', { class: 'menu-list' },
       item('list', 'Standortliste', () => setListOpen(true, 'list'), 'Standorte im Kartenausschnitt'),
+      item('gauge', 'Pegel-Ampel', () => { location.href = './pegel-ampel'; }, 'Passt mein Boot heute aufs Wasser?'),
       item('star', 'Favoriten', () => setListOpen(true, 'fav'), `${favorites.all().length} gespeichert`),
       item('plus', 'Neue Slipanlage melden', () => openReport('slipanlage-melden')),
       item('plus', 'Kraftstoffpreis melden', () => choosePlaceFor('tankpreis-melden')),

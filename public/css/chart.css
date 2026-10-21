@@ -1,0 +1,20 @@
+/* Eigene SVG-Diagramme (Pegel, Wetter): Karte und Pegel-Ampel. Farben über Variablen der jeweiligen Seite. */
+.gc-wrap { position: relative; padding-top: 30px; }   /* Platz für den Tooltip, damit er nichts verdeckt */
+.gc-svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.gc-grid { stroke: #E6EDF1; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.gc-axis, .gc-reflabel { font-size: 10.5px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.gc-reflabel { font-weight: 700; }
+.gc-ref { stroke: #9DB0BC; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.gc-ref.is-hsw { stroke: #D03B3B; }
+.gc-line { fill: none; stroke: #1F6FB2; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.gc-area { fill: #1F6FB2; opacity: .1; }
+.gc-dot { fill: #1F6FB2; stroke: #fff; stroke-width: 2; }
+.gc-cross { stroke: var(--muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.gc-tip { position: absolute; top: 0; transform: translateX(-50%); background: var(--navy); color: #fff; font-size: 12px; font-weight: 600; padding: 5px 9px; border-radius: 8px; max-width: 100%; width: max-content; text-align: center; pointer-events: none; font-variant-numeric: tabular-nums; }
+.gc-table { font-size: 13px; margin-top: 6px; }
+.gc-table summary { cursor: pointer; color: #06667E; font-weight: 600; padding: 6px 0; }
+.gc-table table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.gc-table th, .gc-table td { text-align: left; padding: 5px 4px; border-bottom: 1px solid #EEF3F5; }
+.gc-table th { color: var(--muted); font-weight: 600; }
+.gc-threshold { stroke: #B91C1C; stroke-width: 1.5; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
+.gc-threshold-label { fill: #B91C1C; }

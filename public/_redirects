@@ -4,3 +4,5 @@
 /api/pegel/*  https://www.pegelonline.wsv.de/webservices/rest-api/v2/:splat  200
 # Wetter, Wind und Warnungen: Daten des Deutschen Wetterdienstes über Bright Sky (https://brightsky.dev)
 /api/wetter/*  https://api.brightsky.dev/:splat  200
+# Pegel-Ampel unter einer kurzen Adresse
+/pegel-ampel  /pegel-ampel.html  200

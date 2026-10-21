@@ -71,8 +71,8 @@ export async function loadGauges() {
   return raw.map(s => normalizeStation(s, now)).filter(Boolean);
 }
 
-export async function loadHistory(id) {
-  const raw = await getJson(`stations/${encodeURIComponent(id)}/W/measurements.json?start=P${CONFIG.PEGEL_HISTORY_DAYS}D`);
+export async function loadHistory(id, days = CONFIG.PEGEL_HISTORY_DAYS) {
+  const raw = await getJson(`stations/${encodeURIComponent(id)}/W/measurements.json?start=P${days}D`);
   if (!Array.isArray(raw)) throw new Error('Unerwartete Antwort');
   return raw.map(m => ({ t: Date.parse(m.timestamp), v: num(m.value) }))
     .filter(m => Number.isFinite(m.t) && m.v !== null).sort((a, b) => a.t - b.t);
@@ -138,6 +138,8 @@ export function renderGaugeDetail(g, { history, close, user, distance, weather }
 
   if (weather) body.append(weather);
 
+  body.append(h('a', { class: 'btn btn-outline ampel-link', href: `./pegel-ampel?pegel=${encodeURIComponent(g.id)}`, html: icon('gauge', 18) + '<span>In der Pegel-Ampel prüfen</span>' }));
+
   body.append(h('p', { class: 'hint', text: 'Pegelwerte beziehen sich auf den Pegelnullpunkt, nicht auf die Wassertiefe. Für Fahrrinnentiefen gelten die amtlichen Bekanntmachungen.' }));
 
   body.append(h('footer', { class: 'source' },
@@ -170,7 +172,8 @@ function gaugeMeter(g) {
 
 // ------------------------------------------------------------------ Verlaufsdiagramm (eigenes SVG, keine Bibliothek)
 
-export function historyChart(pts, g) {
+/** opts.threshold = { value, label } zeichnet eine gestrichelte Linie (z. B. Mindestpegel der Pegel-Ampel). */
+export function historyChart(pts, g, { threshold = null } = {}) {
   const W = 360, H = 176, L = 40, R = 46, T = 10, B = 24;
   const vs = pts.map(p => p.v);
   let lo = Math.min(...vs), hi = Math.max(...vs);
@@ -178,6 +181,7 @@ export function historyChart(pts, g) {
   // Kennwerte nur zeigen, wenn sie das Diagramm nicht platt drücken
   const refs = Object.entries(g.refs).filter(([, v]) => v >= lo - span && v <= hi + span);
   for (const [, v] of refs) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  if (threshold) { lo = Math.min(lo, threshold.value); hi = Math.max(hi, threshold.value); }
   const step = niceStep(Math.max(hi - lo, 10));
   lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
   if (hi === lo) hi = lo + step;
@@ -204,6 +208,10 @@ export function historyChart(pts, g) {
   for (const [k, v] of refs) {
     svg.append(s('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'gc-ref' + (k === 'HSW' ? ' is-hsw' : '') }));
     const t = s('text', { x: W - R + 4, y: y(v) + 4, class: 'gc-reflabel' }); t.textContent = k; svg.append(t);
+  }
+  if (threshold) {
+    svg.append(s('line', { x1: L, x2: W - R, y1: y(threshold.value), y2: y(threshold.value), class: 'gc-threshold' }));
+    const t = s('text', { x: W - R + 4, y: y(threshold.value) + 4, class: 'gc-reflabel gc-threshold-label' }); t.textContent = threshold.label; svg.append(t);
   }
   // Linie (Lücken > 1 h werden nicht überbrückt) und Fläche
   let d = '', prev = null;

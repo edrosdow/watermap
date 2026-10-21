@@ -223,23 +223,6 @@ body:not(.list-open) .sidebar { display: none; }
 .gm-labels > span:nth-child(even) { top: 20px; }
 .gm-labels b { color: var(--ink); margin-right: 3px; }
 .gauge-chart { min-height: 60px; }
-.gc-wrap { position: relative; padding-top: 30px; }   /* Platz für den Tooltip, damit er nichts verdeckt */
-.gc-svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
-.gc-grid { stroke: #E6EDF1; stroke-width: 1; vector-effect: non-scaling-stroke; }
-.gc-axis, .gc-reflabel { font-size: 10.5px; fill: var(--muted); font-variant-numeric: tabular-nums; }
-.gc-reflabel { font-weight: 700; }
-.gc-ref { stroke: #9DB0BC; stroke-width: 1; vector-effect: non-scaling-stroke; }
-.gc-ref.is-hsw { stroke: #D03B3B; }
-.gc-line { fill: none; stroke: #1F6FB2; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-.gc-area { fill: #1F6FB2; opacity: .1; }
-.gc-dot { fill: #1F6FB2; stroke: #fff; stroke-width: 2; }
-.gc-cross { stroke: var(--muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.gc-tip { position: absolute; top: 0; transform: translateX(-50%); background: var(--navy); color: #fff; font-size: 12px; font-weight: 600; padding: 5px 9px; border-radius: 8px; max-width: 100%; width: max-content; text-align: center; pointer-events: none; font-variant-numeric: tabular-nums; }
-.gc-table { font-size: 13px; margin-top: 6px; }
-.gc-table summary { cursor: pointer; color: #06667E; font-weight: 600; padding: 6px 0; }
-.gc-table table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.gc-table th, .gc-table td { text-align: left; padding: 5px 4px; border-bottom: 1px solid #EEF3F5; }
-.gc-table th { color: var(--muted); font-weight: 600; }
 
 /* ---------------------------------------------------------------- Wetter und Wind */
 .wx { display: flex; flex-direction: column; gap: 12px; }
@@ -385,6 +368,7 @@ body:not(.list-open) .sidebar { display: none; }
 .contact { display: flex; gap: 10px; align-items: center; min-height: 40px; word-break: break-word; }
 .coords { margin: 0; font-variant-numeric: tabular-nums; color: var(--muted); }
 .hint { margin: 0; font-size: 12.5px; color: var(--muted); }
+.ampel-link { align-self: flex-start; }
 .actions { flex-direction: row; flex-wrap: wrap; }
 .source { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
 .detail-body > .source:last-child { text-align: center; }
