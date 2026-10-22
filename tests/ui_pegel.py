@@ -114,6 +114,7 @@ with sync_playwright() as p:
                             timezone_id='Europe/Berlin', service_workers='block')
         ctx.route('**/api/pegel/**', api)
         # Das Pegel-Detail lädt auch das Wetter (eigener Test: ui_wetter.py) – hier nur leere Antworten
+        ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))   # „Heute vor Ort“ (eigener Test: ui_meldungen.py)
         ctx.route('**/api/wetter/**', lambda r: r.fulfill(status=200, content_type='application/json',
                   body=json.dumps({'current_weather': {'weather': None}, 'weather': {'weather': []}}.get(urlparse(r.request.url).path.rsplit('/', 1)[1], {'alerts': []}))))
         ctx.route(re.compile(r'https://([a-c]\.)?tile\.openstreetmap\.org/.*'), lambda r: r.fulfill(status=200, content_type='image/png', body=TILE))

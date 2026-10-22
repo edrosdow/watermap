@@ -601,7 +601,7 @@ body:not(.list-open) .sidebar { display: none; }
   .peek-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
   .peek-actions .dbtn { min-height: 48px; }
   .fab { bottom: 16px; }
-  .has-peek .fab { bottom: calc(var(--peek-h, 180px) + 22px); }
+  .has-peek .fab { bottom: calc(var(--peek-h, 180px) + 38px); }
   body:not(.has-peek) .map-wrap:has(.consent) .fab { display: none; } /* Karte liegt sonst über dem Knopf; sie bietet dasselbe an */
   .leaflet-control-zoom { display: none; }
   .banner { left: 10px; right: 10px; bottom: 12px; max-width: none; }

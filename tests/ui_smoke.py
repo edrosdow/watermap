@@ -24,6 +24,7 @@ def route_libs(ctx):
         rel = route.request.url.split('/data/', 1)[1].split('?')[0]
         f = FIXTURE / rel
         return route.fulfill(status=200, content_type='application/json', body=f.read_bytes()) if f.is_file() else route.fulfill(status=404, body='')
+    ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))   # „Heute vor Ort“ (eigener Test: ui_meldungen.py)
     ctx.route('**/data/**', data)
     # Details laden auch das Wetter (eigener Test: ui_wetter.py) – hier nur leere Antworten
     ctx.route('**/.netlify/functions/umgebung*', lambda r: r.fulfill(status=200, content_type='application/json', body='{"elements": []}'))   # „In der Nähe“ live

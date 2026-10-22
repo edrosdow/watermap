@@ -133,6 +133,7 @@ with sync_playwright() as p:
         ctx.route('**/data/meta.json', lambda r: r.fulfill(status=200, content_type='application/json', body=json.dumps(META)))
         ctx.route('**/data/osm/extras.geojson', extras)
         ctx.route('**/data/hafeninfo.json', lambda r: r.fulfill(status=200, content_type='application/json', body=HAFENINFO))
+        ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))   # „Heute vor Ort“ (eigener Test: ui_meldungen.py)
         ctx.route('**/api/wetter/**', EMPTY_WX)
         ctx.route('**/.netlify/functions/umgebung*', overpass)
         ctx.route('https://overpass-api.de/**', overpass)

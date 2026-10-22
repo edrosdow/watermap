@@ -93,6 +93,7 @@ def new_page(b, mobile=False, geo=True, block_libs=False, fresh=False, **kw):
     ctx = b.new_context(viewport=vp, device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile, locale='de-DE',
                         geolocation={'latitude': 51.5, 'longitude': 7.5} if geo else None, permissions=['geolocation'] if geo else [], **kw)
     lib_routes(ctx, block_libs)
+    ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))   # „Heute vor Ort“ (eigener Test: ui_meldungen.py)
     if not fresh: ctx.add_init_script("try { if (localStorage.getItem('watermap.cats') === null) { localStorage.setItem('watermap.cats', 'slip,marina,fuel'); localStorage.setItem('watermap.listOpen', '1'); } } catch {}")   # alte Ansicht: alle Kategorien, Liste offen
     pg = ctx.new_page(); errs = []
     pg.on('pageerror', lambda e: errs.append('PAGEERROR ' + str(e)))
@@ -510,8 +511,8 @@ def mobile(b):
     check(not small, f'Touch-Flächen ≥ 40 px {small[:4]}')
     hb = pg.locator('.app-header').bounding_box(); sb = pg.locator('#q').bounding_box()
     check(pg.locator('.brand-text').is_hidden() and sb['width'] > 390 * 0.7, 'Kopf: Logo-Symbol und breites Suchfeld, kein Schriftzug')
-    cats = pg.locator('#cats .cat'); w = [cats.nth(i).bounding_box()['width'] for i in range(3)]
-    check(max(w) - min(w) < 2, f'Kategorie-Umschalter: drei gleich breite Felder ({[round(x) for x in w]})')
+    cats = pg.locator('#cats .cat')
+    check(cats.count() == 3 and [cats.nth(i).inner_text().strip() for i in range(3)] == ['Slip', 'Häfen', 'Tanken'], 'Kategorie-Chips: Slip · Häfen · Tanken')
     pg.click('.cat-slip'); pg.click('.cat-marina'); pg.wait_for_timeout(200)   # nur Tankstellen
     check(pg.evaluate("getComputedStyle(document.querySelector('.cat-fuel')).backgroundColor") == 'rgb(255, 255, 255)', 'Aktive Kategorie weiß gefüllt')
     bn = pg.locator('#bottomnav').bounding_box()
