@@ -1,6 +1,6 @@
 """Ausführlicher UI-Test (Playwright + Leaflet-Ersatz) mit SYNTHETISCHEN Testdaten in einer temporären Kopie.
 Es wird nichts in public/ verändert.   Start: python3 tests/ui_full.py [screenshots-ordner]"""
-import functools, http.server, io, json, pathlib, random, shutil, socketserver, sys, tempfile, threading, datetime as dt
+import functools, http.server, io, json, pathlib, random, re, shutil, socketserver, sys, tempfile, threading, datetime as dt
 from playwright.sync_api import sync_playwright
 from PIL import Image
 
@@ -118,7 +118,7 @@ def run():
         try:
             with sync_playwright() as p:
                 b = p.chromium.launch()
-                defaults(b); desktop(b); mobile(b); failures(b, site)
+                defaults(b); desktop(b); mobile(b); photo_form(b, False); photo_form(b, True); failures(b, site)
                 b.close()
         finally:
             srv.shutdown()
@@ -304,30 +304,19 @@ def desktop(b):
         check(b'\xff\xd8\xff' in raw, 'Foto wurde als JPEG neu kodiert gesendet')
         check(b'dublette_bestaetigt' in raw, 'Dubletten-Bestätigung wird mitgesendet')
     pg.click('#dlg-body button:has-text("Schließen")')
-    # Falsche Dateien
+    # Foto aus dem Menü: Standort auf der Karte antippen (ausführlich: photo_form)
     pg.evaluate("localStorage.clear()")
     pg.click('#btn-menu'); pg.click('#menu .menu-item:has-text("Foto einreichen")'); pg.wait_for_selector('#pickbar:not([hidden])')
     check('Tippe auf der Karte' in pg.inner_text('#pickbar') and pg.locator('#dlg[open]').count() == 0, 'Foto aus Menü: Standort auf der Karte wählen, keine Liste')
     pg.evaluate("window.__watermap.selectPlace('node/1')"); pg.wait_for_selector('#dlg[open]')
-    check(pg.locator('#dlg input[name=standort_id]').get_attribute('value') == 'node/1' and pg.locator('#pickbar').is_hidden()
-          and pg.locator('#dlg select[name=standort_id]').count() == 0, 'Foto aus Menü: angetippter Standort steht im Formular')
-    pg.fill('textarea[name=beschreibung]', 'Test')
-    pg.check('input[name=foto_rechte]')
-    pg.set_input_files('input[name=foto]', {'name': 'virus.jpg', 'mimeType': 'image/jpeg', 'buffer': b'MZ\x90\x00 not an image at all' * 10})
-    pg.click('#dlg-body button:has-text("Foto zur Prüfung senden")'); pg.wait_for_timeout(500)
-    check('Nur JPEG' in pg.inner_text('#dlg .form-status'), 'Datei mit falschem Inhalt (nur umbenannt) wird abgelehnt')
-    pg.set_input_files('input[name=foto]', {'name': 'big.jpg', 'mimeType': 'image/jpeg', 'buffer': b'\xff\xd8\xff' + b'0' * (6 * 1024 * 1024)})
-    pg.click('#dlg-body button:has-text("Foto zur Prüfung senden")'); pg.wait_for_timeout(500)
-    check('5 MB' in pg.inner_text('#dlg .form-status'), 'Zu großes Foto wird abgelehnt')
-    check(len(posts) == 2, 'Abgelehnte Fotos erzeugen keine Anfrage')
-    pg.click('#dlg-close')
+    check(pg.locator('#dlg input[name=standort_id]').get_attribute('value') == 'node/1' and pg.locator('#pickbar').is_hidden(), 'Foto aus Menü: angetippter Standort steht im Formular')
+    pg.click('#dlg .pf-x')
     # Aus der Detailansicht: Standort steht fest (auch bei Standorten jenseits der ersten 600 der Liste)
     last = pg.evaluate("window.__watermap.state.places.map(p => p.id).sort().pop()")
     pg.evaluate(f"window.__watermap.selectPlace({json.dumps(last)})"); pg.wait_for_selector('#detail button[title="Foto hinzufügen"]')
     pg.click('#detail button[title="Foto hinzufügen"]'); pg.wait_for_selector('#dlg[open]')
-    check(pg.locator('#dlg select[name=standort_id]').count() == 0 and pg.locator('#dlg .fixed-place').count() == 1, 'Foto aus Detail: keine Standortauswahl')
     check(pg.locator('#dlg input[name=standort_id]').get_attribute('value') == last, f'Foto aus Detail: Standort-ID fest ({last})')
-    pg.click('#dlg-close')
+    pg.click('#dlg .pf-x')
     # Preis-Formular
     pg.click('#btn-menu'); pg.click('#menu .menu-item:has-text("Kraftstoffpreis")'); pg.wait_for_selector('#pickbar:not([hidden])')
     pg.evaluate("window.__watermap.selectPlace('node/1')"); pg.wait_for_timeout(200)
@@ -364,6 +353,113 @@ def desktop(b):
     check(pg.locator('#dlg-body button:has-text("Korrektur senden")').is_enabled(), 'Nach Fehler erneut sendbar')
     check(not pg.errs, f'Keine JS-Fehler {pg.errs[:3]}')
     ctx.close()
+
+def photo_form(b, mobile):
+    tag = 'Handy 375' if mobile else 'Desktop'
+    print(f'--- Foto hinzufügen ({tag})')
+    ctx, pg = new_page_vp(b, 375, 667) if mobile else new_page(b)
+    posts = []
+    def on_post(route):
+        req = route.request
+        if req.method == 'POST': posts.append({'ct': req.headers.get('content-type', ''), 'body': req.post_data_buffer or b''}); return route.fulfill(status=200, body='ok')
+        return route.continue_()
+    ctx.route(BASE, on_post)
+    open_app(pg, mobile)
+    pg.evaluate("window.__watermap.selectPlace('node/1')"); pg.wait_for_selector('#detail button[title="Foto hinzufügen"]')
+    pg.click('#detail button[title="Foto hinzufügen"]'); pg.wait_for_selector('#dlg[open]')
+    shot = lambda n: pg.screenshot(path=str(SHOTS / f'foto_{"m" if mobile else "d"}_{n}.png'))
+    # leer
+    txt = pg.inner_text('#dlg')
+    check('Foto hinzufügen' in txt and 'Fotos helfen' not in txt and 'Zeig anderen, wie es hier aussieht' in txt, f'{tag}: Titel, kein Einleitungstext, leere Foto-Fläche')
+    check(pg.locator('#dlg .pf-place strong').inner_text() == 'TEST Slip 1' and 'TEST-See' in pg.inner_text('#dlg .pf-place small')
+          and re.search(r'\d+\.\d{3}, \d+\.\d{3}$', pg.inner_text('#dlg .pf-place small')), f'{tag}: Standort-Karte mit Name, Gewässer, Koordinaten (3 Stellen)')
+    check(pg.evaluate("document.activeElement.id") == 'dlg-title', f'{tag}: Fokus beim Öffnen auf dem Titel, nicht auf dem Schließen-Knopf')
+    check(pg.locator('#dlg .pf-x[aria-label="Schließen"]').is_visible() and not pg.locator('#dlg-close').is_visible(), f'{tag}: ein runder Schließen-Knopf')
+    check(pg.locator('#dlg input[type=file]').evaluate_all("l => l.every(e => e.getBoundingClientRect().width <= 1)"), f'{tag}: kein sichtbares Datei-Feld')
+    check(pg.locator('#dlg input[capture=environment]').count() == 1, f'{tag}: Kamera-Knopf öffnet die Kamera (capture)')
+    send = pg.locator('#dlg .pf-send')
+    check(send.get_attribute('aria-disabled') == 'true' and pg.evaluate("getComputedStyle(document.querySelector('.pf-send')).backgroundColor") == 'rgb(225, 232, 231)', f'{tag}: Knopf grau, solange nichts gewählt')
+    small = pg.evaluate("""[...document.querySelectorAll('#dlg button, #dlg input:not([type=hidden]):not([type=file]), #dlg label.pf-check')].filter(e => e.offsetParent !== null && !e.closest('.hp'))
+        .map(e => { const r = e.getBoundingClientRect(); return [e.className || e.type, Math.round(r.width), Math.round(r.height)]; })
+        .filter(x => x[0] !== 'checkbox' && (x[2] < 44 || x[1] < 44))""")
+    check(not small, f'{tag}: Touch-Ziele ≥ 44 px {small[:4]}')
+    check(pg.evaluate("document.documentElement.scrollWidth <= window.innerWidth"), f'{tag}: kein horizontales Scrollen')
+    shot('1_leer')
+    # falsches Format, zu groß
+    pg.set_input_files('#dlg input[data-quelle=galerie]', {'name': 'virus.jpg', 'mimeType': 'image/jpeg', 'buffer': b'MZ\x90\x00 not an image at all' * 10})
+    pg.wait_for_selector('#dlg .pf-error:not([hidden])')
+    check('Nur JPEG' in pg.inner_text('#dlg .pf-error') and pg.locator('#dlg .pf-preview').count() == 0, f'{tag}: falsches Format → rote Meldung unter dem Foto')
+    shot('2_format')
+    pg.set_input_files('#dlg input[data-quelle=galerie]', {'name': 'big.jpg', 'mimeType': 'image/jpeg', 'buffer': b'\xff\xd8\xff' + b'0' * (6 * 1024 * 1024)})
+    pg.wait_for_function("document.querySelector('#dlg .pf-error').textContent.includes('5 MB')")
+    check(True, f'{tag}: zu große Datei → Meldung „größer als 5 MB“')
+    # gültiges Foto mit GPS
+    gps = jpeg_with_gps()
+    pg.set_input_files('#dlg input[data-quelle=kamera]', {'name': 'IMG_2381.jpg', 'mimeType': 'image/jpeg', 'buffer': gps})
+    pg.wait_for_selector('#dlg .pf-preview img')
+    ok = pg.inner_text('#dlg .pf-ok')
+    check(pg.locator('#dlg .pf-error').is_hidden() and ok.startswith('IMG_2381.jpg · ') and ok.endswith('GPS-Daten entfernt'), f'{tag}: Vorschau und grüne Zeile ({ok})')
+    h = pg.locator('#dlg .pf-preview').bounding_box()['height']
+    check(200 <= h <= 230, f'{tag}: Vorschau ca. 216 px hoch ({h:.0f})')
+    check(send.get_attribute('aria-disabled') == 'true', f'{tag}: ohne Häkchen noch grau')
+    pg.locator('#dlg .pf-chip', has_text='Rampe').click(); pg.locator('#dlg .pf-chip', has_text='Parkplatz').click()
+    pg.locator('#dlg .pf-chip', has_text='Steg').click(); pg.locator('#dlg .pf-chip', has_text='Steg').click()
+    check(pg.locator('#dlg .pf-chip[aria-pressed=true]').count() == 2 and pg.locator('#dlg input[name=motiv]').input_value() == 'Rampe, Parkplatz'
+          and pg.evaluate("getComputedStyle(document.querySelector('.pf-chip[aria-pressed=true]')).backgroundColor") == 'rgb(14, 36, 51)', f'{tag}: Chips Mehrfachauswahl, aria-pressed, Navy')
+    pg.check('#pf-rights')
+    check(send.get_attribute('aria-disabled') == 'false' and pg.evaluate("getComputedStyle(document.querySelector('.pf-send')).backgroundColor") == 'rgb(11, 94, 107)', f'{tag}: Knopf Petrol, wenn bereit')
+    check(pg.locator('#pf-note').get_attribute('maxlength') == '140', f'{tag}: Notiz max. 140 Zeichen')
+    pg.fill('#pf-note', 'bei Niedrigwasser, Mai 2026')
+    foot = pg.locator('#dlg .pf-foot').bounding_box()
+    check(foot['y'] + foot['height'] <= pg.viewport_size['height'] + 1, f'{tag}: Fußzeile mit Knopf sichtbar')
+    pg.locator('#dlg .pf-scroll').evaluate("e => e.scrollTop = e.scrollHeight")
+    foot2 = pg.locator('#dlg .pf-foot').bounding_box()
+    check(abs(foot2['y'] - foot['y']) < 1, f'{tag}: Fußzeile bleibt beim Scrollen stehen')
+    pg.locator('#dlg .pf-scroll').evaluate("e => e.scrollTop = 0")
+    shot('3_foto')
+    # entfernen und erneut wählen
+    pg.click('#dlg .pf-remove')
+    check(pg.locator('#dlg .pf-preview').count() == 0 and pg.locator('#dlg .pf-ok').is_hidden() and send.get_attribute('aria-disabled') == 'true', f'{tag}: Foto entfernt → leere Fläche, Knopf grau')
+    shot('4_entfernt')
+    pg.set_input_files('#dlg input[data-quelle=galerie]', {'name': 'IMG_2381.jpg', 'mimeType': 'image/jpeg', 'buffer': gps})
+    pg.wait_for_selector('#dlg .pf-preview img')
+    # Standort ändern: Eingaben bleiben erhalten
+    pg.click('#dlg .pf-link'); pg.wait_for_selector('#pickbar:not([hidden])')
+    pg.evaluate("window.__watermap.selectPlace('node/2')"); pg.wait_for_selector('#dlg[open] .pf-preview img')
+    check(pg.locator('#dlg input[name=standort_id]').get_attribute('value') == 'node/2' and pg.locator('#pf-note').input_value() == 'bei Niedrigwasser, Mai 2026'
+          and pg.locator('#pf-rights').is_checked() and pg.locator('#dlg .pf-chip[aria-pressed=true]').count() == 2, f'{tag}: „Ändern“ behält Foto, Motiv, Notiz, Häkchen')
+    # senden
+    pg.evaluate("localStorage.clear()")
+    pg.evaluate("window.__texte = []; new MutationObserver(() => window.__texte.push(document.querySelector('.pf-send')?.textContent)).observe(document.querySelector('.pf-send'), { childList: true, characterData: true, subtree: true })")
+    pg.click('#dlg .pf-send')
+    pg.wait_for_selector('#dlg .pf-done', timeout=5000)
+    check(len(posts) == 1, f'{tag}: eine Einsendung ({len(posts)})')
+    if posts:
+        raw = posts[0]['body']
+        fields = {k: v for k, v in re.findall(rb'name="([^"]+)"\r\n\r\n([^\r]*)\r\n', raw)}
+        check('multipart/form-data' in posts[0]['ct'] and fields.get(b'form-name') == b'foto-einreichen', f'{tag}: multipart an Netlify Forms (foto-einreichen)')
+        check(fields.get(b'standort_id') == b'node/2' and fields.get(b'standort_name') == b'TEST Slip 2', f'{tag}: Standort gesendet')
+        check(fields.get(b'motiv') == b'Rampe, Parkplatz' and fields.get(b'beschreibung') == b'bei Niedrigwasser, Mai 2026' and fields.get(b'foto_rechte') == b'on', f'{tag}: Motiv, Notiz, Einverständnis gesendet')
+        check(b'name="foto"; filename="foto.jpg"' in raw and b'\xff\xd8\xff' in raw, f'{tag}: Foto als JPEG gesendet')
+        check(b'Exif' not in raw and b'GPS' not in raw and b'TESTCAM' not in raw, f'{tag}: keine EXIF-/GPS-Daten im gesendeten Foto')
+        check(raw.count(b'filename=') == 1, f'{tag}: nur das aufbereitete Foto, keine Originaldatei')
+    check('Wird hochgeladen …' in pg.evaluate("window.__texte"), f'{tag}: Ladezustand im Knopf')
+    check('Danke!' in pg.inner_text('#dlg') and 'innerhalb von 24 Stunden' in pg.inner_text('#dlg'), f'{tag}: Erfolgsansicht')
+    shot('5_danke')
+    pg.click('#dlg button:has-text("Fertig")')
+    check(pg.locator('#dlg[open]').count() == 0, f'{tag}: „Fertig“ schließt')
+    check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
+    ctx.close()
+
+def new_page_vp(b, w, hgt):
+    ctx = b.new_context(viewport={'width': w, 'height': hgt}, device_scale_factor=2, is_mobile=True, has_touch=True, locale='de-DE')
+    lib_routes(ctx, False)
+    ctx.add_init_script("try { if (localStorage.getItem('watermap.cats') === null) { localStorage.setItem('watermap.cats', 'slip,marina,fuel'); localStorage.setItem('watermap.listOpen', '1'); } } catch {}")
+    pg = ctx.new_page(); errs = []
+    pg.on('pageerror', lambda e: errs.append('PAGEERROR ' + str(e)))
+    pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' and '501' not in m.text and 'Failed to load resource' not in m.text else None)
+    pg.errs = errs
+    return ctx, pg
 
 def mobile(b):
     print('--- Smartphone')

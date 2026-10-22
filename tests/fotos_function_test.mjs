@@ -8,12 +8,12 @@ const OV = 'public/data/community/overrides.json', HIST = 'admin/verlauf.json';
 const NOW = new Date('2026-10-20T12:34:56Z');
 
 /** Nachgebaute Welt: Netlify-Formulare + ein Git-Zweig „main“ (Dateien als Buffer). */
-function fakeWorld({ photo = JPEG, rights = 'ja', standort = 'node/632876845', overrides = [], files = {}, reports = [], slips = [], prices = [], raceOnce = false } = {}) {
+function fakeWorld({ photo = JPEG, rights = 'ja', beschreibung = 'Rampe bei Niedrigwasser', motiv = undefined, standort = 'node/632876845', overrides = [], files = {}, reports = [], slips = [], prices = [], raceOnce = false } = {}) {
   const repo = { [OV]: Buffer.from(JSON.stringify(overrides)) };
   for (const [k, v] of Object.entries(files)) repo[k] = Buffer.from(v);
   const state = {
     subs: [{ id: 's1', created_at: '2026-10-20T12:00:00Z', data: {
-      standort_id: standort, standort_name: 'Slip Vössen', beschreibung: 'Rampe bei Niedrigwasser', foto_rechte: rights,
+      standort_id: standort, standort_name: 'Slip Vössen', beschreibung, ...(motiv ? { motiv } : {}), foto_rechte: rights,
       foto: { filename: 'x.jpg', url: 'https://files.netlify.example/s1/x.jpg' } } }],
     reports, slips, prices, repo, commits: { c0: { files: repo } }, head: 'c0', n: 0, blobs: {}, trees: {}, messages: [], deleted: [], calls: [], raceOnce,
   };
@@ -126,6 +126,13 @@ assert.equal(photoReport({ id: 'r3', data: { art: 'sonstiges', details: 'Foto un
   assert.deepEqual(ov[1], { id: 'node/632876845', status: 'approved', photos: [{ url: j.foto.url, credit: 'WaterMap-Community', alt: 'Rampe bei Niedrigwasser' }], updated: '2026-10-20' });
   assert.deepEqual(w.jsonAt(HIST), [{ zeit: NOW.toISOString(), bereich: 'foto', aktion: 'freigegeben', standort_id: 'node/632876845', standort_name: 'Slip Vössen', foto: j.foto.url, beschreibung: 'Rampe bei Niedrigwasser' }]);
   assert.deepEqual(w.state.deleted, ['s1']); }
+
+// Neues Foto-Formular: Motiv in der Liste; ohne Notiz wird das Motiv zur Bildbeschreibung
+{ const w = fakeWorld({ beschreibung: '', motiv: 'Rampe, Steg' });
+  const f = (await (await run(req('GET'), w)).json()).fotos[0];
+  assert.equal(f.motiv, 'Rampe, Steg'); assert.equal(f.beschreibung, '');
+  const j = await (await run(req('POST', '', { aktion: 'freigeben', id: 's1' }), w)).json();
+  assert.equal(w.jsonAt(OV)[0].photos[0].alt, 'Rampe, Steg', JSON.stringify(j)); }
 
 // Gleichzeitige Änderung am Zweig: neu aufbauen, nichts geht verloren
 { const w = fakeWorld({ raceOnce: true });

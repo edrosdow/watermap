@@ -590,7 +590,7 @@ function openReport(formName, preset = {}) {
     dialog: el.dlg, places: state.places,
     requestUserPos, pickLocation, nearestSlips,
     showPlace: (id) => selectPlace(id),
-    choosePlace: (name) => choosePlaceFor(name),
+    choosePlace: (name, carry = {}) => choosePlaceFor(name, carry),
   };
   const p = preset.standort_id && state.byId.get(preset.standort_id);
   if (p && formName === 'tankpreis-melden') preset.standort_id = p.id;
