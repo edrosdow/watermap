@@ -99,8 +99,8 @@ function normalize(f) {
 // (netlify/functions/umgebung.mjs → Overpass API): keine IP-Adressen der Besucher bei Dritten, der Import bleibt klein.
 // Klappt das nicht (offline, Overpass überlastet), bleiben die importierten Daten.
 const LIVE_KINDS = new Set(['lock', 'toilets', 'water', 'food', 'rest', 'parking', 'shop']);   // diese Arten deckt die Abfrage ab
-const LIVE_TIMEOUT_MS = 20000;   // die Funktion fragt mehrere Overpass-Server gleichzeitig
-const DIREKT_TIMEOUT_MS = 12000;
+const LIVE_TIMEOUT_MS = 22000;   // die Funktion fragt mehrere Overpass-Server gleichzeitig
+const DIREKT_TIMEOUT_MS = 18000;
 const NOT_PUBLIC = new Set(['private', 'no', 'customers', 'permit', 'military', 'agricultural', 'forestry', 'delivery']);
 const liveCache = new Map();
 
@@ -149,7 +149,7 @@ export function liveNearby(lat, lon, radius, { fetchFn = fetch } = {}) {
       .then(j => {
         if (!Array.isArray(j?.elements)) throw new Error('unerwartete Antwort');
         // Overpass meldet Überlastung oft mit HTTP 200, leerer Liste und „runtime error“ – das ist kein leeres Ergebnis
-        if (/runtime error/i.test(j.remark || '')) throw new Error(`${new URL(url, location.href).host}: überlastet`);
+        if (!j.elements.length && /runtime error/i.test(j.remark || '')) throw new Error(`${new URL(url, location.href).host}: überlastet`);
         return j.elements;
       })
       .finally(() => timer && clearTimeout(timer));
