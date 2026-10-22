@@ -23,6 +23,10 @@ class PegelAmpelLogikTests(unittest.TestCase):
         res = subprocess.run(["node", str(ROOT / "tests" / "umgebung_test.mjs")], capture_output=True, text=True, timeout=60)
         self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
 
+    def test_meldungen(self):
+        res = subprocess.run(["node", str(ROOT / "tests" / "meldungen_test.mjs")], capture_output=True, text=True, timeout=60)
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

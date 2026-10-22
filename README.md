@@ -17,6 +17,8 @@ Die Standorte für **ganz Deutschland** (16 Bundesländer) kommen per Import aus
 - Mac/Linux: `sh daten-aktualisieren.sh`
 - Automatisch jeden Monat: [GitHub Action](.github/workflows/update-osm-data.yml)
 
+„Heute vor Ort“: Lagemeldungen (24 h sichtbar) über `netlify/functions/meldungen.mjs` + Netlify Blobs – Einrichtung in `docs/HEUTE-VOR-ORT.md`.
+
 „In der Nähe“ (500 m um einen Standort) fragt Campingplätze, Parkplätze, Toiletten, Gastronomie, Supermärkte und Schleusen live bei OpenStreetMap ab (direkt aus dem Browser bei overpass-api.de; Rückfall: Netlify-Funktion `netlify/functions/umgebung.mjs` mit Ausweich-Servern); der Import liefert Brücken, Wehre, Kanu-Einstiege und Verleihe und dient als Rückfall.
 
 Details: [docs/DATEN-AKTUALISIEREN.md](docs/DATEN-AKTUALISIEREN.md). Fehlt ein Bundesland, weil die Overpass-Server ausfallen, bricht der Import ab und die alten Daten bleiben.

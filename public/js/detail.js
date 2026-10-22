@@ -64,7 +64,7 @@ export function routeLink(p, cls = 'dbtn dbtn-primary') {
     h('span', { html: icon('navigate', 18) }), h('span', { text: 'Route' }));
 }
 
-export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, pegel }) {
+export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, pegel, vorOrt }) {
   const isFav = favorites.has(p.id);
   const dist = user ? haversine(user.lat, user.lon, p.lat, p.lon) : null;
   const kicker = [TYPES[p.type].label, p.water?.name && !p.water.approx ? p.water.name : null].filter(Boolean).join(' · ');
@@ -78,6 +78,7 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
     h('button', { type: 'button', class: 'dh-close', 'aria-label': 'Details schließen', title: 'Schließen', html: icon('close', 22), onclick: actions.close }));
 
   const body = h('div', { class: 'detail-body' });
+  if (vorOrt?.zeile) body.append(vorOrt.zeile);   // wichtigste Lagemeldung („Heute vor Ort“)
   const sub = subtitle(p);
   if (sub && sub !== p.water?.name) body.append(h('p', { class: 'detail-sub', text: sub }));
   const tags = tagRow(placeTags(p, 4));
@@ -96,6 +97,9 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
     body.append(slot);
     pegel.then(box => { if (box) slot.replaceWith(box); else slot.remove(); }, () => slot.remove());
   }
+
+  // „Heute vor Ort“ direkt unter Titel und Knöpfen, vor Fotos und Wetter
+  if (vorOrt?.section) body.append(vorOrt.section);
 
   // Fotos
   if (p.photos.length) body.append(photoCarousel(p.photos, { name: displayName(p), onReport: actions.reportPhoto }));

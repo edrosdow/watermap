@@ -140,18 +140,16 @@ def run():
             srv.shutdown()
 
 def defaults(b):
-    print('--- Erster Start: Liste eingeklappt, keine Kategorie gewählt')
+    print('--- Erster Start: Liste eingeklappt, Slipanlagen gewählt')
     for mob in (False, True):
         name = 'Handy' if mob else 'Desktop'
         ctx, pg = new_page(b, mobile=mob, fresh=True)
         pg.goto(BASE); pg.wait_for_selector('.cat-slip', timeout=10000); pg.wait_for_timeout(300)
         check(not pg.locator('#sidebar').is_visible(), f'{name}: Standortliste beim ersten Start nicht sichtbar')
-        check(pg.locator('.leaflet-marker-icon').count() == 0, f'{name}: keine Standorte auf der Karte')
-        check(pg.locator('#cat-hint').is_visible() and pg.get_attribute('.cat-slip', 'aria-pressed') == 'false', f'{name}: Hinweis, Kategorien aus')
+        check(pg.get_attribute('.cat-slip', 'aria-pressed') == 'true' and pg.get_attribute('.cat-marina', 'aria-pressed') == 'false', f'{name}: Start mit Slipanlagen (mindestens eine Kategorie aktiv)')
+        check(pg.locator('.leaflet-marker-icon').count() > 0, f'{name}: Slipanlagen auf der Karte')
         check(pg.locator('#menu, #btn-menu, #filterbar').count() == 0, f'{name}: kein ☰-Menü und keine Chip-Reihe mehr')
-        pg.click('.cat-slip'); pg.wait_for_timeout(300)
-        check(pg.locator('.leaflet-marker-icon').count() > 0 and pg.get_attribute('.cat-slip', 'aria-pressed') == 'true', f'{name}: Slipanlagen per Umschalter eingeblendet')
-        check(pg.locator('#cat-hint').is_hidden(), f'{name}: Hinweis verschwindet')
+        pg.click('.cat-marina'); pg.wait_for_timeout(200); pg.click('.cat-marina'); pg.wait_for_timeout(200)
         check(layer(pg, 'sub-free')[0] == 1, f'{name}: bei einer Kategorie gibt es Unterfilter im Filter-Fenster')
         pg.reload(); pg.wait_for_selector('.cat-slip'); pg.wait_for_timeout(300)
         check(pg.get_attribute('.cat-slip', 'aria-pressed') == 'true' and pg.get_attribute('.cat-marina', 'aria-pressed') == 'false', f'{name}: Auswahl wird gemerkt')

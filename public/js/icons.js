@@ -61,6 +61,11 @@ const P = {
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
   bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/>',
   shield: '<path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6z"/>',
+  pump: '<path d="M5 20V5.5A1.5 1.5 0 0 1 6.5 4h6A1.5 1.5 0 0 1 14 5.5V20M3.5 20h12M7 8h5"/><path d="M14 10h1.5a1.5 1.5 0 0 1 1.5 1.5V16a1.5 1.5 0 0 0 3 0V8.5L17.5 6"/>',
+  car: '<path d="M5 15V10.5L7 6h10l2 4.5V15z"/><path d="M5 15v2.5M19 15v2.5M4 11h16"/><circle cx="8" cy="15.5" r="1.4"/><circle cx="16" cy="15.5" r="1.4"/>',
+  slippery: '<path d="m4 17 5-5 3.5 3L20 7"/><path d="M15 7h5v5"/>',
+  blocked: '<circle cx="12" cy="12" r="9"/><path d="M7.5 12h9"/>',
+  chevron: '<path d="m9 6 6 6-6 6"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   pin: '<path d="M12 21s7-6.2 7-11.5a7 7 0 1 0-14 0C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
   // Pegellatte mit Wellen

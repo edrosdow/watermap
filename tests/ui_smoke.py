@@ -58,7 +58,7 @@ with sync_playwright() as p:
         # Kategorie ohne Daten
         pg.click('.cat-slip'); pg.click('.cat-fuel'); pg.wait_for_timeout(150)      # nur Häfen
         check('Noch keine Marinas' in pg.inner_text('#list'), f'{name}: Leerzustand Marinas ehrlich')
-        pg.click('.cat-marina'); pg.click('.cat-slip'); pg.wait_for_timeout(150)    # nur Slipanlagen
+        pg.click('.cat-slip'); pg.click('.cat-marina'); pg.wait_for_timeout(150)    # nur Slipanlagen (mindestens eine bleibt aktiv)
         check(pg.locator('.cat-slip').get_attribute('aria-pressed') == 'true' and pg.locator('.cat-marina').get_attribute('aria-pressed') == 'false', f'{name}: Kategorie-Umschalter mit aria-pressed')
         # Unterfilter ohne Daten ist deaktiviert und blendet nichts aus
         pg.click('#btn-filter'); pg.wait_for_selector('#filter-panel[open]')
