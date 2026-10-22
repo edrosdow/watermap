@@ -43,6 +43,7 @@ export async function handle(req, { fetchFn = fetch, server = SERVER, timeoutMs 
       if (!res.ok) throw new Error(`${res.status}`);
       const data = await res.json();
       if (!Array.isArray(data?.elements)) throw new Error('unerwartete Antwort');
+      if (/runtime error/i.test(data.remark || '')) throw new Error('überlastet');   // HTTP 200, aber abgebrochen – nicht zwischenspeichern
       return { data, host };
     } catch (e) {
       fehler.push(`${host}: ${e.name === 'AbortError' ? 'Zeitüberschreitung' : e.message}`);

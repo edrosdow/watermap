@@ -146,7 +146,12 @@ export function liveNearby(lat, lon, radius, { fetchFn = fetch } = {}) {
     return fetchFn(url, { ...opts, signal: ctl?.signal })
       .catch((e) => { throw new Error(`${new URL(url, location.href).host}: ${e?.name === 'AbortError' ? 'Zeitüberschreitung' : 'nicht erreichbar'}`); })
       .then(r => { if (!r.ok) throw new Error(`${new URL(url, location.href).host}: HTTP ${r.status}`); return r.json(); })
-      .then(j => { if (!Array.isArray(j?.elements)) throw new Error('unerwartete Antwort'); return j.elements; })
+      .then(j => {
+        if (!Array.isArray(j?.elements)) throw new Error('unerwartete Antwort');
+        // Overpass meldet Überlastung oft mit HTTP 200, leerer Liste und „runtime error“ – das ist kein leeres Ergebnis
+        if (/runtime error/i.test(j.remark || '')) throw new Error(`${new URL(url, location.href).host}: überlastet`);
+        return j.elements;
+      })
       .finally(() => timer && clearTimeout(timer));
   };
   // Zuerst direkt beim Overpass-Server (Rechenzentrums-Adressen wie Netlify lehnt overpass-api.de ab),

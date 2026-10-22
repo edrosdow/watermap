@@ -88,6 +88,8 @@ def overpass(route):
     live['queries'].append(q)
     cors = {'access-control-allow-origin': '*'}   # wie der echte Overpass-Server
     if live['mode'] == 'down': return route.fulfill(status=503, headers=cors, body='busy')
+    if live['mode'] == 'remark':   # Overpass überlastet: HTTP 200, leere Liste, „runtime error“
+        return route.fulfill(status=200, content_type='application/json', headers=cors, body=json.dumps({'elements': [], 'remark': 'runtime error: Query timed out in "query" at line 1 after 15 seconds.'}))
     els = LIVE if live['mode'] == 'data' else []
     route.fulfill(status=200, content_type='application/json', headers=cors, body=json.dumps({'elements': els}))
 
@@ -245,6 +247,12 @@ with sync_playwright() as p:
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(far['id'])})")
         pg.wait_for_selector('#detail .nearby-list:not([aria-busy])'); pg.wait_for_timeout(300)
         check(pg.inner_text('#detail .nearby-list').strip() == 'Keine weiteren Einrichtungen in unseren Daten gefunden.', f'{name}: Text bei leerem Ergebnis')
+        # Überlastet (HTTP 200 mit „runtime error“): kein leeres Ergebnis, sondern Hinweis
+        live['mode'] = 'remark'
+        far2 = next(f for f in slips if abs(f['geometry']['coordinates'][1] - LAT) > 1 and f['id'] != far['id'])
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(far2['id'])})")
+        pg.wait_for_selector('#detail .nearby-hinweis', timeout=8000)
+        check('überlastet' in pg.inner_text('#detail .nearby-hinweis'), f'{name}: Overpass überlastet → Hinweis statt stillem leeren Ergebnis')
         live['mode'] = 'down'
         pg.keyboard.press('Escape')
 
