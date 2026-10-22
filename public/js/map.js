@@ -52,7 +52,7 @@ export async function loadMapLibraries() {
 export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster }) {
   const L = window.L;
   const map = L.map(el, { zoomControl: false, worldCopyJump: false, tap: true }).setView(CONFIG.FALLBACK_VIEW.center, CONFIG.FALLBACK_VIEW.zoom);
-  L.control.zoom({ position: 'bottomright', zoomInTitle: 'Vergrößern', zoomOutTitle: 'Verkleinern' }).addTo(map);
+  L.control.zoom({ position: 'topright', zoomInTitle: 'Vergrößern', zoomOutTitle: 'Verkleinern' }).addTo(map);
   L.tileLayer(CONFIG.TILE_URL, { maxZoom: CONFIG.TILE_MAX_ZOOM, attribution: CONFIG.TILE_ATTRIBUTION }).addTo(map);
   map.attributionControl.setPrefix(false);
 

@@ -51,6 +51,8 @@ with sync_playwright() as p:
         pg.on('pageerror', lambda e: errors.append(str(e)))
         pg.on('console', lambda m: errors.append(m.text) if m.type == 'error' and 'Failed to load resource' not in m.text else None)   # Kacheln sind absichtlich blockiert
         pg.goto(f'http://127.0.0.1:{PORT}/#p={MANY}')
+        if pg.viewport_size['width'] < 768:   # Handy: Deep-Link zeigt erst die Vorschau-Karte
+            pg.locator('#peek button', has_text='Details').click()
         frame = pg.locator('#detail .ph-frame'); frame.wait_for()
         count = lambda: pg.inner_text('#detail .ph-count')
         src = lambda: pg.get_attribute('#detail .ph-frame img >> nth=-1', 'src')   # beim Wechsel liegen kurz zwei Bilder übereinander
@@ -92,7 +94,7 @@ with sync_playwright() as p:
               f'{name}: „Foto melden“ füllt die Meldung vor')
         pg.click('#dlg-close')
         # Standort mit einem Foto: keine Pfeile, kein Zähler
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ONE)})"); pg.locator('#detail .ph-caption', has_text='Einzelfoto').wait_for()
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ONE)}, {{ full: true }})"); pg.locator('#detail .ph-caption', has_text='Einzelfoto').wait_for()
         check(pg.locator('#detail .ph-nav:visible').count() == 0 and pg.locator('#detail .ph-count').count() == 0, f'{name}: ein Foto ohne Pfeile und Zähler')
         csp = pg.evaluate('window.__csp || []')
         check(not errors and not csp, f'{name}: keine JS-/CSP-Fehler {errors[:3]} {csp[:3]}')

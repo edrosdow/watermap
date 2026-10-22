@@ -95,6 +95,17 @@ KOELN = STATIONS[0]['uuid']
 srv = ThreadingHTTPServer(('127.0.0.1', PORT), functools.partial(Handler, directory=str(ROOT)))
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 
+
+def layer(pg, key, click=False):
+    """Schalter im Filter-Fenster (Kartenebenen, Unterfilter): (vorhanden, an?, Zähler); optional umschalten. Fenster wird wieder geschlossen."""
+    if not pg.locator('#filter-panel[open]').count():
+        pg.click('#btn-filter'); pg.wait_for_selector('#filter-panel[open]')
+    sw = pg.locator(f'#filter-panel [data-key="{key}"]')
+    res = (sw.count(), sw.get_attribute('aria-checked') if sw.count() else None, sw.locator('.fswitch-n').inner_text() if sw.locator('.fswitch-n').count() else None)
+    if click: sw.click(); pg.wait_for_timeout(50)
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(80)
+    return res
+
 with sync_playwright() as p:
     b = p.chromium.launch()
     for name, vp, mobile in [('desktop', {'width': 1280, 'height': 860}, False), ('mobile', {'width': 390, 'height': 844}, True)]:
@@ -116,13 +127,14 @@ with sync_playwright() as p:
         pg.on('console', lambda m: errors.append(m.text) if m.type == 'error' else None)
         pg.goto(BASE); pg.wait_for_selector('.wm-cluster, .wm-pin', timeout=20000)
 
-        chip = pg.locator('.chip-gauge')
-        check(chip.count() == 1 and chip.get_attribute('aria-pressed') == 'false', f'{name}: Pegel-Chip vorhanden, aus')
+        n, on, _ = layer(pg, 'gauges')
+        check(n == 1 and on == 'false', f'{name}: Schalter „Pegelstände“ im Filter-Fenster, aus')
         check(not api_calls, f'{name}: ohne Einschalten keine Pegel-Abfrage')
-        chip.click(); pg.wait_for_selector('.wm-gauge', timeout=8000)
+        layer(pg, 'gauges', click=True); pg.wait_for_selector('.wm-gauge', timeout=8000)
         check(pg.locator('.wm-gauge').count() == 6, f'{name}: 6 Pegel mit Wasserstand auf der Karte ({pg.locator(".wm-gauge").count()})')
-        check(pg.locator('.chip-gauge .chip-n').inner_text() == '6', f'{name}: Zähler am Chip')
-        check(pg.locator('.chip-gauge').get_attribute('aria-pressed') == 'true', f'{name}: Chip aktiv')
+        n, on, cnt = layer(pg, 'gauges')
+        check(cnt == '6', f'{name}: Zähler am Schalter ({cnt})')
+        check(on == 'true', f'{name}: Schalter an')
         check('PEGELONLINE' in pg.inner_text('.leaflet-control-attribution'), f'{name}: Quellenangabe in der Karte')
         check(pg.evaluate("document.querySelector('#map').classList.contains('wm-gauges-compact')"), f'{name}: bei Deutschland-Zoom nur Punkte')
         pg.screenshot(path=str(SHOTS / f'{name}_1_uebersicht.png'))
@@ -181,14 +193,14 @@ with sync_playwright() as p:
         pg2.close()
 
         # Ausschalten
-        pg.locator('.chip-gauge').click(); pg.wait_for_timeout(200)
+        layer(pg, 'gauges', click=True); pg.wait_for_timeout(200)
         check(pg.locator('.wm-gauge').count() == 0 and 'PEGELONLINE' not in pg.inner_text('.leaflet-control-attribution'), f'{name}: Ausschalten entfernt Pegel und Quellenangabe')
 
         # Schnittstelle gestört
         fail_api['on'] = True
-        pg.locator('.chip-gauge').click(); pg.wait_for_timeout(500)
+        layer(pg, 'gauges', click=True); pg.wait_for_timeout(500)
         check('nicht erreichbar' in pg.inner_text('#toast'), f'{name}: Hinweis, wenn PEGELONLINE ausfällt')
-        check(pg.locator('.chip-gauge').get_attribute('aria-pressed') == 'false', f'{name}: Chip danach wieder aus')
+        check(layer(pg, 'gauges')[1] == 'false', f'{name}: Schalter danach wieder aus')
         fail_api['on'] = False
 
         csp = pg.evaluate('window.__csp || []')

@@ -121,7 +121,7 @@ with sync_playwright() as p:
 
         north = pg.evaluate(PICK, True)
         place = pg.evaluate(f"window.__watermap.state.byId.get({json.dumps(north)})")
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)})")
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)}, {{ full: true }})")
         pg.wait_for_selector('#detail .wx-wind', timeout=8000)
         txt = pg.inner_text('#detail .wx-block')
         check('Sturmböen'.upper() in txt and 'Markante Wetterwarnung' in txt, f'{name}: amtliche Warnung mit Stufe als Text')
@@ -157,12 +157,12 @@ with sync_playwright() as p:
 
         # Zwischenspeicher: gleicher Standort erneut → keine neuen Abfragen
         n = len(calls)
-        pg.keyboard.press('Escape'); pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)})"); pg.wait_for_selector('#detail .wx-wind')
+        pg.keyboard.press('Escape'); pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)}, {{ full: true }})"); pg.wait_for_selector('#detail .wx-wind')
         check(len(calls) == n, f'{name}: kurzzeitiger Zwischenspeicher je Ort')
 
         # Ohne Warnung
         south = pg.evaluate(PICK, False)
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(south)})"); pg.wait_for_selector('#detail .wx-noalert', timeout=8000)
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(south)}, {{ full: true }})"); pg.wait_for_selector('#detail .wx-noalert', timeout=8000)
         check('keine amtlichen Wetterwarnungen für Stadt Mainz' in pg.inner_text('#detail'), f'{name}: Hinweis ohne Warnung nennt den Warnbereich')
 
         # Pegel-Detail enthält ebenfalls Wetter
@@ -175,7 +175,7 @@ with sync_playwright() as p:
         # Dienst gestört (neuer Ort, damit nichts aus dem Zwischenspeicher kommt)
         fail['on'] = True
         other = pg.evaluate("window.__watermap.state.places.find(p => p.lat > 53 && p.lon > 10).id")
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(other)})"); pg.wait_for_timeout(800)
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(other)}, {{ full: true }})"); pg.wait_for_timeout(800)
         check('Wetterdaten sind gerade nicht erreichbar' in pg.inner_text('#detail'), f'{name}: Hinweis bei Ausfall')
         check(pg.locator('#detail .facts').count() == 1, f'{name}: restliche Details trotzdem da')
         fail['on'] = False

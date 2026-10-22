@@ -114,6 +114,17 @@ def check(cond, msg):
 srv = ThreadingHTTPServer(('127.0.0.1', PORT), functools.partial(Handler, directory=str(ROOT)))
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 
+
+def layer(pg, key, click=False):
+    """Schalter im Filter-Fenster (Kartenebenen, Unterfilter): (vorhanden, an?, Zähler); optional umschalten. Fenster wird wieder geschlossen."""
+    if not pg.locator('#filter-panel[open]').count():
+        pg.click('#btn-filter'); pg.wait_for_selector('#filter-panel[open]')
+    sw = pg.locator(f'#filter-panel [data-key="{key}"]')
+    res = (sw.count(), sw.get_attribute('aria-checked') if sw.count() else None, sw.locator('.fswitch-n').inner_text() if sw.locator('.fswitch-n').count() else None)
+    if click: sw.click(); pg.wait_for_timeout(50)
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(80)
+    return res
+
 with sync_playwright() as p:
     b = p.chromium.launch()
     for name, vp, mobile in [('desktop', {'width': 1280, 'height': 900}, False), ('mobile', {'width': 390, 'height': 844}, True)]:
@@ -125,6 +136,7 @@ with sync_playwright() as p:
         ctx.route('**/api/wetter/**', EMPTY_WX)
         ctx.route('**/.netlify/functions/umgebung*', overpass)
         ctx.route('https://overpass-api.de/**', overpass)
+        ctx.route('**/api/pegel/**', lambda r: r.fulfill(status=200, content_type='application/json', body='[]'))   # Pegel-Hinweis im Detail
         ctx.route(re.compile(r'https://([a-c]\.)?tile\.openstreetmap\.org/.*'), lambda r: r.fulfill(status=200, content_type='image/png', body=TILE))
         ctx.route(re.compile(r'https://(?!(([a-c]\.)?tile\.openstreetmap\.org|overpass-api\.de/)).*'), lambda r: r.abort())
         ctx.add_init_script("document.addEventListener('securitypolicyviolation', e => (window.__csp = window.__csp || []).push(e.violatedDirective + ' ' + e.blockedURI));")
@@ -136,11 +148,11 @@ with sync_playwright() as p:
         pg.on('console', lambda m: errors.append(m.text) if m.type == 'error' and 'status of 503' not in m.text else None)   # 503 = Overpass absichtlich überlastet
         pg.goto(BASE); pg.wait_for_selector('.wm-cluster, .wm-pin', timeout=20000)
 
-        check(pg.locator('.chip-extra').count() == 2, f'{name}: Chips „Schleusen & Brücken“ und „Service“')
+        check(layer(pg, 'extra-wasser')[0] == 1 and layer(pg, 'extra-service')[0] == 1, f'{name}: Schalter „Schleusen & Brücken“ und „Service“ im Filter-Fenster')
         check(not extras_calls, f'{name}: Extras werden erst bei Bedarf geladen')
 
         # Standort öffnen → „In der Nähe“
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])})")
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])}, {{ full: true }})")
         pg.wait_for_selector('#detail .nearby-item', timeout=8000)
         items = pg.locator('#detail .nearby-item')
         check(items.count() == 10, f'{name}: 10 Einträge in der Nähe, der entfernte nicht ({items.count()})')
@@ -195,12 +207,12 @@ with sync_playwright() as p:
         check(pg.locator('#detail').is_hidden(), f'{name}: Escape schließt')
 
         # Ebenen
-        pg.locator('.chip-extra-wasser').click(); pg.wait_for_timeout(400)
+        layer(pg, 'extra-wasser', click=True); pg.wait_for_timeout(400)
         pg.evaluate(f"window.__watermap.state.map.raw.setView([{LAT}, {LON}], 16, {{ animate: false }})"); pg.wait_for_timeout(500)
         check(pg.locator('.wm-extra').count() == 3, f'{name}: Ebene „Schleusen & Brücken“ zeigt 3 Einträge ({pg.locator(".wm-extra").count()})')
         check(pg.locator('.wm-extra.has-label', has_text='4,5').count() == 1, f'{name}: Brücke zeigt Durchfahrtshöhe am Marker')
-        check(pg.locator('.chip-extra-wasser .chip-n').inner_text() == '3', f'{name}: Zähler am Chip')
-        pg.locator('.chip-extra-service').click(); pg.wait_for_timeout(500)
+        check(layer(pg, 'extra-wasser')[2] == '3', f'{name}: Zähler am Schalter')
+        layer(pg, 'extra-service', click=True); pg.wait_for_timeout(500)
         check(pg.locator('.wm-extra').count() == 10, f'{name}: mit „Service“ 10 Einträge im Ausschnitt ({pg.locator(".wm-extra").count()})')
         pg.screenshot(path=str(SHOTS / f'{name}_3_ebenen.png'))
         m = pg.locator('.wm-extra', has_text='4,5')
@@ -214,15 +226,15 @@ with sync_playwright() as p:
         pg2 = ctx.new_page(); pg2.goto(BASE + '#x=node%2F9000009')
         pg2.wait_for_selector('#detail .facts', timeout=15000)
         check('Kanuverleih Test' in pg2.inner_text('#detail'), f'{name}: Deep-Link öffnet Eintrag direkt')
-        check(pg2.locator('.chip-extra.is-active').count() == 2, f'{name}: eingeschaltete Ebenen werden gemerkt')
+        check(layer(pg2, 'extra-wasser')[1] == 'true' and layer(pg2, 'extra-service')[1] == 'true', f'{name}: eingeschaltete Ebenen werden gemerkt')
         pg2.close()
 
-        pg.locator('.chip-extra-wasser').click(); pg.locator('.chip-extra-service').click(); pg.wait_for_timeout(300)
+        layer(pg, 'extra-wasser', click=True); layer(pg, 'extra-service', click=True); pg.wait_for_timeout(300)
         check(pg.locator('.wm-extra').count() == 0, f'{name}: Ausschalten entfernt die Marker')
 
         # „In der Nähe“ live aus OSM: Flächen mit Mittelpunkt, Supermarkt, Campingplatz; Import ergänzt Brücken/Wehre/Kanu/Verleih
         live['mode'] = 'data'; live['queries'].clear()
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])})")
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])}, {{ full: true }})")
         pg.wait_for_selector('#detail .nearby-item:has-text("Markt Test")', timeout=8000)
         q = live['queries'][-1] if live['queries'] else {}
         check(abs(float(q.get('lat', ['0'])[0]) - LAT) < 1e-4 and abs(float(q.get('lon', ['0'])[0]) - LON) < 1e-4, f'{name}: Abfrage mit den Koordinaten des Standorts')
@@ -244,13 +256,13 @@ with sync_playwright() as p:
         # Nichts gefunden: neuer Text, keine Behauptung über OSM
         live['mode'] = 'empty'
         far = next(f for f in slips if abs(f['geometry']['coordinates'][1] - LAT) > 1)
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(far['id'])})")
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(far['id'])}, {{ full: true }})")
         pg.wait_for_selector('#detail .nearby-list:not([aria-busy])'); pg.wait_for_timeout(300)
         check(pg.inner_text('#detail .nearby-list').strip() == 'Keine weiteren Einrichtungen in unseren Daten gefunden.', f'{name}: Text bei leerem Ergebnis')
         # Überlastet (HTTP 200 mit „runtime error“): kein leeres Ergebnis, sondern Hinweis
         live['mode'] = 'remark'
         far2 = next(f for f in slips if abs(f['geometry']['coordinates'][1] - LAT) > 1 and f['id'] != far['id'])
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(far2['id'])})")
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(far2['id'])}, {{ full: true }})")
         pg.wait_for_selector('#detail .nearby-hinweis', timeout=8000)
         check('überlastet' in pg.inner_text('#detail .nearby-hinweis'), f'{name}: Overpass überlastet → Hinweis statt stillem leeren Ergebnis')
         live['mode'] = 'down'
@@ -263,9 +275,9 @@ with sync_playwright() as p:
 
         # Datei fehlt → Hinweis, Chip bleibt aus (frische Seite, damit nichts zwischengespeichert ist)
         mode['missing'] = True
-        pg3 = ctx.new_page(); pg3.goto(BASE); pg3.wait_for_selector('.chip-extra')
-        pg3.locator('.chip-extra-service').click(); pg3.wait_for_timeout(500)
-        check('nicht geladen' in pg3.inner_text('#toast') and pg3.locator('.chip-extra-service').get_attribute('aria-pressed') == 'false',
+        pg3 = ctx.new_page(); pg3.goto(BASE); pg3.wait_for_selector('#btn-filter')
+        layer(pg3, 'extra-service', click=True); pg3.wait_for_timeout(500)
+        check('nicht geladen' in pg3.inner_text('#toast') and layer(pg3, 'extra-service')[1] == 'false',
               f'{name}: fehlende Datei → Hinweis, Ebene bleibt aus')
         mode['missing'] = False
         ctx.close(); extras_calls.clear()

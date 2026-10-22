@@ -2,7 +2,7 @@
 import { h } from './dom.js';
 import { icon, glyphSvg } from './icons.js';
 import {
-  TYPES, UNKNOWN, displayName, subtitle, describeFacts, describePrices, formatDate, navUrl,
+  TYPES, UNKNOWN, FILTERS, displayName, subtitle, describeFacts, describePrices, formatDate, navUrl,
   osmUrl, safeHttpUrl, safeTel, formatDistance, haversine,
 } from './model.js';
 import { favorites } from './favorites.js';
@@ -49,32 +49,53 @@ function webMark() {
   return h('span', { class: 'web-mark', html: icon('globe', 13), title: 'laut Website des Hafens', 'aria-label': '(laut Website)', role: 'img' });
 }
 
-export function renderDetail(p, { user, actions, weather, nearby, enrichFacts }) {
-  const isFav = favorites.has(p.id);
-  const sub = subtitle(p);
-  const dist = user ? haversine(user.lat, user.lon, p.lat, p.lon) : null;
+/** Bis zu `max` Merkmal-Etiketten aus den Filtern (nur bestätigte Angaben), z. B. „Kostenlos“, „Öffentlich“. */
+export function placeTags(p, max = 3) {
+  return (FILTERS[p.type] || []).filter(d => d.test(p)).slice(0, max).map(d => ({ text: d.label, good: d.id === 'free' }));
+}
 
-  const head = h('header', { class: 'detail-head' },
-    h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Zurück zur Liste', title: 'Schließen', html: icon('close', 22), onclick: actions.close }),
+export function tagRow(tags) {
+  return tags.length ? h('div', { class: 'dtags' }, tags.map(t => h('span', { class: 'dtag' + (t.good ? ' is-good' : '') + (t.cls ? ' ' + t.cls : ''), text: t.text }))) : null;
+}
+
+/** „Route“ – Straßen-Navigation bis zum Standort (keine Wasserroute). */
+export function routeLink(p, cls = 'dbtn dbtn-primary') {
+  return h('a', { class: cls, href: navUrl(p), target: '_blank', rel: 'noopener noreferrer', title: 'Route über Straßen bis zum Standort (keine Wasserroute)' },
+    h('span', { html: icon('navigate', 18) }), h('span', { text: 'Route' }));
+}
+
+export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, pegel }) {
+  const isFav = favorites.has(p.id);
+  const dist = user ? haversine(user.lat, user.lon, p.lat, p.lon) : null;
+  const kicker = [TYPES[p.type].label, p.water?.name && !p.water.approx ? p.water.name : null].filter(Boolean).join(' · ');
+
+  const head = h('header', { class: 'detail-head dh' },
     h('div', { class: 'detail-title' },
-      h('span', { class: `badge badge-${p.type}`, html: glyphSvg(p.type, 18) }, h('span', { text: TYPES[p.type].label })),
+      h('p', { class: `dh-kicker k-${p.type}`, text: kicker }),
       h('h2', { id: 'detail-name', text: displayName(p) }),
-      sub || dist !== null ? h('p', { class: 'detail-sub', text: [sub, dist !== null ? formatDistance(dist) : null].filter(Boolean).join(' · '),
-        title: dist !== null ? 'Luftlinie von deinem Standort' : null }) : null,
-      trustLine(p)),
-    h('button', { type: 'button', class: 'icon-btn fav' + (isFav ? ' is-on' : ''), 'aria-pressed': String(isFav),
-      'aria-label': isFav ? 'Aus Favoriten entfernen' : 'Als Favorit speichern', title: isFav ? 'Aus Favoriten entfernen' : 'Favorit speichern',
-      html: icon('star', 22, isFav), onclick: actions.onFavorite }));
+      h('div', { class: 'dh-meta' }, trustLine(p),
+        dist !== null ? h('span', { title: 'Luftlinie von deinem Standort', text: `· ${formatDistance(dist)} entfernt` }) : null)),
+    h('button', { type: 'button', class: 'dh-close', 'aria-label': 'Details schließen', title: 'Schließen', html: icon('close', 22), onclick: actions.close }));
 
   const body = h('div', { class: 'detail-body' });
+  const sub = subtitle(p);
+  if (sub && sub !== p.water?.name) body.append(h('p', { class: 'detail-sub', text: sub }));
+  const tags = tagRow(placeTags(p, 4));
+  if (tags) body.append(tags);
 
-  // Aktionsleiste
-  body.append(h('div', { class: 'action-bar' },
-    h('a', { class: 'act act-primary', href: navUrl(p), target: '_blank', rel: 'noopener noreferrer', title: 'Route über Straßen bis zum Standort (keine Wasserroute)' },
-      h('span', { class: 'act-ico', html: icon('navigate', 20) }), h('span', { text: 'Route' })),
-    actionButton('share', 'Teilen', 'Link teilen', actions.share),
-    actionButton('camera', 'Foto', 'Foto hinzufügen', actions.addPhoto),
-    actionButton('flag', 'Melden', 'Fehler melden', actions.report)));
+  // Route · Merken · Teilen
+  body.append(h('div', { class: 'dbtns' },
+    routeLink(p),
+    h('button', { type: 'button', class: 'dbtn fav', 'aria-pressed': String(isFav), title: isFav ? 'Aus Favoriten entfernen' : 'Als Favorit speichern', onclick: actions.onFavorite },
+      h('span', { html: icon('star', 18, isFav) }), h('span', { text: isFav ? 'Gemerkt' : 'Merken' })),
+    h('button', { type: 'button', class: 'dbtn', title: 'Link teilen', onclick: actions.share }, h('span', { html: icon('share', 18) }), h('span', { text: 'Teilen' }))));
+
+  // Pegel am selben Gewässer (wird nachgeladen; ohne Pegel bleibt der Platz leer)
+  if (pegel) {
+    const slot = h('div', { class: 'pegel-slot' });
+    body.append(slot);
+    pegel.then(box => { if (box) slot.replaceWith(box); else slot.remove(); }, () => slot.remove());
+  }
 
   // Fotos
   if (p.photos.length) body.append(photoCarousel(p.photos, { name: displayName(p), onReport: actions.reportPhoto }));
@@ -126,11 +147,12 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts })
     'Quelle: ', src ? h('a', { href: src, target: '_blank', rel: 'noopener noreferrer', text: '© OpenStreetMap', title: `OpenStreetMap ${p.osm.type}/${p.osm.id} · ODbL` }) : 'WaterMap-Community',
     p.community_fields.length ? ' + Community' : '', stand ? ` · Stand ${stand}` : ''));
 
-  return [head, body];
-}
+  // Ganz unten, für genau diesen Standort
+  body.append(h('div', { class: 'detail-links' },
+    h('button', { type: 'button', onclick: actions.addPhoto, text: 'Foto hinzufügen' }),
+    h('button', { type: 'button', onclick: actions.report, text: 'Fehler melden' })));
 
-function actionButton(name, label, title, onclick) {
-  return h('button', { type: 'button', class: 'act', title, onclick }, h('span', { class: 'act-ico', html: icon(name, 20) }), h('span', { text: label }));
+  return [head, body];
 }
 
 /** Kleine Herkunftszeile unter dem Namen; Antippen zeigt den Hinweis. */
