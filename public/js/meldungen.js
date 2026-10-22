@@ -155,56 +155,170 @@ export function statusZeile(meldungen, { onOpen, offline = false, zeit = null } 
     h('span', { class: 'meld-pfeil', html: icon('chevron', 18), 'aria-hidden': 'true' }));
 }
 
+/** „gestern 16:20“, „heute 9:05“ (für „Zuletzt: …“). */
+export function zeitpunkt(ms, jetzt = Date.now()) {
+  const d = new Date(ms), heute = new Date(jetzt);
+  const uhr = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const tag = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((tag(heute) - tag(d)) / 86400e3);
+  return diff === 0 ? `heute ${uhr}` : diff === 1 ? `gestern ${uhr}` : `${d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} ${uhr}`;
+}
+
+/** Passende Chips für „Lage hat sich geändert?“ (die gemeldete Lage selbst nicht noch einmal). */
+function aenderungsChips(haupt) {
+  return ['alles_frei', haupt === 'warteschlange' ? 'parkplatz_voll' : 'warteschlange', haupt === 'gesperrt' ? 'hindernis' : 'gesperrt'].filter(t => t !== haupt);
+}
+
 /**
- * Abschnitt „Heute vor Ort“ im Detailpanel. daten: Promise<{meldungen, offline, zeit}>.
- * onMelden(): Lage melden; onGeaendert(meldungen): nach Bestätigung.
+ * Karte „Heute vor Ort“ im Detailpanel (nur Slipanlagen, Häfen, Tankstellen).
+ *   a  nah, keine Probleme      → „Heute keine Probleme gemeldet“ + „Bist du gerade hier?“ mit Chips
+ *   b  Meldungen vorhanden      → wichtigste Meldung; nah: „Stimmt das noch?“ + „Lage hat sich geändert?“
+ *   c  nach Antippen eines Chips → „Deine Meldung“ mit Notiz, Abbrechen / Meldung senden
+ *   d  weiter weg / ohne Position → Status ohne Knöpfe, unten die Zeile „Lage melden“
+ * opts = { standortId, daten: Promise<{meldungen, offline, zeit, unbekannt}>, nah: bool,
+ *          onMehr() (alle sechs Typen), onGesendet(meldungen), onGeaendert(meldungen), toast }
  */
-export function heuteVorOrt(daten, { onMelden, onGeaendert, toast, online = () => navigator.onLine !== false }) {
-  const box = h('div', { class: 'meld-liste', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Wird geladen …' }));
-  const link = h('button', { type: 'button', class: 'meld-link', html: icon('pin', 16) }, h('span', { text: 'Lage hier melden' }));
-  link.onclick = onMelden;
-  const sec = h('section', { class: 'block meld-block', id: 'heute-vor-ort', tabindex: '-1', 'aria-labelledby': 'hvo-titel' },
-    h('div', { class: 'meld-kopf' }, h('h3', { id: 'hvo-titel', text: 'Heute vor Ort' }), h('span', { class: 'muted small', text: 'verschwindet nach 24 h' })),
-    box, link);
-  const zeichnen = ({ meldungen, offline, zeit, unbekannt }) => {
-    box.removeAttribute('aria-busy');
-    const items = [];
-    if (offline) items.push(h('p', { class: 'meld-offline', text: unbekannt ? 'Offline – aktuelle Meldungen können nicht geladen werden.' : `Offline · ${standVon(zeit)}` }));
-    if (!meldungen.length && !(offline && unbekannt)) {
-      items.push(h('p', { class: 'meld-keine' }, h('span', { html: icon('check', 18) }), h('span', { text: 'Keine Probleme gemeldet' })));
+export function vorOrtKarte({ standortId, daten, nah, onMehr, onGesendet, onGeaendert, toast }) {
+  const live = h('p', { class: 'sr-only', 'aria-live': 'polite' });
+  const inhalt = h('div', { class: 'vo-inhalt', 'aria-busy': 'true' }, h('p', { class: 'muted small vo-laden', text: 'Wird geladen …' }));
+  const karte = h('section', { class: 'vo-karte', id: 'heute-vor-ort', tabindex: '-1', 'aria-label': 'Heute vor Ort' }, inhalt, live);
+  const st = { meldungen: [], offline: false, zeit: null, unbekannt: false, wahl: null, notiz: '', busy: false, offen: new Set(), danke: new Set() };
+  const online = () => navigator.onLine !== false && !st.offline;
+  const sag = (text) => { live.textContent = ''; setTimeout(() => { live.textContent = text; }, 30); };
+
+  const kreis = (ico, cls) => h('span', { class: `vo-kreis ${cls}`, html: icon(ico, 20), 'aria-hidden': 'true' });
+
+  function kopf({ klein = false } = {}) {
+    const probleme = st.meldungen.filter(m => m.typ !== 'alles_frei');
+    if (!probleme.length) {
+      const frei = st.meldungen.find(m => m.typ === 'alles_frei');
+      const sub = st.offline ? (st.unbekannt ? 'Offline – aktuelle Meldungen nicht verfügbar' : `Offline · ${standVon(st.zeit)}`)
+        : frei ? `Zuletzt: „Alles frei“ · ${zeitpunkt(frei.erstelltAm)}` : null;
+      return h('div', { class: 'vo-kopf' + (klein ? ' is-klein' : '') }, kreis('check', 'is-ok'),
+        h('div', { class: 'vo-kopf-text' }, h('strong', { class: 'vo-status vo-ok', text: 'Heute keine Probleme gemeldet' }), sub && !klein ? h('small', { text: sub }) : null));
     }
-    if (meldungen.length) {
-      items.push(h('ul', {}, meldungen.map((m) => {
-        const t = TYPEN[m.typ] || TYPEN.hindernis;
-        const fertig = schonBewertet(m.id);
-        const knoepfe = h('div', { class: 'meld-knoepfe' });
-        const danke = h('span', { class: 'meld-danke', role: 'status' });
-        const ja = h('button', { type: 'button', class: 'meld-btn', text: 'Stimmt noch', disabled: fertig || offline });
-        const nein = h('button', { type: 'button', class: 'meld-btn', text: 'Nicht mehr', disabled: fertig || offline });
-        const klick = (stimmt) => async () => {
-          ja.disabled = nein.disabled = true;
-          try {
-            const j = await bestaetigen(m, stimmt);
-            danke.textContent = 'Danke!';
-            onGeaendert?.(j.meldungen || []);
-          } catch (e) { toast?.(e.message); if (!/schon bewertet/.test(e.message)) { ja.disabled = nein.disabled = false; } }
-        };
-        ja.onclick = klick(true); nein.onclick = klick(false);
-        knoepfe.append(ja, nein, fertig ? h('span', { class: 'meld-danke', text: 'Bewertet' }) : danke);
-        return h('li', { class: `meld-item ${tonKlasse(m.typ)}` },
-          h('span', { class: 'meld-ico', style: `--c:${t.farbe}`, html: icon(t.ico, 18) }),
-          h('div', { class: 'meld-inhalt' },
-            h('strong', { text: t.text }),
-            m.notiz ? h('p', { class: 'meld-notiz', text: m.notiz }) : null,
-            h('p', { class: 'meld-meta', text: [alter(m.erstelltAm), m.bestaetigt ? `${m.bestaetigt}× bestätigt` : null].filter(Boolean).join(' · ') }),
-            knoepfe));
-      })));
+    const m = probleme[0], t = TYPEN[m.typ] || TYPEN.hindernis;
+    const sub = [alter(m.erstelltAm), m.bestaetigt ? `${m.bestaetigt}× bestätigt` : null, st.offline ? standVon(st.zeit) : null].filter(Boolean).join(' · ');
+    return h('div', { class: 'vo-kopf' + (klein ? ' is-klein' : '') },
+      h('span', { class: 'vo-kreis is-typ', style: `--c:${t.farbe}`, html: icon(t.ico, 20), 'aria-hidden': 'true' }),
+      h('div', { class: 'vo-kopf-text' }, h('strong', { class: 'vo-status', text: t.zeile }),
+        h('small', { text: sub }), m.notiz && !klein ? h('p', { class: 'vo-notiz', text: m.notiz }) : null));
+  }
+
+  function bewerten(m, box) {
+    const fertig = schonBewertet(m.id) || st.danke.has(m.id);
+    const ja = h('button', { type: 'button', class: 'vo-pille', text: 'Ja', disabled: fertig || !online(), 'aria-label': `Stimmt noch: ${TYPEN[m.typ]?.text || ''}` });
+    const nein = h('button', { type: 'button', class: 'vo-pille', text: 'Nicht mehr', disabled: fertig || !online() });
+    const danke = h('span', { class: 'vo-danke', text: st.danke.has(m.id) ? 'Danke!' : (fertig ? 'Bewertet' : '') });
+    const klick = (stimmt) => async () => {
+      ja.disabled = nein.disabled = true;
+      try {
+        const j = await bestaetigen(m, stimmt);
+        st.danke.add(m.id); danke.textContent = 'Danke!'; sag('Danke für deine Bestätigung.');
+        const liste = j.meldungen || [];
+        setTimeout(() => { st.meldungen = liste; zeichnen(); onGeaendert?.(liste); }, 1200);
+      } catch (e) { toast?.(e.message); if (!/schon bewertet/.test(e.message)) ja.disabled = nein.disabled = false; }
+    };
+    ja.onclick = klick(true); nein.onclick = klick(false);
+    box.append(h('span', { class: 'vo-frage-text', text: 'Stimmt das noch?' }), h('span', { class: 'vo-pillen' }, danke, ja, nein));
+    return box;
+  }
+
+  function weitere(liste) {
+    if (!liste.length) return null;
+    return h('ul', { class: 'vo-weitere' }, liste.map((m) => {
+      const t = TYPEN[m.typ] || TYPEN.hindernis;
+      const offen = st.offen.has(m.id);
+      const knopf = h('button', { type: 'button', class: 'vo-weiter-btn', 'aria-expanded': String(offen),
+        onclick: () => { if (offen) st.offen.delete(m.id); else st.offen.add(m.id); zeichnen(); } },
+        h('span', { class: 'vo-punkt', style: `--c:${t.farbe}`, 'aria-hidden': 'true' }),
+        h('span', { class: 'vo-weiter-text' }, h('strong', { text: t.text }), ` · ${alter(m.erstelltAm)}`),
+        h('span', { class: 'vo-auf', html: icon('chevron', 18), 'aria-hidden': 'true' }));
+      const details = offen ? h('div', { class: 'vo-weiter-details' },
+        m.notiz ? h('p', { class: 'vo-notiz', text: m.notiz }) : null,
+        h('p', { class: 'vo-meta', text: m.bestaetigt ? `${m.bestaetigt}× bestätigt` : 'noch nicht bestätigt' }),
+        nah ? bewerten(m, h('div', { class: 'vo-frage is-klein' })) : null) : null;
+      return h('li', {}, knopf, details);
+    }));
+  }
+
+  function chips(typen) {
+    return h('div', { class: 'vo-chips', role: 'group', 'aria-label': 'Lage melden' },
+      typen.map(typ => h('button', { type: 'button', class: `vo-chip vo-chip-${TYPEN[typ].ton}`, 'aria-pressed': 'false', disabled: !online(), dataset: { typ },
+        onclick: () => { st.wahl = typ; st.notiz = ''; zeichnen(); karte.querySelector('#vo-notiz')?.focus(); sag(`${TYPEN[typ].text} gewählt. Notiz optional, dann Meldung senden.`); } },
+        typ === 'alles_frei' ? h('span', { html: icon('check', 16), 'aria-hidden': 'true' }) : null, h('span', { text: TYPEN[typ].text }))),
+      h('button', { type: 'button', class: 'vo-chip vo-chip-mehr', disabled: !online(), onclick: () => onMehr?.() },
+        h('span', { text: 'Mehr' }), h('span', { html: icon('chevron', 16), 'aria-hidden': 'true' })));
+  }
+
+  const meldenZeile = () => h('button', { type: 'button', class: 'vo-melden', disabled: !online(), onclick: () => onMehr?.() },
+    h('span', { class: 'vo-melden-ico', html: icon('pin', 22), 'aria-hidden': 'true' }),
+    h('span', { class: 'vo-melden-text' }, h('strong', { text: 'Lage melden' }), h('small', { text: online() ? 'Warst du heute dort? Hilf anderen.' : 'Offline – gerade nicht möglich' })),
+    h('span', { class: 'vo-melden-pfeil', html: icon('chevron', 20), 'aria-hidden': 'true' }));
+
+  function bearbeiten() {
+    const t = TYPEN[st.wahl];
+    const status = h('p', { class: 'vo-fehler', role: 'alert', hidden: true });
+    const notiz = h('input', { type: 'text', id: 'vo-notiz', class: 'vo-notizfeld', maxlength: NOTIZ_MAX, autocomplete: 'off', enterkeyhint: 'send',
+      placeholder: 'Notiz (optional), z. B. Ausweichparkplatz am Waldweg', 'aria-label': `Notiz (optional, höchstens ${NOTIZ_MAX} Zeichen)`, value: st.notiz,
+      oninput: () => { st.notiz = notiz.value; } });
+    const sendBtn = h('button', { type: 'submit', class: 'vo-senden', text: st.busy ? 'Wird gesendet …' : 'Meldung senden', disabled: st.busy });
+    const form = h('form', { class: 'vo-edit', novalidate: true },
+      h('div', { class: 'vo-edit-kopf' }, h('strong', { text: 'Deine Meldung' }),
+        h('button', { type: 'button', class: 'vo-aendern', text: 'Ändern', onclick: () => { st.wahl = null; zeichnen(); karte.querySelector('.vo-chip')?.focus(); } })),
+      h('div', { class: 'vo-wahl' }, h('span', { html: icon(t.ico, 20), 'aria-hidden': 'true' }), h('span', { text: t.text })),
+      notiz,
+      h('div', { class: 'vo-edit-knoepfe' },
+        h('button', { type: 'button', class: 'vo-abbrechen', text: 'Abbrechen', onclick: () => { st.wahl = null; st.notiz = ''; zeichnen(); karte.focus(); } }),
+        sendBtn),
+      status,
+      h('p', { class: 'vo-hinweis', text: 'Öffentlich sichtbar · verschwindet nach 24 Stunden' }));
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (st.busy) return;
+      st.busy = true; sendBtn.disabled = true; sendBtn.textContent = 'Wird gesendet …';
+      try {
+        const j = await senden(standortId, st.wahl, notiz.value.trim());
+        st.busy = false; st.wahl = null; st.notiz = ''; st.meldungen = j.meldungen || [];
+        zeichnen();
+        sag('Deine Meldung ist jetzt sichtbar.');
+        onGesendet?.(st.meldungen);
+      } catch (ex) {
+        st.busy = false; sendBtn.disabled = false; sendBtn.textContent = 'Meldung senden';
+        status.hidden = false; status.textContent = ex.message;
+      }
+    });
+    return form;
+  }
+
+  function zeichnen() {
+    inhalt.removeAttribute('aria-busy');
+    const probleme = st.meldungen.filter(m => m.typ !== 'alles_frei');
+    const ton = probleme.length ? (probleme[0].typ === 'gesperrt' ? 'vo-stop' : 'vo-warn') : 'vo-ok';
+    karte.className = `vo-karte ${ton}` + (st.wahl ? ' is-edit' : '');
+    const teile = [];
+    if (st.wahl) {
+      teile.push(h('div', { class: 'vo-oben' }, kopf({ klein: true })), bearbeiten());
+    } else {
+      const oben = h('div', { class: 'vo-oben' }, kopf());
+      if (probleme.length && nah) oben.append(bewerten(probleme[0], h('div', { class: 'vo-frage' })));
+      teile.push(oben);
+      const w = weitere(probleme.slice(1));
+      if (w) teile.push(w);
+      if (nah) {
+        teile.push(h('div', { class: 'vo-unten' },
+          h('div', { class: 'vo-unten-kopf' }, h('strong', { text: probleme.length ? 'Lage hat sich geändert?' : 'Bist du gerade hier?' }),
+            probleme.length ? null : h('small', { text: 'ein Tipp genügt' })),
+          chips(probleme.length ? aenderungsChips(probleme[0].typ) : ['alles_frei', 'parkplatz_voll', 'warteschlange'])));
+      } else {
+        teile.push(meldenZeile());
+      }
     }
-    box.replaceChildren(...items);
-    link.disabled = !online();
-    link.title = online() ? '' : 'Offline – Melden ist gerade nicht möglich';
-  };
-  daten.then(zeichnen, () => zeichnen({ meldungen: [], offline: true, unbekannt: true }));
-  sec.aktualisieren = (meldungen) => zeichnen({ meldungen, offline: false, zeit: Date.now() });
-  return sec;
+    inhalt.replaceChildren(...teile);
+  }
+
+  daten.then((d) => { Object.assign(st, { meldungen: d.meldungen || [], offline: !!d.offline, zeit: d.zeit, unbekannt: !!d.unbekannt }); zeichnen(); },
+    () => { Object.assign(st, { offline: true, unbekannt: true }); zeichnen(); });
+  karte.aktualisieren = (liste) => { st.meldungen = liste; st.wahl = null; zeichnen(); };
+  return karte;
 }

@@ -91,53 +91,99 @@ def run(b, mobile):
         check('Parkplatz voll' in z and 'vor 40 Min.' in z and '3× bestätigt' in z and '+1 weitere' in z, f'{tag}: Statuszeile in der Vorschau ({z!r})')
         check(pg.evaluate("getComputedStyle(document.querySelector('#peek .meld-zeile')).backgroundColor") == 'rgb(255, 246, 227)', f'{tag}: Statuszeile getönt #FFF6E3')
         pg.screenshot(path=str(SHOTS / 'meld_m_2vorschau.png'))
-        pg.click('#peek .meld-zeile'); pg.wait_for_selector('#detail:not([hidden]) .meld-item')
+        pg.click('#peek .meld-zeile'); pg.wait_for_selector('#detail:not([hidden]) .vo-kopf')
         pg.wait_for_timeout(300)
         check(pg.evaluate("document.activeElement.id") == 'heute-vor-ort', f'{tag}: Statuszeile öffnet Details bei „Heute vor Ort“')
     else:
-        pg.wait_for_selector('#detail:not([hidden]) .meld-item')
-        check(pg.locator('#detail .detail-body > .meld-slot .meld-zeile').count() == 1, f'{tag}: Statuszeile oben im Detailpanel')
-    sec = pg.locator('#detail #heute-vor-ort')
-    txt = sec.inner_text()
-    check('verschwindet nach 24 h' in txt and pg.locator('#detail .meld-item').count() == 2, f'{tag}: Abschnitt „Heute vor Ort“ mit zwei Meldungen')
-    check('<b>' in txt and pg.locator('#detail .meld-notiz b').count() == 0, f'{tag}: Notiz als Text, nie als HTML')
+        pg.wait_for_selector('#detail:not([hidden]) .vo-kopf')
+    pg.wait_for_selector('#detail .vo-kopf'); pg.wait_for_timeout(200)
+    karte = pg.locator('#detail #heute-vor-ort')
+    # Zustand b, weiter weg (ohne Position): Status ohne Knöpfe/Chips, unten „Lage melden“
+    check('vo-warn' in karte.get_attribute('class') and pg.inner_text('#detail .vo-status') == 'Parkplatz voll'
+          and 'vor 40 Min. · 3× bestätigt' in pg.inner_text('#detail .vo-kopf'), f'{tag}: b – wichtigste Meldung mit Alter und Bestätigungen')
+    check(pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-oben')).backgroundColor") == 'rgb(255, 246, 227)'
+          and pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-karte')).borderTopColor") == 'rgb(235, 199, 122)', f'{tag}: b – getönt #FFF6E3, Rand #EBC77A')
+    check(karte.locator('.vo-pille').count() == 0 and karte.locator('.vo-chip').count() == 0 and karte.locator('button.vo-melden').count() == 1, f'{tag}: d – weit weg: keine Knöpfe/Chips, Zeile „Lage melden“')
+    mz = karte.locator('.vo-melden').bounding_box()
+    check(mz['height'] >= 60 and 'Warst du heute dort? Hilf anderen.' in pg.inner_text('#detail .vo-melden'), f'{tag}: d – „Lage melden“ ≥ 60 px mit Unterzeile')
+    check('<b>' in karte.inner_text() and karte.locator('.vo-notiz b').count() == 0, f'{tag}: Notiz als Text, nie als HTML')
+    wb = karte.locator('.vo-weiter-btn')
+    check(wb.count() == 1 and wb.get_attribute('aria-expanded') == 'false' and 'Warteschlange' in wb.inner_text() and 'vor 20 Min.' in wb.inner_text(), f'{tag}: weitere Meldung eingeklappt')
+    wb.click(); check(karte.locator('.vo-weiter-btn').get_attribute('aria-expanded') == 'true' and 'noch nicht bestätigt' in karte.inner_text(), f'{tag}: aufklappbar')
     order = pg.evaluate("[...document.querySelectorAll('#detail .detail-body > *')].map(e => e.id || e.className)")
-    check('heute-vor-ort' in order and order.index('heute-vor-ort') < next((k for k, c in enumerate(order) if 'wx-block' in str(c)), 999), f'{tag}: „Heute vor Ort“ über dem Wetter')
-    # Bestätigen
-    first = pg.locator('#detail .meld-item').first
-    first.locator('button', has_text='Stimmt noch').click(); pg.wait_for_timeout(300)
-    check(st['votes'] and st['votes'][0][1] is True and st['votes'][0][2], f'{tag}: „Stimmt noch“ gesendet (mit Geräte-ID)')
-    first = pg.locator('#detail .meld-item').first
-    check(first.locator('button', has_text='Stimmt noch').is_disabled() and 'Danke' in first.inner_text(), f'{tag}: danach deaktiviert mit Dank')
-    check('4× bestätigt' in pg.inner_text('#detail .meld-zeile'), f'{tag}: Statuszeile zählt mit')
-    pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_3detail.png'), full_page=False)
-    # Standort ohne Meldungen
-    pg.evaluate("window.__watermap.selectPlace('node/3', { full: true })"); pg.wait_for_selector('#detail .meld-keine')
-    check('Keine Probleme gemeldet' in pg.inner_text('#detail #heute-vor-ort') and pg.locator('#detail .meld-zeile').count() == 0, f'{tag}: ohne Meldungen „Keine Probleme gemeldet“, keine Statuszeile')
-    # „Lage hier melden“ → Formular
-    pg.click('#detail .meld-link'); pg.wait_for_selector('#dlg[open] .lf-grid')
-    send = pg.locator('#dlg .lf-send')
-    check(pg.locator('#dlg .lf-tile').count() == 6 and send.get_attribute('aria-disabled') == 'true', f'{tag}: sechs Kacheln, Senden erst nach Auswahl')
-    hs = [pg.locator('#dlg .lf-tile').nth(i).bounding_box()['height'] for i in range(6)]
-    check(min(hs) >= 76, f'{tag}: Kacheln mindestens 76 px hoch ({min(hs):.0f})')
-    check(pg.locator('#dlg .lf-back').count() == 0, f'{tag}: ohne Melden-Sheet kein Zurück-Pfeil')
-    pg.click('#dlg .lf-tile[data-typ=gesperrt]'); pg.click('#dlg .lf-tile[data-typ=alles_frei]')
-    check(pg.locator('#dlg .lf-tile[aria-pressed=true]').count() == 1 and pg.get_attribute('#dlg .lf-tile[data-typ=alles_frei]', 'aria-pressed') == 'true', f'{tag}: Einfachauswahl mit aria-pressed')
-    pg.fill('#lf-note', 'Rampe frei geräumt')
-    check(pg.inner_text('#dlg .lf-count') == '18 / 140' and pg.get_attribute('#lf-note', 'maxlength') == '140', f'{tag}: Zähler „18 / 140“')
+    i_btn = next(k for k, c in enumerate(order) if 'dbtns' in str(c))
+    check(order.index('heute-vor-ort') == i_btn + 1 or order.index('heute-vor-ort') == i_btn + 2, f'{tag}: Karte direkt unter Route/Merken/Teilen')
+    check(order.index('heute-vor-ort') < next((k for k, c in enumerate(order) if 'wx-block' in str(c)), 999), f'{tag}: Karte über dem Wetter')
+    check('bei Testort' in pg.inner_text('#detail .dh-meta') and pg.locator('#detail .detail-sub').count() == 0, f'{tag}: Ort in der Unterzeile unter dem Namen')
+    pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_3b_weit.png'))
+    # „Lage melden“ (weit) → sechs Kacheln
+    pg.click('#detail .vo-melden'); pg.wait_for_selector('#dlg[open] .lf-grid')
+    check(pg.locator('#dlg .lf-tile').count() == 6, f'{tag}: d – „Lage melden“ öffnet die sechs Kacheln')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+    # Nah (Position bekannt, ≤ 1000 m): „Stimmt das noch?“ und „Lage hat sich geändert?“
+    pg.evaluate("(() => { const p = window.__watermap.state.byId.get('node/1'); window.__watermap.state.user = { lat: p.lat + 0.004, lon: p.lon }; })()")
+    pg.evaluate("window.__watermap.selectPlace('node/1', { full: true })"); pg.wait_for_selector('#detail .vo-pille')
+    karte = pg.locator('#detail #heute-vor-ort')
+    check(karte.locator('.vo-frage-text').first.inner_text() == 'Stimmt das noch?' and karte.locator('.vo-oben .vo-pille').count() == 2, f'{tag}: b nah – „Stimmt das noch?“ mit Ja / Nicht mehr')
+    chips = [c.strip() for c in karte.locator('.vo-unten .vo-chip').all_inner_texts()]
+    check('Lage hat sich geändert?' in karte.inner_text() and chips == ['Alles frei', 'Warteschlange', 'Gesperrt', 'Mehr'], f'{tag}: b nah – passende Chips ({chips})')
+    hs = [karte.locator('.vo-chip').nth(i).bounding_box()['height'] for i in range(len(chips))]
+    check(min(hs) >= 40, f'{tag}: Chips mindestens 40 px hoch ({min(hs):.0f})')
+    pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_4b_nah.png'))
+    karte.locator('.vo-oben .vo-pille', has_text='Ja').click(); pg.wait_for_timeout(300)
+    check(st['votes'] and st['votes'][-1][1] is True and st['votes'][-1][2], f'{tag}: „Ja“ gesendet (mit Geräte-ID)')
+    check(karte.locator('.vo-oben .vo-pille').first.is_disabled() and 'Danke!' in karte.inner_text(), f'{tag}: danach deaktiviert mit „Danke!“')
+    pg.wait_for_timeout(1400)
+    check('4× bestätigt' in pg.inner_text('#detail .vo-kopf'), f'{tag}: Zähler aktualisiert')
+    # Gesperrt: rot getönt
+    pg.evaluate("(() => { const p = window.__watermap.state.byId.get('node/2'); window.__watermap.state.user = null; })()")
+    pg.evaluate("window.__watermap.selectPlace('node/2', { full: true })"); pg.wait_for_selector('#detail .vo-karte.vo-stop')
+    check(pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-oben')).backgroundColor") == 'rgb(254, 242, 242)' and pg.inner_text('#detail .vo-status') == 'Gesperrt', f'{tag}: b gesperrt – rot getönt #FEF2F2')
+    pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_5b_rot.png'))
+    # Zustand a: nah, keine Meldungen
+    pg.evaluate("(() => { const p = window.__watermap.state.byId.get('node/3'); window.__watermap.state.user = { lat: p.lat, lon: p.lon + 0.003 }; })()")
+    pg.evaluate("window.__watermap.selectPlace('node/3', { full: true })"); pg.wait_for_selector('#detail .vo-unten')
+    karte = pg.locator('#detail #heute-vor-ort')
+    chips = [c.strip() for c in karte.locator('.vo-chip').all_inner_texts()]
+    check(pg.inner_text('#detail .vo-status') == 'Heute keine Probleme gemeldet' and karte.locator('.vo-kopf small').count() == 0, f'{tag}: a – „Heute keine Probleme gemeldet“ ohne Zusatzzeile')
+    check('Bist du gerade hier?' in karte.inner_text() and 'ein Tipp genügt' in karte.inner_text() and chips == ['Alles frei', 'Parkplatz voll', 'Warteschlange', 'Mehr'], f'{tag}: a – „Bist du gerade hier?“ mit Chips ({chips})')
+    check(karte.locator('.vo-melden').count() == 0, f'{tag}: a – keine Zeile „Lage melden“ (nah)')
+    pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_6a.png'))
+    # Zustand c: Chip antippen
+    karte.locator('.vo-chip', has_text='Parkplatz voll').click(); pg.wait_for_selector('#detail .vo-karte.is-edit')
+    check('Deine Meldung' in karte.inner_text() and pg.inner_text('#detail .vo-wahl') == 'Parkplatz voll' and karte.locator('.vo-kopf.is-klein').count() == 1, f'{tag}: c – „Deine Meldung“, gewählte Lage, Status klein')
+    check(pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-karte')).borderTopWidth") == '2px', f'{tag}: c – dunkler Rand 2 px')
+    check(pg.get_attribute('#vo-notiz', 'maxlength') == '140', f'{tag}: c – Notiz max. 140 Zeichen')
+    pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_7c.png'))
+    karte.locator('.vo-aendern').click()
+    check(karte.locator('.vo-chip').count() == 4 and 'is-edit' not in karte.get_attribute('class'), f'{tag}: „Ändern“ führt zu den Chips zurück')
+    karte.locator('.vo-chip', has_text='Alles frei').click(); pg.fill('#vo-notiz', 'Rampe frei geräumt')
     st['mode'] = 'sperre'
-    send.click(); pg.wait_for_selector('#dlg .pf-status.error')
-    check('gerade schon gemeldet' in pg.inner_text('#dlg .pf-status'), f'{tag}: Sperre freundlich erklärt')
+    karte.locator('.vo-senden').click(); pg.wait_for_selector('#detail .vo-fehler:not([hidden])')
+    check('gerade schon gemeldet' in pg.inner_text('#detail .vo-fehler'), f'{tag}: Sperre freundlich erklärt')
     st['mode'] = 'down'
-    send.click(); pg.wait_for_timeout(400)
-    check('Keine Verbindung' in pg.inner_text('#dlg .pf-status'), f'{tag}: ohne Verbindung freundlicher Hinweis')
+    karte.locator('.vo-senden').click(); pg.wait_for_timeout(400)
+    check('Keine Verbindung' in pg.inner_text('#detail .vo-fehler'), f'{tag}: ohne Verbindung freundlicher Hinweis')
     st['mode'] = 'ok'
-    send.click(); pg.wait_for_selector('#dlg', state='hidden')
+    karte.locator('.vo-senden').click(); pg.wait_for_selector('#detail .vo-karte:not(.is-edit) .vo-kopf small')
     check('Danke! Deine Meldung ist jetzt sichtbar.' in pg.inner_text('#toast'), f'{tag}: Toast nach dem Senden')
     p = st['posts'][-1]['body']
     check(p == {'standortId': 'node/3', 'typ': 'alles_frei', 'notiz': 'Rampe frei geräumt'}, f'{tag}: gesendet nur Standort-ID, Typ, Notiz ({p})')
-    pg.wait_for_timeout(300)
-    check(pg.evaluate("window.__watermap.state.meld.get('node/3')?.typ") == 'alles_frei' and pg.locator('#detail .meld-item').count() == 1, f'{tag}: Marker-Stand und Detail sofort aktualisiert')
+    check('Zuletzt: „Alles frei“ · heute' in pg.inner_text('#detail .vo-kopf'), f'{tag}: danach „Zuletzt: „Alles frei“ · heute …“')
+    check(pg.evaluate("window.__watermap.state.meld.get('node/3')?.typ") == 'alles_frei', f'{tag}: Marker-Stand sofort aktualisiert')
+    # „Mehr ›“ → sechs Kacheln
+    karte.locator('.vo-chip-mehr').click(); pg.wait_for_selector('#dlg[open] .lf-grid')
+    send = pg.locator('#dlg .lf-send')
+    check(pg.locator('#dlg .lf-tile').count() == 6 and send.get_attribute('aria-disabled') == 'true', f'{tag}: „Mehr“ öffnet sechs Kacheln, Senden erst nach Auswahl')
+    hs = [pg.locator('#dlg .lf-tile').nth(i).bounding_box()['height'] for i in range(6)]
+    check(min(hs) >= 76, f'{tag}: Kacheln mindestens 76 px hoch ({min(hs):.0f})')
+    pg.click('#dlg .lf-tile[data-typ=gesperrt]'); pg.click('#dlg .lf-tile[data-typ=rampe_rutschig]')
+    check(pg.locator('#dlg .lf-tile[aria-pressed=true]').count() == 1, f'{tag}: Einfachauswahl mit aria-pressed')
+    pg.fill('#lf-note', 'Algen')
+    check(pg.inner_text('#dlg .lf-count') == '5 / 140', f'{tag}: Zähler „5 / 140“')
+    send.click(); pg.wait_for_selector('#dlg', state='hidden'); pg.wait_for_timeout(300)
+    check(pg.inner_text('#detail .vo-status') == 'Rampe rutschig', f'{tag}: Detail zeigt sofort die neue Meldung')
+    pg.evaluate("window.__watermap.state.user = null")
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     # Filter „Aktuelle Meldungen“
     n, on, cnt = uf.layer(pg, 'meldungen')
@@ -189,9 +235,9 @@ def run(b, mobile):
     # Offline: Stand von …, Melden aus
     ctx.set_offline(True); st['mode'] = 'down'
     pg.evaluate("window.dispatchEvent(new Event('offline'))")
-    pg.evaluate("window.__watermap.selectPlace('node/1', { full: true })"); pg.wait_for_selector('#detail .meld-offline')
-    check('Stand von' in pg.inner_text('#detail .meld-offline') or 'Offline' in pg.inner_text('#detail .meld-offline'), f'{tag}: offline mit Hinweis auf den Stand')
-    check(pg.locator('#detail .meld-link').is_disabled(), f'{tag}: offline ist „Lage hier melden“ aus')
+    pg.evaluate("window.__watermap.selectPlace('node/1', { full: true })"); pg.wait_for_selector('#detail .vo-kopf small')
+    check('Offline' in pg.inner_text('#detail .vo-kopf'), f'{tag}: offline mit Hinweis auf den Stand')
+    check(pg.locator('#detail .vo-melden').is_disabled(), f'{tag}: offline ist „Lage melden“ aus')
     check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
     ctx.close()
 

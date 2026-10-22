@@ -163,6 +163,7 @@ with sync_playwright() as p:
         check(link.count() == 1 and 'In der Pegel-Ampel prüfen' in link.inner_text() and link.get_attribute('href') == './pegel-ampel?pegel=' + KOELN,
               f'{name}: Link „In der Pegel-Ampel prüfen“')
         check(pg.locator('.wm-gauge-pill.is-selected').count() == 1, f'{name}: gewählter Pegel hervorgehoben')
+        check(pg.locator('#detail #heute-vor-ort').count() == 0, f'{name}: keine Karte „Heute vor Ort“')
         # Fadenkreuz
         svg = pg.locator('#detail .gc-svg').bounding_box()
         pg.locator('#detail .gc-svg').scroll_into_view_if_needed()

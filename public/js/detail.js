@@ -67,20 +67,20 @@ export function routeLink(p, cls = 'dbtn dbtn-primary') {
 export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, pegel, vorOrt }) {
   const isFav = favorites.has(p.id);
   const dist = user ? haversine(user.lat, user.lon, p.lat, p.lon) : null;
-  const kicker = [TYPES[p.type].label, p.water?.name && !p.water.approx ? p.water.name : null].filter(Boolean).join(' · ');
+  const kicker = [TYPES[p.type].label, p.water?.name || null].filter(Boolean).join(' · ');
+  const ort = p.locality ? (p.locality_kind === 'nearest' ? `bei ${p.locality}` : p.locality) : null;
 
   const head = h('header', { class: 'detail-head dh' },
     h('div', { class: 'detail-title' },
       h('p', { class: `dh-kicker k-${p.type}`, text: kicker }),
       h('h2', { id: 'detail-name', text: displayName(p) }),
-      h('div', { class: 'dh-meta' }, trustLine(p),
-        dist !== null ? h('span', { title: 'Luftlinie von deinem Standort', text: `· ${formatDistance(dist)} entfernt` }) : null)),
+      // Eine Unterzeile: „bei Bünde · OpenStreetMap · 4,3 km“ (Ort, Herkunft, Entfernung)
+      h('div', { class: 'dh-meta' }, ort ? h('span', { text: `${ort} ·` }) : null, trustLine(p),
+        dist !== null ? h('span', { title: 'Luftlinie von deinem Standort', text: `· ${formatDistance(dist)}` }) : null)),
     h('button', { type: 'button', class: 'dh-close', 'aria-label': 'Details schließen', title: 'Schließen', html: icon('close', 22), onclick: actions.close }));
 
   const body = h('div', { class: 'detail-body' });
   if (vorOrt?.zeile) body.append(vorOrt.zeile);   // wichtigste Lagemeldung („Heute vor Ort“)
-  const sub = subtitle(p);
-  if (sub && sub !== p.water?.name) body.append(h('p', { class: 'detail-sub', text: sub }));
   const tags = tagRow(placeTags(p, 4));
   if (tags) body.append(tags);
 

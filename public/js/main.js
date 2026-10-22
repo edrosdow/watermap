@@ -12,7 +12,7 @@ import { openForm } from './forms.js';
 import { renderDetail, placeTags, tagRow, routeLink } from './detail.js';
 import { mountNav, popover, swipeToClose } from './nav.js';
 import { bewerte } from './ampel-logik.js';
-import { aktivLaden, standortLaden, statusZeile, heuteVorOrt, zusammenfassen } from './meldungen.js';
+import { aktivLaden, standortLaden, statusZeile, vorOrtKarte, zusammenfassen } from './meldungen.js';
 import { openLageForm } from './lage-form.js';
 import { loadGauges, loadHistory, renderGaugeDetail } from './pegel.js';
 import { weatherSection } from './wetter.js';
@@ -443,27 +443,29 @@ function showDetail(p, { scrollTo = null } = {}) {
     pegel: pegelInfo(p).then(info => info && pegelBox(info)),
     vorOrt: vorOrtTeile(p),
   });
-  mountDetail(head, body);
+  mountDetail(head, body, 'p:' + p.id);
   if (scrollTo === 'vor-ort') setTimeout(() => {
     const sec = el.detail.querySelector('#heute-vor-ort');
     sec?.scrollIntoView({ block: 'start' }); sec?.focus({ preventScroll: true });
   }, 0);
 }
 
-/** Statuszeile und Abschnitt „Heute vor Ort“ – frisch geladen beim Öffnen des Standorts. */
+/** Ist die (schon bekannte) Position höchstens VOR_ORT_RADIUS_M entfernt? Nie selbst nach der Position fragen. */
+function istNah(p) {
+  return !!state.user && haversine(state.user.lat, state.user.lon, p.lat, p.lon) <= CONFIG.VOR_ORT_RADIUS_M;
+}
+
+/** Karte „Heute vor Ort“ – frisch geladen beim Öffnen des Standorts. */
 function vorOrtTeile(p) {
   const daten = standortLaden(p.id);
   daten.then(d => meldStandortGeladen(p.id, d));
-  const slot = h('div', { class: 'meld-slot' });
-  const section = heuteVorOrt(daten, {
-    onMelden: () => lageMelden(p),
-    onGeaendert: (liste) => { meldLokal(p.id, liste); zeileSetzen(liste); },
-    toast,
+  const section = vorOrtKarte({
+    standortId: p.id, daten, nah: istNah(p), toast,
+    onMehr: () => lageMelden(p),
+    onGeaendert: (liste) => meldLokal(p.id, liste),
+    onGesendet: (liste) => { meldLokal(p.id, liste); toast('Danke! Deine Meldung ist jetzt sichtbar.'); },
   });
-  const zeileSetzen = (liste, d = {}) => slot.replaceChildren(...[statusZeile(liste, { offline: d.offline, zeit: d.zeit,
-    onOpen: () => { const sec = el.detail.querySelector('#heute-vor-ort'); sec?.scrollIntoView({ block: 'start', behavior: 'smooth' }); sec?.focus({ preventScroll: true }); } })].filter(Boolean));
-  daten.then(d => zeileSetzen(d.meldungen, d));
-  return { zeile: slot, section };
+  return { zeile: null, section };
 }
 
 // ---- Vorschau-Karte (Handy)
@@ -562,9 +564,12 @@ function pegelBox({ g, ampel }) {
 }
 
 
-function mountDetail(head, body) {
+/** key: wer gezeigt wird – nur beim Neuzeichnen desselben Eintrags bleibt die Scroll-Position erhalten
+ *  (sonst öffnete ein anderer Standort mitten im Panel und der Kopf überdeckte die ersten Zeilen). */
+function mountDetail(head, body, key = '') {
   const scroll = el.detail.querySelector('.detail-scroll');
-  const prev = scroll ? scroll.scrollTop : 0;
+  const prev = scroll && el.detail.dataset.key === key ? scroll.scrollTop : 0;
+  el.detail.dataset.key = key;
   clear(el.detail).append(h('div', { class: 'detail-scroll' }, head, body));
   el.detail.hidden = false;
   el.detail.setAttribute('aria-labelledby', 'detail-name');
@@ -643,7 +648,7 @@ function selectGauge(id, { fly = true } = {}) {
   state.map?.selectGauge(id);
   const dist = state.user ? formatDistance(haversine(state.user.lat, state.user.lon, g.lat, g.lon)) : null;
   const [head, body] = renderGaugeDetail(g, { history: loadHistory(id), close: closeDetail, user: state.user, distance: dist, weather: weatherSection(g.lat, g.lon) });
-  mountDetail(head, body);
+  mountDetail(head, body, 'g:' + id);
   if (state.map && fly) state.map.reveal(g, { zoom: 12, inset: detailInset() });
   hidePeek();
   setSelHash('g', id);
@@ -699,7 +704,7 @@ function selectExtra(id, { fly = true } = {}) {
   state.extraId = id;
   state.map?.selectExtra(id);
   const [head, body] = renderExtraDetail(x, { close: closeDetail, user: state.user });
-  mountDetail(head, body);
+  mountDetail(head, body, 'x:' + id);
   if (state.map && fly) state.map.reveal(x, { zoom: 16, inset: detailInset() });
   hidePeek();
   setSelHash('x', id);

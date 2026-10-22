@@ -221,6 +221,7 @@ with sync_playwright() as p:
         (pg.touchscreen.tap if mobile else pg.mouse.click)(bx['x'] + 13, bx['y'] + 13)
         pg.wait_for_selector('#detail .facts', timeout=5000)
         check('Hubbrücke Test' in pg.inner_text('#detail') and pg.locator('.wm-extra.is-selected').count() == 1, f'{name}: Marker-Klick öffnet Detail und hebt hervor')
+        check(pg.locator('#detail #heute-vor-ort').count() == 0, f'{name}: keine Karte „Heute vor Ort“')
         pg.keyboard.press('Escape')
 
         # Deep-Link und gemerkte Ebenen
