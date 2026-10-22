@@ -17,6 +17,7 @@
     constructor(latlng, opts) { this.ll = ll(latlng); this.opts = opts || {}; this.icon = this.opts.icon; this.h = {}; this.node = null; this.map = null; }
     on(ev, fn) { this.h[ev] = fn; return this; }
     setIcon(i) { this.icon = i; if (this.map) this.map._draw(); }
+    setZIndexOffset(z) { this.zOffset = z; return this; }
     addTo(layer) { (layer._add ? layer._add(this) : layer.addLayer(this)); return this; }
     remove() { if (this.group) this.group._remove(this); }
   }
@@ -38,7 +39,7 @@
       this.layerEl = document.createElement('div'); this.layerEl.style.cssText = 'position:absolute;inset:0;overflow:hidden';
       el.append(this.layerEl);
       el.addEventListener('click', (e) => { if (e.target.closest('.leaflet-marker-icon')) return; const r = el.getBoundingClientRect(); const p = this._unproject(e.clientX - r.left, e.clientY - r.top); this._fire('click', { latlng: p }); });
-      this.attributionControl = { setPrefix() {} };
+      this.attributionControl = { setPrefix() {}, addAttribution() {}, removeAttribution() {} };
     }
     _fire(ev, d) { (this.h[ev] || []).forEach(f => f(d)); }
     on(ev, fn) { (this.h[ev] ||= []).push(fn); return this; }

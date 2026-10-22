@@ -9,7 +9,7 @@ export const NAV = [
   { id: 'karte', label: 'Karte', top: 'Karte', ico: 'map', href: './#karte' },
   { id: 'liste', label: 'Liste', top: 'Liste', ico: 'list', href: './#liste' },
   { id: 'melden', label: 'Melden', ico: 'plus', href: './#melden', center: true },
-  { id: 'pegel', label: 'Pegel', top: 'Pegel-Ampel', ico: 'gauge', href: './pegel-ampel' },
+  { id: 'pegel', label: 'Pegel', top: 'Pegel', ico: 'gauge', href: './#pegel' },
   { id: 'favoriten', label: 'Favoriten', top: 'Favoriten', ico: 'star', href: './#favoriten' },
 ];
 

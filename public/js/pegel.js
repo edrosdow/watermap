@@ -10,7 +10,7 @@ import { s, niceStep, fmtNum } from './chart.js';
 export const GAUGE_STATES = {
   hsw:     { label: 'Über HSW – Schifffahrt eingeschränkt', short: 'über HSW', color: '#D03B3B', ico: 'alert' },
   high:    { label: 'Hochwasser (über MHW)', short: 'hoch', color: '#EC835A', ico: 'alert' },
-  normal:  { label: 'Normaler Wasserstand', short: 'normal', color: '#1F6FB2', ico: 'check' },
+  normal:  { label: 'Normaler Wasserstand', short: 'normal', color: '#6CBF84', ico: 'check' },
   low:     { label: 'Niedrigwasser (unter MNW)', short: 'niedrig', color: '#FAB219', ico: 'alert' },
   unknown: { label: 'Einordnung nicht möglich', short: 'ohne Einordnung', color: '#8A99A6', ico: 'info' },
   old:     { label: 'Messwert veraltet', short: 'veraltet', color: '#8A99A6', ico: 'clock' },

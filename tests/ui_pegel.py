@@ -147,25 +147,29 @@ with sync_playwright() as p:
         check('↑' in pill.inner_text(), f'{name}: Trendpfeil am Marker')
         pg.screenshot(path=str(SHOTS / f'{name}_2_koeln_marker.png'))
 
-        # Detail öffnen
+        # Marker antippen: Handy → kompakte Vorschau, Desktop → Panel rechts (bleibt auf der Karte)
         box = pill.bounding_box()
         (pg.touchscreen.tap if mobile else pg.mouse.click)(box['x'] + box['width'] / 2, box['y'] + box['height'] / 2)
+        if mobile:
+            pg.wait_for_selector('#peek:not([hidden]) .gpeek', timeout=8000)
+            ptxt = pg.inner_text('#peek')
+            check('Köln' in ptxt and '312' in ptxt and 'Passt mein Boot?' in ptxt, f'{name}: Vorschau mit Wert und „Passt mein Boot?“')
+            check(pg.get_attribute('#peek a.dbtn-primary', 'href') == './pegel-ampel?pegel=' + KOELN, f'{name}: Vorschau verlinkt die Pegel-Ampel')
+            pg.click('#peek button:has-text("Details")')
         pg.wait_for_selector('#detail:not([hidden]) .gc-line', timeout=8000)
         txt = pg.inner_text('#detail')
-        check('Köln' in txt and 'Rhein' in txt, f'{name}: Name und Gewässer lesbar (nicht in Großbuchstaben)')
-        check('312' in txt and 'Normaler Wasserstand' in txt and 'steigend' in txt, f'{name}: Wert, Zustand und Trend als Text')
-        check(pg.locator('#detail .gm-now').count() == 1 and pg.locator('#detail .gm-tick').count() == 4, f'{name}: Einordnung MNW/MW/MHW/HSW')
+        check('Köln' in txt and 'Rhein' in txt.title(), f'{name}: Name und Gewässer lesbar')
+        check('312' in txt and 'Normal' in txt and 'steigend' in txt, f'{name}: Wert, Zustand und Trend als Text')
+        check(pg.locator('#detail .ps-mark').count() == 1 and pg.locator('#detail .ps-labels > span').count() == 4, f'{name}: Einordnung MNW/MW/MHW/HSW')
         d = pg.locator('#detail .gc-line').get_attribute('d')
         check(d.count('M') == 2, f'{name}: Messlücke unterbricht die Linie ({d.count("M")} Abschnitte)')
-        check(pg.locator('#detail .gc-table tbody tr').count() >= 7, f'{name}: Tageswerte als Tabelle')
-        check('#g=' + KOELN in pg.url, f'{name}: Deep-Link #g=…')
-        link = pg.locator('#detail a.ampel-link')
-        check(link.count() == 1 and 'In der Pegel-Ampel prüfen' in link.inner_text() and link.get_attribute('href') == './pegel-ampel?pegel=' + KOELN,
-              f'{name}: Link „In der Pegel-Ampel prüfen“')
+        check('#karte/pegel/' + KOELN in pg.url, f'{name}: Adresse #karte/pegel/…')
+        link = pg.locator('#detail a.pd-kachel')
+        check(link.count() == 1 and 'Passt mein Boot?' in link.inner_text() and link.get_attribute('href') == './pegel-ampel?pegel=' + KOELN,
+              f'{name}: Kachel „Passt mein Boot?“')
         check(pg.locator('.wm-gauge-pill.is-selected').count() == 1, f'{name}: gewählter Pegel hervorgehoben')
         check(pg.locator('#detail #heute-vor-ort').count() == 0, f'{name}: keine Karte „Heute vor Ort“')
         # Fadenkreuz
-        svg = pg.locator('#detail .gc-svg').bounding_box()
         pg.locator('#detail .gc-svg').scroll_into_view_if_needed()
         svg = pg.locator('#detail .gc-svg').bounding_box()
         pg.mouse.move(svg['x'] + svg['width'] * 0.5, svg['y'] + svg['height'] * 0.5); pg.wait_for_timeout(150)
@@ -176,23 +180,24 @@ with sync_playwright() as p:
         pg.screenshot(path=str(SHOTS / f'{name}_4_detail_unten.png'))
 
         # Weitere Zustände
-        for uuid, expect in [(STATIONS[1]['uuid'], 'Niedrigwasser'), (STATIONS[2]['uuid'], 'Hochwasser'),
-                             (STATIONS[3]['uuid'], 'Über HSW'), (STATIONS[4]['uuid'], 'veraltet'), (STATIONS[5]['uuid'], 'Einordnung nicht möglich')]:
-            pg.evaluate(f"window.__watermap.selectGauge({json.dumps(uuid)}, {{ fly: false }})"); pg.wait_for_timeout(200)
-            check(expect in pg.inner_text('#detail'), f'{name}: Zustand „{expect}“')
-        check(pg.locator('#detail .gauge-meter').count() == 0, f'{name}: ohne Kennwerte keine leere Skala')
-        pg.evaluate(f"window.__watermap.selectGauge({json.dumps(STATIONS[3]['uuid'])}, {{ fly: false }})"); pg.wait_for_selector('#detail .gc-line')
+        for uuid, expect in [(STATIONS[1]['uuid'], 'Niedrig'), (STATIONS[2]['uuid'], 'Hoch'),
+                             (STATIONS[3]['uuid'], 'über HSW'), (STATIONS[4]['uuid'], 'veraltet'), (STATIONS[5]['uuid'], 'ohne Kennwerte')]:
+            pg.evaluate(f"window.__watermap.selectGauge({json.dumps(uuid)}, {{ fly: false, full: true }})"); pg.wait_for_timeout(200)
+            check(expect in pg.inner_text('#detail .pd-kopf'), f'{name}: Zustand „{expect}“')
+        check(pg.locator('#detail .ps-track').count() == 0, f'{name}: ohne Kennwerte keine leere Skala')
+        pg.evaluate(f"window.__watermap.selectGauge({json.dumps(STATIONS[3]['uuid'])}, {{ fly: false, full: true }})"); pg.wait_for_selector('#detail .gc-line')
         pg.screenshot(path=str(SHOTS / f'{name}_5_hsw.png'))
 
-        # Schließen, Standort-Auswahl schließt Pegel
+        # Schließen
         pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
-        check(pg.locator('#detail').is_hidden() and '#g=' not in pg.url, f'{name}: Escape schließt Pegel-Detail')
+        check(pg.locator('#detail').is_hidden() and 'pegel/' not in pg.url, f'{name}: Escape schließt Pegel-Detail')
 
-        # Deep-Link in neuer Seite (Ebene war eingeschaltet → bleibt gemerkt)
-        pg2 = ctx.new_page(); pg2.goto(BASE + '#g=' + KOELN)
-        pg2.wait_for_selector('#detail:not([hidden]) .gc-line', timeout=15000)
-        check('Köln' in pg2.inner_text('#detail'), f'{name}: Deep-Link öffnet Pegel direkt')
-        pg2.close()
+        # Deep-Link in neuer Seite (Ebene war eingeschaltet → bleibt gemerkt); alter Link #g= geht weiter
+        for link in ['#karte/pegel/' + KOELN, '#g=' + KOELN]:
+            pg2 = ctx.new_page(); pg2.goto(BASE + link)
+            pg2.wait_for_selector('#peek:not([hidden]) .gpeek' if mobile else '#detail:not([hidden]) .gc-line', timeout=15000)
+            check('Köln' in pg2.inner_text('#peek' if mobile else '#detail'), f'{name}: Deep-Link {link[:13]}… öffnet Pegel auf der Karte')
+            pg2.close()
 
         # Ausschalten
         layer(pg, 'gauges', click=True); pg.wait_for_timeout(200)
@@ -200,9 +205,18 @@ with sync_playwright() as p:
 
         # Schnittstelle gestört
         fail_api['on'] = True
-        layer(pg, 'gauges', click=True); pg.wait_for_timeout(500)
-        check('nicht erreichbar' in pg.inner_text('#toast'), f'{name}: Hinweis, wenn PEGELONLINE ausfällt')
-        check(layer(pg, 'gauges')[1] == 'false', f'{name}: Schalter danach wieder aus')
+        # a) mit gespeichertem Stand (neue Seite, gleicher Browser): letzte Werte mit Hinweis „Stand von …“
+        pg3 = ctx.new_page(); pg3.goto(BASE); pg3.wait_for_selector('.wm-cluster, .wm-pin', timeout=20000)
+        layer(pg3, 'gauges', click=True); pg3.wait_for_timeout(500)
+        check('Stand von' in pg3.inner_text('#toast') and pg3.locator('.wm-gauge').count() == 6, f'{name}: ohne Verbindung letzter Stand mit Hinweis')
+        pg3.close()
+        # b) ohne gespeicherten Stand: Hinweis, Schalter wieder aus
+        pg3 = ctx.new_page(); pg3.goto(BASE); pg3.wait_for_selector('.wm-cluster, .wm-pin', timeout=20000)
+        pg3.evaluate("localStorage.removeItem('watermap.pegel.stand')")
+        layer(pg3, 'gauges', click=True); pg3.wait_for_timeout(500)
+        check('nicht erreichbar' in pg3.inner_text('#toast'), f'{name}: Hinweis, wenn PEGELONLINE ausfällt')
+        check(layer(pg3, 'gauges')[1] == 'false', f'{name}: Schalter danach wieder aus')
+        pg3.close()
         fail_api['on'] = False
 
         csp = pg.evaluate('window.__csp || []')

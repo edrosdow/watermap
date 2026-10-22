@@ -168,9 +168,9 @@ with sync_playwright() as p:
 
         # Pegel-Detail enthält ebenfalls Wetter
         pg.evaluate("window.__watermap.setGauges(true)"); pg.wait_for_selector('.wm-gauge')
-        pg.evaluate("window.__watermap.selectGauge('a6ee8177-107b-47dd-bcfd-30960ccc6e9c', { fly: false })")
+        pg.evaluate("window.__watermap.selectGauge('a6ee8177-107b-47dd-bcfd-30960ccc6e9c', { fly: false, full: true })")
         pg.wait_for_selector('#detail .wx-wind', timeout=8000)
-        check('Pegel' in pg.inner_text('#detail .detail-head') and pg.locator('#detail .wx-block').count() == 1, f'{name}: Wetter auch im Pegel-Detail')
+        check('pegel' in pg.inner_text('#detail .pd-kopf').lower() and pg.locator('#detail .wx-block').count() == 1, f'{name}: Wetter auch im Pegel-Detail')
         pg.evaluate("window.__watermap.setGauges(false)")
 
         # Dienst gestört (neuer Ort, damit nichts aus dem Zwischenspeicher kommt)

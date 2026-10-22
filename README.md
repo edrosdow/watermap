@@ -23,6 +23,9 @@ Die Standorte für **ganz Deutschland** (16 Bundesländer) kommen per Import aus
 
 Details: [docs/DATEN-AKTUALISIEREN.md](docs/DATEN-AKTUALISIEREN.md). Fehlt ein Bundesland, weil die Overpass-Server ausfallen, bricht der Import ab und die alten Daten bleiben.
 
+## Pegel
+Bereich „Pegel“ unter `#pegel` (`js/pegel-dashboard.js`, Darstellung `js/pegel-ansicht.js`, Daten `js/pegel-daten.js`, Stil `css/pegel.css`): Lage heute, „Meine Pegel“ (eigene Liste im Browser, getrennt von den Favoriten), Flüsse im Überblick, alle Pegel als Tabelle. Detailseite `#pegel/<UUID>`; Pegel auf der Karte `#karte/pegel/<UUID>` (alter Link `#g=<UUID>` geht weiter). Eine gemeinsame Stationsliste für Karte und Dashboard, alle 15 Min. aktualisiert; Verläufe nur für sichtbare Karten und die Detailseite. Offline: letzter gespeicherter Stand mit „Stand von …“.
+
 ## Pegel-Ampel
 Eigene Seite unter `/pegel-ampel` (`public/pegel-ampel.html`, `js/ampel.js`, Logik in `js/ampel-logik.js`): Pegel wählen, persönlichen Mindestpegel eingeben → Grün/Gelb/Rot mit Trend, 14-Tage-Verlauf und den nächsten Slipanlagen. Puffer (20 cm), Trendschwelle und Prognosezeitraum stehen als Konstanten oben in `ampel-logik.js`. Weitere Prüfungen (z. B. Brücken) werden an `PRUEFUNGEN` angehängt. Teilbare Links: `/pegel-ampel?pegel=<PEGELONLINE-UUID>&min=<cm>`.
 
@@ -45,6 +48,7 @@ Eigene Seite unter `/pegel-ampel` (`public/pegel-ampel.html`, `js/ampel.js`, Log
 python3 -I -m unittest discover -s tests -v     # Importer, Validator, Moderationsskript
 python3 -I tests/ui_full.py                     # Oberfläche (braucht: pip install playwright pillow)
 python3 -I tests/ui_ampel.py                    # Pegel-Ampel
+python3 -I tests/ui_pegel_dashboard.py          # Pegel-Dashboard (375/390/1024/1440 px)
 ```
 Die Oberflächentests laufen mit einem Leaflet-Ersatz. Siehe [docs/STATUS.md](docs/STATUS.md) für das, was damit **nicht** geprüft ist.
 
