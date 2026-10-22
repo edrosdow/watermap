@@ -2,6 +2,7 @@
 // Toiletten, Wasser, Gastronomie, Rastplätze und Parkplätze (Ebene „Service“). Datei: data/osm/extras.geojson.
 // Text aus den Daten wird nur als Text eingefügt.
 import { CONFIG } from './config.js';
+import { abfrage } from './umgebung-abfrage.js';
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { haversine, formatDistance, navUrl, safeHttpUrl, safeTel, UNKNOWN } from './model.js';
@@ -98,7 +99,8 @@ function normalize(f) {
 // (netlify/functions/umgebung.mjs → Overpass API): keine IP-Adressen der Besucher bei Dritten, der Import bleibt klein.
 // Klappt das nicht (offline, Overpass überlastet), bleiben die importierten Daten.
 const LIVE_KINDS = new Set(['lock', 'toilets', 'water', 'food', 'rest', 'parking', 'shop']);   // diese Arten deckt die Abfrage ab
-const LIVE_TIMEOUT_MS = 20000;   // die Funktion versucht bis zu drei Overpass-Server
+const LIVE_TIMEOUT_MS = 20000;   // die Funktion fragt mehrere Overpass-Server gleichzeitig
+const DIREKT_TIMEOUT_MS = 12000;
 const NOT_PUBLIC = new Set(['private', 'no', 'customers', 'permit', 'military', 'agricultural', 'forestry', 'delivery']);
 const liveCache = new Map();
 
@@ -138,12 +140,20 @@ export function fromOsm(el) {
 export function liveNearby(lat, lon, radius, { fetchFn = fetch } = {}) {
   const key = `${lat.toFixed(4)},${lon.toFixed(4)},${radius}`;
   if (liveCache.has(key)) return liveCache.get(key);
-  const ctl = typeof AbortController === 'function' ? new AbortController() : null;
-  const timer = ctl && setTimeout(() => ctl.abort(), LIVE_TIMEOUT_MS);
-  const p = fetchFn(`${CONFIG.UMGEBUNG_API}?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}`, { signal: ctl?.signal, headers: { Accept: 'application/json' } })
-    .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-    .then(j => (Array.isArray(j?.elements) ? j.elements : []).map(fromOsm).filter(Boolean))
-    .finally(() => timer && clearTimeout(timer));
+  const holen = (url, opts, ms) => {
+    const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = ctl && setTimeout(() => ctl.abort(), ms);
+    return fetchFn(url, { ...opts, signal: ctl?.signal })
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(j => { if (!Array.isArray(j?.elements)) throw new Error('unerwartete Antwort'); return j.elements; })
+      .finally(() => timer && clearTimeout(timer));
+  };
+  // Zuerst direkt beim Overpass-Server (Rechenzentrums-Adressen wie Netlify lehnt overpass-api.de ab),
+  // sonst über unsere Netlify-Funktion mit Ausweich-Servern.
+  const p = holen(CONFIG.OVERPASS_API, { method: 'POST', body: 'data=' + encodeURIComponent(abfrage(lat, lon, radius)),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' } }, DIREKT_TIMEOUT_MS)
+    .catch(() => holen(`${CONFIG.UMGEBUNG_API}?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}`, { headers: { Accept: 'application/json' } }, LIVE_TIMEOUT_MS))
+    .then(els => els.map(fromOsm).filter(Boolean));
   liveCache.set(key, p);
   p.catch(() => liveCache.delete(key));
   return p;

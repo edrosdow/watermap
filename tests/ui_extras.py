@@ -81,10 +81,15 @@ LIVE = [
 live = {'mode': 'down', 'queries': []}
 def overpass(route):
     from urllib.parse import urlparse, parse_qs
-    q = parse_qs(urlparse(route.request.url).query); live['queries'].append(q)
-    if live['mode'] == 'down': return route.fulfill(status=503, body='busy')
+    q = parse_qs(urlparse(route.request.url).query)
+    if route.request.method == 'POST':   # direkt aus dem Browser: Overpass-Abfrage im Formular
+        m = re.search(r'around:\d+,([\d.]+),([\d.]+)', parse_qs(route.request.post_data or '').get('data', [''])[0])
+        q = {'lat': [m.group(1)], 'lon': [m.group(2)], 'direkt': ['1']} if m else {}
+    live['queries'].append(q)
+    cors = {'access-control-allow-origin': '*'}   # wie der echte Overpass-Server
+    if live['mode'] == 'down': return route.fulfill(status=503, headers=cors, body='busy')
     els = LIVE if live['mode'] == 'data' else []
-    route.fulfill(status=200, content_type='application/json', body=json.dumps({'elements': els}))
+    route.fulfill(status=200, content_type='application/json', headers=cors, body=json.dumps({'elements': els}))
 
 def extras(route):
     extras_calls.append(1)
@@ -117,8 +122,9 @@ with sync_playwright() as p:
         ctx.route('**/data/hafeninfo.json', lambda r: r.fulfill(status=200, content_type='application/json', body=HAFENINFO))
         ctx.route('**/api/wetter/**', EMPTY_WX)
         ctx.route('**/.netlify/functions/umgebung*', overpass)
+        ctx.route('https://overpass-api.de/**', overpass)
         ctx.route(re.compile(r'https://([a-c]\.)?tile\.openstreetmap\.org/.*'), lambda r: r.fulfill(status=200, content_type='image/png', body=TILE))
-        ctx.route(re.compile(r'https://(?!([a-c]\.)?tile\.openstreetmap\.org).*'), lambda r: r.abort())
+        ctx.route(re.compile(r'https://(?!(([a-c]\.)?tile\.openstreetmap\.org|overpass-api\.de/)).*'), lambda r: r.abort())
         ctx.add_init_script("document.addEventListener('securitypolicyviolation', e => (window.__csp = window.__csp || []).push(e.violatedDirective + ' ' + e.blockedURI));")
         ctx.add_init_script("try { localStorage.setItem('watermap.geoAsked', '1'); } catch {}")
         ctx.add_init_script("try { if (localStorage.getItem('watermap.cats') === null) { localStorage.setItem('watermap.cats', 'slip,marina,fuel'); localStorage.setItem('watermap.listOpen', '1'); } } catch {}")   # alte Ansicht: alle Kategorien, Liste offen
@@ -215,6 +221,7 @@ with sync_playwright() as p:
         pg.wait_for_selector('#detail .nearby-item:has-text("Markt Test")', timeout=8000)
         q = live['queries'][-1] if live['queries'] else {}
         check(abs(float(q.get('lat', ['0'])[0]) - LAT) < 1e-4 and abs(float(q.get('lon', ['0'])[0]) - LON) < 1e-4, f'{name}: Abfrage mit den Koordinaten des Standorts')
+        check(q.get('direkt') == ['1'], f'{name}: Abfrage direkt beim Overpass-Server')
         txt = pg.inner_text('#detail .nearby-list')
         check('Abenteuercamp Test' in txt and 'Markt Test' in txt and 'Gasthof Test' in txt and 'Wohnmobilstellplatz' in txt and 'Parkplatz' in txt,
               f'{name}: Campingplatz, Supermarkt, Restaurant, Wohnmobilstellplatz, Parkplatz aus OSM')

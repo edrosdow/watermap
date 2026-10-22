@@ -4,7 +4,9 @@
 // eigener Kennung (User-Agent) – overpass-api.de lehnt weitergeleitete Anfragen ohne Kennung mit 406 ab.
 // Alle Server werden gleichzeitig gefragt, die erste brauchbare Antwort gewinnt (einzelne Server sind oft
 // überlastet oder lehnen Cloud-Adressen ab). Antworten werden einen Tag im Netlify-CDN gehalten.
-export const RADIUS_M = 500;
+import { abfrage, RADIUS_M } from '../../public/js/umgebung-abfrage.js';
+
+export { abfrage, RADIUS_M };
 export const SERVER = [
   'https://overpass-api.de/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
@@ -13,17 +15,6 @@ export const SERVER = [
 ];
 const TIMEOUT_MS = 18000;
 const USER_AGENT = 'WaterMap/1.0 (+https://watermaps.netlify.app; map of slipways and marinas)';
-
-/** Overpass-Abfrage: Camping, Rastplätze, Parkplätze, Toiletten, Wasser, Gastronomie, Läden, Schleusen; Flächen mit Mittelpunkt. */
-export function abfrage(lat, lon, radius = RADIUS_M) {
-  const a = `(around:${radius},${lat.toFixed(5)},${lon.toFixed(5)})`;
-  return `[out:json][timeout:15];(`
-    + `nwr["tourism"~"^(camp_site|caravan_site|picnic_site)$"]${a};nwr["leisure"="picnic_site"]${a};`
-    + `nwr["amenity"~"^(parking|toilets|drinking_water|water_point|restaurant|cafe|fast_food|biergarten|pub)$"]${a};`
-    + `nwr["shop"~"^(supermarket|convenience|kiosk)$"]${a};`
-    + `way["lock"="yes"]["waterway"]${a};nwr["seamark:type"="lock_basin"]${a};`
-    + `);out tags center;`;
-}
 
 const json = (status, body, cache) => new Response(JSON.stringify(body), {
   status,
