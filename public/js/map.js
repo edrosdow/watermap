@@ -3,6 +3,7 @@ import { CONFIG } from './config.js';
 import { gaugeMarkerHtml } from './pegel.js';
 import { extraMarkerHtml, extraTitle, KINDS, GROUPS } from './extras.js';
 import { pinSvg } from './icons.js';
+import { favorites } from './favorites.js';
 import { displayName, TYPES } from './model.js';
 
 // ------------------------------------------------------------------ Bibliotheken laden
@@ -73,9 +74,10 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
   let pickHandler = null;
   let userMarker = null;
 
+  const FAV_STAR = '<span class="wm-fav" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><path d="m12 3 2.8 5.8 6.2.8-4.5 4.4 1.1 6.2L12 17.2 6.4 20.2l1.1-6.2L3 9.6l6.2-.8z"/></svg></span>';
   const iconFor = (p, selected) => L.divIcon({
-    className: 'wm-pin' + (selected ? ' is-selected' : ''),
-    html: pinSvg(p.type, { selected }),
+    className: 'wm-pin' + (selected ? ' is-selected' : '') + (favorites.has(p.id) ? ' is-fav' : ''),
+    html: pinSvg(p.type, { selected }) + (favorites.has(p.id) ? FAV_STAR : ''),
     iconSize: [44, 54], iconAnchor: [22, 52],
   });
 
@@ -114,6 +116,12 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
         list.push(m);
       }
       if (layer.addLayers) layer.addLayers(list); else list.forEach(m => m.addTo(layer));
+    },
+
+    /** Pin neu zeichnen (z. B. nach Favorit an/aus). */
+    refresh(id) {
+      const cur = markers.get(id);
+      if (cur) cur.marker.setIcon(iconFor(cur.place, id === selectedId));
     },
 
     select(id) {

@@ -10,6 +10,7 @@ def check(c, m):
 with sync_playwright() as p:
     b = p.chromium.launch(); ctx = b.new_context(viewport={'width': 1200, 'height': 800}, service_workers='allow')
     ctx.route('**/tile.openstreetmap.org/**', lambda r: r.abort())   # Kacheln sind hier nicht nötig
+    ctx.add_init_script("try { if (localStorage.getItem('watermap.cats') === null) { localStorage.setItem('watermap.cats', 'slip,marina,fuel'); localStorage.setItem('watermap.listOpen', '1'); } } catch {}")   # alte Ansicht: alle Kategorien, Liste offen
     pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.goto(BASE); pg.wait_for_selector('.place')
     pg.wait_for_function("navigator.serviceWorker.ready.then(r => !!r.active)", timeout=10000)
@@ -25,7 +26,7 @@ with sync_playwright() as p:
     check(pg.locator('.place').count() == online > 0, f'Offline: Standortliste weiterhin vorhanden ({online})')
     check(pg.locator('#offline').is_visible(), 'Offline: Hinweis sichtbar')
     pg.click('.place >> nth=0'); pg.wait_for_selector('#detail:not([hidden])')
-    check('Nicht bekannt' in pg.inner_text('#detail'), 'Offline: Details öffnen')
+    check('Eigenschaften' in pg.inner_text('#detail'), 'Offline: Details öffnen')
     ctx.set_offline(False)
     check(not errs, f'Keine JS-Fehler {errs[:2]}')
     # Manifest

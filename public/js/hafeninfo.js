@@ -66,7 +66,7 @@ export function enrichFacts(meta, id) {
     const entry = places?.[id];
     const facts = (entry?.facts || []).filter(f => LABELS[f.key] && f.key !== 'sonstiges');
     if (!facts.length || !block.isConnected) return;
-    block.querySelector('dl.facts')?.replaceWith(render(mergeFacts(rows, facts)));
+    block.querySelector('.facts-list')?.replaceWith(render(mergeFacts(rows, facts)));
     block.append(sourceNote(entry));
   }, () => { /* Zusatzinfo – fehlt die Datei, bleibt die Tabelle wie sie ist */ });
 }
@@ -75,9 +75,8 @@ function sourceNote(entry) {
   const age = ageInDays(entry.checked);
   const stale = age !== null && age > CONFIG.HAFENINFO_STALE_DAYS;
   const src = safeHttpUrl(entry.source);
-  return h('div', { class: 'note hi-note ' + (stale ? 'note-warn' : 'note-info'), html: icon(stale ? 'alert' : 'globe', 18) },
-    h('span', {}, 'Mit ', h('span', { class: 'web-mark', html: icon('globe', 13), 'aria-hidden': 'true' }),
-      ' markierte Angaben stehen wörtlich so auf der Website des Hafens',
-      src ? [' (', h('a', { href: src, target: '_blank', rel: 'noopener noreferrer', text: host(src) }), ')'] : '',
-      `, Stand ${formatDate(entry.checked) || 'unbekannt'}. Automatisch übernommen, ohne Gewähr – Preise und Leistungen können sich geändert haben.`));
+  return h('p', { class: 'hi-note' + (stale ? ' is-stale' : '') },
+    h('span', { class: 'web-mark', html: icon('globe', 13), 'aria-hidden': 'true' }), ' = laut Website',
+    src ? [' (', h('a', { href: src, target: '_blank', rel: 'noopener noreferrer', text: host(src) }), ')'] : '',
+    ` · Stand ${formatDate(entry.checked) || 'unbekannt'} · ohne Gewähr`);
 }

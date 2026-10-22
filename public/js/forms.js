@@ -62,7 +62,7 @@ export const FORMS = {
       { name: 'art', label: 'Was stimmt nicht?', type: 'select', required: true, options: [
         ['existiert-nicht', 'Standort existiert nicht mehr'], ['koordinaten', 'Falsche Koordinaten'],
         ['nicht-oeffentlich', 'Nicht öffentlich zugänglich'], ['preis', 'Falscher Preis'],
-        ['oeffnungszeiten', 'Falsche Öffnungszeiten'], ['sonstiges', 'Sonstiges']] },
+        ['oeffnungszeiten', 'Falsche Öffnungszeiten'], ['foto', 'Unpassendes Foto'], ['sonstiges', 'Sonstiges']] },
       { name: 'details', label: 'Details', type: 'textarea', required: true, max: 1000, placeholder: 'Wie ist es richtig?' },
       { name: 'kontakt', label: 'E-Mail für Rückfragen (optional)', type: 'email', max: 120 },
     ],
@@ -156,6 +156,7 @@ export function openForm(formName, ctx, preset = {}) {
       node = labelWrap(f, control);
     } else if (f.type === 'textarea') {
       control = h('textarea', { name: f.name, required: f.required, maxlength: f.max, placeholder: f.placeholder, rows: 4 });
+      if (f.name === 'details' && preset.details) control.value = preset.details;   // z. B. „Foto melden“
       node = labelWrap(f, control);
     } else if (f.type === 'select') {
       control = h('select', { name: f.name, required: f.required }, f.options.map(([v, t]) => h('option', { value: v, text: t })));

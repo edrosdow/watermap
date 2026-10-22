@@ -3,8 +3,15 @@
 [build]
   publish = "public"
   # Kein Build-Schritt nötig: reine statische Seite.
+  # Commits der Foto-Verwaltung, die nur den Verlauf (admin/verlauf.json) ändern, brauchen keinen neuen Deploy.
+  ignore = "git log -1 --pretty=%s | grep -qE '^(Foto abgelehnt|Foto-Meldung verworfen|Slipanlage abgelehnt|Preis abgelehnt|Hinweis erledigt|Hinweis verworfen):'"
 
-# Foto-Freigabe (/admin/fotos.html → netlify/functions/fotos.mjs). Braucht die Umgebungsvariablen
+[build.environment]
+  # @netlify/blobs (Pegel-Alarm) braucht Node 22
+  NODE_VERSION = "22"
+
+# Netlify-Funktionen: Foto-Freigabe (/admin/fotos.html → fotos.mjs) und Pegel-Alarm (pegel-alarm*.mjs, siehe docs/PEGEL-ALARM.md).
+# Foto-Freigabe: Braucht die Umgebungsvariablen
 # FOTO_ADMIN_PASSWORT, NETLIFY_API_TOKEN und GITHUB_TOKEN (siehe docs/MODERATION.md).
 [functions]
   directory = "netlify/functions"

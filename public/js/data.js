@@ -168,3 +168,17 @@ export async function loadAll() {
 
   return { places: [...byId.values()], meta, issues, invalid };
 }
+
+/** Nur Slipanlagen (OSM + freigegebene Community-Meldungen), z. B. für die Pegel-Ampel. */
+export async function loadSlips() {
+  const base = CONFIG.DATA_BASE;
+  let meta = null;
+  try { meta = await fetchJson(base + 'meta.json'); } catch { /* Standardpfade */ }
+  const osmFile = (meta?.files?.osm || []).find(f => /slip/.test(f)) || 'osm/slip.geojson';
+  const comFile = meta?.files?.community?.places || 'community/places.json';
+  const [osm, com] = await Promise.all([fetchJson(base + osmFile), fetchJson(base + comFile).catch(() => null)]);
+  const out = [];
+  for (const rec of asRecords(osm)) { const p = normalizePlace(rec, 'osm'); if (p?.type === 'slip') out.push(p); }
+  for (const rec of asRecords(com)) if (rec?.status === 'approved') { const p = normalizePlace(rec, 'community'); if (p?.type === 'slip') out.push(p); }
+  return out;
+}

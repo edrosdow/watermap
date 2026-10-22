@@ -26,6 +26,8 @@ def route_libs(ctx):
         return route.fulfill(status=200, content_type='application/json', body=f.read_bytes()) if f.is_file() else route.fulfill(status=404, body='')
     ctx.route('**/data/**', data)
     # Details laden auch das Wetter (eigener Test: ui_wetter.py) – hier nur leere Antworten
+    ctx.route('**/.netlify/functions/umgebung*', lambda r: r.fulfill(status=200, content_type='application/json', body='{"elements": []}'))   # „In der Nähe“ live
+    ctx.route('https://overpass-api.de/**', lambda r: r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body='{"elements": []}'))
     ctx.route('**/api/wetter/**', lambda r: r.fulfill(status=200, content_type='application/json',
               body=json.dumps({'current_weather': {'weather': None}, 'weather': {'weather': []}}.get(r.request.url.split('?')[0].rsplit('/', 1)[1], {'alerts': []}))))
     ctx.route('**/nominatim.openstreetmap.org/**', lambda r: r.fulfill(status=200, content_type='application/json',
@@ -43,6 +45,7 @@ with sync_playwright() as p:
                             geolocation={'latitude': 50.9, 'longitude': 6.99}, permissions=['geolocation'],
                             service_workers='block')   # sonst laufen Datenabrufe am Testdaten-Umweg vorbei
         route_libs(ctx)
+        ctx.add_init_script("try { if (localStorage.getItem('watermap.cats') === null) { localStorage.setItem('watermap.cats', 'slip,marina,fuel'); localStorage.setItem('watermap.listOpen', '1'); } } catch {}")   # alte Ansicht: alle Kategorien, Liste offen
         pg = ctx.new_page()
         errors = []
         pg.on('pageerror', lambda e: errors.append(str(e)))
@@ -54,9 +57,9 @@ with sync_playwright() as p:
         pg.screenshot(path=str(SHOTS / f'{name}_start.png'))
         # Kategorie ohne Daten
         if mobile: pg.click('#sheet-handle'); pg.wait_for_timeout(350)
-        pg.click('.chip-marina'); pg.wait_for_timeout(150)
+        pg.click('.chip-slip'); pg.click('.chip-fuel'); pg.wait_for_timeout(150)      # nur Marinas
         check('Noch keine Marinas' in pg.inner_text('#list'), f'{name}: Leerzustand Marinas ehrlich')
-        pg.click('.chip-slip'); pg.wait_for_timeout(150)
+        pg.click('.chip-marina'); pg.click('.chip-slip'); pg.wait_for_timeout(150)    # nur Slipanlagen
         # Unterfilter ohne Daten ist deaktiviert und blendet nichts aus
         chip = pg.locator('.chip-sub:has-text("Kostenlos")')
         check(chip.get_attribute('aria-disabled') == 'true', f'{name}: Filter "Kostenlos" ohne Daten ist als deaktiviert markiert')
@@ -66,16 +69,24 @@ with sync_playwright() as p:
         # Detail
         pg.click('.place >> nth=0'); pg.wait_for_selector('#detail:not([hidden])')
         txt = pg.inner_text('#detail')
-        check('Nicht bekannt' in txt, f'{name}: unbekannte Angaben als "Nicht bekannt"')
-        check('keine Wasserroute' in txt, f'{name}: Hinweis Straßenroute ≠ Wasserroute')
-        check('nicht vor Ort geprüft' in txt, f'{name}: OSM-Hinweis')
+        check('Nicht bekannt' not in txt and pg.locator('#detail .facts-more').is_visible(), f'{name}: unbekannte Angaben eingeklappt')
+        pg.click('#detail .facts-more')
+        check('Nicht bekannt' in pg.inner_text('#detail'), f'{name}: aufgeklappt als "Nicht bekannt"')
+        check('keine Wasserroute' in (pg.get_attribute('#detail .act-primary', 'title') or ''), f'{name}: Hinweis Straßenroute ≠ Wasserroute')
+        check(pg.locator('#detail', has_text='OpenStreetMap-Route').count() == 0, f'{name}: keine OpenStreetMap-Route')
+        check('OpenStreetMap · ungeprüft' in txt and 'nicht vor ort geprüft' not in txt.lower(), f'{name}: OSM-Herkunft dezent')
+        pg.click('#detail .trust')
+        check('nicht vor ort geprüft' in pg.inner_text('#detail').lower(), f'{name}: OSM-Hinweis beim Antippen')
         check('#p=' in pg.url, f'{name}: Deep-Link gesetzt')
         pg.screenshot(path=str(SHOTS / f'{name}_detail.png'))
         # Favorit
         pg.click('#detail .fav'); pg.wait_for_timeout(100)
         check(pg.locator('#detail .fav.is-on').count() == 1, f'{name}: Favorit gesetzt')
+        check(pg.locator('.chip-fav .chip-n').inner_text() == '1', f'{name}: Chip „Favoriten“ mit Anzahl')
+        pg.evaluate('window.__watermap.applyFilters()')   # Stub zeichnet setIcon in Gruppen nicht neu
+        check(pg.locator('.wm-pin.is-fav .wm-fav').count() >= 1, f'{name}: Favorit-Pin mit Stern')
         # Formular Fehler melden
-        pg.click('#detail button:has-text("Fehler melden")'); pg.wait_for_selector('#dlg[open]')
+        pg.click('#detail button[title="Fehler melden"]'); pg.wait_for_selector('#dlg[open]')
         pg.screenshot(path=str(SHOTS / f'{name}_form.png'))
         pg.click('#dlg .btn-primary'); pg.wait_for_timeout(100)
         check('Pflichtfelder' in pg.inner_text('#dlg') or 'Standort' in pg.inner_text('#dlg'), f'{name}: Validierung meldet fehlende Angaben')

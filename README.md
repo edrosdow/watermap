@@ -17,7 +17,14 @@ Die Standorte für **ganz Deutschland** (16 Bundesländer) kommen per Import aus
 - Mac/Linux: `sh daten-aktualisieren.sh`
 - Automatisch jeden Monat: [GitHub Action](.github/workflows/update-osm-data.yml)
 
+„In der Nähe“ (500 m um einen Standort) fragt Campingplätze, Parkplätze, Toiletten, Gastronomie, Supermärkte und Schleusen live bei OpenStreetMap ab (direkt aus dem Browser bei overpass-api.de; Rückfall: Netlify-Funktion `netlify/functions/umgebung.mjs` mit Ausweich-Servern); der Import liefert Brücken, Wehre, Kanu-Einstiege und Verleihe und dient als Rückfall.
+
 Details: [docs/DATEN-AKTUALISIEREN.md](docs/DATEN-AKTUALISIEREN.md). Fehlt ein Bundesland, weil die Overpass-Server ausfallen, bricht der Import ab und die alten Daten bleiben.
+
+## Pegel-Ampel
+Eigene Seite unter `/pegel-ampel` (`public/pegel-ampel.html`, `js/ampel.js`, Logik in `js/ampel-logik.js`): Pegel wählen, persönlichen Mindestpegel eingeben → Grün/Gelb/Rot mit Trend, 14-Tage-Verlauf und den nächsten Slipanlagen. Puffer (20 cm), Trendschwelle und Prognosezeitraum stehen als Konstanten oben in `ampel-logik.js`. Weitere Prüfungen (z. B. Brücken) werden an `PRUEFUNGEN` angehängt. Teilbare Links: `/pegel-ampel?pegel=<PEGELONLINE-UUID>&min=<cm>`.
+
+**E-Mail-Alarm:** `netlify/functions/pegel-alarm.mjs` (Anmeldung mit Double-Opt-in) und `pegel-alarm-pruefen.mjs` (stündlich), Mails über Brevo (kostenlos). Einrichtung: [docs/PEGEL-ALARM.md](docs/PEGEL-ALARM.md).
 
 ## Ordner
 | Pfad | Inhalt |
@@ -26,6 +33,7 @@ Details: [docs/DATEN-AKTUALISIEREN.md](docs/DATEN-AKTUALISIEREN.md). Fehlt ein B
 | `public/js/` | Programmcode: `main.js` (Ablauf), `map.js` (Leaflet), `data.js`, `model.js`, `forms.js`, `detail.js`, `search.js`, `icons.js`, `config.js` |
 | `public/data/osm/` | Standorte aus OpenStreetMap (GeoJSON, wird vom Import überschrieben) |
 | `public/data/community/` | Geprüfte Community-Daten (wird **nie** vom Import überschrieben) |
+| `netlify/` | Netlify-Funktionen (Foto-Verwaltung, Pegel-Alarm); `package.json` nur dafür |
 | `scripts/` | `import_osm.py`, `validate_data.py`, `submissions_to_json.py`, `vendor_libs.py` |
 | `tests/` | Automatische Tests |
 | `docs/` | Anleitungen, Datenschema, Moderation, Status |
@@ -34,6 +42,7 @@ Details: [docs/DATEN-AKTUALISIEREN.md](docs/DATEN-AKTUALISIEREN.md). Fehlt ein B
 ```
 python3 -I -m unittest discover -s tests -v     # Importer, Validator, Moderationsskript
 python3 -I tests/ui_full.py                     # Oberfläche (braucht: pip install playwright pillow)
+python3 -I tests/ui_ampel.py                    # Pegel-Ampel
 ```
 Die Oberflächentests laufen mit einem Leaflet-Ersatz. Siehe [docs/STATUS.md](docs/STATUS.md) für das, was damit **nicht** geprüft ist.
 

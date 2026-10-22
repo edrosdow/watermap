@@ -109,6 +109,7 @@ with sync_playwright() as p:
         ctx.route(re.compile(r'https://(?!([a-c]\.)?tile\.openstreetmap\.org).*'), lambda r: (foreign.append(r.request.url), r.abort()))
         ctx.add_init_script(CSP_HOOK)
         ctx.add_init_script("try { localStorage.setItem('watermap.geoAsked', '1'); } catch {}")
+        ctx.add_init_script("try { if (localStorage.getItem('watermap.cats') === null) { localStorage.setItem('watermap.cats', 'slip,marina,fuel'); localStorage.setItem('watermap.listOpen', '1'); } } catch {}")   # alte Ansicht: alle Kategorien, Liste offen
         pg = ctx.new_page()
         errors = []
         pg.on('pageerror', lambda e: errors.append('pageerror: ' + str(e)))
@@ -145,6 +146,9 @@ with sync_playwright() as p:
         check(d.count('M') == 2, f'{name}: Messlücke unterbricht die Linie ({d.count("M")} Abschnitte)')
         check(pg.locator('#detail .gc-table tbody tr').count() >= 7, f'{name}: Tageswerte als Tabelle')
         check('#g=' + KOELN in pg.url, f'{name}: Deep-Link #g=…')
+        link = pg.locator('#detail a.ampel-link')
+        check(link.count() == 1 and 'In der Pegel-Ampel prüfen' in link.inner_text() and link.get_attribute('href') == './pegel-ampel?pegel=' + KOELN,
+              f'{name}: Link „In der Pegel-Ampel prüfen“')
         check(pg.locator('.wm-gauge-pill.is-selected').count() == 1, f'{name}: gewählter Pegel hervorgehoben')
         # Fadenkreuz
         svg = pg.locator('#detail .gc-svg').bounding_box()

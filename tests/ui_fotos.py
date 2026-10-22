@@ -1,4 +1,4 @@
-"""UI-Test der Foto-Freigabe (public/admin/fotos.html) mit nachgebauter Funktion.
+"""UI-Test der Foto-Verwaltung (public/admin/fotos.html) mit nachgebauter Funktion, unter der echten CSP.
 Start: python3 tests/ui_fotos.py [screenshot-ordner]   (braucht playwright)"""
 import functools, json, pathlib, sys, tempfile, threading
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
@@ -22,18 +22,42 @@ FOTOS = [{'id': 's1', 'created': '2026-10-20T12:00:00Z', 'standort_id': 'node/63
           'beschreibung': 'x', 'rechte': False, 'hat_foto': True},
          {'id': 's3', 'created': '2026-10-20T14:00:00Z', 'standort_id': '__other', 'standort_name': 'Porta In Vössen',
           'beschreibung': 'Slipanlage', 'rechte': True, 'hat_foto': True}]
+REPORTS = [{'id': 'r1', 'created': '2026-10-20T15:00:00Z', 'standort_id': 'node/1937154973', 'standort_name': 'Tegel',
+            'foto': 'photos/a.jpg', 'grund': 'Babybett, <i>kein</i> Slip', 'veroeffentlicht': True}]
+PUBLISHED = [{'standort_id': 'node/1937154973', 'url': 'photos/a.jpg', 'alt': 'Babybett', 'credit': 'WaterMap-Community'},
+             {'standort_id': 'node/632876845', 'url': 'photos/b.jpg', 'alt': '', 'credit': 'WaterMap-Community'}]
+LOG = [{'zeit': '2026-10-20T16:00:00Z', 'aktion': 'entfernt', 'standort_id': 'node/5', 'foto': 'photos/z.jpg', 'beschreibung': 'Brot', 'grund': 'kein Slip'},
+       {'zeit': '2026-10-20T15:30:00Z', 'aktion': 'freigegeben', 'standort_id': 'node/632876845', 'standort_name': 'Slip Vössen', 'foto': 'photos/b.jpg', 'beschreibung': '<img src=x>'},
+       {'zeit': '2026-10-20T15:00:00Z', 'aktion': 'abgelehnt', 'standort_id': '__other', 'standort_name': 'Irgendwo', 'beschreibung': 'unscharf'}]
+SLIP0 = json.loads((ROOT / 'data/osm/slip.geojson').read_text(encoding='utf-8'))['features'][0]
+SLIPS = [{'id': 'n1', 'created': '2026-10-20T09:00:00Z', 'name': 'Doppelt', 'gewaesser': 'See', 'lat': SLIP0['geometry']['coordinates'][1], 'lon': SLIP0['geometry']['coordinates'][0],
+          'zugang': 'oeffentlich', 'gebuehr': 'kostenlos', 'gebuehr_betrag': '', 'parkplatz': 'ja', 'trailerparkplatz': '', 'beschreibung': '<b>Beton</b>', 'kontakt': 'a@b.de',
+          'hat_foto': True, 'rechte': False, 'dublette': True},
+         {'id': 'n2', 'created': '2026-10-20T09:30:00Z', 'name': 'Neu am Meer', 'gewaesser': 'Nordsee', 'lat': 54.9, 'lon': 2.0, 'zugang': '', 'gebuehr': '',
+          'gebuehr_betrag': '', 'parkplatz': '', 'trailerparkplatz': '', 'beschreibung': '', 'kontakt': '', 'hat_foto': False, 'rechte': False, 'dublette': False}]
+PREISE = [{'id': 'p1', 'created': '2026-10-20T10:00:00Z', 'tankstelle_id': 'node/7000', 'tankstelle_name': 'Tanke', 'kraftstoff': 'diesel', 'preis': 2.189, 'datum': '2026-10-19', 'kommentar': 'Schild', 'hat_beleg': True},
+          {'id': 'p2', 'created': '2026-10-20T10:30:00Z', 'tankstelle_id': '__other', 'tankstelle_name': 'Irgendwo', 'kraftstoff': 'benzin', 'preis': 2.0, 'datum': '2026-10-19', 'kommentar': '', 'hat_beleg': False}]
+HINWEISE = [{'id': 'h1', 'created': '2026-10-20T11:00:00Z', 'standort_id': 'node/5', 'standort_name': 'Hafen', 'art': 'oeffnungszeiten', 'art_text': 'Falsche Öffnungszeiten',
+             'details': 'Montags <u>zu</u>', 'kontakt': 'x@y.de'}]
+LOG.append({'zeit': '2026-10-20T14:00:00Z', 'bereich': 'slip', 'aktion': 'freigegeben', 'standort_id': 'c/neu-20261020-abc', 'standort_name': 'Neue Rampe', 'beschreibung': 'Weser'})
 posted = []
 
 def api(route):
     r = route.request
     if r.headers.get('x-passwort') != 'geheim':
         return route.fulfill(status=401, content_type='application/json', body='{"fehler":"Passwort falsch."}')
-    if r.method == 'GET' and 'bild=' in r.url:
-        return route.fulfill(status=200, content_type='image/png', body=PNG)
+    j = lambda body: route.fulfill(status=200, content_type='application/json', body=json.dumps(body))
     if r.method == 'GET':
-        return route.fulfill(status=200, content_type='application/json', body=json.dumps({'fotos': FOTOS}))
+        if 'meldungen' in r.url: return j({'meldungen': REPORTS})
+        if 'veroeffentlicht' in r.url: return j({'fotos': PUBLISHED})
+        if 'verlauf' in r.url: return j({'verlauf': LOG})
+        if 'bild=' in r.url or 'datei=' in r.url: return route.fulfill(status=200, content_type='image/png', body=PNG)
+        if 'form=slipanlage-melden' in r.url: return j({'slips': SLIPS})
+        if 'form=tankpreis-melden' in r.url: return j({'preise': PREISE})
+        if 'form=fehler-melden' in r.url: return j({'hinweise': HINWEISE})
+        return j({'fotos': FOTOS})
     posted.append(json.loads(r.post_data))
-    route.fulfill(status=200, content_type='application/json', body='{"ok":true}')
+    j({'ok': True})
 
 problems = []
 def check(cond, msg):
@@ -52,28 +76,99 @@ with sync_playwright() as p:
     pg.goto(f'http://127.0.0.1:{PORT}/admin/fotos.html')
     pg.fill('#pw', 'falsch'); pg.click('#login button')
     pg.locator('#msg', has_text='Passwort falsch').wait_for()     # CSP verbietet eval → keine wait_for_function
-    check(pg.locator('.card').count() == 0, 'falsches Passwort: nichts sichtbar')
+    check(pg.locator('#tabs').is_hidden() and pg.locator('.card').count() == 0, 'falsches Passwort: nichts sichtbar')
     pg.fill('#pw', 'geheim'); pg.click('#login button')
-    pg.wait_for_selector('.card img[src^="blob:"]')
-    check(pg.locator('.card').count() == 3 and '3 Foto(s)' in pg.inner_text('#msg'), 'Liste mit drei Einreichungen')
-    other = pg.locator('.card >> nth=2')
+    pg.locator('#tab-neu .card img[src^="blob:"] >> nth=2').wait_for()
+    check(pg.locator('#login').is_hidden() and pg.inner_text('#n-neu') == '3' and pg.inner_text('#n-gemeldet') == '1' and pg.inner_text('#n-veroeffentlicht') == '2',
+          'Reiter mit Anzahlen (3 eingereicht, 1 gemeldet, 2 veröffentlicht)')
+    check('hot' in pg.get_attribute('#n-gemeldet', 'class'), 'Meldungen sind hervorgehoben')
+    check(pg.inner_text('#n-slips') == '2' and pg.inner_text('#n-preise') == '2' and pg.inner_text('#n-hinweise') == '1', 'Reiter Slipanlagen, Preise, Hinweise mit Anzahlen')
+
+    # Eingereicht
+    cards = pg.locator('#tab-neu .card')
+    check('<b>Rampe</b>' in cards.nth(0).inner_text() and pg.locator('#tab-neu .card b').count() == 0, 'Beschreibung bleibt Text')
+    check(cards.nth(1).locator('button.ok').is_disabled() and 'nicht freigeben' in cards.nth(1).inner_text(), 'ohne Rechte nicht freigebbar')
+    other = cards.nth(2)
     check(other.locator('button.ok').is_disabled() and 'Porta In Vössen' in other.inner_text(), 'ohne Standort: Freigeben gesperrt, Hinweis da')
     other.locator('input.where').fill('https://watermaps.netlify.app/#p=node%2F632876845')
     check(not other.locator('button.ok').is_disabled(), 'nach Einfügen des Links freigebbar')
-    other.locator('button.ok').click()
-    other.locator('.status', has_text='Freigegeben').wait_for()
+    other.locator('button.ok').click(); pg.locator('#msg', has_text='Freigegeben').wait_for()
     check(posted == [{'aktion': 'freigeben', 'id': 's3', 'standort': 'node/632876845'}], f'Standort wird mitgeschickt ({posted})')
     posted.clear()
-    check('<b>Rampe</b>' in pg.inner_text('.card >> nth=0') and pg.locator('.card b').count() == 0, 'Beschreibung bleibt Text')
-    check(pg.locator('.card >> nth=1').locator('button.ok').is_disabled() and 'nicht freigeben' in pg.inner_text('.card >> nth=1'), 'ohne Rechte nicht freigebbar')
-    pg.locator('.card >> nth=0').locator('button.ok').click()
-    pg.locator('.card >> nth=0').locator('.status', has_text='Freigegeben').wait_for()
+    pg.locator('#tab-neu .card >> nth=0').locator('button.ok').click(); pg.wait_for_timeout(300)
     check(posted == [{'aktion': 'freigeben', 'id': 's1'}], f'Freigabe gesendet ({posted})')
+    posted.clear()
     pg.once('dialog', lambda d: d.dismiss())
-    pg.locator('.card >> nth=1').locator('button', has_text='Ablehnen').click()
-    pg.wait_for_timeout(300)
-    check(len(posted) == 1, 'Ablehnen erst nach Bestätigung')
-    pg.screenshot(path=str(SHOTS / 'fotos_freigabe.png'), full_page=True)
+    pg.locator('#tab-neu .card >> nth=1').locator('button', has_text='Ablehnen').click(); pg.wait_for_timeout(300)
+    check(posted == [], 'Ablehnen erst nach Bestätigung')
+    pg.once('dialog', lambda d: d.accept())
+    pg.locator('#tab-neu .card >> nth=1').locator('button', has_text='Ablehnen').click(); pg.locator('#msg', has_text='Abgelehnt').wait_for()
+    check(posted == [{'aktion': 'ablehnen', 'id': 's2'}], f'Ablehnen gesendet ({posted})')
+    posted.clear()
+    pg.screenshot(path=str(SHOTS / 'fotos_eingereicht.png'), full_page=True)
+
+    # Gemeldet
+    pg.click('#tabs [data-tab=gemeldet]')
+    rep = pg.locator('#tab-gemeldet .card'); rep.locator('img[src^="blob:"]').wait_for()
+    check(pg.locator('#tab-neu').is_hidden() and 'Babybett, <i>kein</i> Slip' in rep.inner_text() and rep.locator('i').count() == 0, 'Meldung mit Grund (als Text)')
+    pg.once('dialog', lambda d: d.accept())
+    rep.locator('button', has_text='Foto entfernen').click(); pg.locator('#msg', has_text='Foto entfernt').wait_for()
+    check(posted == [{'aktion': 'entfernen', 'standort_id': 'node/1937154973', 'url': 'photos/a.jpg', 'meldung': 'r1'}], f'Foto entfernen aus der Meldung ({posted})')
+    posted.clear()
+    pg.locator('#tab-gemeldet button', has_text='Meldung verwerfen').click(); pg.locator('#msg', has_text='Meldung verworfen').wait_for()
+    check(posted == [{'aktion': 'meldung_verwerfen', 'id': 'r1'}], f'Meldung verwerfen ({posted})')
+    posted.clear()
+    pg.screenshot(path=str(SHOTS / 'fotos_gemeldet.png'), full_page=True)
+
+    # Veröffentlicht
+    pg.click('#tabs [data-tab=veroeffentlicht]')
+    pg.locator('#tab-veroeffentlicht .card img[src^="blob:"] >> nth=1').wait_for()
+    check(pg.locator('#tab-veroeffentlicht .card').count() == 2 and 'Babybett' in pg.inner_text('#published'), 'veröffentlichte Fotos mit Bild und Beschreibung')
+    pg.once('dialog', lambda d: d.accept())
+    pg.locator('#tab-veroeffentlicht .card >> nth=0').locator('button', has_text='Entfernen').click(); pg.locator('#msg', has_text='Foto entfernt').wait_for()
+    check(posted == [{'aktion': 'entfernen', 'standort_id': 'node/1937154973', 'url': 'photos/a.jpg'}], f'Entfernen gesendet ({posted})')
+
+    posted.clear()
+    # Slipanlagen
+    pg.click('#tabs [data-tab=slips]')
+    sl = pg.locator('#tab-slips .card')
+    sl.nth(0).locator('.near', has_text='Achtung').wait_for(timeout=15000); sl.nth(1).locator('.near.ok').wait_for()
+    t0 = sl.nth(0).inner_text()
+    check('<b>Beton</b>' in t0 and sl.nth(0).locator('b').count() == 0 and 'Öffentlich' in t0 and 'a@b.de' in t0, 'Slip-Meldung mit Angaben (Text bleibt Text)')
+    check('bestätigt, dass in der Nähe' in t0 and 'Foto wird nicht übernommen' in t0, 'Hinweise: Dublette bestätigt, Foto ohne Rechte')
+    check('Achtung: bekannte Slipanlage 0 m' in t0 and 'Keine bekannte Slipanlage im Umkreis' in sl.nth(1).inner_text(), 'Dublettenprüfung gegen bekannte Slipanlagen')
+    check(sl.nth(0).locator('a[href*="openstreetmap.org/?mlat="]').count() == 1, 'Lage mit Kartenlink')
+    sl.nth(1).locator('button.ok').click(); pg.locator('#msg', has_text='Slipanlage freigegeben').wait_for()
+    check(posted == [{'form': 'slipanlage-melden', 'aktion': 'freigeben', 'id': 'n2'}], f'Slipanlage freigeben ({posted})')
+    posted.clear()
+    pg.once('dialog', lambda d: d.accept())
+    pg.locator('#tab-slips .card >> nth=0').locator('button', has_text='Ablehnen').click(); pg.locator('#msg', has_text='Slipanlage abgelehnt').wait_for()
+    check(posted == [{'form': 'slipanlage-melden', 'aktion': 'ablehnen', 'id': 'n1'}], f'Slipanlage ablehnen ({posted})')
+    posted.clear()
+    pg.screenshot(path=str(SHOTS / 'verwaltung_slips.png'), full_page=True)
+    # Preise
+    pg.click('#tabs [data-tab=preise]')
+    pr = pg.locator('#tab-preise .card')
+    check('2,189 €/l' in pr.nth(0).inner_text() and not pr.nth(0).locator('button.ok').is_disabled(), 'Preis mit Betrag, freigebbar')
+    check(pr.nth(1).locator('button.ok').is_disabled() and 'nicht in der Liste' in pr.nth(1).inner_text(), 'unbekannte Tankstelle nicht freigebbar')
+    pr.nth(0).locator('button.ok').click(); pg.locator('#msg', has_text='Preis freigegeben').wait_for()
+    check(posted == [{'form': 'tankpreis-melden', 'aktion': 'freigeben', 'id': 'p1'}], f'Preis freigeben ({posted})')
+    posted.clear()
+    # Hinweise
+    pg.click('#tabs [data-tab=hinweise]')
+    hi = pg.locator('#tab-hinweise .card')
+    check('Montags <u>zu</u>' in hi.inner_text() and hi.locator('u').count() == 0 and 'Falsche Öffnungszeiten' in hi.inner_text()
+          and hi.locator('a[href="mailto:x@y.de"]').count() == 1, 'Hinweis mit Art, Text und Rückfrage-Adresse')
+    hi.locator('button', has_text='Erledigt').click(); pg.locator('#msg', has_text='erledigt').wait_for()
+    check(posted == [{'form': 'fehler-melden', 'aktion': 'erledigt', 'id': 'h1'}], f'Hinweis erledigt ({posted})')
+    # Verlauf
+    pg.click('#tabs [data-tab=verlauf]')
+    log = pg.inner_text('#log')
+    check(pg.locator('#log li').count() == 4 and log.index('Entfernt') < log.index('Freigegeben') < log.index('Abgelehnt'), 'Verlauf: alle Aktionen in Reihenfolge')
+    check('Slipanlage' in log and 'Neue Rampe' in log and log.count('Foto') >= 3, 'Verlauf zeigt den Bereich (Foto, Slipanlage …)')
+    check('Grund: kein Slip' in log and '„Brot“' in log and 'Slip Vössen' in log and 'Irgendwo' in log, 'Verlauf mit Standort, Beschreibung und Grund')
+    check('<img src=x>' in log and pg.locator('#log img').count() == 0, 'Verlauf: Text bleibt Text')
+    pg.screenshot(path=str(SHOTS / 'fotos_verlauf.png'), full_page=True)
     check(not errors, f'keine JS-/CSP-Fehler {errors}')
     b.close()
 srv.shutdown()
