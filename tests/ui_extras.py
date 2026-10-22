@@ -147,6 +147,9 @@ with sync_playwright() as p:
         txt = pg.inner_text('#detail .nearby-list')
         check('Durchfahrtshöhe 4,5 m' in txt and 'kein Trinkwasser' in txt and 'Kanu-Ein- und Ausstieg' in txt, f'{name}: Kurzinfos in der Liste')
         check('null' not in txt and 'undefined' not in txt, f'{name}: kein „null“/„undefined“ im Text')
+        pg.wait_for_selector('#detail .nearby-hinweis', timeout=8000)
+        hint = pg.inner_text('#detail .nearby-hinweis')
+        check('overpass-api.de: HTTP 503' in hint and 'HTTP 503' in hint.split(';')[-1], f'{name}: Hinweis nennt den Grund der fehlgeschlagenen Live-Abfrage ({hint})')
         pg.locator('#detail .nearby-list').scroll_into_view_if_needed()
         pg.screenshot(path=str(SHOTS / f'{name}_1_in_der_naehe.png'))
 

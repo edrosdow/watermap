@@ -144,7 +144,8 @@ export function liveNearby(lat, lon, radius, { fetchFn = fetch } = {}) {
     const ctl = typeof AbortController === 'function' ? new AbortController() : null;
     const timer = ctl && setTimeout(() => ctl.abort(), ms);
     return fetchFn(url, { ...opts, signal: ctl?.signal })
-      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .catch((e) => { throw new Error(`${new URL(url, location.href).host}: ${e?.name === 'AbortError' ? 'Zeitüberschreitung' : 'nicht erreichbar'}`); })
+      .then(r => { if (!r.ok) throw new Error(`${new URL(url, location.href).host}: HTTP ${r.status}`); return r.json(); })
       .then(j => { if (!Array.isArray(j?.elements)) throw new Error('unerwartete Antwort'); return j.elements; })
       .finally(() => timer && clearTimeout(timer));
   };
@@ -152,7 +153,8 @@ export function liveNearby(lat, lon, radius, { fetchFn = fetch } = {}) {
   // sonst über unsere Netlify-Funktion mit Ausweich-Servern.
   const p = holen(CONFIG.OVERPASS_API, { method: 'POST', body: 'data=' + encodeURIComponent(abfrage(lat, lon, radius)),
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' } }, DIREKT_TIMEOUT_MS)
-    .catch(() => holen(`${CONFIG.UMGEBUNG_API}?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}`, { headers: { Accept: 'application/json' } }, LIVE_TIMEOUT_MS))
+    .catch((e1) => holen(`${CONFIG.UMGEBUNG_API}?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}`, { headers: { Accept: 'application/json' } }, LIVE_TIMEOUT_MS)
+      .catch((e2) => { throw new Error(`${e1.message}; ${e2.message}`); }))
     .then(els => els.map(fromOsm).filter(Boolean));
   liveCache.set(key, p);
   p.catch(() => liveCache.delete(key));
@@ -265,7 +267,8 @@ export function nearbySection(listPromise, lat, lon, { onSelect, exclude, live =
   const box = h('div', { class: 'nearby-list', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Wird geladen …' }));
   const section = h('section', { class: 'block' }, h('h3', { text: `In der Nähe (bis ${R} m)` }), box);
   const imported = listPromise.catch(() => null);
-  const fresh = live ? liveNearby(lat, lon, R).catch(() => null) : Promise.resolve(null);
+  let liveFehler = '';
+  const fresh = live ? liveNearby(lat, lon, R).catch((e) => { liveFehler = e?.message || 'Fehler'; return null; }) : Promise.resolve(null);
   let final = false;
   const draw = (near) => {
     if (!near.length) { box.replaceChildren(h('p', { class: 'unknown', text: 'Keine weiteren Einrichtungen in unseren Daten gefunden.' })); return; }
@@ -289,6 +292,7 @@ export function nearbySection(listPromise, lat, lon, { onSelect, exclude, live =
     const ids = new Set();
     const all = [...(liveList || []), ...base].filter(x => !ids.has(x.id) && ids.add(x.id));
     draw(nearby(all, lat, lon, R, exclude));
+    if (liveFehler) box.append(h('p', { class: 'muted small nearby-hinweis', text: `Live-Abfrage bei OpenStreetMap fehlgeschlagen (${liveFehler}) – angezeigt werden nur unsere gespeicherten Daten.` }));
   });
   return section;
 }
