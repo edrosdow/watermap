@@ -235,6 +235,8 @@ with sync_playwright() as p:
         check(ds == sorted(ds), f'{name}: nach Entfernung sortiert {ds}')
         camp = next(t for t in pg.locator('#detail .nearby-item').all_inner_texts() if 'Abenteuercamp' in t)
         check(re.search(r'\b(29\d|30\d) m', camp) is not None, f'{name}: Entfernung zum Mittelpunkt der Fläche ({camp.splitlines()[-1]})')
+        sub = pg.locator('#detail .nearby-item', has_text='Abenteuercamp').locator('.nearby-sub').inner_text()
+        check(sub == 'Campingplatz', f'{name}: Untertitel nur „Campingplatz“ ({sub})')
         pg.locator('#detail .nearby-item', has_text='Markt Test').click(); pg.wait_for_timeout(200)
         check('Markt Test' in pg.inner_text('#detail h2') and 'Supermarkt' in pg.inner_text('#detail'), f'{name}: Live-Eintrag öffnet seine Details')
         # Nichts gefunden: neuer Text, keine Behauptung über OSM

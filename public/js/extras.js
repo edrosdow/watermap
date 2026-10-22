@@ -277,7 +277,7 @@ export function nearbySection(listPromise, lat, lon, { onSelect, exclude, live =
       h('button', { type: 'button', class: 'nearby-item', onclick: () => onSelect(x.id, x) },
         h('span', { class: 'nearby-ico', style: `background:${kindColor(x.kind)}`, html: glyph(x.kind, 15) }),
         h('span', { class: 'nearby-text' }, h('span', { class: 'nearby-name', text: extraTitle(x) }),
-          h('span', { class: 'nearby-sub', text: [x.name ? KINDS[x.kind].label : '', extraShort(x)].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' · ') })),
+          h('span', { class: 'nearby-sub', text: [x.name && !SUB[x.attrs.sub] ? KINDS[x.kind].label : '', extraShort(x)].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' · ') })),
         h('span', { class: 'nearby-dist', text: formatDistance(d) }))))),
       ...(near.length > shown.length ? [h('p', { class: 'muted small', text: `… und ${near.length - shown.length} weitere.` })] : []));   // replaceChildren macht aus null den Text „null“
   };
