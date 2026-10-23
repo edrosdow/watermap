@@ -26,7 +26,7 @@ Details: [docs/DATEN-AKTUALISIEREN.md](docs/DATEN-AKTUALISIEREN.md). Fehlt ein B
 ## Pegel
 Bereich „In der Nähe“ unter `#naehe` (`js/naehe.js`, Stil `css/naehe.css`; alter Link `#liste` geht weiter): Standorte im Umkreis von 25 km (bei weniger als 5 Treffern 50 bzw. 100 km) um „Meine Position“, die Kartenmitte oder einen gesuchten Ort. Die Standortfreigabe wird vorher geprüft (Permissions API); der Browser-Dialog kommt erst auf „Position verwenden“. Gespeichert wird nur die Wahl des Bezugspunkts, nie die Position; der Ortsname kommt lokal aus den WaterMap-Daten.
 
-Bereich „Pegel“ unter `#pegel` (`js/pegel-dashboard.js`, Darstellung `js/pegel-ansicht.js`, Daten `js/pegel-daten.js`, Stil `css/pegel.css`): Lage heute, „Meine Pegel“ (eigene Liste im Browser, getrennt von den Favoriten), Flüsse im Überblick, alle Pegel als Tabelle. Detailseite `#pegel/<UUID>`; Pegel auf der Karte `#karte/pegel/<UUID>` (alter Link `#g=<UUID>` geht weiter). Eine gemeinsame Stationsliste für Karte und Dashboard, alle 15 Min. aktualisiert; Verläufe nur für sichtbare Karten und die Detailseite. Offline: letzter gespeicherter Stand mit „Stand von …“.
+Bereich „Pegel“ unter `#pegel` (`js/pegel-dashboard.js`, Darstellung `js/pegel-ansicht.js`, Daten `js/pegel-daten.js`, Stil `css/pegel.css`): Lage heute, „Meine Pegel“ (eigene Liste im Browser, getrennt von den Favoriten), Flüsse im Überblick, alle Pegel als Tabelle. Detailseite `#pegel/<UUID>`; Pegel auf der Karte `#karte/pegel/<UUID>` (alter Link `#g=<UUID>` geht weiter). Eine gemeinsame Stationsliste für Karte und Dashboard, alle 15 Min. aktualisiert; Verläufe nur für sichtbare Karten und die Detailseite. Offline: letzter gespeicherter Stand mit „Stand von …“. Flussseite `#pegel/fluss/<name>` (`js/pegel-fluss.js` Logik, `js/pegel-fluss-ansicht.js` Darstellung): Profil des Wasserstands entlang des Flusses und alle Pegel nach Flusskilometer; Küstengewässer laut `CONFIG.PEGEL_KUESTE`.
 
 ## Pegel-Ampel
 Eigene Seite unter `/pegel-ampel` (`public/pegel-ampel.html`, `js/ampel.js`, Logik in `js/ampel-logik.js`): Pegel wählen, persönlichen Mindestpegel eingeben → Grün/Gelb/Rot mit Trend, 14-Tage-Verlauf und den nächsten Slipanlagen. Puffer (20 cm), Trendschwelle und Prognosezeitraum stehen als Konstanten oben in `ampel-logik.js`. Weitere Prüfungen (z. B. Brücken) werden an `PRUEFUNGEN` angehängt. Teilbare Links: `/pegel-ampel?pegel=<PEGELONLINE-UUID>&min=<cm>`.
@@ -51,6 +51,7 @@ python3 -I -m unittest discover -s tests -v     # Importer, Validator, Moderatio
 python3 -I tests/ui_full.py                     # Oberfläche (braucht: pip install playwright pillow)
 python3 -I tests/ui_ampel.py                    # Pegel-Ampel
 python3 -I tests/ui_pegel_dashboard.py          # Pegel-Dashboard (375/390/1024/1440 px)
+python3 -I tests/ui_pegel_fluss.py              # Fluss-Kacheln und Flussseite (375/390/1024/1440 px)
 python3 -I tests/ui_naehe.py                    # „In der Nähe“ (Bezugspunkt, Standortfreigabe, Liste; 375/390/1024/1440 px)
 ```
 Die Oberflächentests laufen mit einem Leaflet-Ersatz. Siehe [docs/STATUS.md](docs/STATUS.md) für das, was damit **nicht** geprüft ist.

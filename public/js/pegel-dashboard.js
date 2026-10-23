@@ -1,5 +1,5 @@
-// Bereich „Pegel“: Dashboard (#pegel) und Pegel-Detailseite (#pegel/<id>).
-// Daten: eine Stationsliste (pegel-daten.js) für Zähler, Flussbänder und Tabelle; Verläufe nur für sichtbare Karten.
+// Bereich „Pegel“: Dashboard (#pegel) und Pegel-Detailseite (#pegel/<id>); Flussseite siehe pegel-fluss-ansicht.js.
+// Daten: eine Stationsliste (pegel-daten.js) für Zähler, Fluss-Kacheln und Tabelle; Verläufe nur für sichtbare Karten.
 import { h, announce } from './dom.js';
 import { icon } from './icons.js';
 import { haversine, formatDistance, displayName } from './model.js';
@@ -7,15 +7,11 @@ import { pegelLaden, verlaufLaden, meinePegel } from './pegel-daten.js';
 import { fmt, kmText, zustand, ZUSTAND, etikett, trendText, trendKlasse, pegelKarte, pegelDetail } from './pegel-ansicht.js';
 import { formatTime } from './pegel.js';
 import { popover } from './nav.js';
+import { ENTWICKLUNG } from './config.js';
+import { normW, flussKm as flussKmRoh, gruppieren, kachelnSortieren } from './pegel-fluss.js';
+import { flussKachel, ohneBewertung } from './pegel-fluss-ansicht.js';
 
-const normW = (s) => String(s || '').toLowerCase().replace(/[^a-zäöüß]/g, '');
-// Reihenfolge von der Quelle zur Mündung. Die Weser hat zwei Kilometrierungen: Ober-/Mittelweser ab Hann. Münden
-// (bis Bremen, km 366,7), die Unterweser beginnt in Bremen (Große Weserbrücke) wieder bei km 0 – sie kommt ans Ende.
-const flussKm = (g) => {
-  if (g.km === null || g.km === undefined) return 1e9;
-  if (normW(g.water) === 'weser' && g.lat > 52.9 && g.km < 130) return g.km + 366.7;
-  return g.km;
-};
+const flussKm = (g) => flussKmRoh(g) ?? 1e9;
 const zeitText = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 const standText = (st) => (st.offline ? `Offline · Stand von ${new Date(st.zeit).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}, ${zeitText(st.zeit)} Uhr`
   : `Stand ${zeitText(st.zeit)} · alle 15 Min. aktualisiert`);
@@ -174,44 +170,34 @@ export function pegelDashboard(root, ctx) {
     if (!ctx.isMobile()) {
       const dlg = document.getElementById('pa-pop'), r = btn.getBoundingClientRect();
       const unten = window.innerHeight - r.bottom - 20, oben = r.top - 20;
-      dlg.style.maxHeight = `${Math.min(560, Math.max(unten, oben))}px`;
+      const nachOben = unten < 360 && oben > unten;
+      dlg.style.maxHeight = `${Math.min(560, nachOben ? oben : unten)}px`;
       // unten verankert, damit das Fenster beim Filtern am Knopf bleibt
-      if (unten < 360 && oben > unten) { dlg.style.top = 'auto'; dlg.style.bottom = `${Math.round(window.innerHeight - r.top + 8)}px`; }
+      if (nachOben) { dlg.style.top = 'auto'; dlg.style.bottom = `${Math.round(window.innerHeight - r.top + 8)}px`; }
     }
   }
 
+  // Fluss-Kacheln: zuerst Flüsse mit „Meine Pegel“, dann nach Schwere; Küste immer zuletzt; Kanäle nur unter „Alle Gewässer“
+  let gemeldet = false;
   function fluesse() {
-    const gruppen = new Map();
-    for (const g of stand.gauges) { if (!g.water) continue; (gruppen.get(g.water) || gruppen.set(g.water, []).get(g.water)).push(g); }
-    // Im Band nur eingeordnete Pegel; Gewässer ganz ohne Einordnung weglassen
-    const eingeordnet = (g) => ['hsw', 'high', 'low', 'normal'].includes(zustand(g));
-    const alle = [...gruppen.entries()].filter(([, liste]) => liste.some(eingeordnet)).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'de'));
-    const zeigen = ui.alleGewaesser ? alle : alle.slice(0, 5);
-    const zusammen = (liste) => {
-      const c = { hsw: 0, high: 0, low: 0, normal: 0, rest: 0 };
-      for (const g of liste) { const z = zustand(g); if (z in c) c[z]++; else c.rest++; }
-      if (c.hsw) return { text: `${c.hsw} über HSW`, cls: 'is-hsw', c };
-      if (c.high) return { text: `${c.high} hoch`, cls: 'is-high', c };
-      if (c.low) return { text: `${c.low} niedrig`, cls: 'is-low', c };
-      return { text: 'alles normal', cls: 'is-normal', c };
-    };
+    meinePegel.ampelUebernehmen();   // vor der Sortierung: Pegel der Pegel-Ampel zählt schon als „Meine Pegel“
+    const gr = gruppieren(stand.gauges);
+    if (ENTWICKLUNG && !gemeldet && gr.ohne.length) {
+      gemeldet = true;
+      console.info('[WaterMap] Gewässer ohne Bewertung (keine Küste laut CONFIG.PEGEL_KUESTE):', gr.ohne.map(f => `${f.name} (${f.pegel.length})`).join(', '));
+    }
+    const fl = kachelnSortieren(gr.fluesse, meinePegel.alle());
+    const alle = [...fl, ...(gr.kueste ? [gr.kueste] : [])];
+    const anzahl = alle.length + gr.ohne.length;
+    const zeigen = ui.alleGewaesser ? alle : [...fl.slice(0, gr.kueste ? 5 : 6), ...(gr.kueste ? [gr.kueste] : [])];
     return h('section', { class: 'pg-fluesse', 'aria-labelledby': 'pg-fl-t' },
       h('h2', { id: 'pg-fl-t', class: 'pg-h2', text: 'Flüsse im Überblick' }),
-      h('p', { class: 'pg-klein', text: 'Jedes Feld ein eingeordneter Pegel, von der Quelle zur Mündung' }),
-      h('div', { class: 'pg-karte pg-fl-karte' },
-        zeigen.map(([name, liste]) => {
-          const sortiert = liste.filter(eingeordnet).sort((a, b) => flussKm(a) - flussKm(b));
-          const zs = zusammen(liste);
-          const c = zs.c;
-          const label = `${name}: ${liste.length} Pegel – ` + [c.hsw && `${c.hsw} über HSW`, c.high && `${c.high} hoch`, c.low && `${c.low} niedrig`, c.normal && `${c.normal} normal`, c.rest && `${c.rest} ohne Einordnung`].filter(Boolean).join(', ') + '. Liste dieses Gewässers zeigen';
-          return h('button', { type: 'button', class: 'pg-fluss', 'aria-label': label, onclick: () => setFilter({ art: 'gewaesser', wert: name, text: name }) },
-            h('span', { class: 'pg-fluss-kopf' }, h('strong', { text: name }), h('span', { class: `pg-fluss-info ${zs.cls}`, text: zs.text })),
-            h('span', { class: 'pg-band', 'aria-hidden': 'true' }, sortiert.map(g => h('i', { style: `background:${ZUSTAND[zustand(g)].farbe}`, title: `${g.name}: ${fmt(g.value)} ${g.unit} (${ZUSTAND[zustand(g)].text})` }))));
-        }),
-        h('p', { class: 'pg-legende' }, [['low', 'niedrig'], ['normal', 'normal'], ['high', 'hoch'], ['hsw', 'über HSW']]
-          .map(([z, t]) => h('span', {}, h('i', { style: `background:${ZUSTAND[z].farbe}` }), t))),
-        alle.length > 5 ? h('button', { type: 'button', class: 'pg-link', text: ui.alleGewaesser ? 'Weniger Gewässer anzeigen' : `Alle ${alle.length} Gewässer anzeigen ›`,
-          onclick: () => { ui.alleGewaesser = !ui.alleGewaesser; zeichnen(); } }) : null));
+      h('p', { class: 'pg-klein', text: 'Tippe auf einen Fluss für alle Pegel' }),
+      h('div', { class: 'fk-raster' }, zeigen.map(f => flussKachel(f, ctx.fluss))),
+      ui.alleGewaesser ? ohneBewertung(gr.ohne, ctx.fluss) : null,
+      anzahl > zeigen.length || ui.alleGewaesser ? h('button', { type: 'button', class: 'pg-link pg-fl-alle', 'aria-expanded': String(ui.alleGewaesser),
+        text: ui.alleGewaesser ? 'Weniger Gewässer anzeigen' : `Alle ${anzahl} Gewässer anzeigen ›`,
+        onclick: () => { ui.alleGewaesser = !ui.alleGewaesser; zeichnen(); root.querySelector('.pg-fl-alle')?.focus(); } }) : null);
   }
 
   function werkzeuge() {
@@ -232,7 +218,7 @@ export function pegelDashboard(root, ctx) {
   // ---------------------------------------------------------------- Alle Pegel
   const alleBox = h('div', { class: 'pg-alle-inhalt' });
   function setFilter(f) {
-    ui.filter = f; ui.suche = ''; ui.alleOffen = true; ui.zeilen = 60;   // Filter ersetzt eine laufende Suche
+    ui.filter = f; ui.suche = ''; ui.alleOffen = true; ui.zeilen = 60;   // Filter (Zähler) ersetzt eine laufende Suche
     zeichnen();
     root.querySelector('#pg-alle')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
@@ -240,7 +226,7 @@ export function pegelDashboard(root, ctx) {
     const suche = h('input', { type: 'search', class: 'pg-suche', placeholder: 'Pegel oder Gewässer suchen', 'aria-label': 'Pegel oder Gewässer suchen', value: ui.suche,
       oninput: () => {
         ui.suche = suche.value; ui.alleOffen = !!suche.value.trim();
-        // Eine neue Suche ersetzt den Filter (Zähler oder Flussband)
+        // Eine neue Suche ersetzt den Filter (Zähler)
         if (ui.filter && suche.value.trim()) { ui.filter = null; root.querySelectorAll('.pg-zaehler.is-aktiv').forEach(z => z.classList.remove('is-aktiv')); }
         zeichneAlle();
       } });
@@ -258,18 +244,16 @@ export function pegelDashboard(root, ctx) {
     const q = normW(ui.suche);
     let liste = stand.gauges.filter(g => {
       if (ui.filter?.art === 'zustand' && zustand(g) !== ui.filter.wert) return false;
-      if (ui.filter?.art === 'gewaesser' && g.water !== ui.filter.wert) return false;
       return !q || normW(g.name).includes(q) || normW(g.water).includes(q);
     });
     const hatPos = !!ctx.user();
     const wasserTreffer = (g) => (q && normW(g.water).includes(q) ? 0 : 1);
-    // Standard: nach Gewässer und Flusskilometer (bei Gewässer-Filter nur nach km)
-    const sort = ui.sort || (ui.filter?.art === 'gewaesser' ? 'km' : 'gewaesser');
+    // Standard: nach Gewässer und Flusskilometer
+    const sort = ui.sort || 'gewaesser';
     const cmp = {
       entfernung: (a, b) => (entfernung(a) ?? 1e12) - (entfernung(b) ?? 1e12),
       // bei einer Suche zuerst die Pegel, deren Gewässer passt („Weser“ vor „Jade-Weser-Port“ an der Jade)
       gewaesser: (a, b) => wasserTreffer(a) - wasserTreffer(b) || a.water.localeCompare(b.water, 'de') || flussKm(a) - flussKm(b),
-      km: (a, b) => flussKm(a) - flussKm(b),
     }[sort];
     liste = [...liste].sort(cmp);
     const sortKnopf = (key, text) => h('button', { type: 'button', class: 'pg-sort' + (sort === key ? ' is-aktiv' : ''), 'aria-pressed': String(sort === key),
@@ -312,8 +296,9 @@ export function pegelDashboard(root, ctx) {
     root.replaceChildren(h('div', { class: 'pg-seite' }, kopf(),
       h('div', { class: 'pg-raster' },
         h('div', { class: 'pg-voll' }, lage()),
+        h('div', { class: 'pg-voll' }, fluesse()),
         h('div', { class: 'pg-links' }, meine(), alleSektion()),
-        h('div', { class: 'pg-rechts' }, fluesse(), werkzeuge(),
+        h('div', { class: 'pg-rechts' }, werkzeuge(),
           h('p', { class: 'pg-fuss', text: 'Pegel der WSV (PEGELONLINE). Kleinere Gewässer und Talsperren teils nicht erfasst. Angaben ohne Gewähr.' })))));
     zeichneAlle();
     if (fokus) { const f = root.querySelector('.pg-suche'); f.focus(); f.setSelectionRange(f.value.length, f.value.length); }

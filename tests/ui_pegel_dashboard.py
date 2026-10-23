@@ -98,15 +98,28 @@ def run(b, w, hh, mobile):
     check('Verlauf 7 Tage' in (k.locator('.pm-spark').get_attribute('aria-label') or ''), f'{tag}: Mini-Verlauf mit aria-label')
     hist = [c for c in api['calls'] if 'measurements' in c]
     check(len(hist) == 1, f'{tag}: Verlauf nur für sichtbare Karten geladen ({len(hist)})')
-    # Flüsse
-    baender = pg.locator('.pg-fluss')
-    check(baender.count() == 3 and pg.locator('.pg-fluss', has_text='Test-See').count() == 0, f'{tag}: Flüsse im Überblick ohne Gewässer ohne Daten ({baender.count()})')
-    weser = pg.locator('.pg-fluss', has_text='Weser')
-    check('1 niedrig' in weser.inner_text() and weser.locator('.pg-band i').count() == 5 and 'Weser: 7 Pegel' in weser.get_attribute('aria-label'), f'{tag}: Band Weser mit Text und aria-label')
-    farben = weser.locator('.pg-band i').evaluate_all("l => l.map(e => getComputedStyle(e).backgroundColor)")
-    check(farben == ['rgb(108, 191, 132)'] * 4 + ['rgb(250, 178, 25)'], f'{tag}: sortiert nach Flusskilometer, nur eingeordnete Pegel, Farben ({farben})')
-    check('keine Daten' not in pg.inner_text('.pg-legende'), f'{tag}: Legende ohne „keine Daten“')
-    check('über HSW' in pg.locator('.pg-fluss', has_text='Mosel').inner_text(), f'{tag}: Mosel „1 über HSW“')
+    # Flüsse im Überblick: Kacheln statt Bänder (Weser zuerst wegen „Meine Pegel“, dann nach Schwere; Küste zuletzt)
+    check(pg.locator('.pg-band, .pg-legende').count() == 0, f'{tag}: keine Farbbänder und keine Band-Legende mehr')
+    namen = [t.strip() for t in pg.locator('.fk .fk-name').all_inner_texts()]
+    check(namen == ['Weser', 'Mosel', 'Rhein', 'Küste'], f'{tag}: Kacheln: Meine Pegel zuerst, dann Schwere, Küste zuletzt ({namen})')
+    check('Tippe auf einen Fluss für alle Pegel' in pg.inner_text('.pg-fluesse'), f'{tag}: Unterzeile der Kacheln')
+    mosel = pg.locator('.fk', has_text='Mosel')
+    check('über HSW' in mosel.inner_text() and 'Schifffahrt eingeschränkt' in mosel.inner_text() and 'höchster Pegel' in mosel.inner_text() and 'Trier 640 cm' in mosel.inner_text(),
+          f'{tag}: Kachel Mosel über HSW mit höchstem Pegel')
+    check(mosel.get_attribute('href') == '#pegel/fluss/mosel' and mosel.evaluate("e => getComputedStyle(e).borderTopColor") == 'rgb(208, 59, 59)', f'{tag}: Kachel ist Link, Kante in Zustandsfarbe')
+    weser = pg.locator('.fk', has_text='Weser')
+    check('teils niedrig' in weser.inner_text() and '1 von 5 niedrig' in weser.inner_text() and 'Minden 96 cm' in weser.inner_text() and weser.locator('.fk-punkte i').count() == 5,
+          f'{tag}: Kachel Weser „teils niedrig“, tiefster Pegel, Punkte nur mit Kennwerten')
+    check('Tide' in pg.locator('.fk', has_text='Küste').inner_text() and 'ohne Niedrig/Hoch-Bewertung' in pg.locator('.fk', has_text='Küste').inner_text(), f'{tag}: Kachel Küste mit „Tide“')
+    if not mobile and w >= 1024:
+        b0, b1, b2 = [pg.locator('.fk').nth(i).bounding_box() for i in range(3)]
+        check(abs(b0['y'] - b2['y']) < 2 and b2['x'] > b1['x'] > b0['x'], f'{tag}: Desktop drei Spalten in voller Breite')
+    elif mobile:
+        b0, b1, b2 = [pg.locator('.fk').nth(i).bounding_box() for i in range(3)]
+        check(abs(b0['y'] - b1['y']) < 2 and b2['y'] > b0['y'], f'{tag}: Handy zwei Spalten')
+    pg.click('.pg-fl-alle'); pg.wait_for_timeout(200)
+    check(pg.locator('.fk-ohne').is_visible() and 'Kanäle und Gewässer ohne Bewertung' in pg.inner_text('.fk-ohne') and 'Test-See' in pg.inner_text('.fk-ohne'), f'{tag}: „Alle Gewässer“ mit Abschnitt ohne Bewertung')
+    pg.click('.pg-fl-alle'); pg.wait_for_timeout(200)
     pg.screenshot(path=str(SHOTS / f'pegel_{w}_1dashboard.png'), full_page=True)
     # Alle Pegel / Filter
     # Suche steht in der Karte „Alle Pegel“ (nicht im Kopf), am Handy auch bei zugeklappter Liste
@@ -131,19 +144,15 @@ def run(b, w, hh, mobile):
     pg.click('.pg-zaehler.is-low'); pg.wait_for_timeout(300)
     names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
     check(sorted(names) == ['Kaub', 'Minden'] and pg.locator('.pg-filter .ftag').get_attribute('aria-label') == 'Filter Niedrigwasser entfernen', f'{tag}: Zähler filtert die Liste ({names})')
-    pg.click('.pg-filter .ftag'); pg.wait_for_timeout(200)
-    pg.click('.pg-fluss:has-text("Weser")'); pg.wait_for_timeout(300)
-    names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
-    check(names == ['Hann. Münden', 'Hameln', 'Porta', 'Vlotho', 'Minden', 'Nienburg', 'Vegesack'], f'{tag}: Band zeigt das Gewässer, nach km ({names})')
     pg.fill('.pg-alle .pg-suche', 'mosel'); pg.wait_for_timeout(200)
     names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
-    check(pg.locator('.pg-filter').count() == 0 and sorted(names) == ['Cochem', 'Trier'], f'{tag}: neue Suche entfernt den Filter „Weser“ ({names})')
+    check(pg.locator('.pg-filter').count() == 0 and sorted(names) == ['Cochem', 'Trier'], f'{tag}: neue Suche entfernt den Filter „Niedrigwasser“ ({names})')
     pg.click('.pg-zaehler.is-low'); pg.wait_for_timeout(300)
     check(pg.input_value('.pg-alle .pg-suche') == '' and pg.locator('.pg-tabelle tbody tr').count() == 2, f'{tag}: Filter ersetzt die Suche')
     pg.fill('.pg-alle .pg-suche', 'w'); pg.wait_for_timeout(200)
     check(pg.locator('.pg-filter').count() == 0 and pg.locator('.pg-zaehler.is-aktiv').count() == 0, f'{tag}: Suche hebt auch den Zähler-Filter auf')
-    pg.click('.pg-fluss:has-text("Weser")'); pg.wait_for_timeout(300)
-    check(pg.input_value('.pg-alle .pg-suche') == '', f'{tag}: Flussband leert die Suche')
+    pg.click('.pg-zaehler.is-low'); pg.wait_for_timeout(300)
+    check(pg.input_value('.pg-alle .pg-suche') == '', f'{tag}: Zähler leert die Suche')
     pg.click('.pg-filter .ftag'); pg.wait_for_timeout(200)
     sorts = [t.replace('↑', '').strip() for t in pg.locator('.pg-sort').all_inner_texts()]
     check(sorts == ['Gewässer', 'Entfernung'], f'{tag}: Sortierung nur nach Gewässer und Entfernung ({sorts})')

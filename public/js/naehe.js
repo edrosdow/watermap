@@ -194,8 +194,9 @@ export function naehe(ctx) {
     dlg.style.bottom = ''; dlg.style.maxHeight = '';
     if (!ctx.isMobile() && btn) {
       const r = btn.getBoundingClientRect(), unten = window.innerHeight - r.bottom - 20, oben = r.top - 20;
-      dlg.style.maxHeight = `${Math.min(560, Math.max(unten, oben))}px`;
-      if (unten < 380 && oben > unten) { dlg.style.top = 'auto'; dlg.style.bottom = `${Math.round(window.innerHeight - r.top + 8)}px`; }
+      const nachOben = unten < 380 && oben > unten;
+      dlg.style.maxHeight = `${Math.min(560, nachOben ? oben : unten)}px`;
+      if (nachOben) { dlg.style.top = 'auto'; dlg.style.bottom = `${Math.round(window.innerHeight - r.top + 8)}px`; }
     }
   }
 

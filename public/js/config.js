@@ -1,6 +1,10 @@
 // Zentrale Einstellungen. Hier – und nur hier – werden Dienste und Grenzwerte angepasst.
+// Entwicklungsmodus: lokal und in Netlify-Vorschauen (deploy-preview-…), nie auf der Live-Seite
+const host = typeof location !== 'undefined' ? location.hostname : '';
+export const ENTWICKLUNG = /^(localhost|127\.0\.0\.1)$|^deploy-preview-/.test(host);
+
 export const CONFIG = {
-  VERSION: '7.21.0',
+  VERSION: '7.22.0',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -26,6 +30,9 @@ export const CONFIG = {
   PEGEL_REFRESH_MIN: 15,       // so oft misst die WSV
   PEGEL_STALE_HOURS: 6,        // ältere Messwerte gelten als veraltet
   PEGEL_HISTORY_DAYS: 7,
+  // Küstengewässer: eigene Kachel „Küste“ (Tide, ohne Niedrig/Hoch-Bewertung) statt Flussseite. Groß-/Kleinschreibung egal.
+  PEGEL_KUESTE: ['Nordsee', 'Ostsee', 'Jade', 'Jadebusen', 'Außenjade', 'Außenems', 'Außenweser', 'Außenelbe', 'Dollart', 'Wattenmeer',
+    'Strelasund', 'Peenestrom', 'Kleines Haff', 'Greifswalder Bodden', 'Kieler Förde', 'Flensburger Förde', 'Schlei', 'Trave-Mündung'],
   PEGEL_ATTRIBUTION: 'Pegel: <a href="https://www.pegelonline.wsv.de" target="_blank" rel="noopener noreferrer">WSV/PEGELONLINE</a>',
 
   // Wetter und Wind (DWD-Daten über Bright Sky). Abruf über die eigene Domain (public/_redirects).

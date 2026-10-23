@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 23.10.2026 · App-Version **7.21.0**
+Stand: 23.10.2026 · App-Version **7.22.0**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.21.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.22.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -37,6 +37,7 @@ Die App ist eine installierbare PWA, auf Deutsch, und nutzt nur kostenlose Diens
   | `#favoriten` | Favoriten |
   | `#pegel` | Pegel-Dashboard |
   | `#pegel/<id>` | Pegel-Detailseite |
+  | `#pegel/fluss/<name>` | Flussseite (Profil + Pegelliste; `kueste` = Küstenpegel) |
   | `#karte/pegel/<id>` | Pegel auf der Karte (alter Link `#g=<id>` geht weiter) |
   | `#melden` | Melden-Auswahl |
   | `p=` / `x=` | Standort bzw. Extra |
@@ -56,6 +57,8 @@ Die App ist eine installierbare PWA, auf Deutsch, und nutzt nur kostenlose Diens
   | `naehe.js` | „In der Nähe“: Bezugspunkt, Standortfreigabe, Liste, Fenster „Entfernungen messen ab …“ |
   | `pegel-ansicht.js` | Pegel-Karten, Skala, Detail |
   | `pegel-dashboard.js` | Pegel-Dashboard |
+  | `pegel-fluss.js` | Flüsse: Gruppierung (Küste/Kanäle), Zustand, rel, Profil-Daten (ohne Oberfläche) |
+  | `pegel-fluss-ansicht.js` | Fluss-Kacheln und Flussseite |
   | `meldungen.js` | Lagemeldungen „Heute vor Ort“ |
   | `wetter.js` | Wetter und Wind |
   | `umgebung-abfrage.js` | „In der Nähe“ |
@@ -136,6 +139,15 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 - Nur bei Slipanlagen (7.20): Häfen und Tankstellen zeigen keine Karte „Heute vor Ort“; Melde-Menü schlägt nur Slipanlagen vor und nimmt bei der Auswahl nur Slipanlagen an.
 - Der Datenschutztext ist abgestimmt.
 
+**Flüsse (7.22)**
+- „Flüsse im Überblick“ als Kacheln (Handy 2, Desktop 3 Spalten, am Desktop in voller Breite unter „Lage heute“); Farbbänder entfernt.
+- Gruppierung nach Gewässer. Küste = feste Liste `CONFIG.PEGEL_KUESTE` (Nordsee, Ostsee, Jade, Außenjade, … – „AUSSENJADE“ passt auch); eigene Kachel „Küste“ (Tide), Seite ohne Profil.
+- Gewässer ganz ohne Kennwerte (Kanäle): keine Kachel, aber unter „Alle Gewässer“ im Abschnitt „Kanäle und Gewässer ohne Bewertung“; Seite ohne Profil. In der Vorschau/lokal (`ENTWICKLUNG` in config.js) listet die Konsole diese Gewässer einmal auf – zum Prüfen der Küstenliste.
+- Zustand eines Flusses nur aus aktuellen, eingeordneten Pegeln: über HSW (mind. einer) → hoch (≥ 50 % über MHW) / teils hoch → niedrig (≥ 50 % unter MNW) / teils niedrig → normal. Nur veraltete Werte → grau „keine aktuellen Daten“. Hervorgehoben: relativ höchster bzw. tiefster Pegel (`rel = (W − MNW) / (MHW − MNW)`, begrenzt −0,5 … 1,6).
+- Kacheln: zuerst Flüsse mit „Meine Pegel“, dann Schwere, dann Anzahl; Küste zuletzt; 6 Kacheln, dann „Alle <n> Gewässer“. Punktreihe nur Pegel mit Kennwerten (max. 12).
+- Flussseite `#pegel/fluss/<name>`: SVG-Profil nach km (Unterweser hinten angehängt), Normalbereich, MNW/MHW gestrichelt, keine HSW-Linie. Abschnitt nach dem letzten Pegel mit Kennwerten abgetrennt: „Tidebereich“, wenn diese Pegel Tide-Kennwerte (MThw/MTnw) haben, sonst „ohne Kennwerte“. Handy: Tipp zeigt Blase des nächstgelegenen Punkts, „Details ›“ öffnet; Desktop Hover + Klick.
+- „<n> Slipanlagen an der <Fluss>“: schaltet Slipanlagen zusätzlich ein und zoomt auf alle (fitBounds). Keine Abfragen pro Pegel.
+
 **In der Nähe (7.21)**
 - Tab `#naehe` ersetzt „Liste“ (Pin-Symbol). Favoriten bleiben eigener Tab mit denselben Karten; kein Umschalter mehr.
 - Bezugspunkt: „Meine Position“, „Kartenmitte“ (Standard beim ersten Öffnen) oder ein gesuchter Ort. Gespeichert (localStorage): nur die Wahl (`watermap.naehe.bezug`), bis zu 3 gesuchte Orte, ob schon entschieden, Sortierung. Die Position selbst nie.
@@ -189,6 +201,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.3 | Sortierung „Zustand“ entfernt (nur noch Gewässer und Entfernung) |
 | 7.20.4 | Suche: passendes Gewässer zuerst; Unterweser hinter Ober-/Mittelweser |
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
+| 7.22.0 | Fluss-Kacheln statt Farbbänder, neue Flussseite mit Profil |
 | 7.21.0 | Tab „Liste“ → „In der Nähe“ (Bezugspunkt, Standortfreigabe, neue Karten); Detail-Abschnitt „Umgebung“; Datenschutz „Standort“ neu |
 
 ## 5. Tests
@@ -196,12 +209,12 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | Bereich | Tests |
 |---|---|
 | Unit (Python) | `python3 -I -m unittest discover -s tests` (Importer, Validator, Hafeninfo, Moderation) |
-| Node | `ampel_logik`, `fotos_function`, `meldungen`, `pegel_alarm`, `pegel_trend`, `umgebung` |
-| Oberfläche (Playwright) | `ui_full`, `ui_smoke`, `pwa_test`, `ui_naehe`, `ui_meldungen`, `ui_extras`, `ui_karussell`, `ui_pegel`, `ui_pegel_dashboard`, `ui_wetter`, `ui_ampel`, `ui_fotos` |
+| Node | `ampel_logik`, `fotos_function`, `meldungen`, `pegel_alarm`, `pegel_trend`, `pegel_fluss`, `umgebung` |
+| Oberfläche (Playwright) | `ui_full`, `ui_smoke`, `pwa_test`, `ui_naehe`, `ui_meldungen`, `ui_extras`, `ui_karussell`, `ui_pegel`, `ui_pegel_dashboard`, `ui_pegel_fluss`, `ui_wetter`, `ui_ampel`, `ui_fotos` |
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.21.0): alle Tests grün außer `ui_smoke` (bricht in der Cloud-Umgebung auch ohne Änderungen ab: `.place` erscheint nicht).**
+**Letzter Lauf (7.22.0): alle Tests grün außer `ui_smoke` (bricht in der Cloud-Umgebung auch ohne Änderungen ab: `.place` erscheint nicht).**
 
 ## 6. Offene Aufgaben
 
