@@ -31,6 +31,8 @@ STATIONS = [
     station(U(8), 'KÖLN', 'RHEIN', 688.0, 50.94, 6.96, 312, refs=R),
     station(U(9), 'TESTPEGEL', 'TEST-SEE', 1.0, 51.0, 6.5, 120, state='unknown'),                      # ohne Kennwerte
     station(U(10), 'ALTPEGEL', 'RHEIN', 700.0, 51.0, 6.8, 300, refs=R, age_h=30),                    # veraltet
+    station(U(11), 'HAMELN', 'WESER', 135.0, 52.10, 9.36, 300, state='unknown', refs=R),            # selbst eingeordnet: normal
+    station(U(12), 'NIENBURG', 'WESER', 268.0, 52.64, 9.21, 250, state='unknown'),                  # ohne Kennwerte, nicht im Band
 ]
 BY_ID = {s['uuid']: s for s in STATIONS}
 api = {'fail': False, 'calls': []}
@@ -81,7 +83,7 @@ def run(b, w, hh, mobile):
     pg.wait_for_selector('.pm-karte')
     check(re.search(r'Stand \d\d:\d\d · alle 15 Min\. aktualisiert', pg.inner_text('.pg-stand')) is not None, f'{tag}: Stand mit Uhrzeit')
     z = {k: pg.inner_text(f'.pg-zaehler.is-{k} strong') for k in ['hsw', 'high', 'low', 'normal']}
-    check(z == {'hsw': '1', 'high': '1', 'low': '2', 'normal': '4'}, f'{tag}: Lage heute ({z})')
+    check(z == {'hsw': '1', 'high': '1', 'low': '2', 'normal': '5'}, f'{tag}: Lage heute ({z})')
     check(pg.locator('.pg-zaehler.is-normal').is_visible() != mobile, f'{tag}: „Normal“ nur am Desktop')
     karten = pg.locator('.pg-meine .pm-karte')
     check(karten.count() == 1 and 'Vlotho' in karten.first.inner_text() and 'Meine Pegel' in pg.inner_text('#pg-meine-t'), f'{tag}: Pegel der Pegel-Ampel übernommen')
@@ -96,11 +98,12 @@ def run(b, w, hh, mobile):
     check(len(hist) == 1, f'{tag}: Verlauf nur für sichtbare Karten geladen ({len(hist)})')
     # Flüsse
     baender = pg.locator('.pg-fluss')
-    check(baender.count() == 4, f'{tag}: Flüsse im Überblick ({baender.count()})')
+    check(baender.count() == 3 and pg.locator('.pg-fluss', has_text='Test-See').count() == 0, f'{tag}: Flüsse im Überblick ohne Gewässer ohne Daten ({baender.count()})')
     weser = pg.locator('.pg-fluss', has_text='Weser')
-    check('1 niedrig' in weser.inner_text() and weser.locator('.pg-band i').count() == 4 and 'Weser: 4 Pegel' in weser.get_attribute('aria-label'), f'{tag}: Band Weser mit Text und aria-label')
+    check('1 niedrig' in weser.inner_text() and weser.locator('.pg-band i').count() == 5 and 'Weser: 6 Pegel' in weser.get_attribute('aria-label'), f'{tag}: Band Weser mit Text und aria-label')
     farben = weser.locator('.pg-band i').evaluate_all("l => l.map(e => getComputedStyle(e).backgroundColor)")
-    check(farben == ['rgb(108, 191, 132)', 'rgb(108, 191, 132)', 'rgb(108, 191, 132)', 'rgb(250, 178, 25)'], f'{tag}: sortiert nach Flusskilometer, Farben ({farben})')
+    check(farben == ['rgb(108, 191, 132)'] * 4 + ['rgb(250, 178, 25)'], f'{tag}: sortiert nach Flusskilometer, nur eingeordnete Pegel, Farben ({farben})')
+    check('keine Daten' not in pg.inner_text('.pg-legende'), f'{tag}: Legende ohne „keine Daten“')
     check('über HSW' in pg.locator('.pg-fluss', has_text='Mosel').inner_text(), f'{tag}: Mosel „1 über HSW“')
     pg.screenshot(path=str(SHOTS / f'pegel_{w}_1dashboard.png'), full_page=True)
     # Alle Pegel / Filter
@@ -108,14 +111,14 @@ def run(b, w, hh, mobile):
         check(pg.locator('.pg-tabelle').is_hidden(), f'{tag}: Liste erst nach „Alle anzeigen“')
         pg.click('.pg-alle .pg-link')
     rows = pg.locator('.pg-tabelle tbody tr')
-    check(rows.count() == 10, f'{tag}: alle Pegel in der Liste ({rows.count()})')
+    check(rows.count() == 12, f'{tag}: alle Pegel in der Liste ({rows.count()})')
     pg.click('.pg-zaehler.is-low'); pg.wait_for_timeout(300)
     names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
     check(sorted(names) == ['Kaub', 'Minden'] and pg.locator('.pg-filter .ftag').get_attribute('aria-label') == 'Filter Niedrigwasser entfernen', f'{tag}: Zähler filtert die Liste ({names})')
     pg.click('.pg-filter .ftag'); pg.wait_for_timeout(200)
     pg.click('.pg-fluss:has-text("Weser")'); pg.wait_for_timeout(300)
     names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
-    check(names == ['Hann. Münden', 'Porta', 'Vlotho', 'Minden'], f'{tag}: Band zeigt das Gewässer, nach km ({names})')
+    check(names == ['Hann. Münden', 'Hameln', 'Porta', 'Vlotho', 'Minden', 'Nienburg'], f'{tag}: Band zeigt das Gewässer, nach km ({names})')
     pg.click('.pg-filter .ftag'); pg.wait_for_timeout(200)
     pg.click('.pg-sort:has-text("Zustand")'); pg.wait_for_timeout(150)
     first = pg.locator('.pg-tabelle tbody .pg-zeile-btn').first.inner_text()

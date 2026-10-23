@@ -41,6 +41,8 @@ export function normalizeStation(s, now = Date.now()) {
   if (old) state = 'old';
   else if (cm.stateNswHsw === 'high' || (refs.HSW !== undefined && value > refs.HSW)) state = 'hsw';
   else if (['low', 'normal', 'high'].includes(cm.stateMnwMhw)) state = cm.stateMnwMhw;
+  // Ohne Einordnung von PEGELONLINE selbst einordnen, wenn MNW und MHW bekannt sind
+  else if (refs.MNW !== undefined && refs.MHW !== undefined) state = value < refs.MNW ? 'low' : value > refs.MHW ? 'high' : 'normal';
   return {
     id: s.uuid, number: s.number ? String(s.number) : null,
     name: titleCase(s.longname || s.shortname || 'Pegel'),

@@ -99,7 +99,9 @@ export function pegelDashboard(root, ctx) {
   function fluesse() {
     const gruppen = new Map();
     for (const g of stand.gauges) { if (!g.water) continue; (gruppen.get(g.water) || gruppen.set(g.water, []).get(g.water)).push(g); }
-    const alle = [...gruppen.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'de'));
+    // Im Band nur eingeordnete Pegel; Gewässer ganz ohne Einordnung weglassen
+    const eingeordnet = (g) => ['hsw', 'high', 'low', 'normal'].includes(zustand(g));
+    const alle = [...gruppen.entries()].filter(([, liste]) => liste.some(eingeordnet)).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'de'));
     const zeigen = ui.alleGewaesser ? alle : alle.slice(0, 5);
     const zusammen = (liste) => {
       const c = { hsw: 0, high: 0, low: 0, normal: 0, rest: 0 };
@@ -107,15 +109,14 @@ export function pegelDashboard(root, ctx) {
       if (c.hsw) return { text: `${c.hsw} über HSW`, cls: 'is-hsw', c };
       if (c.high) return { text: `${c.high} hoch`, cls: 'is-high', c };
       if (c.low) return { text: `${c.low} niedrig`, cls: 'is-low', c };
-      if (!c.normal) return { text: 'keine Kennwerte', cls: 'is-none', c };
       return { text: 'alles normal', cls: 'is-normal', c };
     };
     return h('section', { class: 'pg-fluesse', 'aria-labelledby': 'pg-fl-t' },
       h('h2', { id: 'pg-fl-t', class: 'pg-h2', text: 'Flüsse im Überblick' }),
-      h('p', { class: 'pg-klein', text: 'Jedes Feld ein Pegel, von der Quelle zur Mündung' }),
+      h('p', { class: 'pg-klein', text: 'Jedes Feld ein eingeordneter Pegel, von der Quelle zur Mündung' }),
       h('div', { class: 'pg-karte pg-fl-karte' },
         zeigen.map(([name, liste]) => {
-          const sortiert = [...liste].sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9));
+          const sortiert = liste.filter(eingeordnet).sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9));
           const zs = zusammen(liste);
           const c = zs.c;
           const label = `${name}: ${liste.length} Pegel – ` + [c.hsw && `${c.hsw} über HSW`, c.high && `${c.high} hoch`, c.low && `${c.low} niedrig`, c.normal && `${c.normal} normal`, c.rest && `${c.rest} ohne Einordnung`].filter(Boolean).join(', ') + '. Liste dieses Gewässers zeigen';
@@ -123,7 +124,7 @@ export function pegelDashboard(root, ctx) {
             h('span', { class: 'pg-fluss-kopf' }, h('strong', { text: name }), h('span', { class: `pg-fluss-info ${zs.cls}`, text: zs.text })),
             h('span', { class: 'pg-band', 'aria-hidden': 'true' }, sortiert.map(g => h('i', { style: `background:${ZUSTAND[zustand(g)].farbe}`, title: `${g.name}: ${fmt(g.value)} ${g.unit} (${ZUSTAND[zustand(g)].text})` }))));
         }),
-        h('p', { class: 'pg-legende' }, [['low', 'niedrig'], ['normal', 'normal'], ['high', 'hoch'], ['hsw', 'über HSW'], ['none', 'keine Daten']]
+        h('p', { class: 'pg-legende' }, [['low', 'niedrig'], ['normal', 'normal'], ['high', 'hoch'], ['hsw', 'über HSW']]
           .map(([z, t]) => h('span', {}, h('i', { style: `background:${ZUSTAND[z].farbe}` }), t))),
         alle.length > 5 ? h('button', { type: 'button', class: 'pg-link', text: ui.alleGewaesser ? 'Weniger Gewässer anzeigen' : `Alle ${alle.length} Gewässer anzeigen ›`,
           onclick: () => { ui.alleGewaesser = !ui.alleGewaesser; zeichnen(); } }) : null));

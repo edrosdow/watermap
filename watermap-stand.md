@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 22.10.2026 · App-Version **7.19.0**
+Stand: 23.10.2026 · App-Version **7.19.1**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.19.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.19.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -142,6 +142,8 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 - Ist die Liste leer, erscheinen die 3 nächsten Pegel als Vorschlag.
 - Die Alarm-Kachel verweist auf den bestehenden Alarm (`pegel-ampel#am-alarm`).
 - Farben: Normal überall grün `#6CBF84`, auch auf der Karte. Niedrig `#FAB219`, Hoch `#EC835A`, über HSW `#D03B3B`, ohne Daten `#DCE5EA`.
+- Ordnet PEGELONLINE einen Pegel nicht ein, aber MNW und MHW sind bekannt, ordnet die App selbst ein: unter MNW niedrig, über MHW hoch, sonst normal (7.19.1).
+- „Flüsse im Überblick“ zeigt nur eingeordnete Pegel, keine grauen Felder. Gewässer ganz ohne Einordnung (z. B. Kanäle, Küste) fehlen dort; die Liste zeigt weiter alle Pegel (7.19.1).
 - Karte und Dashboard nutzen eine gemeinsame Stationsliste, die alle 15 Min. und bei Rückkehr in die App aktualisiert wird.
 - Verläufe werden nur für sichtbare Karten und die Detailseite geladen.
 - Offline gibt es den letzten Stand mit Hinweis „Stand von …“.
@@ -162,6 +164,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.17.0 | „Heute vor Ort“: Lagemeldungen (Backend und Oberfläche) |
 | 7.18.0 | „Heute vor Ort“ als Karte mit vier Zuständen |
 | 7.19.0 | Pegel-Dashboard, Detailseite, „Meine Pegel“, Pegel-Vorschau auf der Karte |
+| 7.19.1 | Flüsse im Überblick ohne graue Felder, eigene Einordnung aus MNW/MHW |
 
 ## 5. Tests
 
@@ -173,7 +176,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.19.0): alle Tests grün.**
+**Letzter Lauf (7.19.1): Unit, Node, `ui_full`, `ui_ampel`, `ui_pegel`, `ui_pegel_dashboard` grün.**
 
 ## 6. Offene Aufgaben
 
