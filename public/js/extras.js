@@ -94,7 +94,7 @@ function normalize(f) {
     opening_hours: p.opening_hours || null, operator: p.operator || null, website: p.website || null, phone: p.phone || null, osm: p.osm || null };
 }
 
-// ------------------------------------------------------------------ „In der Nähe“ live aus OpenStreetMap
+// ------------------------------------------------------------------ „Umgebung“ live aus OpenStreetMap
 // Beim Öffnen eines Standorts fragt die App den Umkreis über die eigene Netlify-Funktion ab
 // (netlify/functions/umgebung.mjs → Overpass API): keine IP-Adressen der Besucher bei Dritten, der Import bleibt klein.
 // Klappt das nicht (offline, Overpass überlastet), bleiben die importierten Daten.
@@ -266,11 +266,11 @@ export function renderExtraDetail(x, { close, user }) {
   return [head, body];
 }
 
-/** Abschnitt „In der Nähe“ für die Detailansicht eines Standorts. */
+/** Abschnitt „Umgebung“ für die Detailansicht eines Standorts. */
 export function nearbySection(listPromise, lat, lon, { onSelect, exclude, live = true }) {
   const R = CONFIG.NEARBY_EXTRAS_M;
   const box = h('div', { class: 'nearby-list', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Wird geladen …' }));
-  const section = h('section', { class: 'block' }, h('h3', { text: `In der Nähe (bis ${R} m)` }), box);
+  const section = h('section', { class: 'block' }, h('h3', { text: `Umgebung (bis ${R} m)` }), box);
   const imported = listPromise.catch(() => null);
   let liveFehler = '';
   const fresh = live ? liveNearby(lat, lon, R).catch((e) => { liveFehler = e?.message || 'Fehler'; return null; }) : Promise.resolve(null);

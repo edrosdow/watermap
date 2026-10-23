@@ -1,4 +1,4 @@
-// Hauptnavigation (Karte · Liste · Melden · Pegel · Favoriten) – oben auf dem Desktop, unten auf dem Handy.
+// Hauptnavigation (Karte · In der Nähe · Melden · Pegel · Favoriten) – oben auf dem Desktop, unten auf dem Handy.
 // Wird von der Karte (main.js) und der Pegel-Ampel (ampel.js) genutzt.
 import { h } from './dom.js';
 import { icon } from './icons.js';
@@ -7,7 +7,7 @@ import { favorites } from './favorites.js';
 /** Ziele; `href` gilt von jeder Seite aus (die Karte fängt die Klicks ab und schaltet ohne Neuladen um). */
 export const NAV = [
   { id: 'karte', label: 'Karte', top: 'Karte', ico: 'map', href: './#karte' },
-  { id: 'liste', label: 'Liste', top: 'Liste', ico: 'list', href: './#liste' },
+  { id: 'naehe', label: 'In der Nähe', top: 'In der Nähe', ico: 'pin', href: './#naehe' },
   { id: 'melden', label: 'Melden', ico: 'plus', href: './#melden', center: true },
   { id: 'pegel', label: 'Pegel', top: 'Pegel', ico: 'gauge', href: './#pegel' },
   { id: 'favoriten', label: 'Favoriten', top: 'Favoriten', ico: 'star', href: './#favoriten' },
@@ -21,7 +21,7 @@ function badge() {
 }
 
 /**
- * Navigation in die Seite einhängen. active: 'karte' | 'liste' | 'pegel' | 'favoriten'
+ * Navigation in die Seite einhängen. active: 'karte' | 'naehe' | 'pegel' | 'favoriten'
  * onSelect(id, event) – optional; gibt true zurück, wenn der Klick ohne Seitenwechsel erledigt wurde.
  */
 export function mountNav({ top, bottom, active, onSelect, reportLink = false }) {

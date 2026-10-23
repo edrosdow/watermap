@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="./css/chart.css">
   <link rel="stylesheet" href="./css/nav.css">
   <link rel="stylesheet" href="./css/pegel.css">
+  <link rel="stylesheet" href="./css/naehe.css">
 </head>
 <body>
   <a class="skip" href="#map">Zur Karte springen</a>
@@ -33,6 +34,8 @@
     <button type="button" id="btn-report" class="report-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="report-menu"><span id="btn-report-ico"></span><span>Melden</span></button>
   </header>
 
+  <div id="naehe-kopf-m" class="nh-kopf nh-kopf-m"></div>
+
   <div id="toolbar" class="toolbar">
     <div id="cats" class="cats" role="group" aria-label="Kategorien auf der Karte"></div>
     <button type="button" id="btn-filter" class="filter-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="filter-panel"><span id="btn-filter-ico"></span><span>Filter</span><span id="filter-n" class="filter-n" hidden></span></button>
@@ -50,6 +53,7 @@
         <h2 id="list-title" class="list-title">Liste</h2>
         <button type="button" id="list-close" class="icon-btn list-close" aria-label="Liste schließen" title="Zur Karte"></button>
       </div>
+      <div id="naehe-kopf-d" class="nh-kopf nh-kopf-d"></div>
       <div id="datainfo" class="datainfo"></div>
       <div id="list-head" class="list-head"></div>
       <ul id="list" class="list" aria-live="polite"></ul>

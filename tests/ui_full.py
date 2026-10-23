@@ -118,7 +118,7 @@ def report(pg, label):
     pg.locator('#report-menu .menu-item', has_text=label).click()
 
 def open_app(pg, mobile=False):
-    pg.goto(BASE + '#liste'); pg.wait_for_selector('.place, .empty', timeout=10000)
+    pg.goto(BASE + '#naehe'); pg.wait_for_selector('.place, .empty', timeout=10000)
     if mobile: pg.wait_for_timeout(100)
 
 def jpeg_with_gps(size=(900, 600)):
@@ -157,16 +157,17 @@ def defaults(b):
         nav = '#bottomnav' if mob else '#topnav'
         check(pg.locator(nav).is_visible() and pg.locator('#bottomnav' if not mob else '#topnav').is_hidden(), f'{name}: Navigation {"unten" if mob else "oben"}')
         check(pg.locator(f'{nav} [data-nav=karte]').get_attribute('aria-current') == 'page', f'{name}: „Karte“ aktiv')
-        pg.click(f'{nav} [data-nav=liste]'); pg.wait_for_timeout(400)
-        check(pg.locator('#sidebar').is_visible() and pg.locator('.place').count() > 0 and pg.url.endswith('#liste'), f'{name}: Liste über die Navigation (#liste)')
-        check(pg.locator(f'{nav} [data-nav=liste]').get_attribute('aria-current') == 'page', f'{name}: „Liste“ aktiv')
+        check(pg.inner_text(f'{nav} [data-nav=naehe]').strip() == 'In der Nähe' and pg.locator(f'{nav} [data-nav=liste]').count() == 0, f'{name}: Tab „In der Nähe“ statt „Liste“')
+        pg.click(f'{nav} [data-nav=naehe]'); pg.wait_for_timeout(400)
+        check(pg.locator('#sidebar').is_visible() and pg.locator('.place').count() > 0 and pg.url.endswith('#naehe'), f'{name}: „In der Nähe“ über die Navigation (#naehe)')
+        check(pg.locator(f'{nav} [data-nav=naehe]').get_attribute('aria-current') == 'page', f'{name}: „In der Nähe“ aktiv')
         if not mob:
             mw = pg.locator('.map-wrap').bounding_box(); sb = pg.locator('#sidebar').bounding_box()
             check(sb['x'] < 1 and sb['width'] < 420 and mw['x'] >= sb['width'] - 1, f'{name}: Liste als linke Seitenleiste neben der Karte')
         else:
             sb = pg.locator('#sidebar').bounding_box(); bn = pg.locator('#bottomnav').bounding_box()
             check(sb['y'] + sb['height'] <= bn['y'] + 1, f'{name}: Liste endet über der Navigation')
-        pg.click('#list-close'); pg.wait_for_timeout(300)
+        pg.click(f'{nav} [data-nav=karte]'); pg.wait_for_timeout(300)
         check(not pg.locator('#sidebar').is_visible(), f'{name}: Liste wieder geschlossen')
         pg.click(f'{nav} [data-nav=favoriten]'); pg.wait_for_timeout(400)
         check(pg.locator('#sidebar').is_visible() and pg.inner_text('#list-title') == 'Favoriten', f'{name}: Favoriten öffnen die Liste')
@@ -505,6 +506,7 @@ def new_page_vp(b, w, hgt):
 def mobile(b):
     print('--- Smartphone')
     ctx, pg = new_page(b, mobile=True); open_app(pg, True)
+    pg.click('#bottomnav [data-nav=karte]'); pg.wait_for_timeout(300)   # Werkzeugleiste gehört zur Karte („In der Nähe“ hat eigene Chips)
     check(pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), 'Kein horizontales Scrollen')
     pg.screenshot(path=str(SHOTS / 'full_mobile_start.png'))
     small = pg.evaluate("""[...document.querySelectorAll('button,a.btn,.cat,.bn-item,input,select')].filter(e=>e.offsetParent!==null).map(e=>{const r=e.getBoundingClientRect();return [e.className||e.tagName, Math.round(r.width), Math.round(r.height)]}).filter(x=>x[2]<40 && x[1]<40)""")
@@ -519,7 +521,7 @@ def mobile(b):
     check(bn['y'] + bn['height'] >= 843 and pg.locator('#bottomnav .bn-item').count() == 5, 'Navigation unten mit fünf Zielen')
     plus = pg.locator('#bottomnav .bn-plus').bounding_box()
     check(plus['y'] < bn['y'], '„Melden“ ragt über die Leiste hinaus')
-    pg.click('#bottomnav [data-nav=liste]'); pg.wait_for_timeout(300)
+    pg.click('#bottomnav [data-nav=naehe]'); pg.wait_for_timeout(300)
     pg.screenshot(path=str(SHOTS / 'full_mobile_list.png'))
     pg.click('.place >> nth=0'); pg.wait_for_selector('#peek:not([hidden])'); pg.wait_for_timeout(300)
     pk = pg.locator('#peek').bounding_box(); fab = pg.locator('#btn-locate').bounding_box()

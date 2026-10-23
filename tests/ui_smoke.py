@@ -51,7 +51,7 @@ with sync_playwright() as p:
         errors = []
         pg.on('pageerror', lambda e: errors.append(str(e)))
         pg.on('console', lambda m: errors.append(m.text) if m.type == 'error' else None)
-        pg.goto(BASE + '#liste'); pg.wait_for_selector('.place', timeout=8000)
+        pg.goto(BASE + '#naehe'); pg.wait_for_selector('.place', timeout=8000)
         print(f'--- {name}')
         check(pg.locator('.place').count() == 8, f'{name}: 8 Slipanlagen in der Liste')
         check(pg.locator('.leaflet-marker-icon').count() >= 1, f'{name}: Marker im Kartenfenster ({pg.locator(".leaflet-marker-icon").count()})')

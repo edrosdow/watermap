@@ -13,7 +13,7 @@ with sync_playwright() as p:
     ctx.route('**/tile.openstreetmap.org/**', lambda r: r.abort())   # Kacheln sind hier nicht nötig
     ctx.add_init_script("try { if (localStorage.getItem('watermap.cats') === null) { localStorage.setItem('watermap.cats', 'slip,marina,fuel'); localStorage.setItem('watermap.listOpen', '1'); } } catch {}")   # alte Ansicht: alle Kategorien, Liste offen
     pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
-    pg.goto(BASE + '#liste'); pg.wait_for_selector('.place')
+    pg.goto(BASE + '#naehe'); pg.wait_for_selector('.place')
     pg.wait_for_function("navigator.serviceWorker.ready.then(r => !!r.active)", timeout=10000)
     pg.reload(); pg.wait_for_selector('.place')
     online = pg.locator('.place').count()

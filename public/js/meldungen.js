@@ -34,13 +34,13 @@ export function geraetId() {
 }
 
 // ------------------------------------------------------------------ Laden
-let aktivCache = null;   // { zeit, map: Map(id → {n, typ}), offline }
+let aktivCache = null;   // { zeit, map: Map(id → {n, typ, at}), offline }
 const lokale = new Map(); // eigene, gerade gesendete Stände (bis der CDN-Zwischenspeicher nachzieht)
 
 function snapshotLesen() {
   try { const j = JSON.parse(localStorage.getItem(LS_AKTIV) || 'null'); return j && Array.isArray(j.aktiv) ? j : null; } catch { return null; }
 }
-function zuMap(liste) { return new Map(liste.map(a => [a.standortId, { n: a.n, typ: a.typ }])); }
+function zuMap(liste) { return new Map(liste.map(a => [a.standortId, { n: a.n, typ: a.typ, at: a.at }])); }
 function mitLokalen(map) {
   const out = new Map(map);
   for (const [id, v] of lokale) { if (Date.now() - v.at > 90e3) { lokale.delete(id); continue; } if (v.info) out.set(id, v.info); else out.delete(id); }
@@ -83,7 +83,7 @@ export async function standortLaden(id, { fetchFn = fetch } = {}) {
 /** Zusammenfassung aus einer Liste (wichtigste zuerst, wie vom Server geliefert). */
 export function zusammenfassen(meldungen) {
   const s = [...meldungen].sort((a, b) => (TYPEN[b.typ]?.rang || 0) - (TYPEN[a.typ]?.rang || 0) || b.erstelltAm - a.erstelltAm);
-  return s.length ? { n: s.length, typ: s[0].typ } : null;
+  return s.length ? { n: s.length, typ: s[0].typ, at: s[0].erstelltAm } : null;
 }
 
 function merkeLokal(id, meldungen) {

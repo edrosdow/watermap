@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 23.10.2026 · App-Version **7.20.5**
+Stand: 23.10.2026 · App-Version **7.21.0**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.20.5 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.21.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -33,7 +33,7 @@ Die App ist eine installierbare PWA, auf Deutsch, und nutzt nur kostenlose Diens
   | Adresse | Ziel |
   |---|---|
   | `#karte` (Standard) | Karte |
-  | `#liste` | Liste |
+  | `#naehe` | In der Nähe (alter Link `#liste` geht weiter) |
   | `#favoriten` | Favoriten |
   | `#pegel` | Pegel-Dashboard |
   | `#pegel/<id>` | Pegel-Detailseite |
@@ -53,6 +53,7 @@ Die App ist eine installierbare PWA, auf Deutsch, und nutzt nur kostenlose Diens
   | `forms.js`, `photo-form.js`, `lage-form.js` | Formulare |
   | `pegel.js` | PEGELONLINE-Anbindung, Diagramm |
   | `pegel-daten.js` | gemeinsame Stationsliste, Verläufe, „Meine Pegel“ |
+  | `naehe.js` | „In der Nähe“: Bezugspunkt, Standortfreigabe, Liste, Fenster „Entfernungen messen ab …“ |
   | `pegel-ansicht.js` | Pegel-Karten, Skala, Detail |
   | `pegel-dashboard.js` | Pegel-Dashboard |
   | `meldungen.js` | Lagemeldungen „Heute vor Ort“ |
@@ -135,6 +136,16 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 - Nur bei Slipanlagen (7.20): Häfen und Tankstellen zeigen keine Karte „Heute vor Ort“; Melde-Menü schlägt nur Slipanlagen vor und nimmt bei der Auswahl nur Slipanlagen an.
 - Der Datenschutztext ist abgestimmt.
 
+**In der Nähe (7.21)**
+- Tab `#naehe` ersetzt „Liste“ (Pin-Symbol). Favoriten bleiben eigener Tab mit denselben Karten; kein Umschalter mehr.
+- Bezugspunkt: „Meine Position“, „Kartenmitte“ (Standard beim ersten Öffnen) oder ein gesuchter Ort. Gespeichert (localStorage): nur die Wahl (`watermap.naehe.bezug`), bis zu 3 gesuchte Orte, ob schon entschieden, Sortierung. Die Position selbst nie.
+- Ortsname im Kopf lokal aus den WaterMap-Daten (Ort des nächsten Standorts, ≤ 30 km) – keine Rückwärtssuche, damit die Position nicht an Nominatim geht.
+- Freigabe vorher per Permissions API: granted → direkt Position; prompt/unbekannt → Erklär-Karte (Browser-Dialog erst auf „Position verwenden“); denied → gelber Hinweis mit Anleitung. Status gemeinsam mit „Meine Position“ auf der Karte. Der einmalige Karten-Hinweis „Karte auf deinen Standort ausrichten?“ ist entfernt.
+- Position wird beim Öffnen des Tabs und per Ziehen nach unten aktualisiert, nicht laufend.
+- Liste: 25 km, bei < 5 Treffern 50 bzw. 100 km; höchstens `LIST_LIMIT`. Sortierung „Nächste zuerst“, „Name A–Z“, bei nur Häfen „Gastliegeplätze zuerst“. Keine Fahrzeit. Meldungs-Etikett bei Slipanlagen (die Übersicht `/api/meldungen/aktiv` liefert dafür jetzt `at`).
+- Handy: Navy-Kopf mit Kategorien und Filter statt der Werkzeugleiste; Tipp → Karte mit Vorschau, Zurück → gleiche Scrollstelle. Desktop: Seitenleiste links, Kategorien in der Werkzeugleiste, bei Kartenmitte läuft die Liste mit der Karte mit.
+- Detail-Abschnitt „In der Nähe (bis 500 m)“ heißt jetzt „Umgebung (bis 500 m)“.
+
 **Pegel (7.19)**
 - Der Bereich „Pegel“ ist ein eigenes Dashboard.
 - Die Pegel-Ampel bleibt unverändert und ist über „Passt mein Boot?“ mit `?pegel=` erreichbar.
@@ -178,6 +189,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.3 | Sortierung „Zustand“ entfernt (nur noch Gewässer und Entfernung) |
 | 7.20.4 | Suche: passendes Gewässer zuerst; Unterweser hinter Ober-/Mittelweser |
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
+| 7.21.0 | Tab „Liste“ → „In der Nähe“ (Bezugspunkt, Standortfreigabe, neue Karten); Detail-Abschnitt „Umgebung“; Datenschutz „Standort“ neu |
 
 ## 5. Tests
 
@@ -185,11 +197,11 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 |---|---|
 | Unit (Python) | `python3 -I -m unittest discover -s tests` (Importer, Validator, Hafeninfo, Moderation) |
 | Node | `ampel_logik`, `fotos_function`, `meldungen`, `pegel_alarm`, `pegel_trend`, `umgebung` |
-| Oberfläche (Playwright) | `ui_full`, `ui_smoke`, `pwa_test`, `ui_meldungen`, `ui_extras`, `ui_karussell`, `ui_pegel`, `ui_pegel_dashboard`, `ui_wetter`, `ui_ampel`, `ui_fotos` |
+| Oberfläche (Playwright) | `ui_full`, `ui_smoke`, `pwa_test`, `ui_naehe`, `ui_meldungen`, `ui_extras`, `ui_karussell`, `ui_pegel`, `ui_pegel_dashboard`, `ui_wetter`, `ui_ampel`, `ui_fotos` |
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.20.0; 7.20.1/7.20.2: Unit, Node, `ui_pegel_dashboard`, `ui_pegel`, `ui_ampel`): alle Tests grün außer `ui_smoke` (bricht in der Cloud-Umgebung auch ohne Änderungen ab: `.place` erscheint nicht).**
+**Letzter Lauf (7.21.0): alle Tests grün außer `ui_smoke` (bricht in der Cloud-Umgebung auch ohne Änderungen ab: `.place` erscheint nicht).**
 
 ## 6. Offene Aufgaben
 

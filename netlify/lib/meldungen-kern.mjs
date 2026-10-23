@@ -127,7 +127,7 @@ export function meldungenApi(deps) {
       const jetzt = now();
       const idx = await lesen(deps.store, 'index', {});
       return Object.entries(idx).filter(([, v]) => v && jetzt - v.at < SICHTBAR_MS)
-        .map(([standortId, v]) => ({ standortId, n: v.n, typ: v.typ }));
+        .map(([standortId, v]) => ({ standortId, n: v.n, typ: v.typ, at: v.at }));
     },
 
     /** Neue Meldung. body = { standortId, typ, notiz }, wer = { geraet, ip } */

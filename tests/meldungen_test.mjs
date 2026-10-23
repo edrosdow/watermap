@@ -59,8 +59,9 @@ await api.melden({ standortId: 'node/1', typ: 'gesperrt' }, bob);
 let liste = await api.standort('node/1');
 assert.deepEqual(liste.map(m => m.typ), ['gesperrt', 'parkplatz_voll']);
 let aktiv = await api.aktiv();
-assert.deepEqual(aktiv.find(a => a.standortId === 'node/1'), { standortId: 'node/1', n: 2, typ: 'gesperrt' });
-assert.deepEqual(aktiv.find(a => a.standortId === 'node/2'), { standortId: 'node/2', n: 1, typ: 'hindernis' });
+const ohneZeit = ({ at, ...rest }) => (assert.ok(Number.isFinite(at), 'Zeitpunkt der wichtigsten Meldung'), rest);
+assert.deepEqual(ohneZeit(aktiv.find(a => a.standortId === 'node/1')), { standortId: 'node/1', n: 2, typ: 'gesperrt' });
+assert.deepEqual(ohneZeit(aktiv.find(a => a.standortId === 'node/2')), { standortId: 'node/2', n: 1, typ: 'hindernis' });
 
 // Bestätigen: einmal pro Gerät, verlängert die 24 h nicht
 const voll = liste.find(m => m.typ === 'parkplatz_voll');
@@ -128,7 +129,7 @@ assert.equal(res.status, 200); assert.equal(res.headers.get('cache-control'), 'n
 assert.equal((await res.json()).meldungen[0].notiz, 'Tor zu');
 res = await handle(req('GET', '/api/meldungen/aktiv'), ctx());
 assert.ok(res.headers.get('netlify-cdn-cache-control').includes('s-maxage=60'));
-assert.deepEqual((await res.json()).aktiv, [{ standortId: 'node/1', n: 1, typ: 'gesperrt' }]);
+assert.deepEqual((await res.json()).aktiv.map(ohneZeit), [{ standortId: 'node/1', n: 1, typ: 'gesperrt' }]);
 res = await handle(req('POST', `/api/meldungen/${neu.id}/bestaetigen`, { stimmt: true }, { 'x-geraet': 'anderes-geraet-0000001' }), ctx({ ip: '198.51.100.1' }));
 assert.equal(res.status, 200); assert.equal((await res.json()).meldungen[0].bestaetigt, 1);
 res = await handle(req('POST', '/api/meldungen', { standortId: 'node/2', typ: 'gesperrt' }), ctx({ salz: '' }));

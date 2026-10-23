@@ -14,6 +14,7 @@ import { mountNav, popover, swipeToClose } from './nav.js';
 import { bewerte } from './ampel-logik.js';
 import { aktivLaden, standortLaden, statusZeile, vorOrtKarte, zusammenfassen } from './meldungen.js';
 import { openLageForm } from './lage-form.js';
+import { naehe, geoFreigabe } from './naehe.js';
 import { pegelLaden, pegelStand, verlaufLaden } from './pegel-daten.js';
 import { pegelDetail, etikett as pegelEtikett, fmt as pegelFmt, trendText, trendKlasse, sternKnopf } from './pegel-ansicht.js';
 import { pegelDashboard, pegelSeite, slipsAmPegel } from './pegel-dashboard.js';
@@ -44,7 +45,7 @@ const CAT_LABEL = { slip: 'Slipanlagen', marina: 'Häfen', fuel: 'Tanken' };
 const CAT_SHORT = { slip: 'Slip', marina: 'Häfen', fuel: 'Tanken' };
 const CAT_PLURAL = { slip: 'Slipanlagen', marina: 'Häfen', fuel: 'Tankstellen' };
 const fmtN = (n) => n.toLocaleString('de-DE');
-let nav, filterPop, reportPop;
+let nav, filterPop, reportPop, nah;
 
 // ============================================================ Start
 async function init() {
@@ -63,6 +64,8 @@ async function init() {
   reportPop = popover($('#report-menu'), { isMobile, align: 'right' });
   renderSkeleton();
   wireStatic();
+  nah = naehe(naeheCtx());
+  nah.binden({ kopfHandy: $('#naehe-kopf-m'), kopfDesktop: $('#naehe-kopf-d'), head: el.listHead, ul: el.list, aktiv: () => state.view === 'naehe' && !state.loadFailed && state.places.length > 0 });
 
   const [libs, data] = await Promise.all([
     loadMapLibraries().catch(() => ({ leaflet: false })),
@@ -95,8 +98,7 @@ async function init() {
   if (state.mapOk && prefs.get('gauges') === '1') setGauges(true);
   if (state.mapOk && hasExtras()) for (const g of Object.keys(GROUPS)) if (prefs.get('extras.' + g) === '1') setExtras(g, true);
   handleHash({ initial: true });
-  if (state.loadFailed) setView('liste', { push: false });   // Fehlermeldung mit „Erneut laden“ steht in der Liste
-  offerLocation();
+  if (state.loadFailed) setView('naehe', { push: false });   // Fehlermeldung mit „Erneut laden“ steht in der Liste
   registerServiceWorker();
   meldAktualisieren();
   setInterval(() => { if (document.visibilityState === 'visible') meldAktualisieren(); }, 2 * 60e3);
@@ -127,7 +129,7 @@ function meldLokal(id, liste) {
 function meldStandortGeladen(id, d) {
   if (d.offline) return;
   const info = zusammenfassen(d.meldungen), alt = state.meld.get(id);
-  if (info?.n === alt?.n && info?.typ === alt?.typ) return;
+  if (info?.n === alt?.n && info?.typ === alt?.typ && info?.at === alt?.at) return;
   meldLokal(id, d.meldungen);
 }
 
@@ -331,71 +333,69 @@ function renderFilterPanel() {
   if (focusedLabel) [...body.querySelectorAll('.fswitch')].find(b => b.querySelector('.fswitch-label').textContent === focusedLabel)?.focus();
 }
 
-// ============================================================ Liste
-function distanceFrom(p) {
-  const ref = state.user || (state.map ? state.map.getCenter() : null);
-  return ref ? haversine(ref.lat, ref.lon, p.lat, p.lon) : null;
+// ============================================================ In der Nähe / Favoriten
+function naeheCtx() {
+  return {
+    places: () => state.filtered,
+    allPlaces: () => state.places,
+    user: () => state.user,
+    setUser: (pos) => { state.user = pos; state.map?.showUser(pos.lat, pos.lon, pos.accuracy); },
+    requestUserPos,
+    mapCenter: () => (state.map ? state.map.getCenter() : null),
+    isMobile,
+    liste: () => el.list,
+    cats: () => state.cats,
+    toggleCat: (t) => toggleCat(t),
+    meld: () => state.meld,
+    filterZahl: () => state.subs.size + (state.meldOnly ? 1 : 0),
+    filterOeffnen: (btn) => { if (!filterPop.isOpen) renderFilterPanel(); filterPop.toggle(btn); },
+    filterZuruecksetzen: () => { state.subs.clear(); state.meldOnly = false; applyFilters(); },
+    // Tipp auf einen Standort: Handy → Karte mit Vorschau (Zurück führt wieder hierher), Desktop → Details neben der Liste
+    waehlen: (p) => { if (isMobile()) setView('karte'); selectPlace(p.id); },
+    aufKarte: (liste) => {
+      if (isMobile()) setView('karte');
+      if (!state.map || !liste.length) return;
+      setTimeout(() => { state.map.invalidate(); state.map.fitBounds(liste.map(p => [p.lat, p.lon]), { maxZoom: 14 }); }, 0);
+    },
+    leer: leereKategorie,
+    dialog: el.dlg,
+    toast,
+  };
 }
 
+// ============================================================ Liste
 function renderList() {
   clear(el.listHead);
   if (state.loadFailed && state.tab === 'list') { renderLoadError(); return; }
-  let items, headText, note = null;
-
-  if (state.tab === 'fav') {
-    items = favorites.all().map(id => state.byId.get(id)).filter(Boolean);
-    items.sort((a, b) => displayName(a).localeCompare(displayName(b), 'de'));
-    headText = `${items.length} Favorit${items.length === 1 ? '' : 'en'}`;
-    if (!favorites.persistent) note = 'Dein Browser erlaubt kein Speichern. Favoriten gelten nur bis zum Schließen.';
-  } else {
-    let pool = state.filtered;
-    let inView = false;
-    if (state.map && state.map.getZoom() >= 7) {
-      const b = state.map.getBounds();
-      const visible = pool.filter(p => p.lat >= b.south && p.lat <= b.north && p.lon >= b.west && p.lon <= b.east);
-      if (visible.length || !pool.length) { pool = visible; inView = true; }
-    }
-    items = pool.map(p => ({ p, d: distanceFrom(p) }));
-    items.sort((a, b) => (a.d ?? 0) - (b.d ?? 0) || displayName(a.p).localeCompare(displayName(b.p), 'de'));
-    items = items.map(x => x.p);
-    const total = pool.length;
-    headText = inView ? `${total} im Kartenausschnitt` : `${total} Standort${total === 1 ? '' : 'e'}`;
-    if (total > CONFIG.LIST_LIMIT) { note = `Die ${CONFIG.LIST_LIMIT} nächsten werden gezeigt. Zoome näher heran oder nutze die Filter.`; items = items.slice(0, CONFIG.LIST_LIMIT); }
-    else if (state.subs.size) note = 'Gefiltert werden nur Standorte mit bestätigter Angabe. Unbekanntes gilt nicht als „Nein“.';
+  if (state.tab === 'list') {
+    if (state.places.length) { nah?.zeichnen(); return; }
+    clear(el.list).append(emptyState());
+    return;
   }
-
+  // Favoriten (eigener Tab): gleiche Karten wie „In der Nähe“, nach Name
+  const items = favorites.all().map(id => state.byId.get(id)).filter(Boolean);
+  items.sort((a, b) => displayName(a).localeCompare(displayName(b), 'de'));
+  const headText = `${items.length} Favorit${items.length === 1 ? '' : 'en'}`;
   $('#count').textContent = headText;
   el.listHead.append(h('strong', { text: headText }));
-  if (note) el.listHead.append(h('span', { class: 'muted', text: note }));
-
+  if (!favorites.persistent) el.listHead.append(h('span', { class: 'muted', text: 'Dein Browser erlaubt kein Speichern. Favoriten gelten nur bis zum Schließen.' }));
   const ul = clear(el.list);
   if (!items.length) { ul.append(emptyState()); return; }
-  for (const p of items) {
-    const d = distanceFrom(p);
-    const sub = subtitle(p, { short: true });
-    ul.append(h('li', {},
-      h('button', { type: 'button', class: 'place' + (p.id === state.selectedId ? ' is-selected' : ''), dataset: { id: p.id }, onclick: () => { if (isMobile()) setView('karte'); selectPlace(p.id); } },
-        h('span', { class: `place-ico bg-${p.type}`, html: glyphSvg(p.type, 24) }),
-        h('span', { class: 'place-text' },
-          h('span', { class: 'place-name', text: displayName(p) }),
-          h('span', { class: 'place-sub', text: [singleCat() ? null : TYPES[p.type].label, sub].filter(Boolean).join(' · ') || TYPES[p.type].label })),
-        favorites.has(p.id) ? h('span', { class: 'place-fav', html: icon('star', 16, true), 'aria-label': 'Favorit' }) : null,
-        d !== null && state.tab === 'list' ? h('span', { class: 'place-dist', text: formatDistance(d) }) : null)));
-  }
+  for (const p of items) ul.append(nah.karte(p, state.user ? haversine(state.user.lat, state.user.lon, p.lat, p.lon) : null));
 }
 
 function emptyState() {
   if (state.tab === 'fav') return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Noch keine Favoriten' }), h('p', { class: 'muted', text: 'Tippe in einer Standortansicht auf den Stern, um einen Ort hier zu speichern.' }));
-  if (!state.places.length) return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Noch keine Standorte in der Datenbank' }), h('p', { class: 'muted', text: 'Du kannst trotzdem Slipanlagen melden. Sie erscheinen nach Prüfung.' }));
-  if (!state.cats.size) return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Keine Kategorie gewählt' }), h('p', { class: 'muted', text: 'Wähle oben Slipanlagen, Häfen oder Tanken.' }));
+  return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Noch keine Standorte in der Datenbank' }), h('p', { class: 'muted', text: 'Du kannst trotzdem Slipanlagen melden. Sie erscheinen nach Prüfung.' }));
+}
+
+/** „In der Nähe“ leer, weil die eine gewählte Kategorie noch gar keine Daten hat: ehrlich sagen statt „nichts im Umkreis“. */
+function leereKategorie() {
   const one = singleCat();
-  if (one && !state.places.some(p => p.type === one)) {
-    return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: `Noch keine ${TYPES[one].plural} in der Datenbank` }),
-      h('p', { class: 'muted', text: 'Für diese Kategorie steht der Import aus OpenStreetMap noch aus. Es werden keine Standorte erfunden.' }),
-      one === 'slip' ? h('button', { class: 'btn btn-outline', type: 'button', text: 'Slipanlage melden', onclick: () => openReport('slipanlage-melden') }) : null);
-  }
-  if (state.subs.size) return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Keine Treffer für diese Filter' }), h('p', { class: 'muted', text: 'Nur Standorte mit bestätigter Angabe werden gezeigt. Nimm einen Filter heraus.' }), h('button', { class: 'btn btn-outline', type: 'button', text: 'Filter zurücksetzen', onclick: () => { state.subs.clear(); applyFilters(); } }));
-  return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Hier ist nichts in der Nähe' }), h('p', { class: 'muted', text: 'Verschiebe oder verkleinere die Karte, um weitere Standorte zu sehen.' }));
+  if (!one || state.places.some(p => p.type === one)) return null;
+  return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: `Noch keine ${TYPES[one].plural} in der Datenbank` }),
+    h('p', { class: 'muted', text: 'Für diese Kategorie steht der Import aus OpenStreetMap noch aus. Es werden keine Standorte erfunden.' }),
+    one === 'slip' ? h('button', { class: 'btn btn-outline', type: 'button', text: 'Slipanlage melden', onclick: () => openReport('slipanlage-melden') }) : null);
 }
 
 // ============================================================ Auswahl und Details
@@ -816,9 +816,9 @@ function selectExtra(id, { fly = true } = {}) {
   return true;
 }
 
-// Adresse: Bereich („#liste“, „#favoriten“) und/oder Auswahl („p=…“, „g=…“, „x=…“), verbunden mit „&“.
+// Adresse: Bereich („#naehe“, „#favoriten“; alt „#liste“) und/oder Auswahl („p=…“, „g=…“, „x=…“), verbunden mit „&“.
 // Bereichswechsel legen einen Verlaufseintrag an (Zurück-Taste), Auswahl ersetzt nur den aktuellen.
-const VIEWS = ['karte', 'liste', 'favoriten', 'pegel'];
+const VIEWS = ['karte', 'naehe', 'favoriten', 'pegel'];
 let selHash = null, appliedHash = null;
 
 function readHash() {
@@ -828,6 +828,7 @@ function readHash() {
     if (pg) { out.view = 'pegel'; try { out.pegel = decodeURIComponent(pg[1]); } catch { /* ungültig */ } }
     else if (kp) { out.view = 'karte'; try { out.sel = { k: 'g', id: decodeURIComponent(kp[1]) }; } catch { /* ungültig */ } }
     else if (VIEWS.includes(part)) out.view = part;
+    else if (part === 'liste') out.view = 'naehe';   // alte Links
     else if (part === 'melden') out.melden = true;
     else {
       const m = part.match(/^([pgx])=(.+)$/);
@@ -854,18 +855,20 @@ function writeHash(push = false) {
 
 function setSelHash(k, id) { selHash = k ? { k, id } : null; writeHash(false); }
 
-/** Bereich wechseln (Karte, Liste, Favoriten). push: neuer Eintrag für die Zurück-Taste. */
+/** Bereich wechseln (Karte, In der Nähe, Favoriten, Pegel). push: neuer Eintrag für die Zurück-Taste. */
 function setView(view, { push = true } = {}) {
   if (!VIEWS.includes(view)) view = 'karte';
   const changed = view !== state.view;
   state.view = view;
-  if (view === 'liste' || view === 'favoriten') { state.tab = view === 'favoriten' ? 'fav' : 'list'; renderList(); }
+  if (view === 'naehe' || view === 'favoriten') { state.tab = view === 'favoriten' ? 'fav' : 'list'; renderList(); }
+  if (view === 'naehe' && changed) nah?.oeffnen();
   if (view !== 'pegel') state.pegelId = null;
-  document.body.classList.toggle('list-open', view === 'liste' || view === 'favoriten');
+  document.body.classList.toggle('list-open', view === 'naehe' || view === 'favoriten');
+  document.body.classList.toggle('view-naehe', view === 'naehe');
   document.body.classList.toggle('view-pegel', view === 'pegel');
   el.pegelseite.hidden = view !== 'pegel';
   if (view === 'pegel') pegelBereich();
-  $('#list-title').textContent = view === 'favoriten' ? 'Favoriten' : 'Liste';
+  $('#list-title').textContent = 'Favoriten';
   if (view !== 'karte' && isMobile()) { hidePeek(); closeDetailPanel(); }
   nav?.setActive(view);
   $('#cat-hint').hidden = !(state.places.length && !state.cats.size) || view !== 'karte';
@@ -873,7 +876,7 @@ function setView(view, { push = true } = {}) {
   setTimeout(() => state.map?.invalidate(), 0);
 }
 
-/** Navigation: Karte/Liste/Favoriten/Pegel ohne Neuladen; Melden öffnet die Auswahl. */
+/** Navigation: Karte/In der Nähe/Favoriten/Pegel ohne Neuladen; Melden öffnet die Auswahl. */
 function onNav(id, e) {
   if (id === 'melden') { if (!reportPop.isOpen) renderReportMenu({ fragen: true }); reportPop.toggle(e.currentTarget); return true; }
   if (id === 'pegel' && state.view === 'pegel' && state.pegelId) { state.pegelId = null; writeHash(true); pegelBereich(); return true; }
@@ -929,24 +932,15 @@ async function locate({ fly = true } = {}) {
   try {
     const pos = await requestUserPos();
     state.user = pos;
+    geoFreigabe.merken(true);
     if (state.map) { state.map.showUser(pos.lat, pos.lon, pos.accuracy); if (fly) state.map.flyTo(pos.lat, pos.lon, 11); }
     renderList();
     if (state.peekId) showPeek(state.byId.get(state.peekId));
     else if (state.selectedId) showDetail(state.byId.get(state.selectedId));
     announce('Karte auf deinen Standort ausgerichtet');
     return pos;
-  } catch (e) { toast(e.message); throw e; }
+  } catch (e) { if (/verweigert/.test(e.message)) geoFreigabe.merken(false); toast(e.message); throw e; }
   finally { btn.classList.remove('is-busy'); }
-}
-
-function offerLocation() {
-  if (!('geolocation' in navigator) || prefs.get('geoAsked') || !state.mapOk) return;
-  const card = h('div', { class: 'consent', role: 'region', 'aria-label': 'Standort verwenden' },
-    h('p', {}, h('strong', { text: 'Karte auf deinen Standort ausrichten?' }), ' Dein Standort bleibt auf deinem Gerät und wird nicht gespeichert oder gesendet.'),
-    h('div', { class: 'btn-row' },
-      h('button', { type: 'button', class: 'btn btn-primary small', text: 'Standort verwenden', onclick: () => { prefs.set('geoAsked', '1'); card.remove(); locate().catch(() => {}); } }),
-      h('button', { type: 'button', class: 'btn btn-outline small', text: 'Nein danke', onclick: () => { prefs.set('geoAsked', '1'); card.remove(); } })));
-  el.banner.append(card);
 }
 
 // ============================================================ Meldungen (Formulare)
@@ -1199,7 +1193,7 @@ function wireStatic() {
   $('#list-close').addEventListener('click', () => setView('karte'));
   swipeToClose(el.peek, closeDetail, () => !!state.peekId);
   document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || el.dlg.open || filterPop.isOpen || reportPop.isOpen || $('dialog.lightbox[open]') || el.suggest.offsetParent) return;
+    if (e.key !== 'Escape' || el.dlg.open || filterPop.isOpen || reportPop.isOpen || $('#naehe-bezug[open]') || $('#pa-pop[open]') || $('dialog.lightbox[open]') || el.suggest.offsetParent) return;
     if (state.selectedId || state.gaugeId || state.extraId || state.peekId || state.gaugePeekId) closeDetail();
   });
   window.addEventListener('resize', debounce(() => state.map?.invalidate(), 150));

@@ -98,7 +98,7 @@ with sync_playwright() as p:
         navsel = '#bottomnav' if mobile else '#topnav'
         check(pg.locator(navsel).is_visible() and pg.locator(f'{navsel} [data-nav=pegel]').get_attribute('aria-current') == 'page',
               f'{name}: Hauptnavigation auf der Pegel-Ampel, „Pegel“ aktiv')
-        check(pg.locator(f'{navsel} [data-nav=liste]').get_attribute('href') == './#liste', f'{name}: „Liste“ führt zur Karte mit Liste')
+        check(pg.locator(f'{navsel} [data-nav=naehe]').get_attribute('href') == './#naehe', f'{name}: „In der Nähe“ führt zur Karte mit Liste')
 
         # Suche
         pg.fill('#am-q', 'kau'); pg.locator('#am-list li').first.wait_for()
