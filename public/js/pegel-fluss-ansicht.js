@@ -2,7 +2,7 @@
 import { h } from './dom.js';
 import { icon, glyphSvg } from './icons.js';
 import { fmt } from './pegel-ansicht.js';
-import { FLUSS_ZUSTAND, flussZustand, punkte, profil, slipsAmFluss, artikel } from './pegel-fluss.js';
+import { FLUSS_ZUSTAND, flussZustand, punkte, profil, slipsAmFluss, artikel, abschnitt } from './pegel-fluss.js';
 
 const PFEIL = { 1: '↗', 0: '→', '-1': '↘' };
 const TREND = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' };
@@ -71,25 +71,26 @@ function svg(tag, attrs = {}, ...kinder) {
 }
 
 /** Profil in box zeichnen (Breite = Breite der Karte). opts = { onOpen(id), isMobile(), hervorId } */
-function profilZeichnen(box, pr, gr, opts) {
+function profilZeichnen(box, pr, opts) {
   const handy = opts.isMobile();
-  const W = Math.max(280, Math.round(box.clientWidth || 600)), H = handy ? 220 : 190;
-  const L = 8, R = 8, T = 30, B = 26, [ymin, ymax] = pr.yBereich;
-  const xs = (pos) => L + pos * (W - L - R);   // pos: halb km, halb Reihenfolge (pegel-fluss.js)
+  const W = Math.max(280, Math.round(box.clientWidth || 600)), H = 170;
+  const L = 6, R = 6, T = 22, B = 10, [ymin, ymax] = pr.yBereich;
+  const xs = (pos) => L + 8 + pos * (W - L - R - 16);   // gleiche Abstände in Fließrichtung
   const ys = (y) => T + (ymax - y) / (ymax - ymin) * (H - T - B);
-  const rechts = pr.tide ? xs(pr.tide.pos) : W - R;
+  const y0 = pr.mnw ? ys(0) : H - B, y1 = pr.mhw ? ys(1) : T;
   const s = svg('svg', { class: 'pf-svg', viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'group', 'aria-label': box.dataset.label });
-  s.append(
-    svg('rect', { x: L, y: ys(1), width: W - L - R, height: ys(0) - ys(1), fill: '#E4F4E8' }),
-    svg('line', { x1: L, x2: W - R, y1: ys(1), y2: ys(1), stroke: '#EC835A', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }),
-    svg('line', { x1: L, x2: W - R, y1: ys(0), y2: ys(0), stroke: '#E0A100', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }),
-    svg('text', { x: L + 2, y: ys(1) - 5, class: 'pf-ax is-mhw' }, 'MHW'),
-    svg('text', { x: L + 2, y: ys(0) - 5, class: 'pf-ax is-mnw' }, 'MNW'),
-    svg('text', { x: rechts - 6, y: ys(1) + 15, 'text-anchor': 'end', class: 'pf-ax is-normal' }, 'normaler Bereich'));
-  if (pr.tide) {
-    s.append(svg('line', { x1: rechts, x2: rechts, y1: 4, y2: H - B + 4, stroke: '#9AAAB5', 'stroke-width': 1.5 }),
-      svg('text', { x: Math.min(W - 6, rechts + 6), y: 14, 'text-anchor': rechts > W - 110 ? 'end' : 'start', class: 'pf-ax is-tide' }, pr.tide.label));
-  }
+  // Flächen: über MHW hellorange, normal hellgrün, unter MNW leicht gelb
+  if (pr.mhw) s.append(svg('rect', { x: L, y: T, width: W - L - R, height: Math.max(0, y1 - T), fill: '#FDEBDD' }));
+  s.append(svg('rect', { x: L, y: y1, width: W - L - R, height: Math.max(0, y0 - y1), fill: '#E4F4E8' }));
+  if (pr.mnw) s.append(svg('rect', { x: L, y: y0, width: W - L - R, height: Math.max(0, H - B - y0), fill: '#FFF8E6' }));
+  if (pr.mhw) s.append(svg('line', { x1: L, x2: W - R, y1, y2: y1, stroke: '#EC835A', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }),
+    svg('text', { x: W - R - 4, y: y1 - 5, 'text-anchor': 'end', class: 'pf-ax is-mhw' }, 'MHW'));
+  if (pr.mnw) s.append(svg('line', { x1: L, x2: W - R, y1: y0, y2: y0, stroke: '#C98A00', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }),
+    svg('text', { x: W - R - 4, y: y0 - 5, 'text-anchor': 'end', class: 'pf-ax is-mnw' }, 'MNW'));
+  // Beschriftung der Flächen; liegt eine Linie außerhalb, ein Hinweis
+  s.append(svg('text', { x: L + 4, y: T - 7, class: 'pf-ax is-normal' }, pr.mhw ? 'normal' : 'normal · MHW liegt weiter oben ↑'));
+  if (pr.mnw) s.append(svg('text', { x: W - R - 4, y: H - B - 5, 'text-anchor': 'end', class: 'pf-ax is-niedrig' }, 'niedrig'));
+  else s.append(svg('text', { x: W - R - 4, y: H - B - 5, 'text-anchor': 'end', class: 'pf-ax is-niedrig' }, 'MNW liegt weiter unten ↓'));
   const pts = pr.punkte;
   if (pts.length > 1) s.append(svg('polyline', { points: pts.map(p => `${xs(p.pos).toFixed(1)},${ys(p.y).toFixed(1)}`).join(' '), fill: 'none', stroke: '#0B3045', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
   const blase = h('div', { class: 'pf-blase', hidden: true, role: 'status' });
@@ -104,10 +105,9 @@ function profilZeichnen(box, pr, gr, opts) {
     const oben = py - blase.offsetHeight - 16;
     blase.style.top = `${oben >= -20 ? oben : py + 18}px`;
   };
-  let hervor = null;
   for (const p of pts) {
     const ist = p.g.id === opts.hervorId;
-    const kreis = svg('circle', { cx: xs(p.pos), cy: ys(p.y), r: ist ? 8 : handy ? 4 : 5, fill: PUNKT_FARBE[p.g.state], stroke: ist ? '#0B3045' : '#fff', 'stroke-width': ist ? 3 : 1.5, class: 'pf-punkt' });
+    const kreis = svg('circle', { cx: xs(p.pos), cy: ys(p.y), r: ist ? 6.5 : handy ? 4 : 5, fill: PUNKT_FARBE[p.g.state], stroke: ist ? '#0B3045' : '#fff', 'stroke-width': ist ? 2.5 : 1.5, class: 'pf-punkt' + (ist ? ' is-hervor' : '') });
     const ziel = svg('circle', { cx: xs(p.pos), cy: ys(p.y), r: 16, fill: 'transparent', class: 'pf-ziel', tabindex: 0, role: 'button',
       'aria-label': `${p.g.name}: ${fmt(p.g.value)} ${p.g.unit}, ${pegelEtikett(p.g).textContent}. Details öffnen` });
     ziel.addEventListener('mouseenter', () => { if (!opts.isMobile()) zeigeBlase(p, false); });
@@ -117,7 +117,6 @@ function profilZeichnen(box, pr, gr, opts) {
     ziel.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); opts.onOpen(p.g.id); } });
     ziel.addEventListener('click', () => { if (!opts.isMobile()) opts.onOpen(p.g.id); });
     s.append(kreis, ziel);
-    if (ist) hervor = p;
   }
   // Handy: Tipp zeigt die Blase des nächstgelegenen Punkts (Tippflächen dicht liegender Pegel überlappen), „Details ›“ öffnet
   s.addEventListener('click', (e) => {
@@ -128,34 +127,52 @@ function profilZeichnen(box, pr, gr, opts) {
     e.stopPropagation();
     zeigeBlase(p, true);
   });
-  if (hervor) {
-    const text = `${hervor.g.name} ${fmt(hervor.g.value)} ${hervor.g.unit}`, bw = Math.min(W - 8, text.length * 7.6 + 20);
-    // bevorzugt unter dem Punkt (über der Fläche stehen MHW/MNW-Beschriftungen), sonst darüber
-    const x = Math.max(4, Math.min(W - bw - 4, xs(hervor.pos) - bw / 2)), unten = ys(hervor.y) + 14 + 24 <= H - 2;
-    const y = unten ? ys(hervor.y) + 14 : ys(hervor.y) - 14 - 24;
-    s.append(svg('rect', { x, y, width: bw, height: 24, rx: 12, fill: '#0B3045' }), svg('text', { x: x + bw / 2, y: y + 16, 'text-anchor': 'middle', class: 'pf-hervor-text' }, text));
-  }
   box.replaceChildren(s, blase);
 }
 
-/** Karte „Wasserstand entlang der <Fluss>“. */
+const WELLEN = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 9c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/></svg>';
+
+/** „42 cm unter MNW“ / „35 cm über MHW“ für den hervorgehobenen Pegel. */
+function abstand(g) {
+  const { MNW, MHW } = g.refs || {};
+  if (g.state === 'low' && MNW !== undefined) return `${fmt(MNW - g.value)} cm unter MNW`;
+  if ((g.state === 'high' || g.state === 'hsw') && MHW !== undefined) return `${fmt(g.value - MHW)} cm über MHW`;
+  return null;
+}
+
+/** Karte „Wasserstand entlang der <Fluss>“. opts = { onOpen, isMobile, zuTide() } */
 function profilKarte(gr, z, opts) {
   const pr = profil(gr);
-  if (!pr || !pr.punkte.length) return null;
+  if (!pr) return null;
   const n = (k) => pr.punkte.filter(p => p.g.state === k).length;
-  const kmT = (g) => `${g.name} (km ${kmZahl(g.km)})`;
-  const label = `Wasserstand ${artikel(gr.name).entlang}: ${pr.punkte.length} Pegel mit Kennwerten von ${kmT(pr.von)} bis ${kmT(pr.bis)}. `
+  const label = `Wasserstand ${artikel(gr.name).entlang}: ${pr.punkte.length} bewertete Pegel von ${pr.von.name} bis ${pr.bis.name} in Fließrichtung. `
     + [n('low') && `${n('low')} unter MNW`, n('normal') && `${n('normal')} normal`, n('high') && `${n('high')} über MHW`, n('hsw') && `${n('hsw')} über HSW`].filter(Boolean).join(', ') + '.'
     + (z.hervor ? ` ${z.hervorArt === 'tiefster' ? 'Tiefster' : 'Höchster'} Pegel: ${z.hervor.name} ${fmt(z.hervor.value)} ${z.hervor.unit}.` : '')
-    + (pr.tide ? ` Danach ${pr.tide.label === 'Tidebereich' ? 'Tidebereich' : 'Pegel'} ohne Kennwerte.` : '');
+    + (pr.tide ? ` Ab ${pr.tide.ab.name} folgen ${pr.tide.pegel.length} ${pr.tide.mitTide ? 'Tidepegel' : 'Pegel ohne Kennwerte'}.` : '');
   const box = h('div', { class: 'pf-profil', dataset: { label } });
+  // Hervorgehobener Pegel als antippbare Zeile über dem Diagramm (kein Etikett im Diagramm)
+  const hv = z.hervor;
+  const hervorZeile = hv ? h('button', { type: 'button', class: `pf-hervor is-${z.key}`, onclick: () => opts.onOpen(hv.id),
+    'aria-label': `${z.hervorArt} Pegel: ${hv.name}, ${fmt(hv.value)} ${hv.unit}${abstand(hv) ? `, ${abstand(hv)}` : ''}. Details öffnen` },
+    h('span', { class: 'pf-hervor-punkt', style: `background:${PUNKT_FARBE[hv.state]}`, 'aria-hidden': 'true' }),
+    h('span', { class: 'pf-hervor-text' }, h('small', { text: `${z.hervorArt} Pegel` }),
+      h('span', {}, h('strong', { text: `${hv.name} · ${fmt(hv.value)} ${hv.unit}` }), abstand(hv) ? h('em', { text: ` ${abstand(hv)}` }) : null)),
+    h('span', { class: 'pf-hervor-pfeil', html: icon('chevron', 20), 'aria-hidden': 'true' })) : null;
+  const tideZeile = pr.tide ? h('button', { type: 'button', class: 'pf-tidezeile', onclick: opts.zuTide },
+    h('span', { class: 'pf-tidezeile-ico', html: WELLEN }),
+    h('span', { class: 'pf-tidezeile-text' }, `Ab ${pr.tide.ab.name} `, h('strong', { text: `${pr.tide.pegel.length} ${pr.tide.mitTide ? 'Tidepegel' : `Pegel ohne Kennwerte`}` }),
+      pr.tide.mitTide ? ' – Ebbe und Flut, ohne Bewertung' : ''),
+    h('span', { class: 'pf-tidezeile-pfeil', html: icon('chevron', 20), 'aria-hidden': 'true' })) : null;
   const karte = h('section', { class: 'pf-karte pf-profilkarte', 'aria-labelledby': 'pf-profil-t' },
     h('h2', { id: 'pf-profil-t', class: 'pf-h2', text: `Wasserstand ${artikel(gr.name).entlang}` }),
+    hervorZeile,
     box,
-    h('p', { class: 'pf-enden' }, h('span', { text: `← ${kmT(pr.von)}` }), h('span', { text: `${kmT(pr.bis)} →` })),
+    h('p', { class: 'pf-enden' }, h('span', { text: `← ${pr.von.name}` }), h('span', { text: `${pr.bis.name} →` })),
     h('p', { class: 'pf-legende' }, [['#FAB219', 'unter MNW'], ['#6CBF84', 'normal'], ['#EC835A', 'über MHW'], ['#D03B3B', 'über HSW']]
-      .map(([f, t]) => h('span', {}, h('i', { style: `background:${f}` }), t))));
-  const zeichnen = () => { if (box.isConnected) profilZeichnen(box, pr, gr, { ...opts, hervorId: z.hervor?.id }); };
+      .map(([f, t]) => h('span', {}, h('i', { style: `background:${f}` }), t))),
+    tideZeile,
+    h('p', { class: 'pf-tipp', text: 'Tippe auf einen Punkt für Details.' }));
+  const zeichnen = () => { if (box.isConnected) profilZeichnen(box, pr, { ...opts, hervorId: hv?.id }); };
   requestAnimationFrame(zeichnen);
   let w = 0;
   const ro = new ResizeObserver(() => {
@@ -186,22 +203,24 @@ export function flussSeite(root, gr, ctx) {
   const pr = gr.art === 'fluss' ? profil(gr) : null;
   const st = ctx.stand;
   const stand = st.offline ? `Offline · Stand von ${new Date(st.zeit).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}, ${zeitText(st.zeit)} Uhr` : `Stand ${zeitText(st.zeit)}`;
+  // Kompakter Kopf: Zurück, Name und Etikett in einer Zeile, darunter Zusammenfassung und Stand
   const kopf = h('header', { class: 'pf-kopf' },
-    h('button', { type: 'button', class: 'pf-zurueck', 'aria-label': 'Zurück zur Übersicht', html: icon('back', 24), onclick: ctx.back }),
-    h('p', { class: 'pf-kicker', text: gr.art === 'kueste' ? 'Küste' : 'Gewässer' }),
-    h('div', { class: 'pf-titel-zeile' }, h('h1', { id: 'pf-name', class: 'pf-titel', tabindex: '-1', text: gr.name }), fzEtikett(z.key)),
-    h('p', { class: 'pf-zus', text: z.kopf }),
-    h('p', { class: 'pf-stand', text: stand }));
+    h('div', { class: 'pf-titel-zeile' },
+      h('button', { type: 'button', class: 'pf-zurueck', 'aria-label': 'Zurück zur Übersicht', html: icon('back', 24), onclick: ctx.back }),
+      h('h1', { id: 'pf-name', class: 'pf-titel', tabindex: '-1', text: gr.name }), fzEtikett(z.key)),
+    h('p', { class: 'pf-zus', text: `${z.kopf} · ${stand}` }));
 
-  // Pegelliste (nach km; Küste nach Gewässer)
+  // Pegelliste (in Fließrichtung; Küste nach Gewässer)
   let offen = false;
   const liste = h('ul', { class: 'pf-liste' });
   const mehr = h('button', { type: 'button', class: 'pg-link pf-mehr', onclick: () => { offen = !offen; listeZeichnen(); } });
   function zeile(g) {
     const ist = z.hervor?.id === g.id;
     const zusatz = ist ? (z.hervorArt === 'tiefster' ? 'tiefster' : 'höchster') : (pr?.tide?.ids.has(g.id) && g.tide ? 'Tide' : null);
-    const ort = [gr.art === 'kueste' ? g.water : null, g.km !== null && g.km !== undefined ? `km ${kmZahl(g.km)}` : null, zusatz].filter(Boolean).join(' · ');
-    return h('li', {}, h('button', { type: 'button', class: 'pf-zeile' + (ist ? ` is-hervor is-${z.key}` : ''), onclick: () => ctx.onOpen(g.id),
+    const km = g.km !== null && g.km !== undefined ? [abschnitt(g), `km ${kmZahl(g.km)}`].filter(Boolean).join(' ') : null;
+    const ort = [gr.art === 'kueste' ? g.water : null, km, zusatz].filter(Boolean).join(' · ');
+    const ersteTide = pr?.tide?.pegel[0]?.id === g.id;
+    return h('li', { id: ersteTide ? 'pf-tide-start' : null }, h('button', { type: 'button', class: 'pf-zeile' + (ist ? ` is-hervor is-${z.key}` : ''), onclick: () => ctx.onOpen(g.id),
       'aria-label': `${g.name}${ort ? `, ${ort}` : ''}: ${fmt(g.value)} ${g.unit}${g.trend !== null && g.trend !== undefined ? `, ${TREND[g.trend]}` : ''}, ${pegelEtikett(g).textContent}. Details öffnen` },
       h('span', { class: 'pf-z-text' }, h('strong', { text: g.name }), ort ? h('small', { text: ort }) : null),
       h('span', { class: 'pf-z-wert', text: `${fmt(g.value)} ${g.unit}` }),
@@ -218,7 +237,7 @@ export function flussSeite(root, gr, ctx) {
   listeZeichnen();
   const listenKarte = h('section', { class: 'pf-karte pf-listenkarte', 'aria-labelledby': 'pf-liste-t' },
     h('div', { class: 'pf-h2-zeile' }, h('h2', { id: 'pf-liste-t', class: 'pf-h2', text: `Alle ${gr.pegel.length} Pegel` }),
-      h('span', { class: 'pf-klein', text: gr.art === 'kueste' ? 'nach Gewässer' : 'nach Flusskilometer' })),
+      h('span', { class: 'pf-klein', text: gr.art === 'kueste' ? 'nach Gewässer' : 'flussabwärts' })),
     liste, mehr);
 
   // Slipanlagen an diesem Gewässer
@@ -229,7 +248,14 @@ export function flussSeite(root, gr, ctx) {
     h('span', { class: 'pf-slips-pfeil', html: icon('chevron', 20), 'aria-hidden': 'true' })) : null;
 
   const hinweis = h('p', { class: 'pf-hinweis', text: 'Normal/Niedrig/Hoch nach den amtlichen Kennwerten der einzelnen Pegel (WSV/PEGELONLINE). Tidepegel ohne Bewertung.' });
-  const profilK = pr ? profilKarte(gr, z, { onOpen: ctx.onOpen, isMobile: ctx.isMobile }) : null;
+  // Tide-Zeile: Liste ganz aufklappen und zu den Tidepegeln scrollen
+  const zuTide = () => {
+    if (!offen) { offen = true; listeZeichnen(); }
+    const el = document.getElementById('pf-tide-start');
+    el?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    el?.querySelector('button')?.focus({ preventScroll: true });
+  };
+  const profilK = pr ? profilKarte(gr, z, { onOpen: ctx.onOpen, isMobile: ctx.isMobile, zuTide }) : null;
   // Raster: Handy Profil · Liste · Slipanlagen · Hinweis; Desktop links Profil (+ Slipanlagen, Hinweis), rechts die Liste
   root.replaceChildren(h('div', { class: 'pg-seite pf-seite' }, kopf,
     h('div', { class: 'pf-raster' + (profilK ? '' : ' ohne-profil') }, profilK, listenKarte, slipKarte, hinweis)));

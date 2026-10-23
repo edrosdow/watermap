@@ -2,6 +2,7 @@
 // (/api/pegel/… → Netlify leitet an PEGELONLINE weiter, siehe public/_redirects): keine CSP-Ausnahme,
 // keine IP-Adressen der Besucher bei Dritten. Text aus den Daten wird nur als Text eingefügt.
 import { CONFIG } from './config.js';
+import { schoenerName } from './pegel-namen.js';
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { s, niceStep, fmtNum } from './chart.js';
@@ -47,8 +48,8 @@ export function normalizeStation(s, now = Date.now()) {
   else if (refs.MNW !== undefined && refs.MHW !== undefined) state = value < refs.MNW ? 'low' : value > refs.MHW ? 'high' : 'normal';
   return {
     id: s.uuid, number: s.number ? String(s.number) : null,
-    name: titleCase(s.longname || s.shortname || 'Pegel'),
-    water: titleCase(s.water?.longname || s.water?.shortname || ''),
+    name: schoenerName(s.longname || s.shortname || 'Pegel'), nameRoh: s.longname || s.shortname || '',
+    water: schoenerName(s.water?.longname || s.water?.shortname || ''),
     km: num(s.km), agency: s.agency || '',
     lat, lon, value, unit: ts.unit || 'cm',
     time: Number.isFinite(time) ? time : null,
@@ -56,11 +57,6 @@ export function normalizeStation(s, now = Date.now()) {
     trend: cm.trend !== null && cm.trend !== undefined && cm.trend !== '' && [-1, 0, 1].includes(Number(cm.trend)) ? Number(cm.trend) : null,
     state, refs, tide,
   };
-}
-
-// PEGELONLINE liefert Namen in Großbuchstaben („KÖLN“, „RHEIN“).
-function titleCase(s) {
-  return String(s).toLowerCase().replace(/(^|[\s\-(/])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
 }
 
 async function getJson(path) {
@@ -150,7 +146,7 @@ export function renderGaugeDetail(g, { history, close, user, distance, weather }
   body.append(h('footer', { class: 'source' },
     h('p', {}, 'Quelle: ', g.number ? h('a', { href: `https://www.pegelonline.wsv.de/gast/stammdaten?pegelnr=${encodeURIComponent(g.number)}`, target: '_blank', rel: 'noopener noreferrer', text: 'PEGELONLINE' }) : 'PEGELONLINE',
       ', Wasserstraßen- und Schifffahrtsverwaltung des Bundes (WSV) · Datenlizenz Deutschland – Zero – 2.0'),
-    g.agency ? h('p', { text: `Zuständig: ${titleCase(g.agency)}` }) : null));
+    g.agency ? h('p', { text: `Zuständig: ${schoenerName(g.agency)}` }) : null));
 
   return [head, body];
 }

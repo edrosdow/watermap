@@ -748,6 +748,7 @@ async function pegelBereich() {
   if (!dashboard) dashboard = pegelDashboard(root, pegelCtx());
   clearInterval(pegelTimer);
   pegelTimer = setInterval(() => { if (state.view === 'pegel' && document.visibilityState === 'visible') pegelBereich(); }, CONFIG.PEGEL_REFRESH_MIN * 60e3);
+  document.body.classList.toggle('view-fluss', !!(state.pegelFluss && !state.pegelId));   // Handy: Flussseite ohne globales Suchfeld
   if (state.pegelFluss && !state.pegelId) { await flussBereich(root); return; }
   if (!state.pegelId) {
     await dashboard.zeigen();
@@ -900,6 +901,7 @@ function setView(view, { push = true } = {}) {
   document.body.classList.toggle('list-open', view === 'naehe' || view === 'favoriten');
   document.body.classList.toggle('view-naehe', view === 'naehe');
   document.body.classList.toggle('view-pegel', view === 'pegel');
+  if (view !== 'pegel') document.body.classList.remove('view-fluss');
   el.pegelseite.hidden = view !== 'pegel';
   if (view === 'pegel') pegelBereich();
   $('#list-title').textContent = 'Favoriten';

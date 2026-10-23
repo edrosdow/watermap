@@ -23,10 +23,13 @@ U = lambda n: f'{n:08d}-0000-4000-8000-000000000000'
 ELBE = [('SCHÖNA', 2, 80, 'low'), ('DRESDEN', 55, 62, 'low'), ('MEISSEN', 82, 85, 'low'), ('TORGAU', 154, 90, 'low'), ('WITTENBERG', 214, 92, 'low'),
         ('AKEN', 275, 95, 'low'), ('MAGDEBURG-STROMBRÜCKE', 326, 96, 'low'), ('TANGERMÜNDE', 388, 120, 'normal'), ('WITTENBERGE', 454, 150, 'normal'),
         ('NEU DARCHAU', 536, 200, 'normal')]
-STATIONS = [station(U(i + 1), n, 'ELBE', km, 51 + i * 0.2, 12 + i * 0.1, v, state=s, refs=R, trend=-1 if n == 'DRESDEN' else None) for i, (n, km, v, s) in enumerate(ELBE)]
+# Lage entlang einer Linie Schöna → Cuxhaven (passend zu den km, damit die Reihenfolge nach km gilt)
+ELAT = lambda km: 50.9 + km / 727 * 2.97
+ELON = lambda km: 14.2 - km / 727 * 5.5
+STATIONS = [station(U(i + 1), n, 'ELBE', km, ELAT(km), ELON(km), v, state=s, refs=R, trend=-1 if n == 'DRESDEN' else None) for i, (n, km, v, s) in enumerate(ELBE)]
 STATIONS += [
-    station(U(20), 'HAMBURG ST. PAULI', 'ELBE', 623.1, 53.54, 9.97, 520, state='unknown', refs=TIDE),
-    station(U(21), 'CUXHAVEN', 'ELBE', 727.0, 53.87, 8.71, 610, state='unknown', refs=TIDE),
+    station(U(20), 'HAMBURG ST.PAULI', 'ELBE', 623.1, ELAT(623.1), ELON(623.1), 520, state='unknown', refs=TIDE),
+    station(U(21), 'CUXHAVEN', 'ELBE', 727.0, ELAT(727), ELON(727), 610, state='unknown', refs=TIDE),
     station(U(22), 'ELBE OHNE KM', 'ELBE', None, 52.0, 11.0, 100, refs=R),
     station(U(30), 'TRIER', 'MOSEL', 195.8, 49.76, 6.63, 640, state='high', hsw='high', refs=R, trend=1),
     station(U(31), 'COCHEM', 'MOSEL', 51.6, 50.15, 7.17, 500, state='high', refs=R),
@@ -99,30 +102,43 @@ def run(b, w, hh, mobile):
     pg.click('.fk:has-text("Elbe")'); pg.wait_for_selector('.pf-titel'); pg.wait_for_timeout(300)
     check(pg.url.endswith('#pegel/fluss/elbe') and pg.locator(f'{nav} [data-nav=pegel]').get_attribute('aria-current') == 'page', f'{tag}: Adresse #pegel/fluss/elbe, Tab „Pegel“ aktiv')
     kopf = pg.inner_text('.pf-kopf')
-    check('GEWÄSSER' in kopf.upper() and 'Elbe' in kopf and 'niedrig' in kopf and '7 von 11 Pegeln unter MNW' in kopf and re.search(r'Stand \d\d:\d\d', kopf), f'{tag}: Kopf ({kopf!r})')
+    check('GEWÄSSER' not in kopf.upper() and 'Elbe' in kopf and 'niedrig' in kopf and re.search(r'7 von 11 bewerteten Pegeln unter MNW · Stand \d\d:\d\d', kopf), f'{tag}: kompakter Kopf ({kopf!r})')
+    if mobile:
+        check(pg.locator('.app-header').is_hidden() and pg.locator('.pf-kopf').bounding_box()['y'] < 5, f'{tag}: Flussseite ohne globales Suchfeld')
     check('Wasserstand entlang der Elbe' in pg.inner_text('.pf-profilkarte'), f'{tag}: Überschrift Profil')
     check(pg.locator('.pf-punkt').count() == 10, f'{tag}: 10 Punkte (ohne Tide, ohne km)')
-    hl = pg.locator('.pf-hervor-text').text_content()
-    check(hl == 'Dresden 62 cm', f'{tag}: hervorgehobener Pegel mit Etikett ({hl!r})')
-    check(pg.locator('.pf-ax.is-tide').text_content() == 'Tidebereich', f'{tag}: Tidebereich abgetrennt und beschriftet')
+    hv = pg.inner_text('.pf-hervor')
+    check('tiefster Pegel' in hv and 'Dresden · 62 cm' in hv and '36 cm unter MNW' in hv, f'{tag}: Zeile mit tiefstem Pegel über dem Diagramm ({hv!r})')
+    check('Dresden' not in (pg.locator('.pf-svg').text_content() or '') and pg.locator('.pf-punkt.is-hervor').get_attribute('r') == '6.5', f'{tag}: im Diagramm kein Etikett, Punkt nur größer')
+    check(pg.locator('.pf-svg line[stroke="#9AAAB5"]').count() == 0, f'{tag}: keine Tide-Trennlinie im Diagramm')
     en = pg.inner_text('.pf-enden')
-    check('← Schöna (km 2)' in en and 'Cuxhaven (km 727) →' in en, f'{tag}: Enden mit Name und km ({en!r})')
-    check(all(x in pg.inner_text('.pf-legende') for x in ['unter MNW', 'normal', 'über MHW', 'über HSW']), f'{tag}: Legende')
+    check('← Schöna' in en and 'Neu Darchau →' in en and 'km' not in en, f'{tag}: Enden einzeilig ohne km ({en!r})')
+    check(pg.locator('.pf-enden span').first.bounding_box()['height'] < 26, f'{tag}: Enden einzeilig')
+    check(all(x in pg.inner_text('.pf-legende') for x in ['unter MNW', 'normal', 'über MHW', 'über HSW']) and pg.locator('.pf-tipp').is_visible(), f'{tag}: Legende und „Tippe auf einen Punkt …“')
     lab = pg.get_attribute('.pf-svg', 'aria-label') or ''
-    check('Tiefster Pegel: Dresden 62 cm' in lab and '7 unter MNW' in lab, f'{tag}: aria-label mit Textzusammenfassung')
+    check('Tiefster Pegel: Dresden 62 cm' in lab and '7 unter MNW' in lab and 'Ab Neu Darchau folgen 2 Tidepegel' in lab, f'{tag}: aria-label mit Textzusammenfassung und Tidepegeln')
     svg = pg.locator('.pf-svg').bounding_box()
-    check(abs(svg['height'] - (220 if mobile else 190)) < 2 and svg['width'] > (w * 0.45 if not mobile else w - 80), f'{tag}: Profil volle Breite, {220 if mobile else 190} px hoch ({svg})')
+    check(abs(svg['height'] - 170) < 2 and svg['width'] > (w * 0.45 if not mobile else w - 80), f'{tag}: Profil volle Breite, 170 px hoch ({svg})')
     cx = [float(c.get_attribute('cx')) for c in pg.locator('.pf-punkt').all()]
-    check(min(b - a for a, b in zip(cx, cx[1:])) > 8, f'{tag}: Punkte liegen nicht aufeinander (kleinster Abstand {min(b - a for a, b in zip(cx, cx[1:])):.0f} px)')
-    # Lage der Punkte: MNW-Linie bei rel 0, Dresden darunter
-    y_mnw = float(pg.locator('.pf-svg line').nth(1).get_attribute('y1'))
+    abst = [round(b - a, 1) for a, b in zip(cx, cx[1:])]
+    check(max(abst) - min(abst) < 0.5, f'{tag}: gleiche Abstände in Fließrichtung ({abst[:3]})')
+    # Höhe: MNW-Linie im Bild, MHW (alle Werte weit darunter) nicht – stattdessen Hinweis
+    mnw = pg.locator('.pf-svg line[stroke="#C98A00"]')
+    y_mnw = float(mnw.get_attribute('y1'))
     cy = [float(c.get_attribute('cy')) for c in pg.locator('.pf-punkt').all()]
     check(cy[1] > y_mnw and cy[-1] < y_mnw, f'{tag}: unter MNW unterhalb, normal oberhalb der MNW-Linie')
+    check(pg.locator('.pf-svg line[stroke="#EC835A"]').count() == 0 and 'MHW liegt weiter oben ↑' in pg.locator('.pf-svg').text_content(), f'{tag}: MHW außerhalb → Hinweis „MHW liegt weiter oben ↑“')
+    check(pg.locator('.pf-svg rect[fill="#FFF8E6"]').count() == 1 and pg.locator('.pf-svg rect[fill="#E4F4E8"]').count() == 1, f'{tag}: Flächen niedrig (gelb) und normal (grün)')
+    tz = pg.locator('.pf-tidezeile')
+    check(tz.is_visible() and 'Ab Neu Darchau 2 Tidepegel' in tz.inner_text() and tz.bounding_box()['height'] >= 44, f'{tag}: Tide-Zeile unter dem Diagramm')
     # Liste
     zeilen = pg.locator('.pf-zeile')
-    check(zeilen.count() == 6 and 'Alle 13 Pegel' in pg.inner_text('.pf-listenkarte') and 'nach Flusskilometer' in pg.inner_text('.pf-listenkarte'), f'{tag}: erst 6 Zeilen')
+    check(zeilen.count() == 6 and 'Alle 13 Pegel' in pg.inner_text('.pf-listenkarte') and 'flussabwärts' in pg.inner_text('.pf-listenkarte'), f'{tag}: erst 6 Zeilen, „flussabwärts“')
     check('is-hervor' in zeilen.nth(1).get_attribute('class') and 'km 55 · tiefster' in zeilen.nth(1).inner_text(), f'{tag}: hervorgehobene Zeile „tiefster“')
-    pg.click('.pf-mehr'); pg.wait_for_timeout(150)
+    pg.click('.pf-tidezeile'); pg.wait_for_timeout(600)
+    tb = pg.locator('#pf-tide-start').bounding_box()
+    check(pg.locator('.pf-zeile').count() == 13 and tb['y'] >= -2 and tb['y'] < hh, f'{tag}: Tide-Zeile klappt die Liste auf und scrollt zu den Tidepegeln')
+    check('Hamburg St. Pauli' in pg.inner_text('#pf-tide-start'), f'{tag}: Namen schön geschrieben („St. Pauli“)')
     texte = [t for t in pg.locator('.pf-zeile').all_inner_texts()]
     check(len(texte) == 13 and 'Tide' in texte[10] and 'km 623,1 · Tide' in texte[10] and texte[12].startswith('Elbe Ohne Km'), f'{tag}: alle Pegel, Tide markiert, ohne km am Ende')
     check(len([c for c in calls if 'measurements' in c]) == n_mess, f'{tag}: keine Abfragen pro Pegel für Kacheln und Profil')

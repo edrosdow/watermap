@@ -30,6 +30,54 @@ export function flussKm(g) {
 }
 const nachKm = (a, b) => (flussKm(a) ?? 1e9) - (flussKm(b) ?? 1e9) || a.name.localeCompare(b.name, 'de');
 
+// Flüsse, deren Kilometrierung an der Mündung beginnt (km steigen flussaufwärts)
+const KM_AB_MUENDUNG = new Set(['Mosel', 'Saar', 'Main', 'Neckar', 'Lahn', 'Saale'].map(normW));
+const hatOrt = (g) => Number.isFinite(g.lat) && Number.isFinite(g.lon);
+function entfernungKm(a, b) {
+  const r = Math.PI / 180, x = (b.lon - a.lon) * r * Math.cos((a.lat + b.lat) / 2 * r), y = (b.lat - a.lat) * r;
+  return Math.hypot(x, y) * 6371;
+}
+
+/**
+ * Pegel eines Flusses in Fließrichtung. Steigen die km flussabwärts durchgehend, nach km; springt die Kilometrierung
+ * (z. B. Weser: Ober-/Mittelweser ab Hann. Münden, Unterweser neu ab Bremen), als Kette über die Lage: jeweils der
+ * nächstgelegene noch nicht verwendete Pegel, von dem Ende aus, das die kürzeste Kette ergibt. Ohne km bzw. Lage ans Ende.
+ */
+export function flussReihenfolge(pegel) {
+  if (pegel.length < 2) return [...pegel];
+  const abMuendung = KM_AB_MUENDUNG.has(normW(pegel[0].water));
+  const name = (a, b) => a.name.localeCompare(b.name, 'de');
+  const mitKm = pegel.filter(g => g.km !== null && g.km !== undefined).sort((a, b) => (abMuendung ? b.km - a.km : a.km - b.km) || name(a, b));
+  const ohneKm = pegel.filter(g => g.km === null || g.km === undefined).sort(name);
+  const sprung = mitKm.some((g, i) => i && hatOrt(g) && hatOrt(mitKm[i - 1]) && entfernungKm(mitKm[i - 1], g) > Math.abs(g.km - mitKm[i - 1].km) + 15);
+  if (!sprung) return [...mitKm, ...ohneKm];
+  const orte = pegel.filter(hatOrt);
+  const kette = (start) => {
+    const rest = new Set(orte); rest.delete(start);
+    const k = [start]; let laenge = 0;
+    while (rest.size) {
+      let best = null, d = Infinity;
+      for (const g of rest) { const e = entfernungKm(k[k.length - 1], g); if (e < d) { d = e; best = g; } }
+      k.push(best); rest.delete(best); laenge += d;
+    }
+    return { k, laenge };
+  };
+  let best = null;
+  for (const g of orte) { const c = kette(g); if (!best || c.laenge < best.laenge - 1e-9) best = c; }
+  let k = best.k;
+  // Richtung: Anfang ist das Ende mit dem kleineren km (bei Kilometrierung ab Mündung: dem größeren)
+  const kmA = k[0].km ?? null, kmB = k[k.length - 1].km ?? null;
+  if (kmA !== null && kmB !== null && (abMuendung ? kmA < kmB : kmA > kmB)) k = [...k].reverse();
+  return [...k, ...pegel.filter(g => !hatOrt(g)).sort(name)];
+}
+
+/** Abschnitt eines Pegels für die Liste („Oberweser km 0,7“) – nur, wo sicher ableitbar (Weser). */
+export function abschnitt(g) {
+  if (normW(g.water) !== 'weser' || g.km === null || g.km === undefined) return null;
+  if (g.lat > 52.9 && g.km < 130) return g.km <= 65 ? 'Unterweser' : 'Außenweser';
+  return g.km <= 204.5 ? 'Oberweser' : 'Mittelweser';
+}
+
 /** Relativer Wasserstand: MNW = 0, MHW = 1; begrenzt auf −0,5 … 1,6. null ohne beide Kennwerte. */
 export function rel(g) {
   const { MNW, MHW } = g.refs || {};
@@ -40,7 +88,7 @@ export function rel(g) {
 
 /**
  * Pegel nach Gewässer gruppieren.
- * → { fluesse: [Gruppe], kueste: Gruppe|null, ohne: [Gruppe] }   Gruppe = { name, slug, art, pegel (nach km) }
+ * → { fluesse: [Gruppe], kueste: Gruppe|null, ohne: [Gruppe] }   Gruppe = { name, slug, art, pegel (in Fließrichtung) }
  *   art: 'fluss' (mind. ein Pegel mit Kennwerten) · 'kueste' · 'ohne' (Kanäle und Gewässer ohne Bewertung)
  */
 export function gruppieren(gauges) {
@@ -52,7 +100,7 @@ export function gruppieren(gauges) {
   }
   const fluesse = [], ohne = [];
   for (const [name, pegel] of map) {
-    const gr = { name, slug: slug(name), pegel: [...pegel].sort(nachKm) };
+    const gr = { name, slug: slug(name), pegel: flussReihenfolge(pegel) };
     if (pegel.some(hatKennwerte)) fluesse.push({ ...gr, art: 'fluss' }); else ohne.push({ ...gr, art: 'ohne' });
   }
   ohne.sort((a, b) => a.name.localeCompare(b.name, 'de'));
@@ -98,11 +146,11 @@ export function flussZustand(gr) {
   const wert = (g) => rel(g) ?? (g.refs?.HSW ? g.value / g.refs.HSW : 0);
   const hoechster = () => b.reduce((m, g) => (wert(g) > wert(m) ? g : m));
   const tiefster = () => b.reduce((m, g) => (wert(g) < wert(m) ? g : m));
-  const pegelN = (k) => `${k} von ${n} Pegel${n === 1 ? '' : 'n'}`;
+  const pegelN = (k) => `${k} von ${n} bewerteten Pegel${n === 1 ? '' : 'n'}`;
   if (hsw) return { key: 'hsw', n, hoch, niedrig, hsw, hervor: hoechster(), hervorArt: 'höchster', kachel: 'Schifffahrt eingeschränkt', kopf: `${pegelN(hsw)} über HSW – Schifffahrt eingeschränkt` };
   if (hoch) return { key: hoch * 2 >= n ? 'hoch' : 'teils-hoch', n, hoch, niedrig, hsw, hervor: hoechster(), hervorArt: 'höchster', kachel: `${hoch} von ${n} hoch`, kopf: `${pegelN(hoch)} über MHW` };
   if (niedrig) return { key: niedrig * 2 >= n ? 'niedrig' : 'teils-niedrig', n, hoch, niedrig, hsw, hervor: tiefster(), hervorArt: 'tiefster', kachel: `${niedrig} von ${n} niedrig`, kopf: `${pegelN(niedrig)} unter MNW` };
-  return { key: 'normal', n, hoch, niedrig, hsw, hervor: null, hervorArt: null, kachel: 'keine Auffälligkeiten', kopf: `Alle ${n} Pegel im Normalbereich` };
+  return { key: 'normal', n, hoch, niedrig, hsw, hervor: null, hervorArt: null, kachel: 'keine Auffälligkeiten', kopf: `Alle ${n} bewerteten Pegel im Normalbereich` };
 }
 
 /** Kacheln: zuerst Flüsse mit „Meine Pegel“, dann nach Schwere, dann nach Anzahl Pegel. Küste kommt separat ans Ende. */
@@ -121,30 +169,30 @@ export function punkte(gr, max = 12) {
 }
 
 /**
- * Profil entlang des Flusses (nur Pegel mit km).
- * → { punkte: [{ g, x, y, pos }], von, bis (Pegel), xMin, xMax, yBereich: [min, max], tide: { x, pos, label, ids: Set } | null }
- * pos (0 … 1): halb nach Flusskilometer, halb nach Reihenfolge – Lage bleibt erkennbar, Häufungen ziehen sich auseinander.
- * yBereich: so weit, wie die Werte es brauchen (MNW und MHW immer sichtbar), höchstens −0,5 … 1,6.
- * Tidebereich: nach dem letzten Pegel mit Kennwerten, wenn alle Pegel flussabwärts keine haben; Linie mittig dazwischen.
- * Beschriftung „Tidebereich“ nur, wenn diese Pegel Tide-Kennwerte haben, sonst „ohne Kennwerte“.
+ * Profil entlang des Flusses: bewertete Pegel (mit km) in Fließrichtung mit gleichen Abständen (pos 0 … 1) – die Kilometrierung
+ * springt bei manchen Flüssen. Tidepegel (alles nach dem letzten Pegel mit Kennwerten) kommen nicht ins Diagramm.
+ * yBereich: nur so groß wie die Werte plus Rand; MNW (rel 0) immer im Bild – außer wenn alles über MHW liegt, dann MHW.
+ * → { punkte: [{ g, y, pos }], von, bis, yBereich: [min, max], mnw, mhw (sichtbar?), tide: { ab, pegel, ids, mitTide } | null }
  */
 export function profil(gr) {
-  const mitKm = gr.pegel.filter(g => flussKm(g) !== null);
-  if (!mitKm.length) return null;
-  const xMin = flussKm(mitKm[0]), xMax = flussKm(mitKm[mitKm.length - 1]), n = mitKm.length;
-  const pos = mitKm.map((g, i) => (n < 2 ? 0.5 : 0.5 * (xMax > xMin ? (flussKm(g) - xMin) / (xMax - xMin) : i / (n - 1)) + 0.5 * i / (n - 1)));
+  const reihe = gr.pegel.filter(g => g.km !== null && g.km !== undefined);   // ohne km: nur in der Liste (am Ende)
   let letzter = -1;
-  mitKm.forEach((g, i) => { if (hatKennwerte(g)) letzter = i; });
-  let tide = null;
-  if (letzter >= 0 && letzter < n - 1) {
-    const danach = mitKm.slice(letzter + 1);
-    tide = { x: (flussKm(mitKm[letzter]) + flussKm(danach[0])) / 2, pos: (pos[letzter] + pos[letzter + 1]) / 2,
-      label: danach.some(g => g.tide) ? 'Tidebereich' : 'ohne Kennwerte', ids: new Set(danach.map(g => g.id)) };
-  }
-  const pts = mitKm.map((g, i) => ({ g, x: flussKm(g), y: rel(g), pos: pos[i] })).filter(p => bewertet(p.g) && p.y !== null);
-  const ys = pts.map(p => p.y);
-  const yBereich = [Math.max(-0.5, Math.min(-0.1, Math.min(...ys, 0) - 0.12)), Math.min(1.6, Math.max(1.1, Math.max(...ys, 1) + 0.12))];
-  return { punkte: pts, von: mitKm[0], bis: mitKm[n - 1], xMin, xMax, yBereich, tide };
+  reihe.forEach((g, i) => { if (hatKennwerte(g)) letzter = i; });
+  const pts = reihe.slice(0, letzter + 1).filter(g => bewertet(g) && rel(g) !== null);
+  if (!pts.length) return null;
+  const n = pts.length;
+  const punkte = pts.map((g, i) => ({ g, y: rel(g), pos: n < 2 ? 0.5 : i / (n - 1) }));
+  const ys = punkte.map(p => p.y), lo = Math.min(...ys), hi = Math.max(...ys);
+  const rand = Math.max(0.06, (hi - lo) * 0.12);
+  let ymin = lo - rand, ymax = hi + rand;
+  if (lo > 1) ymin = Math.min(ymin, 1 - rand);                     // alles über MHW: MHW im Bild, MNW weiter unten
+  else { ymin = Math.min(ymin, -rand); ymax = Math.max(ymax, rand); }
+  ymin = Math.max(-0.55, ymin); ymax = Math.min(1.65, ymax);
+  const tidepegel = letzter >= 0 ? reihe.slice(letzter + 1) : [];
+  return {
+    punkte, von: pts[0], bis: pts[n - 1], yBereich: [ymin, ymax], mnw: ymin <= 0 && ymax >= 0, mhw: ymin <= 1 && ymax >= 1,
+    tide: tidepegel.length ? { ab: reihe[letzter], pegel: tidepegel, ids: new Set(tidepegel.map(g => g.id)), mitTide: tidepegel.some(g => g.tide) } : null,
+  };
 }
 
 /** Slipanlagen an diesem Gewässer (Gewässername aus OSM, gleiche Namensprüfung wie auf der Pegel-Detailseite). */

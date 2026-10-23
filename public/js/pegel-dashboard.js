@@ -10,6 +10,7 @@ import { popover } from './nav.js';
 import { ENTWICKLUNG } from './config.js';
 import { normW, flussKm as flussKmRoh, gruppieren, kachelnSortieren } from './pegel-fluss.js';
 import { flussKachel, ohneBewertung } from './pegel-fluss-ansicht.js';
+import { umlautVerdacht } from './pegel-namen.js';
 
 const flussKm = (g) => flussKmRoh(g) ?? 1e9;
 const zeitText = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -182,9 +183,16 @@ export function pegelDashboard(root, ctx) {
   function fluesse() {
     meinePegel.ampelUebernehmen();   // vor der Sortierung: Pegel der Pegel-Ampel zählt schon als „Meine Pegel“
     const gr = gruppieren(stand.gauges);
-    if (ENTWICKLUNG && !gemeldet && gr.ohne.length) {
+    if (ENTWICKLUNG && !gemeldet) {
+      // Prüflisten für die Vorschau: Zuordnung Küste/Kanäle, Reihenfolge in Fließrichtung, Namen mit möglichen Umlauten
       gemeldet = true;
-      console.info('[WaterMap] Gewässer ohne Bewertung (keine Küste laut CONFIG.PEGEL_KUESTE):', gr.ohne.map(f => `${f.name} (${f.pegel.length})`).join(', '));
+      if (gr.ohne.length) console.info('[WaterMap] Gewässer ohne Bewertung (keine Küste laut CONFIG.PEGEL_KUESTE):', gr.ohne.map(f => `${f.name} (${f.pegel.length})`).join(', '));
+      for (const name of ['Weser', 'Elbe', 'Rhein', 'Ems']) {
+        const f = gr.fluesse.find(x => x.name === name);
+        if (f) console.info(`[WaterMap] Reihenfolge ${name}:`, f.pegel.map(g => `${g.name} (${g.km ?? '–'})`).join(' → '));
+      }
+      const verdacht = [...new Set(stand.gauges.flatMap(g => [g.nameRoh, g.water]).filter(umlautVerdacht))].sort();
+      if (verdacht.length) console.info('[WaterMap] Namen mit ae/oe/ue (Umlaut prüfen, Korrektur in js/pegel-namen.js):', verdacht.join(', '));
     }
     const fl = kachelnSortieren(gr.fluesse, meinePegel.alle());
     const alle = [...fl, ...(gr.kueste ? [gr.kueste] : [])];

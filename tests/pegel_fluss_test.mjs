@@ -1,7 +1,8 @@
 // Tests der Fluss-Logik (public/js/pegel-fluss.js): Gruppierung Küste/Tide/Kanäle, Zustand eines Flusses, rel, Profil.
 // Start: node tests/pegel_fluss_test.mjs
 import assert from 'node:assert/strict';
-import { slug, rel, gruppieren, gruppeZu, flussZustand, kachelnSortieren, punkte, profil, flussKm, istKueste, slipsAmFluss, artikel } from '../public/js/pegel-fluss.js';
+import { slug, rel, gruppieren, gruppeZu, flussZustand, kachelnSortieren, punkte, profil, flussKm, istKueste, slipsAmFluss, artikel, flussReihenfolge, abschnitt } from '../public/js/pegel-fluss.js';
+import { schoenerName } from '../public/js/pegel-namen.js';
 
 const R = { MNW: 100, MW: 200, MHW: 300, HSW: 400 };
 let n = 0;
@@ -43,7 +44,7 @@ const z = flussZustand(elbe);
 assert.equal(z.key, 'niedrig', '3 von 4 niedrig → niedrig');
 assert.equal(z.n, 4, 'Tidepegel ohne Kennwerte zählen nicht');
 assert.equal(z.kachel, '3 von 4 niedrig');
-assert.equal(z.kopf, '3 von 4 Pegeln unter MNW');
+assert.equal(z.kopf, '3 von 4 bewerteten Pegeln unter MNW');
 assert.equal(z.hervor.name, 'Dresden', 'relativ tiefster Pegel');
 assert.equal(z.hervorArt, 'tiefster');
 const fluss = (...pegel) => ({ name: 'X', slug: 'x', art: 'fluss', pegel });
@@ -76,27 +77,46 @@ const pk = punkte(viele);
 assert.equal(pk.length, 12); assert.equal(pk[0], viele.pegel[0]); assert.equal(pk[11], viele.pegel[29]);
 assert.equal(punkte(elbe).length, 4, 'nur bewertete Pegel als Punkte');
 
-// Profil: Tidebereich nach dem letzten Pegel mit Kennwerten; Beschriftung nur mit Tide-Kennwerten
+// Profil: nur bewertete Pegel, gleiche Abstände; Tidepegel nicht im Diagramm, sondern als eigene Angabe
 const pr = profil(elbe);
-assert.equal(pr.punkte.length, 3, 'ohne km und ohne Kennwerte keine Punkte');
-assert.equal(pr.von.name, 'Schöna'); assert.equal(pr.bis.name, 'Cuxhaven');
-assert.equal(pr.tide.label, 'Tidebereich');
-assert.equal(pr.tide.x, (586 + 623) / 2, 'Linie mittig zwischen letztem Kennwert-Pegel und erstem Tidepegel');
-assert.ok(pr.tide.ids.has(elbe.pegel[3].id) && pr.tide.ids.size === 2);
-const ohneTide = profil(fluss(P('X', 1, 200, 'normal'), P('X', 5, 200, 'unknown'), P('X', 9, 200, 'normal'), P('X', 20, 200, 'unknown')));
-assert.equal(ohneTide.tide.label, 'ohne Kennwerte', 'ohne Tide-Kennwerte heißt der Abschnitt „ohne Kennwerte“');
-assert.equal(ohneTide.tide.ids.size, 1, 'Pegel ohne Kennwerte mitten im Fluss gehören nicht zum Abschnitt');
+assert.equal(pr.punkte.length, 3, 'bewertete Pegel mit km, Tidepegel und Pegel ohne km nicht');
+assert.deepEqual(pr.punkte.map(p => p.pos), [0, 0.5, 1], 'gleiche Abstände in Fließrichtung');
+assert.equal(pr.von.name, 'Schöna');
+assert.equal(pr.tide.ab.name, 'Elbe 586', 'Tidepegel folgen nach dem letzten Pegel mit Kennwerten');
+assert.equal(pr.tide.pegel.length, 2); assert.ok(pr.tide.mitTide);
+const tideFluss = fluss(P('X', 1, 200, 'normal'), P('X', 5, 200, 'unknown'), P('X', 9, 90, 'low', { name: 'Letzter' }), P('X', 20, 500, 'unknown', { tide: true }), P('X', 30, 500, 'unknown', { tide: true }));
+const tp = profil(tideFluss);
+assert.equal(tp.tide.ab.name, 'Letzter'); assert.equal(tp.tide.pegel.length, 2); assert.ok(tp.tide.mitTide);
+assert.equal(tp.punkte.length, 2, 'Pegel ohne Kennwerte mitten im Fluss nicht im Diagramm');
 assert.equal(profil(fluss(P('X', 1, 200, 'normal'), P('X', 9, 200, 'normal'))).tide, null);
 
-// Achsen: y nur so weit wie nötig (MNW/MHW immer sichtbar), x halb nach km, halb nach Reihenfolge
-const eng = profil(fluss(P('X', 0, 80, 'low'), P('X', 1, 90, 'low'), P('X', 2, 95, 'low'), P('X', 100, 120, 'normal')));
-assert.ok(eng.yBereich[0] < -0.09 && eng.yBereich[0] > -0.5 && eng.yBereich[1] >= 1.1 && eng.yBereich[1] < 1.2, `y-Bereich passt sich an (${eng.yBereich})`);
-assert.deepEqual(profil(fluss(P('X', 0, 0, 'low'), P('X', 1, 900, 'hsw'))).yBereich, [-0.5, 1.6], 'höchstens −0,5 … 1,6');
-const pos = eng.punkte.map(p => p.pos);
-assert.equal(pos[0], 0); assert.equal(pos[3], 1);
-assert.ok(pos[1] - pos[0] > 0.16, `Häufung zieht sich auseinander (${pos})`);
-assert.ok(pos.every((v, i) => !i || v > pos[i - 1]), 'Reihenfolge bleibt');
-assert.ok(pr.tide.pos > pr.punkte[2].pos && pr.tide.pos < 1, 'Tidelinie zwischen letztem Kennwert-Pegel und erstem Tidepegel');
+// Höhe: nur so groß wie nötig, MNW immer im Bild; MHW nur, wenn im Bereich; alles hoch → MHW im Bild statt MNW
+const tief = profil(fluss(P('X', 0, 60, 'low'), P('X', 1, 80, 'low'), P('X', 2, 95, 'low'), P('X', 3, 120, 'normal')));
+assert.ok(tief.mnw && !tief.mhw, 'niedrig: MNW sichtbar, MHW liegt weiter oben');
+assert.ok(tief.yBereich[1] < 0.3 && tief.yBereich[0] < rel(P('X', 0, 60, 'low')), `y-Bereich eng (${tief.yBereich})`);
+const hochFl = profil(fluss(P('X', 0, 520, 'high'), P('X', 1, 560, 'hsw')));
+assert.ok(hochFl.mhw && !hochFl.mnw, 'alles über MHW: MHW sichtbar, MNW liegt weiter unten');
+const beide = profil(fluss(P('X', 0, 90, 'low'), P('X', 1, 500, 'high')));
+assert.ok(beide.mnw && beide.mhw);
+assert.ok(beide.yBereich[0] >= -0.55 && beide.yBereich[1] <= 1.65);
+
+// Reihenfolge in Fließrichtung: km durchgehend → nach km; Sprung (Weser) → Kette über die Lage; km ab Mündung (Mosel)
+const W = (name, km, lat, lon) => ({ ...P('Weser', km, 200, 'normal', { name }), lat, lon });
+const weser = [W('Bremerhaven', 65, 53.54, 8.58), W('Hann. Münden', 0.7, 51.42, 9.65), W('Vlotho', 201.4, 52.17, 8.86), W('Große Weserbrücke', 0, 53.07, 8.81),
+  W('Hameln', 135, 52.10, 9.36), W('Minden', 204.5, 52.29, 8.92), W('Dreye', 362, 52.99, 8.88), W('Vegesack', 17.8, 53.17, 8.62), W('Nienburg', 268, 52.64, 9.21), W('Leuchtturm Alte Weser', 115, 53.86, 8.13)];
+assert.deepEqual(flussReihenfolge(weser).map(g => g.name),
+  ['Hann. Münden', 'Hameln', 'Vlotho', 'Minden', 'Nienburg', 'Dreye', 'Große Weserbrücke', 'Vegesack', 'Bremerhaven', 'Leuchtturm Alte Weser'], 'Weser über die Lage');
+assert.deepEqual([abschnitt(weser[1]), abschnitt(weser[6]), abschnitt(weser[7]), abschnitt(weser[9])], ['Oberweser', 'Mittelweser', 'Unterweser', 'Außenweser']);
+assert.equal(abschnitt(P('Elbe', 55, 62, 'low')), null, 'Abschnitt nur bei der Weser');
+const M = (name, km, lat, lon) => ({ ...P('Mosel', km, 200, 'normal', { name }), lat, lon });
+assert.deepEqual(flussReihenfolge([M('Cochem', 51.6, 50.15, 7.17), M('Trier', 195.8, 49.76, 6.63), M('Koblenz', 2, 50.36, 7.6)]).map(g => g.name), ['Trier', 'Cochem', 'Koblenz'], 'Mosel: km ab Mündung');
+assert.deepEqual(flussReihenfolge(elbe.pegel).map(g => g.name), elbe.pegel.map(g => g.name), 'Elbe: km durchgehend');
+
+// Namen
+assert.equal(schoenerName('HANN.MUENDEN'), 'Hann. Münden');
+assert.equal(schoenerName('HAMBURG ST.PAULI'), 'Hamburg St. Pauli');
+assert.equal(schoenerName('MÜRITZ-ELDE-WASSERSTRASSE'), 'Müritz-Elde-Wasserstraße');
+assert.equal(schoenerName('NEUENKIRCHEN'), 'Neuenkirchen', 'keine allgemeine Regel ue → ü');
 
 // Weser: Unterweser (eigene km ab Bremen) hinter der Mittelweser
 const unterweser = { ...P('Weser', 17.8, 588, 'unknown'), lat: 53.17 };

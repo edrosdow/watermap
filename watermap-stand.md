@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 23.10.2026 · App-Version **7.22.2**
+Stand: 23.10.2026 · App-Version **7.23.0**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.22.2 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.23.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -146,6 +146,9 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 - Zustand eines Flusses nur aus aktuellen, eingeordneten Pegeln: über HSW (mind. einer) → hoch (≥ 50 % über MHW) / teils hoch → niedrig (≥ 50 % unter MNW) / teils niedrig → normal. Nur veraltete Werte → grau „keine aktuellen Daten“. Hervorgehoben: relativ höchster bzw. tiefster Pegel (`rel = (W − MNW) / (MHW − MNW)`, begrenzt −0,5 … 1,6).
 - Kacheln: zuerst Flüsse mit „Meine Pegel“, dann Schwere, dann Anzahl; Küste zuletzt; 6 Kacheln, dann „Alle <n> Gewässer“. Punktreihe nur Pegel mit Kennwerten (max. 12).
 - Flussseite `#pegel/fluss/<name>`: SVG-Profil nach km (Unterweser hinten angehängt; seit 7.22.2 x halb nach km, halb nach Reihenfolge, damit Häufungen nicht aufeinanderliegen; y-Achse nur so weit wie nötig, MNW/MHW immer sichtbar; Handy 220 px hoch), Normalbereich, MNW/MHW gestrichelt, keine HSW-Linie. Abschnitt nach dem letzten Pegel mit Kennwerten abgetrennt: „Tidebereich“, wenn diese Pegel Tide-Kennwerte (MThw/MTnw) haben, sonst „ohne Kennwerte“. Handy: Tipp zeigt Blase des nächstgelegenen Punkts, „Details ›“ öffnet; Desktop Hover + Klick.
+- Seit 7.23: Pegel in Fließrichtung (`flussReihenfolge`: nach km, bei Sprüngen Kette über die Lage; km ab Mündung bei Mosel, Saar, Main, Neckar, Lahn, Saale). Profil mit gleichen Abständen nur aus bewerteten Pegeln; Höhe passt sich an (MNW immer, MHW nur wenn im Bereich, sonst Hinweis); Flächen normal/niedrig/hoch; tiefster/höchster Pegel als Zeile über dem Diagramm; Tidepegel nicht im Diagramm, sondern Zeile „Ab <Pegel> <n> Tidepegel“ darunter. Kompakter Kopf, am Handy ohne globales Suchfeld. Liste „flussabwärts“, Weser mit Abschnitt („Oberweser km 0,7“).
+- Namen: `js/pegel-namen.js` (Korrekturliste für Umlaute, „.“ mit Leerzeichen, „-strasse“ → „-straße“). Die Vorschau-Konsole listet Reihenfolge (Weser, Elbe, Rhein, Ems) und Namen mit ae/oe/ue.
+- BSH: Prüf-Funktion `/api/gezeiten/probe` (nur Vorschau) – Stand der Klärung in `docs/BSH-Klaerung.md`. Gezeiten (Teil B) folgen.
 - „<n> Slipanlagen an der <Fluss>“: schaltet Slipanlagen zusätzlich ein und zoomt auf alle (fitBounds). Keine Abfragen pro Pegel.
 
 **In der Nähe (7.21)**
@@ -202,6 +205,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.3 | Sortierung „Zustand“ entfernt (nur noch Gewässer und Entfernung) |
 | 7.20.4 | Suche: passendes Gewässer zuerst; Unterweser hinter Ober-/Mittelweser |
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
+| 7.23.0 | Flussseite überarbeitet (Reihenfolge in Fließrichtung, Profil ohne Tidepegel, Zeile tiefster/höchster Pegel), Namen mit Umlauten, BSH-Prüf-Funktion |
 | 7.22.2 | Flussprofil: y-Achse passt sich an, x halb nach km/halb nach Reihenfolge, Handy 220 px |
 | 7.22.1 | „In der Nähe“ am Handy kompakt (Kopf, Hinweiszeile, Links am Listenende) |
 | 7.22.0 | Fluss-Kacheln statt Farbbänder, neue Flussseite mit Profil |
@@ -212,7 +216,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | Bereich | Tests |
 |---|---|
 | Unit (Python) | `python3 -I -m unittest discover -s tests` (Importer, Validator, Hafeninfo, Moderation) |
-| Node | `ampel_logik`, `fotos_function`, `meldungen`, `pegel_alarm`, `pegel_trend`, `pegel_fluss`, `umgebung` |
+| Node | `ampel_logik`, `fotos_function`, `meldungen`, `pegel_alarm`, `pegel_trend`, `pegel_fluss`, `gezeiten_probe`, `umgebung` |
 | Oberfläche (Playwright) | `ui_full`, `ui_smoke`, `pwa_test`, `ui_naehe`, `ui_meldungen`, `ui_extras`, `ui_karussell`, `ui_pegel`, `ui_pegel_dashboard`, `ui_pegel_fluss`, `ui_wetter`, `ui_ampel`, `ui_fotos` |
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
