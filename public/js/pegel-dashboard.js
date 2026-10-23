@@ -9,6 +9,13 @@ import { formatTime } from './pegel.js';
 import { popover } from './nav.js';
 
 const normW = (s) => String(s || '').toLowerCase().replace(/[^a-zäöüß]/g, '');
+// Reihenfolge von der Quelle zur Mündung. Die Weser hat zwei Kilometrierungen: Ober-/Mittelweser ab Hann. Münden
+// (bis Bremen, km 366,7), die Unterweser beginnt in Bremen (Große Weserbrücke) wieder bei km 0 – sie kommt ans Ende.
+const flussKm = (g) => {
+  if (g.km === null || g.km === undefined) return 1e9;
+  if (normW(g.water) === 'weser' && g.lat > 52.9 && g.km < 130) return g.km + 366.7;
+  return g.km;
+};
 const zeitText = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 const standText = (st) => (st.offline ? `Offline · Stand von ${new Date(st.zeit).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}, ${zeitText(st.zeit)} Uhr`
   : `Stand ${zeitText(st.zeit)} · alle 15 Min. aktualisiert`);
@@ -193,7 +200,7 @@ export function pegelDashboard(root, ctx) {
       h('p', { class: 'pg-klein', text: 'Jedes Feld ein eingeordneter Pegel, von der Quelle zur Mündung' }),
       h('div', { class: 'pg-karte pg-fl-karte' },
         zeigen.map(([name, liste]) => {
-          const sortiert = liste.filter(eingeordnet).sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9));
+          const sortiert = liste.filter(eingeordnet).sort((a, b) => flussKm(a) - flussKm(b));
           const zs = zusammen(liste);
           const c = zs.c;
           const label = `${name}: ${liste.length} Pegel – ` + [c.hsw && `${c.hsw} über HSW`, c.high && `${c.high} hoch`, c.low && `${c.low} niedrig`, c.normal && `${c.normal} normal`, c.rest && `${c.rest} ohne Einordnung`].filter(Boolean).join(', ') + '. Liste dieses Gewässers zeigen';
@@ -250,12 +257,14 @@ export function pegelDashboard(root, ctx) {
       return !q || normW(g.name).includes(q) || normW(g.water).includes(q);
     });
     const hatPos = !!ctx.user();
+    const wasserTreffer = (g) => (q && normW(g.water).includes(q) ? 0 : 1);
     // Standard: nach Gewässer und Flusskilometer (bei Gewässer-Filter nur nach km)
     const sort = ui.sort || (ui.filter?.art === 'gewaesser' ? 'km' : 'gewaesser');
     const cmp = {
       entfernung: (a, b) => (entfernung(a) ?? 1e12) - (entfernung(b) ?? 1e12),
-      gewaesser: (a, b) => a.water.localeCompare(b.water, 'de') || (a.km ?? 1e9) - (b.km ?? 1e9),
-      km: (a, b) => (a.km ?? 1e9) - (b.km ?? 1e9),
+      // bei einer Suche zuerst die Pegel, deren Gewässer passt („Weser“ vor „Jade-Weser-Port“ an der Jade)
+      gewaesser: (a, b) => wasserTreffer(a) - wasserTreffer(b) || a.water.localeCompare(b.water, 'de') || flussKm(a) - flussKm(b),
+      km: (a, b) => flussKm(a) - flussKm(b),
     }[sort];
     liste = [...liste].sort(cmp);
     const sortKnopf = (key, text) => h('button', { type: 'button', class: 'pg-sort' + (sort === key ? ' is-aktiv' : ''), 'aria-pressed': String(sort === key),

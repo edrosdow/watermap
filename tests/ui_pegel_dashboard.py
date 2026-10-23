@@ -33,6 +33,8 @@ STATIONS = [
     station(U(10), 'ALTPEGEL', 'RHEIN', 700.0, 51.0, 6.8, 300, refs=R, age_h=30),                    # veraltet
     station(U(11), 'HAMELN', 'WESER', 135.0, 52.10, 9.36, 300, state='unknown', refs=R),            # selbst eingeordnet: normal
     station(U(12), 'NIENBURG', 'WESER', 268.0, 52.64, 9.21, 250, state='unknown'),                  # ohne Kennwerte, nicht im Band
+    station(U(13), 'VEGESACK', 'WESER', 17.8, 53.17, 8.62, 588, state='unknown'),                   # Unterweser: eigene km ab Bremen
+    station(U(14), 'JADE-WESER-PORT', 'JADE', 11.6, 53.59, 8.15, 650, state='unknown'),            # Name enthält „Weser“
 ]
 BY_ID = {s['uuid']: s for s in STATIONS}
 api = {'fail': False, 'calls': []}
@@ -100,7 +102,7 @@ def run(b, w, hh, mobile):
     baender = pg.locator('.pg-fluss')
     check(baender.count() == 3 and pg.locator('.pg-fluss', has_text='Test-See').count() == 0, f'{tag}: Flüsse im Überblick ohne Gewässer ohne Daten ({baender.count()})')
     weser = pg.locator('.pg-fluss', has_text='Weser')
-    check('1 niedrig' in weser.inner_text() and weser.locator('.pg-band i').count() == 5 and 'Weser: 6 Pegel' in weser.get_attribute('aria-label'), f'{tag}: Band Weser mit Text und aria-label')
+    check('1 niedrig' in weser.inner_text() and weser.locator('.pg-band i').count() == 5 and 'Weser: 7 Pegel' in weser.get_attribute('aria-label'), f'{tag}: Band Weser mit Text und aria-label')
     farben = weser.locator('.pg-band i').evaluate_all("l => l.map(e => getComputedStyle(e).backgroundColor)")
     check(farben == ['rgb(108, 191, 132)'] * 4 + ['rgb(250, 178, 25)'], f'{tag}: sortiert nach Flusskilometer, nur eingeordnete Pegel, Farben ({farben})')
     check('keine Daten' not in pg.inner_text('.pg-legende'), f'{tag}: Legende ohne „keine Daten“')
@@ -113,14 +115,18 @@ def run(b, w, hh, mobile):
     names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
     check(sorted(names) == ['Cochem', 'Trier'] and pg.locator('.pg-tabelle').is_visible(), f'{tag}: Suche öffnet und filtert die Liste ({names})')
     pg.screenshot(path=str(SHOTS / f'pegel_{w}_5suche.png'))
+    pg.fill('.pg-alle .pg-suche', 'weser'); pg.wait_for_timeout(200)
+    names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
+    check(names == ['Hann. Münden', 'Hameln', 'Porta', 'Vlotho', 'Minden', 'Nienburg', 'Vegesack', 'Jade-Weser-Port'],
+          f'{tag}: Suche „Weser“: erst das Gewässer von der Quelle zur Mündung (Unterweser zuletzt), dann Namenstreffer ({names})')
     pg.fill('.pg-alle .pg-suche', ''); pg.wait_for_timeout(200)
     if mobile:
         check(pg.locator('.pg-tabelle').is_hidden(), f'{tag}: Liste erst nach „Alle anzeigen“')
         pg.click('.pg-alle .pg-link')
     rows = pg.locator('.pg-tabelle tbody tr')
-    check(rows.count() == 12, f'{tag}: alle Pegel in der Liste ({rows.count()})')
+    check(rows.count() == 14, f'{tag}: alle Pegel in der Liste ({rows.count()})')
     names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
-    check(names[:5] == ['Cochem', 'Trier', 'Kaub', 'Köln', 'Altpegel'] and pg.get_attribute('.pg-sort:has-text("Gewässer")', 'aria-pressed') == 'true',
+    check(names[:5] == ['Jade-Weser-Port', 'Cochem', 'Trier', 'Kaub', 'Köln'] and pg.get_attribute('.pg-sort:has-text("Gewässer")', 'aria-pressed') == 'true',
           f'{tag}: Standard nach Gewässer und km ({names[:5]})')
     pg.click('.pg-zaehler.is-low'); pg.wait_for_timeout(300)
     names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
@@ -128,7 +134,7 @@ def run(b, w, hh, mobile):
     pg.click('.pg-filter .ftag'); pg.wait_for_timeout(200)
     pg.click('.pg-fluss:has-text("Weser")'); pg.wait_for_timeout(300)
     names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
-    check(names == ['Hann. Münden', 'Hameln', 'Porta', 'Vlotho', 'Minden', 'Nienburg'], f'{tag}: Band zeigt das Gewässer, nach km ({names})')
+    check(names == ['Hann. Münden', 'Hameln', 'Porta', 'Vlotho', 'Minden', 'Nienburg', 'Vegesack'], f'{tag}: Band zeigt das Gewässer, nach km ({names})')
     pg.click('.pg-filter .ftag'); pg.wait_for_timeout(200)
     sorts = [t.replace('↑', '').strip() for t in pg.locator('.pg-sort').all_inner_texts()]
     check(sorts == ['Gewässer', 'Entfernung'], f'{tag}: Sortierung nur nach Gewässer und Entfernung ({sorts})')
