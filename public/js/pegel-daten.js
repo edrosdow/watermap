@@ -49,6 +49,16 @@ export function verlaufLaden(id) {
   return promise;
 }
 
+/** Trend (-1/0/1) aus den letzten 2 Stunden der Messreihe (ab 2 cm Änderung); null, wenn sie nicht reicht. */
+export function trendAusVerlauf(pts) {
+  if (!pts || pts.length < 2) return null;
+  const last = pts[pts.length - 1];
+  const vorher = [...pts].reverse().find(p => p.t <= last.t - 2 * 3600e3);
+  if (!vorher || last.t - vorher.t > 4 * 3600e3) return null;
+  const d = last.v - vorher.v;
+  return d >= 2 ? 1 : d <= -2 ? -1 : 0;
+}
+
 /** Änderung in 24 h (cm) aus einer Messreihe; null, wenn sie nicht reicht. */
 export function aenderung24h(pts) {
   if (!pts || pts.length < 2) return null;

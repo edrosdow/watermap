@@ -119,6 +119,9 @@ def run(b, w, hh, mobile):
         pg.click('.pg-alle .pg-link')
     rows = pg.locator('.pg-tabelle tbody tr')
     check(rows.count() == 12, f'{tag}: alle Pegel in der Liste ({rows.count()})')
+    names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
+    check(names[:5] == ['Cochem', 'Trier', 'Kaub', 'Köln', 'Altpegel'] and pg.get_attribute('.pg-sort:has-text("Gewässer")', 'aria-pressed') == 'true',
+          f'{tag}: Standard nach Gewässer und km ({names[:5]})')
     pg.click('.pg-zaehler.is-low'); pg.wait_for_timeout(300)
     names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
     check(sorted(names) == ['Kaub', 'Minden'] and pg.locator('.pg-filter .ftag').get_attribute('aria-label') == 'Filter Niedrigwasser entfernen', f'{tag}: Zähler filtert die Liste ({names})')

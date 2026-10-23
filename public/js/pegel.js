@@ -50,7 +50,8 @@ export function normalizeStation(s, now = Date.now()) {
     km: num(s.km), agency: s.agency || '',
     lat, lon, value, unit: ts.unit || 'cm',
     time: Number.isFinite(time) ? time : null,
-    trend: [-1, 0, 1].includes(cm.trend) ? cm.trend : null,
+    // PEGELONLINE liefert den Trend nicht immer (auch als Text); fehlt er, kommt er später aus dem Verlauf
+    trend: cm.trend !== null && cm.trend !== undefined && cm.trend !== '' && [-1, 0, 1].includes(Number(cm.trend)) ? Number(cm.trend) : null,
     state, refs,
   };
 }

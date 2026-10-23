@@ -251,7 +251,8 @@ export function pegelDashboard(root, ctx) {
       return !q || normW(g.name).includes(q) || normW(g.water).includes(q);
     });
     const hatPos = !!ctx.user();
-    const sort = ui.sort || (ui.filter?.art === 'gewaesser' ? 'km' : hatPos ? 'entfernung' : 'zustand');
+    // Standard: nach Gewässer und Flusskilometer (bei Gewässer-Filter nur nach km)
+    const sort = ui.sort || (ui.filter?.art === 'gewaesser' ? 'km' : 'gewaesser');
     const cmp = {
       entfernung: (a, b) => (entfernung(a) ?? 1e12) - (entfernung(b) ?? 1e12),
       zustand: (a, b) => RANG[zustand(a)] - RANG[zustand(b)] || a.name.localeCompare(b.name, 'de'),
@@ -270,16 +271,17 @@ export function pegelDashboard(root, ctx) {
     teile.push(h('div', { class: 'pg-sortleiste', role: 'group', 'aria-label': 'Sortieren nach' }, h('span', { class: 'pg-klein', text: 'Sortieren:' }),
       sortKnopf('entfernung', 'Entfernung'), sortKnopf('zustand', 'Zustand'), sortKnopf('gewaesser', 'Gewässer')));
     const zeilen = liste.slice(0, ui.zeilen);
+    const trendSpalte = zeilen.some(g => g.trend !== null);   // ohne Trend von PEGELONLINE keine leere Spalte
     teile.push(h('table', { class: 'pg-tabelle' },
       h('thead', {}, h('tr', {}, h('th', { text: 'Pegel' }), h('th', { text: 'Gewässer' }), h('th', { class: 'is-zahl', text: 'Stand' }),
-        h('th', { text: 'Trend' }), h('th', { text: 'Zustand' }), h('th', { class: 'is-zahl', text: 'Entfernung' }))),
+        trendSpalte ? h('th', { text: 'Trend' }) : null, h('th', { text: 'Zustand' }), h('th', { class: 'is-zahl', text: 'Entfernung' }))),
       h('tbody', {}, zeilen.map((g) => {
         const d = entfernung(g);
         return h('tr', { dataset: { id: g.id } },
           h('th', { scope: 'row' }, h('button', { type: 'button', class: 'pg-zeile-btn', onclick: () => ctx.open(g.id), text: g.name })),
           h('td', { class: 'pg-td-wasser', text: [g.water, kmText(g)].filter(Boolean).join(' · ') }),
           h('td', { class: 'is-zahl pg-td-wert', text: `${fmt(g.value)} ${g.unit}` }),
-          h('td', { class: `pg-td-trend ${trendKlasse(g)}`, text: trendText(g, { kurz: true }) }),
+          trendSpalte ? h('td', { class: `pg-td-trend ${trendKlasse(g)}`, text: trendText(g, { kurz: true }) }) : null,
           h('td', { class: 'pg-td-zustand' }, etikett(g)),
           h('td', { class: 'is-zahl pg-td-km', text: d !== null ? formatDistance(d) : '–' }));
       }))));
