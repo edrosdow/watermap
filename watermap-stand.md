@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 23.10.2026 · App-Version **7.20.2**
+Stand: 23.10.2026 · App-Version **7.20.3**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.20.2 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.20.3 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -147,7 +147,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 - „Flüsse im Überblick“ zeigt nur eingeordnete Pegel, keine grauen Felder. Gewässer ganz ohne Einordnung (z. B. Kanäle, Küste) fehlen dort; die Liste zeigt weiter alle Pegel (7.19.1).
 - „Pegel hinzufügen“ öffnet ein eigenes Fenster (Handy Bottom-Sheet, Desktop Dropdown, bei wenig Platz nach oben): Suche, ohne Eingabe die nächsten Pegel, „+“ fügt hinzu, Fenster bleibt offen (7.20).
 - Die Suche des Dashboards steht in der Karte „Alle Pegel“ (filtert nur diese Liste); am Handy ist sie auch bei zugeklappter Liste sichtbar und klappt beim Tippen auf (7.20.1).
-- „Alle Pegel“ ist standardmäßig nach Gewässer und Flusskilometer sortiert (7.20.2).
+- „Alle Pegel“ ist standardmäßig nach Gewässer und Flusskilometer sortiert (7.20.2); wählbar sind nur „Gewässer“ und „Entfernung“, „Zustand“ ist auf Wunsch entfernt (7.20.3).
 - Trend: kommt aus `currentMeasurement.trend` (auch als Text). Fehlt er, berechnen Karte und Detailseite ihn aus dem Verlauf (2 h, ab 2 cm). Die Tabelle blendet die Spalte „Trend“ aus, wenn keine Zeile einen Trend hat. Ob PEGELONLINE den Trend noch liefert, ließ sich aus der Cloud-Umgebung nicht prüfen (kein Netzzugang) (7.20.2).
 - Karte und Dashboard nutzen eine gemeinsame Stationsliste, die alle 15 Min. und bei Rückkehr in die App aktualisiert wird.
 - Verläufe werden nur für sichtbare Karten und die Detailseite geladen.
@@ -173,6 +173,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.0 | Fenster „Pegel hinzufügen“, „Lage melden“ nur bei Slipanlagen |
 | 7.20.1 | Pegel-Suche aus dem Kopf in die Karte „Alle Pegel“ verschoben |
 | 7.20.2 | „Alle Pegel“ standardmäßig nach Gewässer und km; Trend aus dem Verlauf, wenn PEGELONLINE keinen liefert |
+| 7.20.3 | Sortierung „Zustand“ entfernt (nur noch Gewässer und Entfernung) |
 
 ## 5. Tests
 

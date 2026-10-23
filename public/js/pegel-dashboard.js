@@ -8,7 +8,6 @@ import { fmt, kmText, zustand, ZUSTAND, etikett, trendText, trendKlasse, pegelKa
 import { formatTime } from './pegel.js';
 import { popover } from './nav.js';
 
-const RANG = { hsw: 0, high: 1, low: 2, normal: 3, unknown: 4, none: 5, old: 6 };
 const normW = (s) => String(s || '').toLowerCase().replace(/[^a-zäöüß]/g, '');
 const zeitText = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 const standText = (st) => (st.offline ? `Offline · Stand von ${new Date(st.zeit).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}, ${zeitText(st.zeit)} Uhr`
@@ -255,7 +254,6 @@ export function pegelDashboard(root, ctx) {
     const sort = ui.sort || (ui.filter?.art === 'gewaesser' ? 'km' : 'gewaesser');
     const cmp = {
       entfernung: (a, b) => (entfernung(a) ?? 1e12) - (entfernung(b) ?? 1e12),
-      zustand: (a, b) => RANG[zustand(a)] - RANG[zustand(b)] || a.name.localeCompare(b.name, 'de'),
       gewaesser: (a, b) => a.water.localeCompare(b.water, 'de') || (a.km ?? 1e9) - (b.km ?? 1e9),
       km: (a, b) => (a.km ?? 1e9) - (b.km ?? 1e9),
     }[sort];
@@ -269,7 +267,7 @@ export function pegelDashboard(root, ctx) {
         onclick: () => { ui.filter = null; zeichnen(); } }, h('span', { text: ui.filter.text }), h('span', { html: icon('close', 16) })), ` ${fmt(liste.length)} Pegel`));
     }
     teile.push(h('div', { class: 'pg-sortleiste', role: 'group', 'aria-label': 'Sortieren nach' }, h('span', { class: 'pg-klein', text: 'Sortieren:' }),
-      sortKnopf('entfernung', 'Entfernung'), sortKnopf('zustand', 'Zustand'), sortKnopf('gewaesser', 'Gewässer')));
+      sortKnopf('gewaesser', 'Gewässer'), sortKnopf('entfernung', 'Entfernung')));
     const zeilen = liste.slice(0, ui.zeilen);
     const trendSpalte = zeilen.some(g => g.trend !== null);   // ohne Trend von PEGELONLINE keine leere Spalte
     teile.push(h('table', { class: 'pg-tabelle' },

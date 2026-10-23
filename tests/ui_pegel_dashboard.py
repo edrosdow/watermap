@@ -130,9 +130,8 @@ def run(b, w, hh, mobile):
     names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
     check(names == ['Hann. Münden', 'Hameln', 'Porta', 'Vlotho', 'Minden', 'Nienburg'], f'{tag}: Band zeigt das Gewässer, nach km ({names})')
     pg.click('.pg-filter .ftag'); pg.wait_for_timeout(200)
-    pg.click('.pg-sort:has-text("Zustand")'); pg.wait_for_timeout(150)
-    first = pg.locator('.pg-tabelle tbody .pg-zeile-btn').first.inner_text()
-    check(first == 'Trier', f'{tag}: sortiert nach Zustand (über HSW zuerst: {first})')
+    sorts = [t.replace('↑', '').strip() for t in pg.locator('.pg-sort').all_inner_texts()]
+    check(sorts == ['Gewässer', 'Entfernung'], f'{tag}: Sortierung nur nach Gewässer und Entfernung ({sorts})')
     check(pg.locator('.pg-tabelle tbody tr', has_text='Testpegel').locator('.pz-tag').inner_text() == 'ohne Kennwerte', f'{tag}: Pegel ohne Kennwerte grau')
     check(pg.locator('.pg-tabelle tbody tr', has_text='Altpegel').locator('.pz-tag').inner_text() == 'veraltet', f'{tag}: veraltete Messung gekennzeichnet')
     tw = pg.locator('.pg-wz.is-ampel'); al = pg.locator('.pg-wz.is-alarm')
