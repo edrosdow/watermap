@@ -39,14 +39,11 @@ export function pegelDashboard(root, ctx) {
   }
 
   function kopf() {
-    const suche = h('input', { type: 'search', class: 'pg-suche', placeholder: 'Pegel oder Gewässer suchen', 'aria-label': 'Pegel oder Gewässer suchen', value: ui.suche,
-      oninput: () => { ui.suche = suche.value; ui.alleOffen = !!suche.value.trim(); zeichneAlle(); } });
     return h('header', { class: 'pg-kopf' },
       h('div', { class: 'pg-kopf-zeile' },
         h('div', {}, h('h1', { class: 'pg-titel', text: 'Pegel' }), h('p', { class: 'pg-stand', 'aria-live': 'polite', text: stand ? standText(stand) : 'Wird geladen …' })),
         h('button', { type: 'button', class: 'pg-neu', 'aria-label': 'Pegel aktualisieren', html: icon('refresh', 22), onclick: async (e) => {
-          e.currentTarget.classList.add('is-busy'); await laden(true); ctx.toast?.(stand?.offline ? 'Keine Verbindung – letzter Stand wird angezeigt.' : 'Pegel aktualisiert.'); } })),
-      h('div', { class: 'pg-suche-box' }, h('span', { class: 'pg-suche-ico', html: icon('search', 20), 'aria-hidden': 'true' }), suche));
+          e.currentTarget.classList.add('is-busy'); await laden(true); ctx.toast?.(stand?.offline ? 'Keine Verbindung – letzter Stand wird angezeigt.' : 'Pegel aktualisiert.'); } })));
   }
 
   function lage() {
@@ -234,11 +231,15 @@ export function pegelDashboard(root, ctx) {
     root.querySelector('#pg-alle')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
   function alleSektion() {
+    const suche = h('input', { type: 'search', class: 'pg-suche', placeholder: 'Pegel oder Gewässer suchen', 'aria-label': 'Pegel oder Gewässer suchen', value: ui.suche,
+      oninput: () => { ui.suche = suche.value; ui.alleOffen = !!suche.value.trim(); zeichneAlle(); } });
     return h('section', { class: 'pg-alle', id: 'pg-alle', 'aria-labelledby': 'pg-alle-t' },
       h('div', { class: 'pg-h2-zeile' }, h('h2', { id: 'pg-alle-t', class: 'pg-h2', text: 'Alle Pegel' }),
         h('button', { type: 'button', class: 'pg-link pg-nur-handy', 'aria-expanded': String(ui.alleOffen), text: ui.alleOffen ? 'Weniger' : `Alle ${fmt(stand.gauges.length)} anzeigen`,
           onclick: () => { ui.alleOffen = !ui.alleOffen; zeichnen(); } })),
-      alleBox);
+      // Suche filtert diese Liste und steht deshalb in ihrer Karte (am Handy auch bei zugeklappter Liste)
+      h('div', { class: 'pg-alle-karte' },
+        h('div', { class: 'pg-alle-suche' }, h('div', { class: 'pg-suche-box' }, h('span', { class: 'pg-suche-ico', html: icon('search', 20), 'aria-hidden': 'true' }), suche)), alleBox));
   }
   function zeichneAlle() {
     if (!stand) return;

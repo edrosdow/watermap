@@ -107,6 +107,13 @@ def run(b, w, hh, mobile):
     check('über HSW' in pg.locator('.pg-fluss', has_text='Mosel').inner_text(), f'{tag}: Mosel „1 über HSW“')
     pg.screenshot(path=str(SHOTS / f'pegel_{w}_1dashboard.png'), full_page=True)
     # Alle Pegel / Filter
+    # Suche steht in der Karte „Alle Pegel“ (nicht im Kopf), am Handy auch bei zugeklappter Liste
+    check(pg.locator('.pg-kopf .pg-suche').count() == 0 and pg.locator('.pg-alle .pg-alle-karte .pg-suche').is_visible(), f'{tag}: Suche in „Alle Pegel“ sichtbar')
+    pg.fill('.pg-alle .pg-suche', 'mosel'); pg.wait_for_timeout(200)
+    names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
+    check(sorted(names) == ['Cochem', 'Trier'] and pg.locator('.pg-tabelle').is_visible(), f'{tag}: Suche öffnet und filtert die Liste ({names})')
+    pg.screenshot(path=str(SHOTS / f'pegel_{w}_5suche.png'))
+    pg.fill('.pg-alle .pg-suche', ''); pg.wait_for_timeout(200)
     if mobile:
         check(pg.locator('.pg-tabelle').is_hidden(), f'{tag}: Liste erst nach „Alle anzeigen“')
         pg.click('.pg-alle .pg-link')

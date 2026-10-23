@@ -113,7 +113,10 @@ body.view-pegel .toolbar, body.view-pegel .shell { display: none; }
 .ps.is-gross .ps-labels b { color: var(--navy); font-size: 15px; }
 
 /* Alle Pegel */
-.pg-alle-inhalt { background: #fff; border-radius: 18px; padding: 6px 0 10px; box-shadow: 0 1px 3px rgba(11, 48, 69, .06); }
+.pg-alle-karte { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(11, 48, 69, .06); }
+.pg-alle-suche { padding: 14px 18px 4px; }
+.pg-alle-suche .pg-suche-box { flex: none; }
+.pg-alle-inhalt { padding: 6px 0 10px; }
 .pg-filter { margin: 8px 18px 0; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
 .pg-sortleiste { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 18px; }
 .pg-sort { min-height: 40px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--line); background: #fff; color: var(--navy); font-weight: 650; font-size: 14px; }
@@ -236,8 +239,8 @@ body.view-pegel .toolbar, body.view-pegel .shell { display: none; }
   .pg-titel { color: #fff; font-size: 28px; }
   .pg-stand { color: #C5D8E1; font-size: 13.5px; }
   .pg-neu { background: #163F57; border: 0; color: #fff; }
-  .pg-suche-box { flex: none; }
-  .pg-suche { border: 0; }
+  .pg-alle-suche { padding: 12px 12px 4px; }
+  .pegelseite:not(.alle-offen) .pg-alle-suche { padding-bottom: 12px; }
   .pg-raster { padding: 16px 16px 0; gap: 22px; }
   .pg-nur-handy { display: block; }
   .pg-h2-zeile .pg-nur-handy { display: inline-flex; align-items: center; }

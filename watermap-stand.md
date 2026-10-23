@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 23.10.2026 · App-Version **7.20.0**
+Stand: 23.10.2026 · App-Version **7.20.1**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.20.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.20.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -146,6 +146,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 - Ordnet PEGELONLINE einen Pegel nicht ein, aber MNW und MHW sind bekannt, ordnet die App selbst ein: unter MNW niedrig, über MHW hoch, sonst normal (7.19.1).
 - „Flüsse im Überblick“ zeigt nur eingeordnete Pegel, keine grauen Felder. Gewässer ganz ohne Einordnung (z. B. Kanäle, Küste) fehlen dort; die Liste zeigt weiter alle Pegel (7.19.1).
 - „Pegel hinzufügen“ öffnet ein eigenes Fenster (Handy Bottom-Sheet, Desktop Dropdown, bei wenig Platz nach oben): Suche, ohne Eingabe die nächsten Pegel, „+“ fügt hinzu, Fenster bleibt offen (7.20).
+- Die Suche des Dashboards steht in der Karte „Alle Pegel“ (filtert nur diese Liste); am Handy ist sie auch bei zugeklappter Liste sichtbar und klappt beim Tippen auf (7.20.1).
 - Karte und Dashboard nutzen eine gemeinsame Stationsliste, die alle 15 Min. und bei Rückkehr in die App aktualisiert wird.
 - Verläufe werden nur für sichtbare Karten und die Detailseite geladen.
 - Offline gibt es den letzten Stand mit Hinweis „Stand von …“.
@@ -168,6 +169,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.19.0 | Pegel-Dashboard, Detailseite, „Meine Pegel“, Pegel-Vorschau auf der Karte |
 | 7.19.1 | Flüsse im Überblick ohne graue Felder, eigene Einordnung aus MNW/MHW |
 | 7.20.0 | Fenster „Pegel hinzufügen“, „Lage melden“ nur bei Slipanlagen |
+| 7.20.1 | Pegel-Suche aus dem Kopf in die Karte „Alle Pegel“ verschoben |
 
 ## 5. Tests
 
@@ -179,7 +181,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.20.0): alle Tests grün außer `ui_smoke` (bricht in der Cloud-Umgebung auch ohne Änderungen ab: `.place` erscheint nicht).**
+**Letzter Lauf (7.20.0, 7.20.1 nur `ui_pegel_dashboard` und `ui_pegel`): alle Tests grün außer `ui_smoke` (bricht in der Cloud-Umgebung auch ohne Änderungen ab: `.place` erscheint nicht).**
 
 ## 6. Offene Aufgaben
 
