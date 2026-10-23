@@ -408,7 +408,7 @@ function selectPlace(id, { fly = true, updateHash = true, full = false } = {}) {
   const p = state.byId.get(id);
   if (!p) return false;
   const pick = state.placePick;
-  if (pick && pick.type && p.type !== pick.type) { toast('Bitte eine Bootstankstelle antippen.'); return false; }
+  if (pick && pick.type && p.type !== pick.type) { toast(pick.type === 'slip' ? 'Bitte eine Slipanlage antippen.' : 'Bitte eine Bootstankstelle antippen.'); return false; }
   if (state.gaugeId) { state.gaugeId = null; state.map?.selectGauge(null); }
   if (state.extraId) { state.extraId = null; state.map?.selectExtra(null); }
   if (!state.cats.has(p.type)) toggleCat(p.type, true);   // z. B. Link oder Suche: Kategorie des Standorts einblenden
@@ -443,7 +443,7 @@ function showDetail(p, { scrollTo = null } = {}) {
       reportPrice: () => openReport('tankpreis-melden', { standort_id: p.id }),
     },
     pegel: pegelInfo(p).then(info => info && pegelBox(info)),
-    vorOrt: vorOrtTeile(p),
+    vorOrt: p.type === 'slip' ? vorOrtTeile(p) : null,   // „Heute vor Ort“ nur bei Slipanlagen
   });
   mountDetail(head, body, 'p:' + p.id);
   if (scrollTo === 'vor-ort') setTimeout(() => {
@@ -490,7 +490,7 @@ function showPeek(p) {
   el.peek.hidden = false;
   document.body.classList.add('has-peek');
   document.body.style.setProperty('--peek-h', `${el.peek.offsetHeight}px`);
-  if (state.meld.has(p.id)) {
+  if (p.type === 'slip' && state.meld.has(p.id)) {
     standortLaden(p.id).then((d) => {
       if (state.peekId !== p.id) return;
       meldStandortGeladen(p.id, d);
@@ -983,7 +983,7 @@ function pickLocation(initial) {
 
 // Menü → Meldung zu einem Standort: statt einer Auswahlliste den Standort auf der Karte (oder über die Suche) antippen
 const PLACE_PICK = {
-  'lage-melden': { text: 'Tippe auf der Karte auf den Standort, an dem du gerade bist.' },
+  'lage-melden': { text: 'Tippe auf der Karte auf die Slipanlage, an der du gerade bist.', type: 'slip' },
   'foto-einreichen': { text: 'Tippe auf der Karte auf die Slipanlage, Marina oder Tankstelle, zu der das Foto gehört.' },
   'fehler-melden': { text: 'Tippe auf der Karte auf den Standort, zu dem du etwas melden möchtest.', general: true },
   'tankpreis-melden': { text: 'Tippe auf der Karte auf die Bootstankstelle.', type: 'fuel' },
@@ -1021,7 +1021,7 @@ function openReport(formName, preset = {}) {
   if (p && formName === 'tankpreis-melden') preset.standort_id = p.id;
   if (formName === 'slipanlage-melden' && !preset.lat && state.user) { /* Position wird nur auf Wunsch übernommen */ }
   closeMenu();
-  if (formName === 'lage-melden') { const pl = state.byId.get(preset.standort_id); if (pl) lageMelden(pl); return; }
+  if (formName === 'lage-melden') { const pl = state.byId.get(preset.standort_id); if (pl?.type === 'slip') lageMelden(pl); return; }
   openForm(formName, ctx, preset);
 }
 
@@ -1119,6 +1119,7 @@ const LAGE_RADIUS_M = 300;
 function standortInDerNaehe(pos) {
   let best = null;
   for (const p of state.places) {
+    if (p.type !== 'slip') continue;   // Lagemeldungen nur für Slipanlagen
     const d = haversine(pos.lat, pos.lon, p.lat, p.lon);
     if (d <= LAGE_RADIUS_M && (!best || d < best.d)) best = { p, d };
   }

@@ -1,11 +1,12 @@
 // Bereich „Pegel“: Dashboard (#pegel) und Pegel-Detailseite (#pegel/<id>).
 // Daten: eine Stationsliste (pegel-daten.js) für Zähler, Flussbänder und Tabelle; Verläufe nur für sichtbare Karten.
-import { h } from './dom.js';
+import { h, announce } from './dom.js';
 import { icon } from './icons.js';
 import { haversine, formatDistance, displayName } from './model.js';
 import { pegelLaden, verlaufLaden, meinePegel } from './pegel-daten.js';
 import { fmt, kmText, zustand, ZUSTAND, etikett, trendText, trendKlasse, pegelKarte, pegelDetail } from './pegel-ansicht.js';
 import { formatTime } from './pegel.js';
+import { popover } from './nav.js';
 
 const RANG = { hsw: 0, high: 1, low: 2, normal: 3, unknown: 4, none: 5, old: 6 };
 const normW = (s) => String(s || '').toLowerCase().replace(/[^a-zäöüß]/g, '');
@@ -72,7 +73,7 @@ export function pegelDashboard(root, ctx) {
         ids = [...stand.gauges].sort((a, b) => entfernung(a) - entfernung(b)).slice(0, 3).map(g => g.id);
         titel = 'Pegel in deiner Nähe'; hinweis = 'Tippe auf ☆, um Pegel zu merken.';
       } else {
-        hinweis = 'Noch keine Pegel gemerkt. Suche oben nach einem Pegel oder Gewässer und tippe auf ☆, um ihn hier zu sehen.';
+        hinweis = 'Noch keine Pegel gemerkt. Tippe auf „Pegel hinzufügen“, um Pegel hier zu sehen.';
       }
     }
     const gemerkt = meinePegel.alle().length > 0;
@@ -90,10 +91,90 @@ export function pegelDashboard(root, ctx) {
         h('button', { type: 'button', class: 'pm-bbtn is-weg', text: 'Entfernen', onclick: () => { meinePegel.entfernen(id); zeichnen(); } })) : null;
       liste.append(pegelKarte(g, { verlauf: verlaufLaden(id), onOpen: () => ctx.open(id), bearbeiten: bearb }));
     });
-    liste.append(h('button', { type: 'button', class: 'pg-hinzu', onclick: () => { const f = root.querySelector('.pg-suche'); f?.focus(); f?.scrollIntoView({ block: 'center' }); } },
+    liste.append(h('button', { type: 'button', class: 'pg-hinzu', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', 'aria-controls': 'pa-pop', onclick: (e) => hinzuOeffnen(e.currentTarget) },
       h('span', { html: icon('plus', 20) }), h('span', { text: 'Pegel hinzufügen' })));
     sec.append(liste);
     return sec;
+  }
+
+  // Fenster „Pegel hinzufügen“: Handy Bottom-Sheet, Desktop Dropdown unter dem Knopf
+  let hinzu = null;
+  function hinzuFenster() {
+    if (hinzu) return hinzu;
+    const liste = h('ul', { class: 'pa-liste' });
+    const kopfzeile = h('p', { class: 'pa-kopf' });
+    const feld = h('input', { type: 'search', class: 'pg-suche pa-suche', placeholder: 'Pegel oder Gewässer', 'aria-label': 'Pegel oder Gewässer suchen', 'data-autofocus': true,
+      oninput: () => fuellen() });
+    const dlg = h('dialog', { id: 'pa-pop', class: 'pop pa-pop', 'aria-labelledby': 'pa-titel' },
+      h('span', { class: 'pop-grip', 'aria-hidden': 'true' }),
+      h('div', { class: 'pa-oben' }, h('h2', { id: 'pa-titel', text: 'Pegel hinzufügen' }),
+        h('div', { class: 'pg-suche-box' }, h('span', { class: 'pg-suche-ico', html: icon('search', 20), 'aria-hidden': 'true' }), feld)),
+      h('div', { class: 'sheet-scroll' }, kopfzeile, liste),
+      h('div', { class: 'pop-foot' }, h('button', { type: 'button', class: 'btn btn-primary', text: 'Fertig', onclick: () => pop.close() })));
+    document.body.append(dlg);
+    const pop = popover(dlg, { isMobile: ctx.isMobile });
+    window.addEventListener('hashchange', () => pop.close());
+    dlg.addEventListener('close', () => { dlg.style.bottom = ''; dlg.style.maxHeight = ''; });
+
+    // Knopf wird an Ort und Stelle umgestellt (kein Neuzeichnen), damit das Fenster beim Klick offen bleibt
+    const knopfStellen = (btn, g) => {
+      const an = meinePegel.hat(g.id);
+      btn.classList.toggle('is-an', an);
+      btn.setAttribute('aria-pressed', String(an));
+      btn.setAttribute('aria-label', an ? `${g.name} aus „Meine Pegel“ entfernen` : `${g.name} zu „Meine Pegel“ hinzufügen`);
+      btn.innerHTML = icon(an ? 'check' : 'plus', 20);
+    };
+    function zeile(g) {
+      const d = entfernung(g);
+      const knopf = h('button', { type: 'button', class: 'pa-knopf', onclick: () => {
+        const an = meinePegel.umschalten(g.id);
+        knopfStellen(knopf, g);
+        announce(an ? `${g.name} hinzugefügt` : `${g.name} entfernt`);
+      } });
+      knopfStellen(knopf, g);
+      return h('li', { class: 'pa-zeile' },
+        h('span', { class: 'pa-text' }, h('strong', { text: g.name }),
+          h('small', { text: [g.water, kmText(g), d !== null ? formatDistance(d) : ''].filter(Boolean).join(' · ') })),
+        h('span', { class: 'pa-wert' }, h('b', { text: `${fmt(g.value)} ${g.unit}` }), etikett(g)),
+        knopf);
+    }
+    const MAX = 40;
+    function fuellen() {
+      if (!stand) return;
+      const q = normW(feld.value);
+      let treffer = [], text = '';
+      if (q) {
+        const start = (g) => (normW(g.name).startsWith(q) ? 0 : 1);
+        treffer = stand.gauges.filter(g => normW(g.name).includes(q) || normW(g.water).includes(q))
+          .sort((a, b) => start(a) - start(b) || (entfernung(a) ?? 0) - (entfernung(b) ?? 0) || a.name.localeCompare(b.name, 'de'));
+        text = treffer.length ? `${fmt(treffer.length)} Treffer` : 'Kein Pegel gefunden.';
+      } else if (ctx.user()) {
+        treffer = [...stand.gauges].sort((a, b) => entfernung(a) - entfernung(b)).slice(0, 8);
+        text = 'In deiner Nähe';
+      } else {
+        text = 'Gib den Namen eines Pegels oder ein Gewässer ein, z. B. „Köln“ oder „Mosel“.';
+      }
+      kopfzeile.textContent = text;
+      liste.replaceChildren(...treffer.slice(0, MAX).map(zeile));
+      if (treffer.length > MAX) liste.append(h('li', { class: 'pa-mehr', text: `Weitere ${fmt(treffer.length - MAX)} – bitte genauer suchen.` }));
+    }
+    hinzu = { pop, feld, fuellen };
+    return hinzu;
+  }
+  function hinzuOeffnen(btn) {
+    const f = hinzuFenster();
+    if (f.pop.isOpen) { f.pop.close(); return; }
+    f.feld.value = '';
+    f.fuellen();
+    f.pop.open(btn);
+    // Desktop: reicht der Platz unter dem Knopf nicht, öffnet das Fenster darüber
+    if (!ctx.isMobile()) {
+      const dlg = document.getElementById('pa-pop'), r = btn.getBoundingClientRect();
+      const unten = window.innerHeight - r.bottom - 20, oben = r.top - 20;
+      dlg.style.maxHeight = `${Math.min(560, Math.max(unten, oben))}px`;
+      // unten verankert, damit das Fenster beim Filtern am Knopf bleibt
+      if (unten < 360 && oben > unten) { dlg.style.top = 'auto'; dlg.style.bottom = `${Math.round(window.innerHeight - r.top + 8)}px`; }
+    }
   }
 
   function fluesse() {

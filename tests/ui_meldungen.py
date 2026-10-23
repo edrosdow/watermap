@@ -228,10 +228,17 @@ def run(b, mobile):
     pg.click(opener); pg.wait_for_selector('#report-menu[open]'); pg.wait_for_timeout(600)
     check(pg.locator('#report-menu .lage-frage').is_hidden(), f'{tag}: ohne Position kein Vorschlag')
     pg.click('#report-menu .lage-main'); pg.wait_for_selector('#pickbar:not([hidden])')
-    check('an dem du gerade bist' in pg.inner_text('#pickbar'), f'{tag}: Eintrag startet die Standortauswahl')
+    check('Slipanlage, an der du gerade bist' in pg.inner_text('#pickbar'), f'{tag}: Eintrag startet die Standortauswahl')
+    r = pg.evaluate("window.__watermap.selectPlace('node/5000')"); pg.wait_for_timeout(200)
+    check(r is False and pg.locator('#dlg[open]').count() == 0 and pg.locator('#pickbar').is_visible(), f'{tag}: Hafen wird für die Lagemeldung nicht angenommen')
     pg.evaluate("window.__watermap.selectPlace('node/2')"); pg.wait_for_selector('#dlg[open] .lf-grid')
     check('TEST Slip 2' in pg.inner_text('#dlg .pf-place'), f'{tag}: gewählter Standort im Formular')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
+    # „Heute vor Ort“ nur bei Slipanlagen
+    pg.evaluate("window.__watermap.selectPlace('node/5000', { full: true })"); pg.wait_for_selector('#detail:not([hidden])'); pg.wait_for_timeout(300)
+    check('TEST Marina 0' in pg.inner_text('#detail') and pg.locator('#detail #heute-vor-ort').count() == 0 and pg.locator('#detail .vo-melden').count() == 0,
+          f'{tag}: Hafen ohne „Heute vor Ort“ und „Lage melden“')
+    pg.evaluate("window.__watermap.selectPlace('node/2', { full: true })"); pg.wait_for_selector('#detail #heute-vor-ort')
     # Offline: Stand von …, Melden aus
     ctx.set_offline(True); st['mode'] = 'down'
     pg.evaluate("window.dispatchEvent(new Event('offline'))")

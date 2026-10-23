@@ -74,7 +74,9 @@ export function mountNav({ top, bottom, active, onSelect, reportLink = false }) 
 export function popover(dialog, { isMobile, align = 'left' }) {
   let trigger = null;
   const onDoc = (e) => {
-    if (!dialog.open || dialog.contains(e.target) || (trigger && trigger.contains(e.target))) return;
+    // composedPath: gilt auch, wenn ein Klick-Handler das angeklickte Element schon ersetzt hat
+    const pfad = e.composedPath();
+    if (!dialog.open || pfad.includes(dialog) || (trigger && pfad.includes(trigger))) return;
     close();
   };
   const onKey = (e) => { if (e.key === 'Escape' && dialog.open) { e.preventDefault(); close(); } };

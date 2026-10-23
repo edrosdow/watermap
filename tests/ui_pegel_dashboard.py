@@ -185,7 +185,7 @@ def run(b, w, hh, mobile):
     # Leere Liste: ohne Position Hinweis, mit Position die 3 nächsten
     ctx, pg = page(b, w, hh, mobile, init="localStorage.setItem('watermap.meinePegel.ampel', '1');")
     pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pg-meine')
-    check(pg.locator('.pg-meine .pm-karte').count() == 0 and 'Suche oben' in pg.inner_text('.pg-meine'), f'{tag}: leer ohne Position: Hinweis')
+    check(pg.locator('.pg-meine .pm-karte').count() == 0 and 'Pegel hinzufügen“' in pg.inner_text('.pg-meine'), f'{tag}: leer ohne Position: Hinweis')
     pg.evaluate("window.__watermap.state.user = { lat: 52.2, lon: 8.9 }")
     pg.click('.pg-neu'); pg.wait_for_selector('.pg-meine .pm-karte')
     names = [n.strip() for n in pg.locator('.pg-meine .pm-name').all_inner_texts()]
@@ -195,6 +195,31 @@ def run(b, w, hh, mobile):
     pg.click('.pg-neu'); pg.wait_for_timeout(500)
     check('Stand von' in pg.inner_text('.pg-stand') and pg.locator('.pg-meine .pm-karte').count() == 3, f'{tag}: offline mit „Stand von …“ und letzten Werten')
     api['fail'] = False
+    # „Pegel hinzufügen“: eigenes Fenster statt Sprung zur Suche
+    y0 = pg.evaluate('scrollY')
+    pg.click('.pg-hinzu'); pg.wait_for_selector('#pa-pop[open]'); pg.wait_for_timeout(200)
+    dlg = pg.locator('#pa-pop')
+    check(('is-sheet' if mobile else 'is-drop') in dlg.get_attribute('class') and pg.evaluate("document.activeElement.classList.contains('pa-suche')")
+          and pg.evaluate('scrollY') == y0, f'{tag}: Fenster öffnet ({"Sheet" if mobile else "Dropdown"}), Fokus im Suchfeld, Seite springt nicht')
+    box = dlg.bounding_box()
+    check(box['y'] >= 0 and box['y'] + box['height'] <= hh + 1 and box['x'] >= 0 and box['x'] + box['width'] <= w + 1, f'{tag}: Fenster ganz sichtbar ({box})')
+    namen = [n.strip() for n in dlg.locator('.pa-text strong').all_inner_texts()]
+    check(pg.inner_text('.pa-kopf') == 'In deiner Nähe' and len(namen) == 8 and namen[0] == 'Vlotho', f'{tag}: ohne Suche die nächsten Pegel ({namen[:3]})')
+    pg.fill('.pa-suche', 'mosel'); pg.wait_for_timeout(150)
+    namen = [n.strip() for n in dlg.locator('.pa-text strong').all_inner_texts()]
+    check(pg.inner_text('.pa-kopf') == '2 Treffer' and sorted(namen) == ['Cochem', 'Trier'], f'{tag}: Suche nach Gewässer ({namen})')
+    pg.screenshot(path=str(SHOTS / f'pegel_{w}_4hinzufuegen.png'))
+    knopf = dlg.locator('.pa-zeile', has_text='Trier').locator('.pa-knopf')
+    check(knopf.get_attribute('aria-label') == 'Trier zu „Meine Pegel“ hinzufügen', f'{tag}: Knopf „+“ mit aria-label')
+    knopf.click(); pg.wait_for_timeout(200)
+    check(knopf.get_attribute('aria-pressed') == 'true' and pg.locator('#pa-pop[open]').count() == 1, f'{tag}: hinzugefügt, Fenster bleibt offen')
+    check(pg.evaluate("JSON.parse(localStorage.getItem('watermap.meinePegel'))") == [U(5)], f'{tag}: in „Meine Pegel“ gespeichert')
+    pg.click('#pa-pop .pop-foot .btn'); pg.wait_for_timeout(200)
+    check(pg.locator('#pa-pop[open]').count() == 0 and [n.strip() for n in pg.locator('.pg-meine .pm-name').all_inner_texts()] == ['Trier'], f'{tag}: „Fertig“ schließt, Karte Trier unter „Meine Pegel“')
+    pg.click('.pg-hinzu'); pg.wait_for_selector('#pa-pop[open]'); pg.fill('.pa-suche', 'xyz'); pg.wait_for_timeout(100)
+    check(pg.inner_text('.pa-kopf') == 'Kein Pegel gefunden.', f'{tag}: kein Treffer')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
+    check(pg.locator('#pa-pop[open]').count() == 0, f'{tag}: Escape schließt')
     check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
     ctx.close()
 

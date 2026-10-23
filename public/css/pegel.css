@@ -274,3 +274,22 @@ body.view-pegel .toolbar, body.view-pegel .shell { display: none; }
 /* Wetter im Pegel-Panel */
 .pd-wetter.block { margin: 0; border: 0; }
 .pd-wetter > h3 { margin: 0 0 12px; font-size: 19px; color: var(--navy); }
+
+/* Fenster „Pegel hinzufügen“ */
+.pa-pop.is-drop { width: min(440px, calc(100vw - 24px)); }
+.pa-oben { flex: none; padding: 14px 18px 10px; border-bottom: 1px solid var(--line); }
+.pa-oben h2 { margin: 0 0 10px; }
+.pa-oben .pg-suche-box { flex: none; }
+.pa-kopf { margin: 0 0 6px; color: var(--muted); font-size: 14px; font-weight: 650; }
+.pa-liste { list-style: none; margin: 0; padding: 0; }
+.pa-zeile { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.pa-zeile:last-child { border-bottom: 0; }
+.pa-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.pa-text strong { color: var(--navy); font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pa-text small { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pa-wert { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; font-size: 14px; color: var(--navy); }
+.pa-wert .pz-tag { min-height: 22px; font-size: 12px; padding: 0 8px; }
+.pa-knopf { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--slip); background: #fff; color: var(--slip); display: grid; place-items: center; }
+.pa-knopf:hover { background: #EAF5F9; }
+.pa-knopf.is-an { background: var(--slip); color: #fff; }
+.pa-mehr { padding: 12px 0 4px; color: var(--muted); font-size: 14px; }

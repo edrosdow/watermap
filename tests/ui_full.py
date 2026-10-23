@@ -209,8 +209,8 @@ def desktop(b):
     fb = pg.locator('#filter-panel').bounding_box(); bb = pg.locator('#btn-filter').bounding_box()
     check(abs(fb['y'] - (bb['y'] + bb['height'] + 8)) < 3, 'Filter-Fenster als Dropdown unter dem Knopf')
     pg.locator('#filter-panel .btn-outline', has_text='Zurücksetzen').click(); pg.wait_for_timeout(100)
-    check(st('window.__watermap.state.subs.size') == 0, '„Zurücksetzen“ leert die Unterfilter')
-    pg.mouse.click(700, 600); pg.wait_for_timeout(100)
+    check(st('window.__watermap.state.subs.size') == 0 and pg.locator('#filter-panel[open]').count() == 1, '„Zurücksetzen“ leert die Unterfilter, Fenster bleibt offen')
+    pg.mouse.click(1150, 700); pg.wait_for_timeout(100)   # Karte rechts neben dem Fenster
     check(pg.locator('#filter-panel[open]').count() == 0, 'Klick außerhalb schließt das Filter-Fenster')
     layer(pg, 'sub-free', click=True)
     pg.click('.cat-marina')
