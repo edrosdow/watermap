@@ -232,13 +232,18 @@ export function pegelDashboard(root, ctx) {
   // ---------------------------------------------------------------- Alle Pegel
   const alleBox = h('div', { class: 'pg-alle-inhalt' });
   function setFilter(f) {
-    ui.filter = f; ui.alleOffen = true; ui.zeilen = 60;
+    ui.filter = f; ui.suche = ''; ui.alleOffen = true; ui.zeilen = 60;   // Filter ersetzt eine laufende Suche
     zeichnen();
     root.querySelector('#pg-alle')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
   function alleSektion() {
     const suche = h('input', { type: 'search', class: 'pg-suche', placeholder: 'Pegel oder Gewässer suchen', 'aria-label': 'Pegel oder Gewässer suchen', value: ui.suche,
-      oninput: () => { ui.suche = suche.value; ui.alleOffen = !!suche.value.trim(); zeichneAlle(); } });
+      oninput: () => {
+        ui.suche = suche.value; ui.alleOffen = !!suche.value.trim();
+        // Eine neue Suche ersetzt den Filter (Zähler oder Flussband)
+        if (ui.filter && suche.value.trim()) { ui.filter = null; root.querySelectorAll('.pg-zaehler.is-aktiv').forEach(z => z.classList.remove('is-aktiv')); }
+        zeichneAlle();
+      } });
     return h('section', { class: 'pg-alle', id: 'pg-alle', 'aria-labelledby': 'pg-alle-t' },
       h('div', { class: 'pg-h2-zeile' }, h('h2', { id: 'pg-alle-t', class: 'pg-h2', text: 'Alle Pegel' }),
         h('button', { type: 'button', class: 'pg-link pg-nur-handy', 'aria-expanded': String(ui.alleOffen), text: ui.alleOffen ? 'Weniger' : `Alle ${fmt(stand.gauges.length)} anzeigen`,

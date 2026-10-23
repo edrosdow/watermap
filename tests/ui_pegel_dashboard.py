@@ -135,6 +135,15 @@ def run(b, w, hh, mobile):
     pg.click('.pg-fluss:has-text("Weser")'); pg.wait_for_timeout(300)
     names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
     check(names == ['Hann. Münden', 'Hameln', 'Porta', 'Vlotho', 'Minden', 'Nienburg', 'Vegesack'], f'{tag}: Band zeigt das Gewässer, nach km ({names})')
+    pg.fill('.pg-alle .pg-suche', 'mosel'); pg.wait_for_timeout(200)
+    names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
+    check(pg.locator('.pg-filter').count() == 0 and sorted(names) == ['Cochem', 'Trier'], f'{tag}: neue Suche entfernt den Filter „Weser“ ({names})')
+    pg.click('.pg-zaehler.is-low'); pg.wait_for_timeout(300)
+    check(pg.input_value('.pg-alle .pg-suche') == '' and pg.locator('.pg-tabelle tbody tr').count() == 2, f'{tag}: Filter ersetzt die Suche')
+    pg.fill('.pg-alle .pg-suche', 'w'); pg.wait_for_timeout(200)
+    check(pg.locator('.pg-filter').count() == 0 and pg.locator('.pg-zaehler.is-aktiv').count() == 0, f'{tag}: Suche hebt auch den Zähler-Filter auf')
+    pg.click('.pg-fluss:has-text("Weser")'); pg.wait_for_timeout(300)
+    check(pg.input_value('.pg-alle .pg-suche') == '', f'{tag}: Flussband leert die Suche')
     pg.click('.pg-filter .ftag'); pg.wait_for_timeout(200)
     sorts = [t.replace('↑', '').strip() for t in pg.locator('.pg-sort').all_inner_texts()]
     check(sorts == ['Gewässer', 'Entfernung'], f'{tag}: Sortierung nur nach Gewässer und Entfernung ({sorts})')

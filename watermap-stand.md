@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 23.10.2026 · App-Version **7.20.4**
+Stand: 23.10.2026 · App-Version **7.20.5**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.20.4 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.20.5 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -150,6 +150,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 - „Alle Pegel“ ist standardmäßig nach Gewässer und Flusskilometer sortiert (7.20.2); wählbar sind nur „Gewässer“ und „Entfernung“, „Zustand“ ist auf Wunsch entfernt (7.20.3).
 - Trend: kommt aus `currentMeasurement.trend` (auch als Text). Fehlt er, berechnen Karte und Detailseite ihn aus dem Verlauf (2 h, ab 2 cm). Die Tabelle blendet die Spalte „Trend“ aus, wenn keine Zeile einen Trend hat. Ob PEGELONLINE den Trend noch liefert, ließ sich aus der Cloud-Umgebung nicht prüfen (kein Netzzugang) (7.20.2).
 - Bei einer Suche kommen zuerst Pegel, deren Gewässer passt (dann Namenstreffer wie „Jade-Weser-Port“). Die Weser hat zwei Kilometrierungen (Ober-/Mittelweser ab Hann. Münden, Unterweser ab Bremen wieder km 0); für die Reihenfolge zählt die Unterweser (nördlich 52,9°, km < 130) als km + 366,7 – angezeigt wird weiter der amtliche km (`flussKm` in `pegel-dashboard.js`, 7.20.4). Andere Flüsse mit mehreren Kilometrierungen sind nicht geprüft.
+- Suche und Filter schließen sich aus: Tippen in die Suche entfernt einen Filter (Zähler oder Flussband), ein neuer Filter leert die Suche (7.20.5).
 - Karte und Dashboard nutzen eine gemeinsame Stationsliste, die alle 15 Min. und bei Rückkehr in die App aktualisiert wird.
 - Verläufe werden nur für sichtbare Karten und die Detailseite geladen.
 - Offline gibt es den letzten Stand mit Hinweis „Stand von …“.
@@ -176,6 +177,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.2 | „Alle Pegel“ standardmäßig nach Gewässer und km; Trend aus dem Verlauf, wenn PEGELONLINE keinen liefert |
 | 7.20.3 | Sortierung „Zustand“ entfernt (nur noch Gewässer und Entfernung) |
 | 7.20.4 | Suche: passendes Gewässer zuerst; Unterweser hinter Ober-/Mittelweser |
+| 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
 
 ## 5. Tests
 
