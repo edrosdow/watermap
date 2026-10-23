@@ -122,22 +122,29 @@ export function punkte(gr, max = 12) {
 
 /**
  * Profil entlang des Flusses (nur Pegel mit km).
- * → { punkte: [{ g, x, y }], von, bis (Pegel), xMin, xMax, tide: { x, label, ids: Set } | null }
+ * → { punkte: [{ g, x, y, pos }], von, bis (Pegel), xMin, xMax, yBereich: [min, max], tide: { x, pos, label, ids: Set } | null }
+ * pos (0 … 1): halb nach Flusskilometer, halb nach Reihenfolge – Lage bleibt erkennbar, Häufungen ziehen sich auseinander.
+ * yBereich: so weit, wie die Werte es brauchen (MNW und MHW immer sichtbar), höchstens −0,5 … 1,6.
  * Tidebereich: nach dem letzten Pegel mit Kennwerten, wenn alle Pegel flussabwärts keine haben; Linie mittig dazwischen.
  * Beschriftung „Tidebereich“ nur, wenn diese Pegel Tide-Kennwerte haben, sonst „ohne Kennwerte“.
  */
 export function profil(gr) {
   const mitKm = gr.pegel.filter(g => flussKm(g) !== null);
   if (!mitKm.length) return null;
+  const xMin = flussKm(mitKm[0]), xMax = flussKm(mitKm[mitKm.length - 1]), n = mitKm.length;
+  const pos = mitKm.map((g, i) => (n < 2 ? 0.5 : 0.5 * (xMax > xMin ? (flussKm(g) - xMin) / (xMax - xMin) : i / (n - 1)) + 0.5 * i / (n - 1)));
   let letzter = -1;
   mitKm.forEach((g, i) => { if (hatKennwerte(g)) letzter = i; });
   let tide = null;
-  if (letzter >= 0 && letzter < mitKm.length - 1) {
+  if (letzter >= 0 && letzter < n - 1) {
     const danach = mitKm.slice(letzter + 1);
-    tide = { x: (flussKm(mitKm[letzter]) + flussKm(danach[0])) / 2, label: danach.some(g => g.tide) ? 'Tidebereich' : 'ohne Kennwerte', ids: new Set(danach.map(g => g.id)) };
+    tide = { x: (flussKm(mitKm[letzter]) + flussKm(danach[0])) / 2, pos: (pos[letzter] + pos[letzter + 1]) / 2,
+      label: danach.some(g => g.tide) ? 'Tidebereich' : 'ohne Kennwerte', ids: new Set(danach.map(g => g.id)) };
   }
-  const pts = mitKm.filter(g => bewertet(g) && rel(g) !== null).map(g => ({ g, x: flussKm(g), y: rel(g) }));
-  return { punkte: pts, von: mitKm[0], bis: mitKm[mitKm.length - 1], xMin: flussKm(mitKm[0]), xMax: flussKm(mitKm[mitKm.length - 1]), tide };
+  const pts = mitKm.map((g, i) => ({ g, x: flussKm(g), y: rel(g), pos: pos[i] })).filter(p => bewertet(p.g) && p.y !== null);
+  const ys = pts.map(p => p.y);
+  const yBereich = [Math.max(-0.5, Math.min(-0.1, Math.min(...ys, 0) - 0.12)), Math.min(1.6, Math.max(1.1, Math.max(...ys, 1) + 0.12))];
+  return { punkte: pts, von: mitKm[0], bis: mitKm[n - 1], xMin, xMax, yBereich, tide };
 }
 
 /** Slipanlagen an diesem Gewässer (Gewässername aus OSM, gleiche Namensprüfung wie auf der Pegel-Detailseite). */

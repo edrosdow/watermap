@@ -88,6 +88,16 @@ assert.equal(ohneTide.tide.label, 'ohne Kennwerte', 'ohne Tide-Kennwerte heißt 
 assert.equal(ohneTide.tide.ids.size, 1, 'Pegel ohne Kennwerte mitten im Fluss gehören nicht zum Abschnitt');
 assert.equal(profil(fluss(P('X', 1, 200, 'normal'), P('X', 9, 200, 'normal'))).tide, null);
 
+// Achsen: y nur so weit wie nötig (MNW/MHW immer sichtbar), x halb nach km, halb nach Reihenfolge
+const eng = profil(fluss(P('X', 0, 80, 'low'), P('X', 1, 90, 'low'), P('X', 2, 95, 'low'), P('X', 100, 120, 'normal')));
+assert.ok(eng.yBereich[0] < -0.09 && eng.yBereich[0] > -0.5 && eng.yBereich[1] >= 1.1 && eng.yBereich[1] < 1.2, `y-Bereich passt sich an (${eng.yBereich})`);
+assert.deepEqual(profil(fluss(P('X', 0, 0, 'low'), P('X', 1, 900, 'hsw'))).yBereich, [-0.5, 1.6], 'höchstens −0,5 … 1,6');
+const pos = eng.punkte.map(p => p.pos);
+assert.equal(pos[0], 0); assert.equal(pos[3], 1);
+assert.ok(pos[1] - pos[0] > 0.16, `Häufung zieht sich auseinander (${pos})`);
+assert.ok(pos.every((v, i) => !i || v > pos[i - 1]), 'Reihenfolge bleibt');
+assert.ok(pr.tide.pos > pr.punkte[2].pos && pr.tide.pos < 1, 'Tidelinie zwischen letztem Kennwert-Pegel und erstem Tidepegel');
+
 // Weser: Unterweser (eigene km ab Bremen) hinter der Mittelweser
 const unterweser = { ...P('Weser', 17.8, 588, 'unknown'), lat: 53.17 };
 assert.ok(flussKm(unterweser) > flussKm({ ...P('Weser', 360, 200, 'normal'), lat: 53.05 }));

@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 23.10.2026 · App-Version **7.22.1**
+Stand: 23.10.2026 · App-Version **7.22.2**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.22.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.22.2 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -145,7 +145,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 - Gewässer ganz ohne Kennwerte (Kanäle): keine Kachel, aber unter „Alle Gewässer“ im Abschnitt „Kanäle und Gewässer ohne Bewertung“; Seite ohne Profil. In der Vorschau/lokal (`ENTWICKLUNG` in config.js) listet die Konsole diese Gewässer einmal auf – zum Prüfen der Küstenliste.
 - Zustand eines Flusses nur aus aktuellen, eingeordneten Pegeln: über HSW (mind. einer) → hoch (≥ 50 % über MHW) / teils hoch → niedrig (≥ 50 % unter MNW) / teils niedrig → normal. Nur veraltete Werte → grau „keine aktuellen Daten“. Hervorgehoben: relativ höchster bzw. tiefster Pegel (`rel = (W − MNW) / (MHW − MNW)`, begrenzt −0,5 … 1,6).
 - Kacheln: zuerst Flüsse mit „Meine Pegel“, dann Schwere, dann Anzahl; Küste zuletzt; 6 Kacheln, dann „Alle <n> Gewässer“. Punktreihe nur Pegel mit Kennwerten (max. 12).
-- Flussseite `#pegel/fluss/<name>`: SVG-Profil nach km (Unterweser hinten angehängt), Normalbereich, MNW/MHW gestrichelt, keine HSW-Linie. Abschnitt nach dem letzten Pegel mit Kennwerten abgetrennt: „Tidebereich“, wenn diese Pegel Tide-Kennwerte (MThw/MTnw) haben, sonst „ohne Kennwerte“. Handy: Tipp zeigt Blase des nächstgelegenen Punkts, „Details ›“ öffnet; Desktop Hover + Klick.
+- Flussseite `#pegel/fluss/<name>`: SVG-Profil nach km (Unterweser hinten angehängt; seit 7.22.2 x halb nach km, halb nach Reihenfolge, damit Häufungen nicht aufeinanderliegen; y-Achse nur so weit wie nötig, MNW/MHW immer sichtbar; Handy 220 px hoch), Normalbereich, MNW/MHW gestrichelt, keine HSW-Linie. Abschnitt nach dem letzten Pegel mit Kennwerten abgetrennt: „Tidebereich“, wenn diese Pegel Tide-Kennwerte (MThw/MTnw) haben, sonst „ohne Kennwerte“. Handy: Tipp zeigt Blase des nächstgelegenen Punkts, „Details ›“ öffnet; Desktop Hover + Klick.
 - „<n> Slipanlagen an der <Fluss>“: schaltet Slipanlagen zusätzlich ein und zoomt auf alle (fitBounds). Keine Abfragen pro Pegel.
 
 **In der Nähe (7.21)**
@@ -202,6 +202,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.3 | Sortierung „Zustand“ entfernt (nur noch Gewässer und Entfernung) |
 | 7.20.4 | Suche: passendes Gewässer zuerst; Unterweser hinter Ober-/Mittelweser |
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
+| 7.22.2 | Flussprofil: y-Achse passt sich an, x halb nach km/halb nach Reihenfolge, Handy 220 px |
 | 7.22.1 | „In der Nähe“ am Handy kompakt (Kopf, Hinweiszeile, Links am Listenende) |
 | 7.22.0 | Fluss-Kacheln statt Farbbänder, neue Flussseite mit Profil |
 | 7.21.0 | Tab „Liste“ → „In der Nähe“ (Bezugspunkt, Standortfreigabe, neue Karten); Detail-Abschnitt „Umgebung“; Datenschutz „Standort“ neu |

@@ -330,7 +330,7 @@ body.view-pegel .toolbar, body.view-pegel .shell { display: none; }
 .pf-h2-zeile { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
 .pf-klein { font-size: 14px; color: var(--muted); }
 .pf-profil { position: relative; margin-top: 12px; min-height: 190px; }
-.pf-svg { display: block; width: 100%; height: 190px; overflow: visible; }
+.pf-svg { display: block; width: 100%; height: auto; overflow: visible; }
 .pf-ax { font-size: 12px; fill: var(--muted); paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
 .pf-ax.is-mhw { fill: #9A3B12; } .pf-ax.is-mnw { fill: #7A5200; } .pf-ax.is-normal { fill: #1F6B3A; } .pf-ax.is-tide { fill: #566878; }
 .pf-hervor-text { font-size: 13px; font-weight: 800; fill: #fff; }

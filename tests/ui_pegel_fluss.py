@@ -111,7 +111,9 @@ def run(b, w, hh, mobile):
     lab = pg.get_attribute('.pf-svg', 'aria-label') or ''
     check('Tiefster Pegel: Dresden 62 cm' in lab and '7 unter MNW' in lab, f'{tag}: aria-label mit Textzusammenfassung')
     svg = pg.locator('.pf-svg').bounding_box()
-    check(abs(svg['height'] - 190) < 2 and svg['width'] > (w * 0.45 if not mobile else w - 80), f'{tag}: Profil volle Breite, 190 px hoch ({svg})')
+    check(abs(svg['height'] - (220 if mobile else 190)) < 2 and svg['width'] > (w * 0.45 if not mobile else w - 80), f'{tag}: Profil volle Breite, {220 if mobile else 190} px hoch ({svg})')
+    cx = [float(c.get_attribute('cx')) for c in pg.locator('.pf-punkt').all()]
+    check(min(b - a for a, b in zip(cx, cx[1:])) > 8, f'{tag}: Punkte liegen nicht aufeinander (kleinster Abstand {min(b - a for a, b in zip(cx, cx[1:])):.0f} px)')
     # Lage der Punkte: MNW-Linie bei rel 0, Dresden darunter
     y_mnw = float(pg.locator('.pf-svg line').nth(1).get_attribute('y1'))
     cy = [float(c.get_attribute('cy')) for c in pg.locator('.pf-punkt').all()]

@@ -72,11 +72,12 @@ function svg(tag, attrs = {}, ...kinder) {
 
 /** Profil in box zeichnen (Breite = Breite der Karte). opts = { onOpen(id), isMobile(), hervorId } */
 function profilZeichnen(box, pr, gr, opts) {
-  const W = Math.max(280, Math.round(box.clientWidth || 600)), H = 190;
-  const L = 8, R = 8, T = 30, B = 26, ymin = -0.5, ymax = 1.6;
-  const xs = (x) => (pr.xMax > pr.xMin ? L + (x - pr.xMin) / (pr.xMax - pr.xMin) * (W - L - R) : W / 2);
+  const handy = opts.isMobile();
+  const W = Math.max(280, Math.round(box.clientWidth || 600)), H = handy ? 220 : 190;
+  const L = 8, R = 8, T = 30, B = 26, [ymin, ymax] = pr.yBereich;
+  const xs = (pos) => L + pos * (W - L - R);   // pos: halb km, halb Reihenfolge (pegel-fluss.js)
   const ys = (y) => T + (ymax - y) / (ymax - ymin) * (H - T - B);
-  const rechts = pr.tide ? xs(pr.tide.x) : W - R;
+  const rechts = pr.tide ? xs(pr.tide.pos) : W - R;
   const s = svg('svg', { class: 'pf-svg', viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'group', 'aria-label': box.dataset.label });
   s.append(
     svg('rect', { x: L, y: ys(1), width: W - L - R, height: ys(0) - ys(1), fill: '#E4F4E8' }),
@@ -90,7 +91,7 @@ function profilZeichnen(box, pr, gr, opts) {
       svg('text', { x: Math.min(W - 6, rechts + 6), y: 14, 'text-anchor': rechts > W - 110 ? 'end' : 'start', class: 'pf-ax is-tide' }, pr.tide.label));
   }
   const pts = pr.punkte;
-  if (pts.length > 1) s.append(svg('polyline', { points: pts.map(p => `${xs(p.x).toFixed(1)},${ys(p.y).toFixed(1)}`).join(' '), fill: 'none', stroke: '#0B3045', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+  if (pts.length > 1) s.append(svg('polyline', { points: pts.map(p => `${xs(p.pos).toFixed(1)},${ys(p.y).toFixed(1)}`).join(' '), fill: 'none', stroke: '#0B3045', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
   const blase = h('div', { class: 'pf-blase', hidden: true, role: 'status' });
   const zeigeBlase = (p, mitKnopf) => {
     const g = p.g;
@@ -98,7 +99,7 @@ function profilZeichnen(box, pr, gr, opts) {
       mitKnopf ? h('button', { type: 'button', class: 'pf-blase-btn', text: 'Details ›', onclick: () => opts.onOpen(g.id) }) : null);
     blase.hidden = false;
     blase.classList.toggle('mit-knopf', mitKnopf);   // nur Hover: Blase fängt keine Klicks ab
-    const bx = xs(p.x) / W * box.clientWidth, py = ys(p.y);
+    const bx = xs(p.pos) / W * box.clientWidth, py = ys(p.y);
     blase.style.left = `${Math.max(4, Math.min(box.clientWidth - 170, bx - 80))}px`;
     const oben = py - blase.offsetHeight - 16;
     blase.style.top = `${oben >= -20 ? oben : py + 18}px`;
@@ -106,8 +107,8 @@ function profilZeichnen(box, pr, gr, opts) {
   let hervor = null;
   for (const p of pts) {
     const ist = p.g.id === opts.hervorId;
-    const kreis = svg('circle', { cx: xs(p.x), cy: ys(p.y), r: ist ? 8 : 5, fill: PUNKT_FARBE[p.g.state], stroke: ist ? '#0B3045' : '#fff', 'stroke-width': ist ? 3 : 1.5, class: 'pf-punkt' });
-    const ziel = svg('circle', { cx: xs(p.x), cy: ys(p.y), r: 16, fill: 'transparent', class: 'pf-ziel', tabindex: 0, role: 'button',
+    const kreis = svg('circle', { cx: xs(p.pos), cy: ys(p.y), r: ist ? 8 : handy ? 4 : 5, fill: PUNKT_FARBE[p.g.state], stroke: ist ? '#0B3045' : '#fff', 'stroke-width': ist ? 3 : 1.5, class: 'pf-punkt' });
+    const ziel = svg('circle', { cx: xs(p.pos), cy: ys(p.y), r: 16, fill: 'transparent', class: 'pf-ziel', tabindex: 0, role: 'button',
       'aria-label': `${p.g.name}: ${fmt(p.g.value)} ${p.g.unit}, ${pegelEtikett(p.g).textContent}. Details öffnen` });
     ziel.addEventListener('mouseenter', () => { if (!opts.isMobile()) zeigeBlase(p, false); });
     ziel.addEventListener('mouseleave', () => { if (!opts.isMobile()) blase.hidden = true; });
@@ -122,15 +123,15 @@ function profilZeichnen(box, pr, gr, opts) {
   s.addEventListener('click', (e) => {
     if (!opts.isMobile() || !pts.length) return;
     const r = s.getBoundingClientRect(), x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
-    const p = pts.reduce((m, q) => (Math.hypot(xs(q.x) - x, ys(q.y) - y) < Math.hypot(xs(m.x) - x, ys(m.y) - y) ? q : m));
-    if (Math.hypot(xs(p.x) - x, ys(p.y) - y) > 40) { blase.hidden = true; return; }
+    const p = pts.reduce((m, q) => (Math.hypot(xs(q.pos) - x, ys(q.y) - y) < Math.hypot(xs(m.pos) - x, ys(m.y) - y) ? q : m));
+    if (Math.hypot(xs(p.pos) - x, ys(p.y) - y) > 40) { blase.hidden = true; return; }
     e.stopPropagation();
     zeigeBlase(p, true);
   });
   if (hervor) {
     const text = `${hervor.g.name} ${fmt(hervor.g.value)} ${hervor.g.unit}`, bw = Math.min(W - 8, text.length * 7.6 + 20);
     // bevorzugt unter dem Punkt (über der Fläche stehen MHW/MNW-Beschriftungen), sonst darüber
-    const x = Math.max(4, Math.min(W - bw - 4, xs(hervor.x) - bw / 2)), unten = ys(hervor.y) + 14 + 24 <= H - 2;
+    const x = Math.max(4, Math.min(W - bw - 4, xs(hervor.pos) - bw / 2)), unten = ys(hervor.y) + 14 + 24 <= H - 2;
     const y = unten ? ys(hervor.y) + 14 : ys(hervor.y) - 14 - 24;
     s.append(svg('rect', { x, y, width: bw, height: 24, rx: 12, fill: '#0B3045' }), svg('text', { x: x + bw / 2, y: y + 16, 'text-anchor': 'middle', class: 'pf-hervor-text' }, text));
   }
