@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 23.10.2026 · App-Version **7.22.0**
+Stand: 23.10.2026 · App-Version **7.22.1**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.22.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.22.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -157,6 +157,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 - Liste: 25 km, bei < 5 Treffern 50 bzw. 100 km; höchstens `LIST_LIMIT`. Sortierung „Nächste zuerst“, „Name A–Z“, bei nur Häfen „Gastliegeplätze zuerst“. Keine Fahrzeit. Meldungs-Etikett bei Slipanlagen (die Übersicht `/api/meldungen/aktiv` liefert dafür jetzt `at`).
 - Handy: Navy-Kopf mit Kategorien und Filter statt der Werkzeugleiste; Tipp → Karte mit Vorschau, Zurück → gleiche Scrollstelle. Desktop: Seitenleiste links, Kategorien in der Werkzeugleiste, bei Kartenmitte läuft die Liste mit der Karte mit.
 - Detail-Abschnitt „In der Nähe (bis 500 m)“ heißt jetzt „Umgebung (bis 500 m)“.
+- Handy kompakt (7.22.1, nur < 768 px): globales Suchfeld ausgeblendet; Kopf mit Titel, Lupe (→ Fenster „Entfernungen messen ab …“) und Karten-Symbol; Bezugspunkt als Pille; Chips 36 px + Filter-Symbol. Statt Erklär-Karte eine Zeile „Genauere Entfernungen mit deiner Position“ mit „Erlauben“ und „×“ (`watermap.naehe.tippZu`, gilt bis zur nächsten eigenen Wahl des Bezugspunkts); „blockiert“ einzeilig. Zählzeile „<n> Slipanlagen · bis <r> km“. Links „Über WaterMap · …“ als letzter Listeneintrag, Liste unten mit Abstand für Navigation und Melden-Knopf. Test: mindestens 4 Einträge ohne Scrollen bei 375 und 390 px.
 
 **Pegel (7.19)**
 - Der Bereich „Pegel“ ist ein eigenes Dashboard.
@@ -201,6 +202,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.3 | Sortierung „Zustand“ entfernt (nur noch Gewässer und Entfernung) |
 | 7.20.4 | Suche: passendes Gewässer zuerst; Unterweser hinter Ober-/Mittelweser |
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
+| 7.22.1 | „In der Nähe“ am Handy kompakt (Kopf, Hinweiszeile, Links am Listenende) |
 | 7.22.0 | Fluss-Kacheln statt Farbbänder, neue Flussseite mit Profil |
 | 7.21.0 | Tab „Liste“ → „In der Nähe“ (Bezugspunkt, Standortfreigabe, neue Karten); Detail-Abschnitt „Umgebung“; Datenschutz „Standort“ neu |
 

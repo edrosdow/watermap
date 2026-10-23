@@ -12,6 +12,7 @@ const LS_BEZUG = 'watermap.naehe.bezug';           // { art: 'position' | 'karte
 const LS_ZULETZT = 'watermap.naehe.zuletzt';       // bis zu 3 gesuchte Orte
 const LS_ENTSCHIEDEN = 'watermap.naehe.entschieden';
 const LS_SORT = 'watermap.naehe.sort';
+const LS_TIPP_ZU = 'watermap.naehe.tippZu';   // Handy: Zeile „Genauere Entfernungen …“ geschlossen
 const RADIEN_KM = [25, 50, 100];
 const MIN_TREFFER = 5;
 
@@ -90,6 +91,7 @@ export function naehe(ctx) {
     bezug = neu;
     schreiben(LS_BEZUG, neu);
     schreiben(LS_ENTSCHIEDEN, true);
+    schreiben(LS_TIPP_ZU, false);   // eigene Wahl: die Zeile darf wieder erscheinen
     zeichnen();
   }
 
@@ -169,7 +171,7 @@ export function naehe(ctx) {
       const art = punkt().art, c = kartenmitte(), mitteName = ortsname(c.lat, c.lon);   // gilt gerade (ohne Position: Kartenmitte)
       const gesperrt = freigabe === 'denied';
       const rows = [
-        zeile({ ico: 'navigate', titel: 'Meine Position', sub: gesperrt ? 'im Browser blockiert' : 'nur auf deinem Gerät genutzt', aktiv: art === 'position', gesperrt,
+        zeile({ ico: 'navigate', titel: 'Meine Position', sub: gesperrt ? 'im Browser blockiert' : 'Wird nur auf deinem Gerät für Entfernungen genutzt – nicht gespeichert, nicht gesendet.', aktiv: art === 'position', gesperrt,
           onclick: () => { pop.close(); positionVerwenden(); } }),
         zeile({ ico: 'locate', titel: 'Kartenmitte', sub: mitteName ? `zuletzt: ${mitteName}` : 'Mitte des zuletzt angesehenen Kartenausschnitts', aktiv: art === 'kartenmitte',
           onclick: () => { pop.close(); bezugSetzen({ art: 'kartenmitte' }); } }),
@@ -215,8 +217,9 @@ export function naehe(ctx) {
     if (!dlg.open) dlg.showModal();
   }
 
-  // ---------------------------------------------------------------- Kopf (Handy: über den Kategorien, Desktop: oben in der Seitenleiste)
-  function kopf({ mitKategorien }) {
+  // ---------------------------------------------------------------- Kopf
+  /** Desktop: Kopf oben in der Seitenleiste (Kategorien stehen in der Werkzeugleiste über der Karte). */
+  function kopf() {
     const p = punkt();
     const text = p.art === 'position' ? ['um deine Position', p.name] : p.art === 'kartenmitte' ? ['um Kartenmitte', p.name] : [`um ${p.name}`];
     const ico = p.art === 'position' ? 'navigate' : p.art === 'kartenmitte' ? 'locate' : 'pin';
@@ -231,28 +234,63 @@ export function naehe(ctx) {
         h('p', { class: 'nh-bezug' }, h('span', { class: 'nh-bezug-ico', html: icon(ico, 16), 'aria-hidden': 'true' }),
           h('span', { text: positionLaeuft ? 'Position wird bestimmt …' : text.filter(Boolean).join(' · ') })),
         aendern),
-      mitKategorien ? h('div', { class: 'nh-zeile nh-kat' },
+    ];
+  }
+
+  /** Handy: kompakter Kopf – Titel mit Lupe und Karte, Bezugspunkt als Pille, Kategorien mit Filter-Symbol. */
+  function kopfHandy() {
+    const p = punkt();
+    const text = positionLaeuft ? 'Position wird bestimmt …' : (p.art === 'position' ? ['um deine Position', p.name] : p.art === 'kartenmitte' ? ['um Kartenmitte', p.name] : [`um ${p.name}`]).filter(Boolean).join(' · ');
+    const ico = p.art === 'position' ? 'navigate' : p.art === 'kartenmitte' ? 'locate' : 'pin';
+    const n = ctx.filterZahl();
+    return [
+      h('div', { class: 'nh-zeile' },
+        h('h2', { class: 'nh-titel', text: 'In der Nähe' }),
+        h('span', { class: 'nh-symbole' },
+          h('button', { type: 'button', class: 'nh-sym', 'aria-label': 'Ort suchen', 'aria-haspopup': 'dialog', html: icon('search', 22), onclick: (e) => fensterOeffnen(e.currentTarget) }),
+          h('button', { type: 'button', class: 'nh-sym', 'aria-label': 'Auf der Karte zeigen', html: icon('map', 22), onclick: () => ctx.aufKarte(aktuelleTreffer) }))),
+      h('button', { type: 'button', class: 'nh-pille', 'aria-haspopup': 'dialog', 'aria-controls': 'naehe-bezug', 'aria-label': `Entfernungen ${text}. Bezugspunkt ändern`,
+        onclick: (e) => fensterOeffnen(e.currentTarget) },
+        h('span', { class: 'nh-bezug-ico', html: icon(ico, 16), 'aria-hidden': 'true' }), h('span', { class: 'nh-pille-text', text }),
+        h('span', { class: 'nh-pille-pfeil', html: icon('chevron', 16), 'aria-hidden': 'true' })),
+      h('div', { class: 'nh-zeile nh-kat' },
         h('div', { class: 'nh-cats', role: 'group', 'aria-label': 'Kategorien' }, Object.keys(TYPES).map(t => {
           const on = ctx.cats().has(t);
           return h('button', { type: 'button', class: 'cat nh-cat', style: `--cc: var(--${t})`, 'aria-pressed': String(on), dataset: { cat: t }, onclick: () => ctx.toggleCat(t) },
             h('span', { class: 'cat-check', html: icon('check', 16), 'aria-hidden': 'true' }), h('span', { class: 'cat-label', text: { slip: 'Slip', marina: 'Häfen', fuel: 'Tanken' }[t] }));
         })),
-        h('button', { type: 'button', class: 'filter-btn nh-filter', 'aria-haspopup': 'dialog', onclick: (e) => ctx.filterOeffnen(e.currentTarget) },
-          h('span', { html: icon('filter', 20), 'aria-hidden': 'true' }), h('span', { text: 'Filter' }),
-          ctx.filterZahl() ? h('span', { class: 'filter-n', text: String(ctx.filterZahl()) }) : null)) : null,
+        h('button', { type: 'button', class: 'nh-sym nh-filter', 'aria-haspopup': 'dialog', 'aria-label': n ? `Filter, ${n} aktiv` : 'Filter', onclick: (e) => ctx.filterOeffnen(e.currentTarget) },
+          h('span', { html: icon('filter', 22), 'aria-hidden': 'true' }), n ? h('span', { class: 'filter-n', text: String(n) }) : null)),
     ];
+  }
+
+  /** Handy: schmale Zeile statt Erklär-Karte („×“ blendet sie aus, bis der Bezugspunkt selbst geändert wird). */
+  function hinweisHandy() {
+    if (freigabe === 'denied') {
+      return h('div', { class: 'nh-zeile1 is-blockiert nur-handy', role: 'note' },
+        h('span', { class: 'nh-zeile1-ico', html: icon('blocked', 20), 'aria-hidden': 'true' }),
+        h('span', { class: 'nh-zeile1-text', text: 'Standort im Browser blockiert.' }),
+        h('button', { type: 'button', class: 'nh-link', text: 'So geht’s ›', 'aria-label': 'So aktivierst du ihn', onclick: anleitung }));
+    }
+    if (freigabe === 'granted' || punkt().art === 'position' || lesen(LS_TIPP_ZU) === true) return null;
+    const zeile = h('div', { class: 'nh-zeile1 nur-handy' },
+      h('span', { class: 'nh-zeile1-ico', html: icon('pin', 20), 'aria-hidden': 'true' }),
+      h('span', { class: 'nh-zeile1-text', text: 'Genauere Entfernungen mit deiner Position' }),
+      h('button', { type: 'button', class: 'btn btn-primary nh-erlauben', text: 'Erlauben', onclick: positionVerwenden }),
+      h('button', { type: 'button', class: 'nh-x', 'aria-label': 'Hinweis schließen', html: icon('close', 20), onclick: () => { schreiben(LS_TIPP_ZU, true); zeichnen(); } }));
+    return zeile;
   }
 
   /** Erklär-Karte (noch keine Wahl) bzw. Hinweis (im Browser blockiert). */
   function hinweis() {
     if (freigabe === 'denied') {
-      return h('div', { class: 'nh-blockiert', role: 'note' },
+      return h('div', { class: 'nh-blockiert nur-desktop', role: 'note' },
         h('span', { class: 'nh-blockiert-ico', html: icon('blocked', 20), 'aria-hidden': 'true' }),
         h('span', { class: 'nh-blockiert-text', text: 'Standort im Browser blockiert.' }),
         h('button', { type: 'button', class: 'nh-link', text: 'So aktivierst du ihn ›', onclick: anleitung }));
     }
     if (freigabe === 'granted' || entschieden()) return null;
-    return h('section', { class: 'nh-erklaer', 'aria-labelledby': 'nh-erklaer-t' },
+    return h('section', { class: 'nh-erklaer nur-desktop', 'aria-labelledby': 'nh-erklaer-t' },
       h('span', { class: 'nh-erklaer-ico', html: icon('pin', 26), 'aria-hidden': 'true' }),
       h('div', { class: 'nh-erklaer-text' },
         h('h3', { id: 'nh-erklaer-t', text: 'Standorte in deiner Nähe finden' }),
@@ -306,7 +344,12 @@ export function naehe(ctx) {
     const sel = h('select', { class: 'nh-sort', 'aria-label': 'Sortierung', onchange: () => { sortierung = sel.value; schreiben(LS_SORT, sortierung); zeichnen(); } },
       [['naechste', 'Nächste zuerst'], ['name', 'Name A–Z'], ...(gastSortierbar() ? [['gast', 'Gastliegeplätze zuerst']] : [])]
         .map(([v, t]) => h('option', { value: v, selected: v === sortierung, text: t })));
-    head.replaceChildren(...[hinweis(), n ? h('div', { class: 'nh-zahlzeile' }, h('p', { class: 'nh-zahl' }, zahl), h('span', { class: 'nh-sort-box' }, sel)) : null].filter(Boolean));
+    // Handy einzeilig: „31 Slipanlagen · bis 50 km“ (mehrere Kategorien: „Standorte“)
+    const one = ctx.cats().size === 1 ? [...ctx.cats()][0] : null;
+    const was = n === 1 ? (one ? { slip: 'Slipanlage', marina: 'Hafen', fuel: 'Tankstelle' }[one] : 'Standort') : (one ? { slip: 'Slipanlagen', marina: 'Häfen', fuel: 'Tankstellen' }[one] : 'Standorte');
+    const zahlKurz = [h('strong', { text: String(n) }), ` ${was} · bis ${r} km`];
+    head.replaceChildren(...[hinweisHandy(), hinweis(), n ? h('div', { class: 'nh-zahlzeile' },
+      h('p', { class: 'nh-zahl nur-desktop' }, zahl), h('p', { class: 'nh-zahl nh-zahl-kurz nur-handy' }, zahlKurz), h('span', { class: 'nh-sort-box' }, sel)) : null].filter(Boolean));
     if (n > CONFIG.LIST_LIMIT) head.append(h('p', { class: 'muted nh-limit', text: `Die ${CONFIG.LIST_LIMIT} nächsten werden gezeigt.` }));
     if (n !== letzteZahl) { announce(n ? `${n} Standorte in der Nähe` : 'Keine Standorte in der Nähe'); letzteZahl = n; }
 
@@ -321,15 +364,22 @@ export function naehe(ctx) {
           h('button', { type: 'button', class: 'btn btn-outline', text: 'Filter zurücksetzen', onclick: () => ctx.filterZuruecksetzen() }))));
       return;
     }
-    ul.replaceChildren(...treffer.map(x => karte(x.p, x.d)));
+    ul.replaceChildren(...treffer.map(x => karte(x.p, x.d)), fuss());
     if (scrollMerken !== null && !ctx.isMobile()) scrollMerken = null;
+  }
+
+  /** Handy: Links als letzter Eintrag der Liste (nicht fest unten, nichts unter der Navigation). */
+  function fuss() {
+    return h('li', { class: 'nh-fuss nur-handy' },
+      h('a', { href: './ueber.html', text: 'Über WaterMap' }), ' · ', h('a', { href: './datenschutz.html', text: 'Datenschutz' }), ' · ', h('a', { href: './impressum.html', text: 'Impressum' }),
+      h('span', { class: 'version', text: `Version ${CONFIG.VERSION} · Kartendaten © OpenStreetMap-Mitwirkende (ODbL)` }));
   }
 
   let ziel = null;   // { kopfHandy, kopfDesktop, head, ul }
   function zeichnen() {
     if (!ziel || !ziel.aktiv()) return;
-    ziel.kopfHandy.replaceChildren(...kopf({ mitKategorien: true }).filter(Boolean));
-    ziel.kopfDesktop.replaceChildren(...kopf({ mitKategorien: false }).filter(Boolean));
+    ziel.kopfHandy.replaceChildren(...kopfHandy());
+    ziel.kopfDesktop.replaceChildren(...kopf().filter(Boolean));
     liste(ziel.head, ziel.ul);
   }
 

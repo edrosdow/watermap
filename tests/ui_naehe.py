@@ -74,6 +74,13 @@ def run(b, w, hh, mobile):
     tag = f'{w}px'
     print(f'--- {tag}')
     nav = '#bottomnav' if mobile else '#topnav'
+    # Handy (< 768 px) kompakt: schmale Hinweiszeile, Pille, Symbolknöpfe; Desktop: Erklär-Karte, „Ändern“, „Auf Karte“
+    HINT = '.nh-zeile1:not(.is-blockiert)' if mobile else '.nh-erklaer'
+    ERLAUBEN = '.nh-erlauben' if mobile else '.nh-erklaer .btn-primary'
+    BLOCK = '.nh-zeile1.is-blockiert' if mobile else '.nh-blockiert'
+    AENDERN = '.nh-pille' if mobile else '.nh-aendern:visible'
+    ORT = '.nh-sym[aria-label="Ort suchen"]' if mobile else '.nh-erklaer .btn-outline'
+    AUFKARTE = '.nh-sym[aria-label="Auf der Karte zeigen"]' if mobile else '.nh-knopf:visible'
 
     # 1) Erstes Öffnen ohne Freigabe: kein Browser-Dialog, Erklär-Karte, Liste um die Kartenmitte
     ctx, pg = page(b, w, hh, mobile)
@@ -83,10 +90,26 @@ def run(b, w, hh, mobile):
     item.click(); pg.wait_for_selector('.place.nk'); pg.wait_for_timeout(300)
     check(pg.url.endswith('#naehe') and item.get_attribute('aria-current') == 'page', f'{tag}: Adresse #naehe, Tab aktiv')
     check(pg.evaluate('window.__geoCalls') == 0, f'{tag}: beim Öffnen keine Standortabfrage')
-    check(pg.locator('.nh-erklaer').is_visible() and 'nicht gespeichert, nicht gesendet' in pg.inner_text('.nh-erklaer'), f'{tag}: Erklär-Karte bei fehlender Freigabe')
+    if mobile:
+        check(pg.locator(HINT).is_visible() and pg.inner_text(HINT).startswith('Genauere Entfernungen mit deiner Position') and pg.locator('.nh-erklaer:visible').count() == 0,
+              f'{tag}: schmale Zeile „Genauere Entfernungen …“ statt Erklär-Karte')
+        check(pg.locator(HINT).bounding_box()['height'] <= 60, f'{tag}: Hinweiszeile schmal ({pg.locator(HINT).bounding_box()["height"]} px)')
+    else:
+        check(pg.locator(HINT).is_visible() and 'nicht gespeichert, nicht gesendet' in pg.inner_text(HINT), f'{tag}: Erklär-Karte bei fehlender Freigabe')
     k = kopf(pg, mobile)
     check('In der Nähe' in k and 'um Kartenmitte' in k, f'{tag}: Kopf nennt den Bezugspunkt „um Kartenmitte“ ({k!r})')
-    check('um die Kartenmitte' in pg.inner_text('.nh-zahl'), f'{tag}: Zeile „… um die Kartenmitte“')
+    if mobile:
+        zk = pg.locator('.nh-zahl-kurz')
+        check(re.fullmatch(r'\d+ Slipanlagen · bis (25|50|100) km', zk.inner_text().strip()) and zk.bounding_box()['height'] < 26, f'{tag}: Zählzeile einzeilig ({zk.inner_text()!r})')
+        check(pg.locator('.app-header').is_hidden() and pg.locator('#naehe-kopf-m .nh-titel').inner_text() == 'In der Nähe', f'{tag}: globales Suchfeld ausgeblendet, Titel im Kopf')
+        kh = pg.locator('#naehe-kopf-m').bounding_box()['height']
+        check(kh <= 175, f'{tag}: Kopf kompakt ({kh} px)')
+        # mindestens 4 Einträge ohne Scrollen ganz sichtbar (über der Navigation und dem Melden-Knopf)
+        unten = pg.locator('#bottomnav .bn-plus').bounding_box()['y']
+        ganz = sum(1 for bb in [c.bounding_box() for c in pg.locator('.place.nk').all()[:8]] if bb and bb['y'] >= 0 and bb['y'] + bb['height'] <= unten)
+        check(ganz >= 4, f'{tag}: mindestens 4 Einträge ohne Scrollen sichtbar ({ganz})')
+    else:
+        check('um die Kartenmitte' in pg.inner_text('.nh-zahl'), f'{tag}: Zeile „… um die Kartenmitte“')
     check(pg.locator('#sidebar button', has_text='Favoriten').count() == 0 and pg.locator('#sidebar [role=tab]').count() == 0, f'{tag}: kein Umschalter Standorte/Favoriten')
     check(pg.locator('#naehe-kopf-m').is_visible() == mobile and pg.locator('#naehe-kopf-d').is_visible() != mobile, f'{tag}: Kopf {"über den Kategorien" if mobile else "in der Seitenleiste"}')
     if not mobile:
@@ -95,31 +118,33 @@ def run(b, w, hh, mobile):
     else:
         check(pg.locator('#toolbar').is_hidden() and pg.locator('.nh-cat').count() == 3, f'{tag}: Kategorien im Navy-Kopf')
     check(pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), f'{tag}: kein horizontales Scrollen')
-    klein = pg.evaluate("""[...document.querySelectorAll('.nh-kopf button, .nh-erklaer button, .place.nk, .nh-sort')].filter(e => e.offsetParent !== null)
-        .map(e => { const r = e.getBoundingClientRect(); return [e.className || e.tagName, Math.round(r.width), Math.round(r.height)]; }).filter(x => x[2] < 44)""")
-    check(not klein, f'{tag}: Touch-Ziele ≥ 44 px {klein[:3]}')
+    # Chips und Pille sind laut Vorgabe 36 px hoch, Knöpfe der Hinweiszeile 40 px, sonst ≥ 44 px
+    klein = pg.evaluate("""[...document.querySelectorAll('.nh-kopf button, .nh-erklaer button, .nh-zeile1 button, .place.nk, .nh-sort')].filter(e => e.offsetParent !== null)
+        .map(e => { const r = e.getBoundingClientRect(); const min = e.matches('.cat, .nh-pille') ? 36 : e.matches('.nh-zeile1 button, .nh-sort') ? 40 : 44;
+          return [e.className || e.tagName, Math.round(r.width), Math.round(r.height), min]; }).filter(x => x[2] < x[3])""")
+    check(not klein, f'{tag}: Touch-Ziele groß genug {klein[:3]}')
     karte = pg.locator('.place.nk').first
     check(karte.locator('.nk-ico').count() == 1 and karte.locator('.nk-dist').count() == 1 and 'Min.' not in karte.inner_text(), f'{tag}: Karte mit Symbol und Entfernung, ohne Fahrzeit')
     pg.screenshot(path=str(SHOTS / f'naehe_{w}_1erst.png'))
 
     # 2) „Position verwenden“ → erlaubt
-    pg.click('.nh-erklaer .btn-primary'); pg.wait_for_timeout(400)
+    pg.click(ERLAUBEN); pg.wait_for_timeout(400)
     k = kopf(pg, mobile)
-    check(pg.evaluate('window.__geoCalls') == 1 and 'um deine Position' in k and pg.locator('.nh-erklaer').count() == 0, f'{tag}: erlaubt → „um deine Position“, Karte weg ({k!r})')
-    zahl = pg.inner_text('.nh-zahl')
-    check('Standorte im Umkreis von' in zahl, f'{tag}: „<n> Standorte im Umkreis von <r> km“ ({zahl!r})')
+    check(pg.evaluate('window.__geoCalls') == 1 and 'um deine Position' in k and pg.locator(HINT).count() == 0, f'{tag}: erlaubt → „um deine Position“, Hinweis weg ({k!r})')
+    zahl = pg.inner_text('.nh-zahl:visible')
+    check(('Slipanlagen · bis' in zahl) if mobile else ('Standorte im Umkreis von' in zahl), f'{tag}: Zählzeile mit Umkreis ({zahl!r})')
     # Umkreis 25 → 50 → 100 km bei weniger als 5 Treffern
     pts = pg.evaluate("window.__watermap.state.filtered.map(p => [p.lat, p.lon])")
     erwartet = next((r for r in (25, 50, 100) if sum(1 for p in pts if km(POS, p) <= r) >= 5), 100)
     n = sum(1 for p in pts if km(POS, p) <= erwartet)
-    check(f'{n} Standorte im Umkreis von {erwartet} km' in zahl.replace('\n', ' '), f'{tag}: Umkreis {erwartet} km mit {n} Treffern ({zahl!r})')
+    check((f'{n} Slipanlagen · bis {erwartet} km' if mobile else f'{n} Standorte im Umkreis von {erwartet} km') in zahl.replace('\n', ' '), f'{tag}: Umkreis {erwartet} km mit {n} Treffern ({zahl!r})')
     d = [t for t in pg.locator('.nk-dist').all_inner_texts()]
     werte = [float(x[:-3].replace(',', '.')) if x.endswith(' km') else float(x[:-2]) / 1000 for x in d]
     check(werte == sorted(werte), f'{tag}: „Nächste zuerst“ ({d[:4]})')
     check('Standorte in der Nähe' in pg.inner_text('#live'), f'{tag}: Trefferzahl wird angesagt')
     # Wahl bleibt nach Neuladen, Freigabe erteilt → direkt Position, keine Karte
     pg.reload(); pg.wait_for_selector('.place.nk'); pg.wait_for_timeout(400)
-    check('um deine Position' in kopf(pg, mobile) and pg.locator('.nh-erklaer').count() == 0 and pg.evaluate('window.__geoCalls') == 1, f'{tag}: nach Neuladen wieder „um deine Position“')
+    check('um deine Position' in kopf(pg, mobile) and pg.locator(HINT).count() == 0 and pg.evaluate('window.__geoCalls') == 1, f'{tag}: nach Neuladen wieder „um deine Position“')
     # Sortierung Name A–Z
     pg.select_option('.nh-sort', 'name'); pg.wait_for_timeout(200)
     namen = [t.strip() for t in pg.locator('.nk-name').all_inner_texts()]
@@ -129,17 +154,18 @@ def run(b, w, hh, mobile):
 
     # 3) „Position verwenden“ → abgelehnt; Hinweis, Anleitung, Fenster mit gesperrter „Meine Position“
     ctx, pg = page(b, w, hh, mobile, allow='false'); oeffnen(pg, mobile)
-    pg.click('.nh-erklaer .btn-primary'); pg.wait_for_timeout(400)
-    check(pg.locator('.nh-blockiert').is_visible() and 'Standort im Browser blockiert.' in pg.inner_text('.nh-blockiert') and pg.locator('.nh-erklaer').count() == 0,
+    pg.click(ERLAUBEN); pg.wait_for_timeout(400)
+    check(pg.locator(BLOCK).is_visible() and 'Standort im Browser blockiert.' in pg.inner_text(BLOCK) and pg.locator(HINT).count() == 0,
           f'{tag}: abgelehnt → schmaler Hinweis statt Erklär-Karte')
-    farbe = pg.evaluate("getComputedStyle(document.querySelector('.nh-blockiert')).backgroundColor")
+    if mobile: check(pg.locator(BLOCK).bounding_box()['height'] <= 60, f'{tag}: Hinweis „blockiert“ einzeilig')
+    farbe = pg.evaluate(f"getComputedStyle(document.querySelector('{BLOCK}')).backgroundColor")
     check(farbe == 'rgb(255, 246, 227)', f'{tag}: Hinweis gelb getönt ({farbe})')
     check('um Kartenmitte' in kopf(pg, mobile), f'{tag}: ohne Position gilt die Kartenmitte')
-    pg.click('.nh-blockiert .nh-link'); pg.wait_for_selector('#dlg[open] .nh-anleitung')
+    pg.click(f'{BLOCK} .nh-link'); pg.wait_for_selector('#dlg[open] .nh-anleitung')
     t = pg.inner_text('#dlg')
     check('iPhone' in t and 'Android' in t and 'Computer' in t, f'{tag}: Anleitung für iPhone, Android, Desktop')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
-    pg.locator('.nh-aendern:visible').click(); pg.wait_for_selector('#naehe-bezug[open]')
+    pg.locator(AENDERN).click(); pg.wait_for_selector('#naehe-bezug[open]')
     mp = pg.locator('#naehe-bezug .nb-zeile', has_text='Meine Position')
     check(mp.get_attribute('aria-disabled') == 'true' and 'im Browser blockiert' in mp.inner_text(), f'{tag}: „Meine Position“ ausgegraut, „im Browser blockiert“')
     check(mp.get_attribute('aria-current') is None and pg.locator('#naehe-bezug .nb-zeile', has_text='Kartenmitte').get_attribute('aria-current') == 'true', f'{tag}: aktiv ist die Kartenmitte, nicht die blockierte Position')
@@ -151,17 +177,39 @@ def run(b, w, hh, mobile):
 
     # 4) Bereits blockiert: Hinweis sofort, keine Abfrage
     ctx, pg = page(b, w, hh, mobile, perm='denied'); oeffnen(pg, mobile)
-    check(pg.locator('.nh-blockiert').is_visible() and pg.locator('.nh-erklaer').count() == 0 and pg.evaluate('window.__geoCalls') == 0, f'{tag}: blockiert → Hinweis, keine Abfrage')
+    check(pg.locator(BLOCK).is_visible() and pg.locator(HINT).count() == 0 and pg.evaluate('window.__geoCalls') == 0, f'{tag}: blockiert → Hinweis, keine Abfrage')
+    if mobile:
+        unten = pg.locator('#bottomnav .bn-plus').bounding_box()['y']
+        ganz = sum(1 for bb in [c.bounding_box() for c in pg.locator('.place.nk').all()[:8]] if bb and bb['y'] >= 0 and bb['y'] + bb['height'] <= unten)
+        check(ganz >= 4, f'{tag}: blockiert: mindestens 4 Einträge sichtbar ({ganz})')
     ctx.close()
 
     # 5) Freigabe bereits erteilt: direkt „Meine Position“, keine Erklär-Karte; „Meine Position“ auf der Karte teilt den Status
     ctx, pg = page(b, w, hh, mobile, perm='granted'); oeffnen(pg, mobile); pg.wait_for_timeout(300)
-    check('um deine Position' in kopf(pg, mobile) and pg.locator('.nh-erklaer').count() == 0, f'{tag}: Freigabe erteilt → direkt Position')
+    check('um deine Position' in kopf(pg, mobile) and pg.locator(HINT).count() == 0, f'{tag}: Freigabe erteilt → direkt Position')
+    if mobile:
+        unten = pg.locator('#bottomnav .bn-plus').bounding_box()['y']
+        ganz = sum(1 for bb in [c.bounding_box() for c in pg.locator('.place.nk').all()[:8]] if bb and bb['y'] >= 0 and bb['y'] + bb['height'] <= unten)
+        check(ganz >= 4, f'{tag}: mit Freigabe: mindestens 4 Einträge sichtbar ({ganz})')
     ctx.close()
 
     # 6) Ort eingeben, Wahl bleibt nach Neuladen, zuletzt gesucht, Kartenmitte, Meldungs-Etikett, leerer Zustand
     ctx, pg = page(b, w, hh, mobile); oeffnen(pg, mobile)
-    pg.click('.nh-erklaer .btn-outline'); pg.wait_for_selector('#naehe-bezug[open]'); pg.wait_for_timeout(150)
+    if mobile:
+        # „×“ blendet die Zeile aus – auch nach Neuladen –, bis der Bezugspunkt selbst geändert wird
+        pg.click('.nh-zeile1 .nh-x'); pg.wait_for_timeout(150)
+        check(pg.locator(HINT).count() == 0, f'{tag}: „×“ schließt die Hinweiszeile')
+        pg.reload(); pg.wait_for_selector('.place.nk'); pg.wait_for_timeout(300)
+        check(pg.locator(HINT).count() == 0, f'{tag}: geschlossene Hinweiszeile bleibt nach Neuladen weg')
+        # Links am Listenende, nicht verdeckt
+        check(pg.locator('#sidebar .sidebar-foot').is_hidden() and pg.locator('.nh-fuss').count() == 1, f'{tag}: Links als letzter Listeneintrag')
+        pg.locator('#list').evaluate('e => e.scrollTop = e.scrollHeight'); pg.wait_for_timeout(200)
+        fb = pg.locator('.nh-fuss').bounding_box(); plus = pg.locator('#bottomnav .bn-plus').bounding_box()
+        check(fb['y'] + fb['height'] <= plus['y'], f'{tag}: Links nicht von Navigation oder Melden-Knopf verdeckt ({fb}, {plus["y"]})')
+        pg.locator('#list').evaluate('e => e.scrollTop = 0')
+    pg.click(ORT); pg.wait_for_selector('#naehe-bezug[open]'); pg.wait_for_timeout(150)
+    mp = pg.locator('#naehe-bezug .nb-zeile', has_text='Meine Position')
+    check('nicht gespeichert, nicht gesendet' in mp.inner_text(), f'{tag}: Datenschutz-Satz unter „Meine Position“ im Fenster')
     check(pg.evaluate("document.activeElement.classList.contains('nb-suche')"), f'{tag}: „Ort eingeben“ → Fokus im Suchfeld')
     check(pg.get_attribute('.nb-suche', 'placeholder') == 'Ort, Gewässer oder Postleitzahl', f'{tag}: Suchfeld „Ort, Gewässer oder Postleitzahl“')
     zeilen = [t.split('\n')[0] for t in pg.locator('#naehe-bezug .nb-liste:not(.nb-treffer) .nb-zeile').all_inner_texts()]
@@ -172,12 +220,13 @@ def run(b, w, hh, mobile):
     pg.fill('.nb-suche', 'Bünde'); pg.wait_for_selector('.nb-treffer .nb-zeile')
     pg.screenshot(path=str(SHOTS / f'naehe_{w}_6suche.png'))
     pg.click('.nb-treffer .nb-zeile'); pg.wait_for_timeout(300)
-    check('um Bünde' in kopf(pg, mobile) and pg.locator('.nh-erklaer').count() == 0 and pg.locator('#naehe-bezug[open]').count() == 0, f'{tag}: Ort gewählt → „um Bünde“, Karte weg')
+    check('um Bünde' in kopf(pg, mobile) and pg.locator('#naehe-bezug[open]').count() == 0, f'{tag}: Ort gewählt → „um Bünde“')
+    check(pg.locator(HINT).count() == (1 if mobile else 0), f'{tag}: {"Hinweiszeile nach eigener Wahl wieder da" if mobile else "Erklär-Karte weg"}')
     gesp = pg.evaluate("JSON.parse(localStorage.getItem('watermap.naehe.bezug'))")
     check(gesp.get('art') == 'ort' and gesp.get('name') == 'Bünde' and abs(gesp.get('lat') - 52.2) < 1e-6, f'{tag}: nur die Wahl gespeichert ({gesp})')
     pg.reload(); pg.wait_for_selector('.place.nk'); pg.wait_for_timeout(300)
     check('um Bünde' in kopf(pg, mobile), f'{tag}: Ort bleibt nach Neuladen')
-    pg.locator('.nh-aendern:visible').click(); pg.wait_for_selector('#naehe-bezug[open]')
+    pg.locator(AENDERN).click(); pg.wait_for_selector('#naehe-bezug[open]')
     gm = pg.locator('#naehe-bezug .nb-zeile', has_text='Bünde')
     check(gm.count() == 1 and 'gemerkt' in gm.inner_text() and gm.locator('.nb-haken').count() == 1, f'{tag}: gemerkter Ort mit Haken')
     pg.fill('.nb-suche', 'Rügen'); pg.wait_for_selector('.nb-treffer .nb-zeile'); pg.click('.nb-treffer .nb-zeile'); pg.wait_for_timeout(300)
@@ -221,7 +270,7 @@ def run(b, w, hh, mobile):
         check(pg.locator('#sidebar').is_visible() and pg.evaluate('window.__watermap.state.selectedId') == zid, f'{tag}: Tipp → Details neben der Liste')
     # „Auf Karte“: alle Treffer im Ausschnitt
     ids = pg.evaluate("[...document.querySelectorAll('.place.nk')].map(e => e.dataset.id)")
-    pg.locator('.nh-knopf:visible').click(); pg.wait_for_timeout(400)
+    pg.locator(AUFKARTE).click(); pg.wait_for_timeout(400)
     drin = pg.evaluate("""(ids) => { const m = window.__watermap.state.map, b = m.getBounds();
         return ids.map(id => window.__watermap.state.byId.get(id)).every(p => p.lat >= b.south && p.lat <= b.north && p.lon >= b.west && p.lon <= b.east); }""", ids)
     check(drin and (not mobile or pg.locator(f'{nav} [data-nav=karte]').get_attribute('aria-current') == 'page'), f'{tag}: „Auf Karte“ zeigt alle {len(ids)} Treffer')
