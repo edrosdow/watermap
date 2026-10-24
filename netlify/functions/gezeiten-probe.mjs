@@ -1,5 +1,5 @@
 // Prüf-Funktion (nur Vorschau): Welche Daten liefert das BSH für Gezeiten und Wasserstandsvorhersage?
-// Aufruf: GET /api/gezeiten/probe – fragt einmalig die BSH-Schnittstelle und die BSH-Webseiten ab und zeigt die
+// Aufruf: GET /api/gezeiten/probe (?runde=2: nur Aufbau einer Station und Stationsliste) – fragt einmalig die BSH-Schnittstelle und die BSH-Webseiten ab und zeigt die
 // Rohdaten gekürzt an, damit Adresse, Format, Orte, Zeitraum und Aktualisierung geklärt werden können (docs/BSH-Klaerung.md).
 // Auf der Live-Seite (CONTEXT=production) ist sie abgeschaltet. Kein Zwischenspeicher, keine Weitergabe an Nutzer.
 const USER_AGENT = (env) => `WaterMap/1.0 (+https://watermaps.netlify.app; Pruefung BSH-Datenabruf${env.WATERMAP_KONTAKT ? `; ${env.WATERMAP_KONTAKT}` : ''})`;
@@ -38,12 +38,32 @@ export function verweise(html, basis) {
   return [...out].map(u => { try { return new URL(u, basis).href; } catch { return u; } }).slice(0, 80);
 }
 
+/** Aufbau eines JSON-Objekts: je Feld Typ, bei Listen Länge sowie erster und letzter Eintrag (gekürzt). */
+export function aufbau(text) {
+  let j; try { j = JSON.parse(text); } catch { return { fehler: 'kein JSON', anfang: text.slice(0, 500) }; }
+  const kurz = (v) => JSON.stringify(v)?.slice(0, 400);
+  const beschreibe = (o) => Object.fromEntries(Object.entries(o || {}).map(([k, v]) => [k,
+    Array.isArray(v) ? { liste: v.length, erster: kurz(v[0]), letzter: kurz(v[v.length - 1]) }
+      : v && typeof v === 'object' ? { objekt: Object.keys(v).slice(0, 30) } : { wert: kurz(v) }]));
+  return { oben: Object.keys(j), properties: beschreibe(j.properties) };
+}
+
+/** Stationsliste kompakt: Kennung, Name, Pegelnummer, PEGELONLINE-UUID, Region. */
+export function stationen(text) {
+  let j; try { j = JSON.parse(text); } catch { return { fehler: 'kein JSON', anfang: text.slice(0, 500) }; }
+  return (j.features || []).map(f => {
+    const p = f.properties || {};
+    return [f.id, p.gauge_label, p.operator_gauge_id, (String(p.measurement_url || '').match(/id=([0-9a-f-]{36})/) || [])[1] || null, p.region, p.area].join(' | ');
+  });
+}
+
 export async function handle(req, { fetchFn = fetch, env = process.env } = {}) {
   if (env.CONTEXT === 'production') return json(404, { fehler: 'Nur in der Vorschau verfügbar.' });
   if (req.method !== 'GET') return json(405, { fehler: 'Nur GET.' });
   const ua = USER_AGENT(env), ergebnisse = [];
-  let ids = [];
-  for (const z of ZIELE) {
+  // ?runde=2: nur Aufbau einer Station und Stationsliste (kürzere Ausgabe)
+  const runde2 = new URL(req.url).searchParams.get('runde') === '2';
+  for (const z of runde2 ? [] : ZIELE) {
     const r = await abrufen(fetchFn, z.url, ua);
     const e = { name: z.name, url: z.url, status: r.status ?? null, typ: r.typ ?? null, groesse: r.groesse ?? null, fehler: r.fehler ?? null };
     if (r.text) {
@@ -57,18 +77,15 @@ export async function handle(req, { fetchFn = fetch, env = process.env } = {}) {
           e.skripte.push({ url: s, status: sr.status ?? null, fehler: sr.fehler ?? null,
             adressen: sr.text ? [...new Set([...sr.text.matchAll(/["'`](https?:\/\/[^"'`\s]+|\/[^"'`\s]*(?:api|json|rest|ldproxy|forecast|tide|gezeit|station)[^"'`\s]*)["'`]/gi)].map(m => m[1]))].slice(0, 60) : [] });
         }
-      } else {
-        e.inhalt = r.text.slice(0, MAX_TEXT);
-        if (z.url.includes('/collections')) { try { ids = (JSON.parse(r.text).collections || []).map(c => c.id).slice(0, 6); } catch { /* kein JSON */ } }
-      }
+      } else e.inhalt = r.text.slice(0, MAX_TEXT);
     }
     ergebnisse.push(e);
   }
-  // Sammlungen der Schnittstelle: je zwei Beispiel-Einträge
-  for (const id of ids) {
-    const r = await abrufen(fetchFn, `${API}/collections/${encodeURIComponent(id)}/items?f=json&limit=2`, ua);
-    ergebnisse.push({ name: `Beispiel ${id}`, url: r.url, status: r.status ?? null, typ: r.typ ?? null, fehler: r.fehler ?? null, inhalt: r.text?.slice(0, MAX_TEXT) });
-  }
+  // Runde 2: Aufbau einer Station (Feldnamen, Längen, erster/letzter Wert) und Liste aller Stationen (nur Kennungen)
+  const st = await abrufen(fetchFn, `${API}/collections/waterlevelforecastdata/items/cuxhaven_steubenhoeft?f=json`, ua);
+  ergebnisse.push({ name: 'Aufbau Station cuxhaven_steubenhoeft', url: st.url, status: st.status ?? null, fehler: st.fehler ?? null, aufbau: st.text ? aufbau(st.text) : null });
+  const li = await abrufen(fetchFn, `${API}/collections/waterlevelforecastdata/items?f=json&limit=200&properties=gauge_label,operator_gauge_id,measurement_url,region,area`, ua);
+  ergebnisse.push({ name: 'Liste aller Stationen', url: li.url, status: li.status ?? null, fehler: li.fehler ?? null, groesse: li.text?.length ?? null, stationen: li.text ? stationen(li.text) : null });
   return json(200, { zeit: new Date().toISOString(), userAgent: ua, ergebnisse });
 }
 

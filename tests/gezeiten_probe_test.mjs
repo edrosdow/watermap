@@ -10,7 +10,8 @@ const aufrufe = [];
 const fetchFn = async (url, opt) => {
   aufrufe.push({ url, ua: opt.headers['User-Agent'] });
   if (url.endsWith('/collections?f=json')) return new Response(JSON.stringify({ collections: [{ id: 'stationen' }, { id: 'vorhersage' }] }), { headers: { 'content-type': 'application/json' } });
-  if (url.includes('/items')) return new Response('{"type":"FeatureCollection","features":[]}', { headers: { 'content-type': 'application/geo+json' } });
+  if (url.includes('/items/cuxhaven')) return new Response(JSON.stringify({ type: 'Feature', id: 'cuxhaven_steubenhoeft', properties: { gauge_label: 'Cuxhaven', high_water_low_water: [{ event: 'HW' }, { event: 'NW' }] } }));
+  if (url.includes('/items')) return new Response(JSON.stringify({ features: [{ id: 'cuxhaven_steubenhoeft', properties: { gauge_label: 'Cuxhaven', operator_gauge_id: '5990020', measurement_url: 'https://x/?pegelnr=5990020#detail?id=aad49293-242a-43ad-a8b1-e91d7792c4b2', region: 'north_sea' } }] }), { headers: { 'content-type': 'application/geo+json' } });
   if (url.endsWith('.js')) return new Response('fetch("https://gdi.bsh.de/ldproxy/rest/services/WaterLevelForecast/collections/x/items")');
   if (url.startsWith('https://wasserstand')) return new Response('<script src="/app.js"></script>', { headers: { 'content-type': 'text/html' } });
   throw new Error('nicht erreichbar');
@@ -19,7 +20,10 @@ const r = await handle(req, { env: { CONTEXT: 'deploy-preview', WATERMAP_KONTAKT
 const j = await r.json();
 assert.equal(r.status, 200);
 assert.ok(aufrufe.every(a => a.ua.startsWith('WaterMap/1.0') && a.ua.includes('kontakt@example.org')), 'eigener User-Agent mit Kontakt');
-assert.ok(j.ergebnisse.some(e => e.name === 'Beispiel stationen'), 'Beispiel-Einträge der Sammlungen');
+assert.deepEqual(j.ergebnisse.find(e => e.name.startsWith('Aufbau')).aufbau.properties.high_water_low_water.liste, 2, 'Aufbau einer Station');
+assert.equal(j.ergebnisse.find(e => e.name === 'Liste aller Stationen').stationen[0], 'cuxhaven_steubenhoeft | Cuxhaven | 5990020 | aad49293-242a-43ad-a8b1-e91d7792c4b2 | north_sea | ', 'Stationsliste kompakt');
+const r2 = await (await handle(new Request('https://x.test/api/gezeiten/probe?runde=2'), { env: {}, fetchFn })).json();
+assert.deepEqual(r2.ergebnisse.map(e => e.name), ['Aufbau Station cuxhaven_steubenhoeft', 'Liste aller Stationen'], 'Runde 2 kurz');
 assert.ok(j.ergebnisse.find(e => e.name === 'Wasserstand-Anwendung').skripte[0].adressen[0].includes('ldproxy'), 'Datenadressen aus Skripten');
 assert.ok(j.ergebnisse.find(e => e.name === 'Gezeiten-Anwendung').fehler, 'Ausfall wird gemeldet, kein Absturz');
 assert.deepEqual(verweise('<a href="/x/data.json">', 'https://a.bsh.de/'), ['https://a.bsh.de/x/data.json']);
