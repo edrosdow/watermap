@@ -230,6 +230,9 @@ body.view-pegel .toolbar, body.view-pegel .shell { display: none; }
   .pg-alle-suche { padding: 12px 12px 4px; }
   .pegelseite:not(.alle-offen) .pg-alle-suche { padding-bottom: 12px; }
   .pg-raster { padding: 16px 16px 0; gap: 22px; }
+  /* Handy: erst „Meine Pegel“, dann „Flüsse im Überblick“ */
+  .pg-links { display: contents; }
+  .pg-o-lage { order: 1; } .pg-o-meine { order: 2; } .pg-o-fluesse { order: 3; } .pg-o-alle { order: 4; } .pg-o-rechts { order: 5; }
   .pg-nur-handy { display: block; }
   .pg-h2-zeile .pg-nur-handy { display: inline-flex; align-items: center; }
   .pg-h2 { font-size: 20px; }

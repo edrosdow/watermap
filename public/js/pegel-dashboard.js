@@ -303,10 +303,10 @@ export function pegelDashboard(root, ctx) {
     const fokus = document.activeElement?.classList?.contains('pg-suche');
     root.replaceChildren(h('div', { class: 'pg-seite' }, kopf(),
       h('div', { class: 'pg-raster' },
-        h('div', { class: 'pg-voll' }, lage()),
-        h('div', { class: 'pg-voll' }, fluesse()),
-        h('div', { class: 'pg-links' }, meine(), alleSektion()),
-        h('div', { class: 'pg-rechts' }, werkzeuge(),
+        h('div', { class: 'pg-voll pg-o-lage' }, lage()),
+        h('div', { class: 'pg-voll pg-o-fluesse' }, fluesse()),
+        h('div', { class: 'pg-links' }, h('div', { class: 'pg-o-meine' }, meine()), h('div', { class: 'pg-o-alle' }, alleSektion())),
+        h('div', { class: 'pg-rechts pg-o-rechts' }, werkzeuge(),
           h('p', { class: 'pg-fuss', text: 'Pegel der WSV (PEGELONLINE). Kleinere Gewässer und Talsperren teils nicht erfasst. Angaben ohne Gewähr.' })))));
     zeichneAlle();
     if (fokus) { const f = root.querySelector('.pg-suche'); f.focus(); f.setSelectionRange(f.value.length, f.value.length); }

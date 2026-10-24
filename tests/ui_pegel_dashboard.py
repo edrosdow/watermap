@@ -89,6 +89,8 @@ def run(b, w, hh, mobile):
     check(pg.locator('.pg-zaehler.is-normal').is_visible() != mobile, f'{tag}: „Normal“ nur am Desktop')
     karten = pg.locator('.pg-meine .pm-karte')
     check(karten.count() == 1 and 'Vlotho' in karten.first.inner_text() and 'Meine Pegel' in pg.inner_text('#pg-meine-t'), f'{tag}: Pegel der Pegel-Ampel übernommen')
+    ym, yf = pg.locator('#pg-meine-t').bounding_box()['y'], pg.locator('#pg-fl-t').bounding_box()['y']
+    check((ym < yf) == (w < 768), f'{tag}: „Meine Pegel“ {"vor" if w < 768 else "nach"} „Flüsse im Überblick“')
     k = karten.first
     pg.wait_for_selector('.pm-karte .pm-spark')
     kt = k.inner_text()
