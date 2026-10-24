@@ -68,7 +68,9 @@ r = await handle(req('nr=1234567'), { fetchFn, env, jetzt });
 assert.equal(r.status, 404);
 assert.equal((await r.json()).keinOrt, true);
 r = await handle(req('orte=1'), { fetchFn, env, jetzt });
-assert.deepEqual((await r.json()).orte.map(o => o.uuid), [CUX]);
+const orteJ = (await r.json()).orte;
+assert.deepEqual(orteJ.map(o => o.uuid), [CUX]);
+assert.deepEqual(orteJ[0].alias, [], 'alias aus der Ausnahmeliste');
 assert.equal((await handle(req('pegel=abc'), { fetchFn, env, jetzt })).status, 400);
 // BSH-Fehler → 502, nicht zwischengespeichert
 r = await handle(req(`pegel=${CUX}`), { fetchFn: async (u) => (u.includes('/items?') ? fetchFn(u, { headers: {} }) : new Response('x', { status: 503 })), env, jetzt });
@@ -90,4 +92,8 @@ assert.ok(blobs.get('orte')?.liste.length === 1);
 _zuruecksetzen(); aufrufe = [];
 await handle(req(`pegel=${CUX}`), { fetchFn, env, store, jetzt: jetzt + 3600e3 });
 assert.ok(!aufrufe.some(a => a.url.includes('/items?')), 'Ortsliste aus Blobs');
+// echte Ausnahmen zeigen auf vorhandene Kennungen
+import { AUSNAHMEN } from '../netlify/lib/gezeiten-orte.mjs';
+assert.equal(ortFinden(orte([feature('grauerort', '5970020', null)]), { nr: '5970026' }), 'grauerort');
+assert.ok(Object.values(AUSNAHMEN).every(v => /^[a-z0-9_-]+$/.test(v)));
 console.log('gezeiten_bsh_test: ok');

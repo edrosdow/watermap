@@ -32,7 +32,7 @@ async function start() {
   else {
     const mit = tide.filter(g => hatBsh(o, g)), ohne = tide.filter(g => !hatBsh(o, g));
     const ids = new Set(st.gauges.map(g => g.id)), nrs = new Set(st.gauges.map(g => g.number).filter(Boolean));
-    const frei = o.liste.filter(x => !(x.uuid && ids.has(x.uuid)) && !(x.nr && nrs.has(x.nr)));
+    const frei = o.liste.filter(x => !(x.uuid && ids.has(x.uuid)) && !(x.nr && nrs.has(x.nr)) && !(x.alias || []).some(a => ids.has(a) || nrs.has(a)));
     teile.push([`Tidepegel mit BSH-Vorhersage (${mit.length})`, mit.map(g => `${g.water}: ${g.name}`).join('\n') || 'keine']);
     teile.push([`Tidepegel ohne BSH-Ort (${ohne.length})`, ohne.map(g => `${g.water}: ${g.name} (Nr. ${g.number || '–'})`).join('\n') || 'keine']);
     teile.push([`BSH-Orte ohne PEGELONLINE-Pegel (${frei.length})`, frei.map(x => `${x.id} | ${x.name} | Nr. ${x.nr || '–'}`).join('\n') || 'keine']);

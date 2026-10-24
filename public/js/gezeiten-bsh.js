@@ -49,7 +49,9 @@ export function vorhersageLaden(g) {
 export function bshOrte() {
   if (!CONFIG.GEZEITEN_BSH_AKTIV) return Promise.resolve(null);
   orteP ||= fetch(`${CONFIG.GEZEITEN_BASE}?orte=1`).then(r => (r.ok ? r.json() : null)).then((j) => j?.orte ? {
-    liste: j.orte, uuids: new Set(j.orte.map(o => o.uuid).filter(Boolean)), nrs: new Set(j.orte.map(o => o.nr).filter(Boolean)),
+    liste: j.orte,
+    uuids: new Set(j.orte.flatMap(o => [o.uuid, ...(o.alias || []).filter(a => a.includes('-'))]).filter(Boolean)),
+    nrs: new Set(j.orte.flatMap(o => [o.nr, ...(o.alias || []).filter(a => !a.includes('-'))]).filter(Boolean)),
   } : null).catch(() => { orteP = null; return null; });
   return orteP;
 }

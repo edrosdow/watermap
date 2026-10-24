@@ -5,6 +5,7 @@
 // Abschalten ohne neuen Deploy: Umgebungsvariable GEZEITEN_BSH_AUS=1. Kontakt im User-Agent: WATERMAP_KONTAKT.
 import { getStore } from '@netlify/blobs';
 import { API, orte, ortFinden, aufbereiten } from '../lib/gezeiten-kern.mjs';
+import { AUSNAHMEN } from '../lib/gezeiten-orte.mjs';
 
 const TIMEOUT_MS = 8000;
 const ORTE_MS = 24 * 3600e3;
@@ -71,7 +72,9 @@ export async function handle(req, { fetchFn = fetch, env = {}, store = null, jet
   let liste;
   try { liste = await orteHolen({ fetchFn, ua, store, jetzt }); }
   catch (e) { return json(502, { fehler: `Gezeitenvorhersage nicht erreichbar: ${e.message}` }); }
-  if (q.get('orte')) return json(200, { orte: liste.map(o => ({ id: o.id, name: o.name, nr: o.nr, uuid: o.uuid })) }, 6 * 3600);
+  // alias: Pegel (Nummer oder UUID) aus der Ausnahmeliste, die diesem Ort zugeordnet sind
+  const alias = (id) => Object.entries(AUSNAHMEN).filter(([, v]) => v === id).map(([k]) => String(k));
+  if (q.get('orte')) return json(200, { orte: liste.map(o => ({ id: o.id, name: o.name, nr: o.nr, uuid: o.uuid, alias: alias(o.id) })) }, 6 * 3600);
   const pegel = q.get('pegel') || '', nr = q.get('nr') || '';
   if (!/^[0-9a-f-]{36}$/i.test(pegel) && !/^\d{3,9}$/.test(nr)) return json(400, { fehler: 'pegel (UUID) oder nr fehlt.' });
   const id = ortFinden(liste, { pegel, nr });
