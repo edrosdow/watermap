@@ -49,4 +49,9 @@ assert.equal(res.status, 502);
 assert.equal(res.headers.get('cache-control'), 'no-store');
 assert.equal((await res.json()).details.length, SERVER.length);
 
+// HTTP 200 mit „runtime error“ (überlastet) gilt als Fehler, nicht als leeres Ergebnis
+res = await handle(req('?lat=51&lon=13'), { fetchFn: async () => ok({ elements: [], remark: 'runtime error: Query timed out in "query" at line 1 after 15 seconds.' }) });
+assert.equal(res.status, 502);
+assert.equal(res.headers.get('cache-control'), 'no-store');
+
 console.log('umgebung: alle Tests OK');

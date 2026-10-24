@@ -9,8 +9,18 @@ import { loadMapLibraries, createMap } from './map.js';
 import { buildIndex, searchLocal, geocode } from './search.js';
 import { favorites, prefs } from './favorites.js';
 import { openForm } from './forms.js';
-import { renderDetail } from './detail.js';
-import { loadGauges, loadHistory, renderGaugeDetail } from './pegel.js';
+import { renderDetail, placeTags, tagRow, routeLink } from './detail.js';
+import { mountNav, popover, swipeToClose } from './nav.js';
+import { bewerte } from './ampel-logik.js';
+import { aktivLaden, standortLaden, statusZeile, vorOrtKarte, zusammenfassen } from './meldungen.js';
+import { openLageForm } from './lage-form.js';
+import { naehe, geoFreigabe } from './naehe.js';
+import { gruppieren, gruppeZu } from './pegel-fluss.js';
+import { flussSeite } from './pegel-fluss-ansicht.js';
+import { istTidepegel } from './gezeiten.js';
+import { pegelLaden, pegelStand, verlaufLaden } from './pegel-daten.js';
+import { pegelDetail, etikett as pegelEtikett, fmt as pegelFmt, trendText, trendKlasse, sternKnopf } from './pegel-ansicht.js';
+import { pegelDashboard, pegelSeite, slipsAmPegel } from './pegel-dashboard.js';
 import { weatherSection } from './wetter.js';
 import { GROUPS, loadExtras, renderExtraDetail, nearbySection, glyph } from './extras.js';
 import { enrichFacts } from './hafeninfo.js';
@@ -18,6 +28,8 @@ import { enrichFacts } from './hafeninfo.js';
 const state = {
   places: [], byId: new Map(), index: [], meta: null, issues: [], invalid: 0,
   cats: new Set(), subs: new Set(), tab: 'list',   // cats: sichtbare Kategorien (Start: keine – der Nutzer wählt)
+  view: 'karte', peekId: null, pegelId: null, gaugePeekId: null,                     // view: karte | liste | favoriten (steht in der Adresse)
+  meld: new Map(), meldOffline: false, meldOnly: false,   // „Heute vor Ort“: Standort-ID → { n, typ }
   selectedId: null, user: null,
   map: null, mapOk: false,
   filtered: [], loadFailed: false,
@@ -27,24 +39,36 @@ const state = {
 
 const el = {
   sidebar: $('#sidebar'), list: $('#list'), listHead: $('#list-head'), datainfo: $('#datainfo'),
-  filterbar: $('#filterbar'), detail: $('#detail'), mapEl: $('#map'), dlg: $('#dlg'),
+  toolbar: $('#toolbar'), pegelseite: $('#pegelseite'), detail: $('#detail'), peek: $('#peek'), mapEl: $('#map'), dlg: $('#dlg'),
   q: $('#q'), suggest: $('#suggest'), tabs: $('#tabs'), banner: $('#banner'), pickbar: $('#pickbar'),
 };
 
-const isMobile = () => window.matchMedia('(max-width: 899px)').matches;
+const isMobile = () => window.matchMedia('(max-width: 767px)').matches;
+const CAT_LABEL = { slip: 'Slipanlagen', marina: 'Häfen', fuel: 'Tanken' };
+const CAT_SHORT = { slip: 'Slip', marina: 'Häfen', fuel: 'Tanken' };
+const CAT_PLURAL = { slip: 'Slipanlagen', marina: 'Häfen', fuel: 'Tankstellen' };
+const fmtN = (n) => n.toLocaleString('de-DE');
+let nav, filterPop, reportPop, nah;
 
 // ============================================================ Start
 async function init() {
   $('#brand-logo').innerHTML = logoSvg(38);
   $('#btn-search-ico').innerHTML = icon('search', 20);
-  $('#btn-menu').innerHTML = icon('menu', 24);
+  $('#btn-report-ico').innerHTML = icon('plus', 20);
+  $('#btn-filter-ico').innerHTML = icon('filter', 20);
   $('#btn-locate').innerHTML = icon('locate', 22);
-  if (window.matchMedia('(max-width: 520px)').matches) el.q.placeholder = 'Suchen …';
+  if (isMobile()) el.q.placeholder = 'Ort, Gewässer oder Standort';
   $('#list-close').innerHTML = icon('close', 20);
+  $('#version-list').textContent = `Version ${CONFIG.VERSION} · Kartendaten © OpenStreetMap-Mitwirkende (ODbL)`;
   state.cats = new Set((prefs.get('cats') || '').split(',').filter(t => TYPE_KEYS.includes(t)));
-  if (prefs.get('listOpen') === '1') document.body.classList.add('list-open');
+  if (!state.cats.size) state.cats.add('slip');   // mindestens eine Kategorie ist immer aktiv
+  nav = mountNav({ top: $('#topnav'), bottom: $('#bottomnav'), active: 'karte', onSelect: onNav });
+  filterPop = popover($('#filter-panel'), { isMobile });
+  reportPop = popover($('#report-menu'), { isMobile, align: 'right' });
   renderSkeleton();
   wireStatic();
+  nah = naehe(naeheCtx());
+  nah.binden({ kopfHandy: $('#naehe-kopf-m'), kopfDesktop: $('#naehe-kopf-d'), head: el.listHead, ul: el.list, aktiv: () => state.view === 'naehe' && !state.loadFailed && state.places.length > 0 });
 
   const [libs, data] = await Promise.all([
     loadMapLibraries().catch(() => ({ leaflet: false })),
@@ -54,8 +78,8 @@ async function init() {
   if (libs.leaflet) {
     state.map = createMap(el.mapEl, {
       useCluster: libs.cluster,
-      onMoveEnd: debounce(() => { if (state.tab === 'list') renderList(); }, 180),
-      onMapClick: () => { if (state.selectedId || state.gaugeId || state.extraId) closeDetail(); },
+      onMoveEnd: debounce(() => { if (state.tab === 'list') renderList(); updateInview(); }, 180),
+      onMapClick: () => { if (state.selectedId || state.gaugeId || state.extraId || state.peekId || state.gaugePeekId) closeDetail(); },
       onMarkerClick: (id) => selectPlace(id),
     });
     state.mapOk = true;
@@ -76,9 +100,55 @@ async function init() {
   if (state.mapOk && data.ok) startView();
   if (state.mapOk && prefs.get('gauges') === '1') setGauges(true);
   if (state.mapOk && hasExtras()) for (const g of Object.keys(GROUPS)) if (prefs.get('extras.' + g) === '1') setExtras(g, true);
-  handleHash();
-  offerLocation();
+  handleHash({ initial: true });
+  if (state.loadFailed) setView('naehe', { push: false });   // Fehlermeldung mit „Erneut laden“ steht in der Liste
   registerServiceWorker();
+  meldAktualisieren();
+  setInterval(() => { if (document.visibilityState === 'visible') meldAktualisieren(); }, 2 * 60e3);
+  window.addEventListener('online', () => meldAktualisieren(true));
+}
+
+// ============================================================ Heute vor Ort (Lagemeldungen)
+async function meldAktualisieren(force = false) {
+  const r = await aktivLaden({ force });
+  meldSetzen(r.map, r.offline);
+}
+
+function meldSetzen(map, offline = state.meldOffline) {
+  state.meld = map; state.meldOffline = offline;
+  state.map?.setMeldungen(map);
+  if (state.meldOnly) applyFilters(); else renderFilterbar();
+}
+
+/** Eigene Meldung/Bestätigung: Marker, Vorschau und Filter sofort aktualisieren. */
+function meldLokal(id, liste) {
+  const next = new Map(state.meld);
+  const info = zusammenfassen(liste);
+  if (info) next.set(id, info); else next.delete(id);
+  meldSetzen(next);
+}
+
+/** Frisch geladener Stand eines Standorts gleicht die Übersicht ab (z. B. abgelaufen). */
+function meldStandortGeladen(id, d) {
+  if (d.offline) return;
+  const info = zusammenfassen(d.meldungen), alt = state.meld.get(id);
+  if (info?.n === alt?.n && info?.typ === alt?.typ && info?.at === alt?.at) return;
+  meldLokal(id, d.meldungen);
+}
+
+/** „Wie ist die Lage?“ für einen Standort öffnen. */
+function lageMelden(p, { distance = null, zurueck = false } = {}) {
+  if (navigator.onLine === false) { toast('Keine Verbindung, bitte später erneut versuchen.'); return; }
+  const d = distance ?? (state.user ? haversine(state.user.lat, state.user.lon, p.lat, p.lon) : null);
+  openLageForm({
+    dialog: el.dlg, place: p, distance: d, toast,
+    onBack: zurueck ? () => { renderReportMenu({ fragen: false }); reportPop.open($(isMobile() ? '#bottomnav [data-nav="melden"]' : '#btn-report')); } : null,
+    onSent: (liste) => {
+      meldLokal(p.id, liste);
+      if (state.peekId === p.id) showPeek(p);
+      else if (state.selectedId === p.id && !el.detail.hidden) showDetail(p, { scrollTo: 'vor-ort' });
+    },
+  });
 }
 
 function ingest({ places, meta, issues, invalid }) {
@@ -144,6 +214,7 @@ function renderDatainfo() {
 function singleCat() { return state.cats.size === 1 ? [...state.cats][0] : null; }
 
 function toggleCat(type, on = !state.cats.has(type)) {
+  if (!on && state.cats.size === 1 && state.cats.has(type)) { toast('Mindestens eine Kategorie bleibt eingeblendet.'); return; }
   if (on) state.cats.add(type); else state.cats.delete(type);
   state.subs.clear();
   prefs.set('cats', [...state.cats].join(','));
@@ -153,7 +224,7 @@ function toggleCat(type, on = !state.cats.has(type)) {
 function applyFilters() {
   const one = singleCat();
   const defs = one ? FILTERS[one].filter(d => state.subs.has(d.id)) : [];
-  state.filtered = state.places.filter(p => state.cats.has(p.type) && defs.every(d => d.test(p)));
+  state.filtered = state.places.filter(p => state.cats.has(p.type) && defs.every(d => d.test(p)) && (!state.meldOnly || state.meld.has(p.id)));
   renderFilterbar();
   if (state.map) state.map.setPlaces(withFavorites(state.filtered));
   if (state.map && state.selectedId) state.map.select(state.selectedId);
@@ -167,147 +238,196 @@ function withFavorites(list) {
   return extra.length ? list.concat(extra) : list;
 }
 
+/** Werkzeugleiste (Kategorien, Filter-Knopf, aktive Filter, Anzahl im Ausschnitt); offenes Filter-Fenster mit aktualisieren. */
 function renderFilterbar() {
-  const bar = clear(el.filterbar);
-  // Kategorien einzeln ein- und ausschalten (Start: keine, die Auswahl wird gemerkt)
-  const cats = TYPE_KEYS.map(t => [t, TYPES[t].plural, state.places.filter(p => p.type === t).length]);
-  const row1 = h('div', { class: 'chips', role: 'group', 'aria-label': 'Auf der Karte zeigen' }, cats.map(([key, label, n]) => {
-    const on = state.cats.has(key);
-    return h('button', { type: 'button', class: `chip chip-${key}` + (on ? ' is-active' : ''), 'aria-pressed': String(on),
-      title: on ? `${label} ausblenden` : `${label} auf der Karte zeigen`, onclick: () => toggleCat(key) },
-      h('span', { class: 'chip-dot', html: glyphSvg(key, 16) }),
-      h('span', { text: label }), h('span', { class: 'chip-n', text: String(n) }));
+  renderToolbar();
+  if (filterPop?.isOpen) renderFilterPanel();
+}
+
+function renderToolbar() {
+  const counts = Object.fromEntries(TYPE_KEYS.map(t => [t, state.places.filter(p => p.type === t).length]));
+  clear($('#cats')).append(...TYPE_KEYS.map(t => {
+    const on = state.cats.has(t);
+    return h('button', { type: 'button', class: `cat cat-${t}`, 'aria-pressed': String(on), dataset: { cat: t },
+      title: on ? `${TYPES[t].plural} ausblenden` : `${TYPES[t].plural} auf der Karte zeigen`, onclick: () => toggleCat(t) },
+      h('span', { class: 'cat-check', html: icon('check', 16), 'aria-hidden': 'true' }),
+      h('span', { class: 'cat-label cat-label-long', text: CAT_LABEL[t] }), h('span', { class: 'cat-label cat-label-short', text: CAT_SHORT[t] }), state.places.length ? h('span', { class: 'cat-n', text: fmtN(counts[t]) }) : null);
   }));
+  const n = state.subs.size + (state.meldOnly ? 1 : 0);
+  const badge = $('#filter-n');
+  badge.hidden = !n; badge.textContent = n ? String(n) : '';
+  $('#btn-filter').setAttribute('aria-label', n ? `Filter, ${n} aktiv` : 'Filter');
+  const one = singleCat();
+  clear($('#filter-tags')).append(...[...(one ? FILTERS[one].filter(d => state.subs.has(d.id)) : []).map(d =>
+    h('button', { type: 'button', class: 'ftag', 'aria-label': `Filter ${d.label} entfernen`, onclick: () => { state.subs.delete(d.id); applyFilters(); $('#btn-filter').focus(); } },
+      h('span', { text: d.label }), h('span', { html: icon('close', 16) }))),
+    state.meldOnly ? h('button', { type: 'button', class: 'ftag', 'aria-label': 'Filter Aktuelle Meldungen entfernen', onclick: () => { setMeldOnly(false); $('#btn-filter').focus(); } },
+      h('span', { text: 'Aktuelle Meldungen' }), h('span', { html: icon('close', 16) })) : null].filter(Boolean));   // replaceChildren/append machen aus null den Text „null“
+  $('#cat-hint').hidden = true;
+  updateInview();
+}
+
+function setMeldOnly(on) { state.meldOnly = on; applyFilters(); }
+
+/** Wie viele der gewählten Standorte (vor dem Meldungs-Filter) gerade Meldungen haben. */
+function meldCount() {
+  return state.places.filter(p => state.cats.has(p.type) && state.meld.has(p.id)).length;
+}
+
+/** „24 Slipanlagen im Kartenausschnitt“ (Desktop, rechts in der Werkzeugleiste). */
+function updateInview() {
+  const box = $('#inview');
+  if (!state.map || !state.places.length) { box.textContent = ''; return; }
+  if (!state.cats.size) { box.textContent = 'Keine Kategorie gewählt'; return; }
+  const b = state.map.getBounds();
+  const n = state.filtered.filter(p => p.lat >= b.south && p.lat <= b.north && p.lon >= b.west && p.lon <= b.east).length;
+  const one = singleCat();
+  box.replaceChildren(h('strong', { text: fmtN(n) }), ` ${one ? CAT_PLURAL[one] : (n === 1 ? 'Standort' : 'Standorte')} im Kartenausschnitt`);
+}
+
+function fswitch(label, on, onToggle, { count = null, disabled = false, title = null, key = null } = {}) {
+  return h('button', { type: 'button', role: 'switch', class: 'fswitch', 'aria-checked': String(on), 'aria-disabled': disabled ? 'true' : null, title, onclick: onToggle, dataset: key ? { key } : null },
+    h('span', { class: 'fswitch-label', text: label }), count !== null ? h('span', { class: 'fswitch-n', text: fmtN(count) }) : null,
+    h('span', { class: 'fswitch-track', 'aria-hidden': 'true' }));
+}
+
+/** Filter-Fenster: Unterfilter der gewählten Kategorie und Kartenebenen (Pegel, Schleusen & Brücken …). */
+function renderFilterPanel() {
+  const body = $('#filter-body');
+  const focusedLabel = document.activeElement?.closest?.('#filter-panel .fswitch')?.querySelector('.fswitch-label')?.textContent;
+  clear(body);
+  const one = singleCat();
+  body.append(h('h2', { id: 'filter-title', text: 'Filter' }));
+  body.append(h('section', { class: 'fsec' }, h('h3', { text: 'Heute vor Ort' }),
+    fswitch('Aktuelle Meldungen', state.meldOnly, () => setMeldOnly(!state.meldOnly), { key: 'meldungen', count: meldCount() }),
+    state.meldOffline ? h('p', { class: 'hint', text: 'Offline – Stand der letzten Abfrage.' }) : null));
+  const sec1 = h('section', { class: 'fsec' }, h('h3', { text: one ? TYPES[one].plural : 'Eigenschaften' }));
+  if (one) {
+    sec1.append(...filterCounts(state.places, one).map(d => {
+      const on = state.subs.has(d.id), none = d.count === 0;
+      return fswitch(d.label, on, () => {
+        if (none && !on) { toast('Zu diesem Filter liegen noch keine bestätigten Angaben vor.'); return; }
+        if (on) state.subs.delete(d.id); else state.subs.add(d.id);
+        applyFilters();
+      }, { key: 'sub-' + d.id, count: d.count, disabled: none && !on, title: none ? 'Dazu liegen noch keine bestätigten Angaben vor.' : `${d.count} von ${d.total} Standorten mit bestätigter Angabe` });
+    }));
+    sec1.append(h('p', { class: 'hint', text: 'Gezeigt werden nur Standorte mit bestätigter Angabe. Unbekanntes gilt nicht als „Nein“.' }));
+  } else {
+    sec1.append(h('p', { class: 'hint', text: state.cats.size ? 'Weitere Filter gibt es, wenn genau eine Kategorie gewählt ist.' : 'Wähle zuerst Slipanlagen, Häfen oder Tanken.' }));
+  }
+  body.append(sec1);
   if (state.mapOk) {
-    row1.append(h('button', { type: 'button', class: 'chip chip-gauge' + (state.gaugesOn ? ' is-active' : ''), 'aria-pressed': String(state.gaugesOn),
-      title: state.gaugesOn ? 'Pegelstände ausblenden' : 'Aktuelle Pegelstände der Bundeswasserstraßen einblenden',
-      onclick: () => setGauges(!state.gaugesOn) },
-      h('span', { class: 'chip-dot', html: icon('gauge', 16) }), h('span', { text: 'Pegel' }),
-      state.gaugesOn && state.gauges ? h('span', { class: 'chip-n', text: String(state.gauges.length) }) : null));
+    const sec2 = h('section', { class: 'fsec' }, h('h3', { text: 'Auf der Karte zeigen' }),
+      fswitch('Pegelstände', state.gaugesOn, () => setGauges(!state.gaugesOn), { key: 'gauges', count: state.gaugesOn && state.gauges ? state.gauges.length : null }));
     if (hasExtras()) {
       for (const [g, def] of Object.entries(GROUPS)) {
         const on = state.extrasOn[g];
         const n = on && state.extras ? state.extras.filter(x => def.kinds.includes(x.kind)).length : null;
-        row1.append(h('button', { type: 'button', class: `chip chip-extra chip-extra-${g}` + (on ? ' is-active' : ''), 'aria-pressed': String(on),
-          style: `--c:${def.color}`, title: on ? `${def.label} ausblenden` : `${def.label} einblenden`, onclick: () => setExtras(g, !on) },
-          h('span', { class: 'chip-dot', html: glyph(def.kinds[0], 15) }), h('span', { text: def.label }),
-          n !== null ? h('span', { class: 'chip-n', text: String(n) }) : null));
+        sec2.append(fswitch(def.label, on, () => setExtras(g, !on), { key: 'extra-' + g, count: n }));
       }
     }
+    body.append(sec2);
   }
-  const nFav = favorites.all().filter(id => state.byId.has(id)).length;
-  if (nFav) row1.prepend(h('button', { type: 'button', class: 'chip chip-fav', title: 'Meine Favoriten anzeigen', onclick: () => setListOpen(true, 'fav') },
-    h('span', { class: 'chip-dot', html: icon('star', 15, true) }), h('span', { text: 'Favoriten' }), h('span', { class: 'chip-n', text: String(nFav) })));
-  bar.append(row1);
-  if (!state.cats.size && state.places.length) {
-    bar.append(h('p', { class: 'filter-hint', text: 'Tippe oben auf Slipanlagen, Marinas oder Tankstellen, um sie auf der Karte zu zeigen.' }));
-  }
-  if (singleCat()) {
-    const counts = filterCounts(state.places, singleCat());
-    bar.append(h('div', { class: 'chips chips-sub', role: 'group', 'aria-label': 'Weitere Filter' }, counts.map(d => {
-      const on = state.subs.has(d.id), none = d.count === 0;
-      return h('button', { type: 'button', class: 'chip chip-sub' + (on ? ' is-active' : '') + (none && !on ? ' is-empty' : ''), 'aria-pressed': String(on),
-        'aria-disabled': none && !on ? 'true' : null,
-        title: none ? 'Dazu liegen noch keine bestätigten Angaben vor.' : `${d.count} von ${d.total} Standorten mit bestätigter Angabe`,
-        onclick: () => { if (none && !on) { toast('Zu diesem Filter liegen noch keine bestätigten Angaben vor.'); return; } on ? state.subs.delete(d.id) : state.subs.add(d.id); applyFilters(); } },
-        h('span', { text: d.label }), h('span', { class: 'chip-n', text: String(d.count) }));
-    })));
-  }
+  const shown = state.filtered.length;
+  clear($('#filter-foot')).append(
+    h('button', { type: 'button', class: 'btn btn-outline', text: 'Zurücksetzen', disabled: !state.subs.size && !state.meldOnly, onclick: () => { state.subs.clear(); state.meldOnly = false; applyFilters(); } }),
+    h('button', { type: 'button', class: 'btn btn-primary', 'data-autofocus': '', text: `${fmtN(shown)} Standort${shown === 1 ? '' : 'e'} anzeigen`, onclick: () => filterPop.close() }));
+  // Fokus bleibt nach dem Umschalten auf demselben Schalter (die Liste wird neu gezeichnet)
+  if (focusedLabel) [...body.querySelectorAll('.fswitch')].find(b => b.querySelector('.fswitch-label').textContent === focusedLabel)?.focus();
+}
+
+// ============================================================ In der Nähe / Favoriten
+function naeheCtx() {
+  return {
+    places: () => state.filtered,
+    allPlaces: () => state.places,
+    user: () => state.user,
+    setUser: (pos) => { state.user = pos; state.map?.showUser(pos.lat, pos.lon, pos.accuracy); },
+    requestUserPos,
+    mapCenter: () => (state.map ? state.map.getCenter() : null),
+    isMobile,
+    liste: () => el.list,
+    cats: () => state.cats,
+    toggleCat: (t) => toggleCat(t),
+    meld: () => state.meld,
+    filterZahl: () => state.subs.size + (state.meldOnly ? 1 : 0),
+    filterOeffnen: (btn) => { if (!filterPop.isOpen) renderFilterPanel(); filterPop.toggle(btn); },
+    filterZuruecksetzen: () => { state.subs.clear(); state.meldOnly = false; applyFilters(); },
+    // Tipp auf einen Standort: Handy → Karte mit Vorschau (Zurück führt wieder hierher), Desktop → Details neben der Liste
+    waehlen: (p) => { if (isMobile()) setView('karte'); selectPlace(p.id); },
+    aufKarte: (liste) => {
+      if (isMobile()) setView('karte');
+      if (!state.map || !liste.length) return;
+      setTimeout(() => { state.map.invalidate(); state.map.fitBounds(liste.map(p => [p.lat, p.lon]), { maxZoom: 14 }); }, 0);
+    },
+    leer: leereKategorie,
+    dialog: el.dlg,
+    toast,
+  };
 }
 
 // ============================================================ Liste
-function distanceFrom(p) {
-  const ref = state.user || (state.map ? state.map.getCenter() : null);
-  return ref ? haversine(ref.lat, ref.lon, p.lat, p.lon) : null;
-}
-
 function renderList() {
   clear(el.listHead);
   if (state.loadFailed && state.tab === 'list') { renderLoadError(); return; }
-  let items, headText, note = null;
-
-  if (state.tab === 'fav') {
-    items = favorites.all().map(id => state.byId.get(id)).filter(Boolean);
-    items.sort((a, b) => displayName(a).localeCompare(displayName(b), 'de'));
-    headText = `${items.length} Favorit${items.length === 1 ? '' : 'en'}`;
-    if (!favorites.persistent) note = 'Dein Browser erlaubt kein Speichern. Favoriten gelten nur bis zum Schließen.';
-  } else {
-    let pool = state.filtered;
-    let inView = false;
-    if (state.map && state.map.getZoom() >= 7) {
-      const b = state.map.getBounds();
-      const visible = pool.filter(p => p.lat >= b.south && p.lat <= b.north && p.lon >= b.west && p.lon <= b.east);
-      if (visible.length || !pool.length) { pool = visible; inView = true; }
-    }
-    items = pool.map(p => ({ p, d: distanceFrom(p) }));
-    items.sort((a, b) => (a.d ?? 0) - (b.d ?? 0) || displayName(a.p).localeCompare(displayName(b.p), 'de'));
-    items = items.map(x => x.p);
-    const total = pool.length;
-    headText = inView ? `${total} im Kartenausschnitt` : `${total} Standort${total === 1 ? '' : 'e'}`;
-    if (total > CONFIG.LIST_LIMIT) { note = `Die ${CONFIG.LIST_LIMIT} nächsten werden gezeigt. Zoome näher heran oder nutze die Filter.`; items = items.slice(0, CONFIG.LIST_LIMIT); }
-    else if (state.subs.size) note = 'Gefiltert werden nur Standorte mit bestätigter Angabe. Unbekanntes gilt nicht als „Nein“.';
+  if (state.tab === 'list') {
+    if (state.places.length) { nah?.zeichnen(); return; }
+    clear(el.list).append(emptyState());
+    return;
   }
-
+  // Favoriten (eigener Tab): gleiche Karten wie „In der Nähe“, nach Name
+  const items = favorites.all().map(id => state.byId.get(id)).filter(Boolean);
+  items.sort((a, b) => displayName(a).localeCompare(displayName(b), 'de'));
+  const headText = `${items.length} Favorit${items.length === 1 ? '' : 'en'}`;
   $('#count').textContent = headText;
   el.listHead.append(h('strong', { text: headText }));
-  if (note) el.listHead.append(h('span', { class: 'muted', text: note }));
-
+  if (!favorites.persistent) el.listHead.append(h('span', { class: 'muted', text: 'Dein Browser erlaubt kein Speichern. Favoriten gelten nur bis zum Schließen.' }));
   const ul = clear(el.list);
   if (!items.length) { ul.append(emptyState()); return; }
-  for (const p of items) {
-    const d = distanceFrom(p);
-    const sub = subtitle(p, { short: true });
-    ul.append(h('li', {},
-      h('button', { type: 'button', class: 'place' + (p.id === state.selectedId ? ' is-selected' : ''), dataset: { id: p.id }, onclick: () => selectPlace(p.id) },
-        h('span', { class: `place-ico bg-${p.type}`, html: glyphSvg(p.type, 24) }),
-        h('span', { class: 'place-text' },
-          h('span', { class: 'place-name', text: displayName(p) }),
-          h('span', { class: 'place-sub', text: [singleCat() ? null : TYPES[p.type].label, sub].filter(Boolean).join(' · ') || TYPES[p.type].label })),
-        favorites.has(p.id) ? h('span', { class: 'place-fav', html: icon('star', 16, true), 'aria-label': 'Favorit' }) : null,
-        d !== null && state.tab === 'list' ? h('span', { class: 'place-dist', text: formatDistance(d) }) : null)));
-  }
+  for (const p of items) ul.append(nah.karte(p, state.user ? haversine(state.user.lat, state.user.lon, p.lat, p.lon) : null));
 }
 
 function emptyState() {
   if (state.tab === 'fav') return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Noch keine Favoriten' }), h('p', { class: 'muted', text: 'Tippe in einer Standortansicht auf den Stern, um einen Ort hier zu speichern.' }));
-  if (!state.places.length) return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Noch keine Standorte in der Datenbank' }), h('p', { class: 'muted', text: 'Du kannst trotzdem Slipanlagen melden. Sie erscheinen nach Prüfung.' }));
-  if (!state.cats.size) return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Keine Kategorie gewählt' }), h('p', { class: 'muted', text: 'Tippe oben auf der Karte auf Slipanlagen, Marinas oder Tankstellen.' }));
+  return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Noch keine Standorte in der Datenbank' }), h('p', { class: 'muted', text: 'Du kannst trotzdem Slipanlagen melden. Sie erscheinen nach Prüfung.' }));
+}
+
+/** „In der Nähe“ leer, weil die eine gewählte Kategorie noch gar keine Daten hat: ehrlich sagen statt „nichts im Umkreis“. */
+function leereKategorie() {
   const one = singleCat();
-  if (one && !state.places.some(p => p.type === one)) {
-    return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: `Noch keine ${TYPES[one].plural} in der Datenbank` }),
-      h('p', { class: 'muted', text: 'Für diese Kategorie steht der Import aus OpenStreetMap noch aus. Es werden keine Standorte erfunden.' }),
-      one === 'slip' ? h('button', { class: 'btn btn-outline', type: 'button', text: 'Slipanlage melden', onclick: () => openReport('slipanlage-melden') }) : null);
-  }
-  if (state.subs.size) return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Keine Treffer für diese Filter' }), h('p', { class: 'muted', text: 'Nur Standorte mit bestätigter Angabe werden gezeigt. Nimm einen Filter heraus.' }), h('button', { class: 'btn btn-outline', type: 'button', text: 'Filter zurücksetzen', onclick: () => { state.subs.clear(); applyFilters(); } }));
-  return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: 'Hier ist nichts in der Nähe' }), h('p', { class: 'muted', text: 'Verschiebe oder verkleinere die Karte, um weitere Standorte zu sehen.' }));
+  if (!one || state.places.some(p => p.type === one)) return null;
+  return h('li', { class: 'empty' }, h('p', { class: 'empty-title', text: `Noch keine ${TYPES[one].plural} in der Datenbank` }),
+    h('p', { class: 'muted', text: 'Für diese Kategorie steht der Import aus OpenStreetMap noch aus. Es werden keine Standorte erfunden.' }),
+    one === 'slip' ? h('button', { class: 'btn btn-outline', type: 'button', text: 'Slipanlage melden', onclick: () => openReport('slipanlage-melden') }) : null);
 }
 
 // ============================================================ Auswahl und Details
 function detailInset() {
-  if (isMobile()) return { bottom: Math.round(window.innerHeight * 0.5), top: el.filterbar.offsetHeight + 8 };
-  return { right: el.detail.offsetWidth + 24, top: el.filterbar.offsetHeight + 8 };
+  if (isMobile()) return state.peekId ? { bottom: el.peek.offsetHeight + 24, top: 16 } : { bottom: Math.round(el.mapEl.offsetHeight * 0.6), top: 16 };
+  return { right: el.detail.offsetWidth + 24, top: 16 };
 }
 
-function selectPlace(id, { fly = true, updateHash = true } = {}) {
+function selectPlace(id, { fly = true, updateHash = true, full = false } = {}) {
   const p = state.byId.get(id);
   if (!p) return false;
   const pick = state.placePick;
-  if (pick && pick.type && p.type !== pick.type) { toast('Bitte eine Bootstankstelle antippen.'); return false; }
+  if (pick && pick.type && p.type !== pick.type) { toast(pick.type === 'slip' ? 'Bitte eine Slipanlage antippen.' : 'Bitte eine Bootstankstelle antippen.'); return false; }
   if (state.gaugeId) { state.gaugeId = null; state.map?.selectGauge(null); }
   if (state.extraId) { state.extraId = null; state.map?.selectExtra(null); }
   if (!state.cats.has(p.type)) toggleCat(p.type, true);   // z. B. Link oder Suche: Kategorie des Standorts einblenden
   state.selectedId = id;
   if (state.map) { state.map.select(id); }
-  showDetail(p);
+  // Handy: erst die kompakte Vorschau über der Navigation, „Details“ öffnet das Panel
+  if (isMobile() && !full && !pick) { closeDetailPanel(); showPeek(p); } else { hidePeek(); showDetail(p); }
   if (state.map && fly) state.map.reveal(p, { zoom: 15, inset: detailInset() });
-  if (updateHash) history.replaceState(null, '', '#p=' + encodeURIComponent(id));
+  if (updateHash) setSelHash('p', id);
   $$('.place', el.list).forEach(b => b.classList.toggle('is-selected', b.dataset.id === id));
   announce(`${displayName(p)} ausgewählt`);
   if (pick) { endPlacePick(); openReport(pick.formName, { ...pick.preset, standort_id: id }); }  // Auswahlmodus aus dem Menü
   return true;
 }
 
-function showDetail(p) {
+function showDetail(p, { scrollTo = null } = {}) {
   const [head, body] = renderDetail(p, {
     user: state.user,
     enrichFacts: enrichFacts(state.meta, p.id),
@@ -318,20 +438,136 @@ function showDetail(p) {
     }),
     actions: {
       close: closeDetail,
-      onFavorite: () => { favorites.toggle(p.id); showDetail(p); renderList(); updateTabs(); renderFilterbar(); state.map?.refresh(p.id); },
+      onFavorite: () => { favorites.toggle(p.id); showDetail(p); renderList(); updateTabs(); state.map?.refresh(p.id); },
       share: () => shareLink(p),
       report: () => openReport('fehler-melden', { standort_id: p.id }),
       addPhoto: () => openReport('foto-einreichen', { standort_id: p.id }),
       reportPhoto: (ph) => openReport('fehler-melden', { standort_id: p.id, art: 'foto', details: `Foto unpassend: ${ph.url}\nGrund: ` }),
       reportPrice: () => openReport('tankpreis-melden', { standort_id: p.id }),
     },
+    pegel: pegelInfo(p).then(info => info && pegelBox(info)),
+    vorOrt: p.type === 'slip' ? vorOrtTeile(p) : null,   // „Heute vor Ort“ nur bei Slipanlagen
   });
-  mountDetail(head, body);
+  mountDetail(head, body, 'p:' + p.id);
+  if (scrollTo === 'vor-ort') setTimeout(() => {
+    const sec = el.detail.querySelector('#heute-vor-ort');
+    sec?.scrollIntoView({ block: 'start' }); sec?.focus({ preventScroll: true });
+  }, 0);
 }
 
-function mountDetail(head, body) {
+/** Ist die (schon bekannte) Position höchstens VOR_ORT_RADIUS_M entfernt? Nie selbst nach der Position fragen. */
+function istNah(p) {
+  return !!state.user && haversine(state.user.lat, state.user.lon, p.lat, p.lon) <= CONFIG.VOR_ORT_RADIUS_M;
+}
+
+/** Karte „Heute vor Ort“ – frisch geladen beim Öffnen des Standorts. */
+function vorOrtTeile(p) {
+  const daten = standortLaden(p.id);
+  daten.then(d => meldStandortGeladen(p.id, d));
+  const section = vorOrtKarte({
+    standortId: p.id, daten, nah: istNah(p), toast,
+    onMehr: () => lageMelden(p),
+    onGeaendert: (liste) => meldLokal(p.id, liste),
+    onGesendet: (liste) => { meldLokal(p.id, liste); toast('Danke! Deine Meldung ist jetzt sichtbar.'); },
+  });
+  return { zeile: null, section };
+}
+
+// ---- Vorschau-Karte (Handy)
+function showPeek(p) {
+  state.peekId = p.id;
+  const isFav = favorites.has(p.id);
+  const dist = state.user ? haversine(state.user.lat, state.user.lon, p.lat, p.lon) : null;
+  const sub = [p.water?.name || p.locality || TYPES[p.type].label, dist !== null ? `${formatDistance(dist)} entfernt` : null].filter(Boolean).join(' · ');
+  const tags = h('div', { class: 'peek-tags' }, tagRow(placeTags(p, 3)));
+  const details = h('button', { type: 'button', class: 'dbtn', text: 'Details', onclick: () => { hidePeek(); showDetail(p); el.detail.focus({ preventScroll: true }); } });
+  const card = h('div', { class: 'peek-card' },
+    h('span', { class: `peek-ico bg-${p.type}`, html: glyphSvg(p.type, 28) }),
+    h('div', { class: 'peek-text' }, h('h2', { class: 'peek-name', id: 'peek-name', text: displayName(p) }), h('p', { class: 'peek-sub', text: sub }), tags),
+    h('button', { type: 'button', class: 'peek-fav', 'aria-pressed': String(isFav), 'aria-label': isFav ? 'Aus Favoriten entfernen' : 'Als Favorit speichern', html: icon('star', 22, isFav),
+      onclick: () => { favorites.toggle(p.id); showPeek(p); renderList(); updateTabs(); state.map?.refresh(p.id); } }),
+    h('div', { class: 'peek-meld' }),
+    h('div', { class: 'peek-actions' }, routeLink(p), details));
+  clear(el.peek).append(card);
+  el.peek.setAttribute('aria-labelledby', 'peek-name');
+  el.peek.hidden = false;
+  document.body.classList.add('has-peek');
+  document.body.style.setProperty('--peek-h', `${el.peek.offsetHeight}px`);
+  if (p.type === 'slip' && state.meld.has(p.id)) {
+    standortLaden(p.id).then((d) => {
+      if (state.peekId !== p.id) return;
+      meldStandortGeladen(p.id, d);
+      const z = statusZeile(d.meldungen, { offline: d.offline, zeit: d.zeit, onOpen: () => { hidePeek(); showDetail(p, { scrollTo: 'vor-ort' }); } });
+      card.querySelector('.peek-meld').replaceChildren(...[z].filter(Boolean));
+      document.body.style.setProperty('--peek-h', `${el.peek.offsetHeight}px`);
+    });
+  }
+  // Pegel-Etikett nur, wenn für diesen Pegel ein Mindestpegel in der Pegel-Ampel gespeichert ist
+  pegelInfo(p).then((info) => {
+    if (!info?.ampel || state.peekId !== p.id) return;
+    const row = tags.querySelector('.dtags') || tags.appendChild(h('div', { class: 'dtags' }));
+    row.append(h('span', { class: `dtag ${info.ampel.cls}`, text: info.ampel.tag }));
+    document.body.style.setProperty('--peek-h', `${el.peek.offsetHeight}px`);
+  });
+}
+
+function hidePeek() {
+  if (!state.peekId && el.peek.hidden) return;
+  state.peekId = null;
+  el.peek.hidden = true; clear(el.peek);
+  document.body.classList.remove('has-peek');
+}
+
+// ---- Pegel am selben Gewässer (nächster PEGELONLINE-Pegel bis 15 km)
+const PEGEL_RADIUS_M = 15000;
+const normWater = (s) => String(s || '').toLowerCase().replace(/[^a-zäöüß]/g, '');
+function allGauges() { return pegelLaden().then(st => st.gauges); }
+const AMPEL_TAG = {
+  gruen: { tag: 'Pegel gut', cls: 'is-good', box: 'is-gruen' },
+  gelb: { tag: 'Pegel knapp', cls: 'is-warn', box: '' },
+  rot: { tag: 'Pegel zu niedrig', cls: 'is-bad', box: 'is-rot' },
+};
+const pegelCache = new Map();
+function pegelInfo(p) {
+  const w = normWater(p.water?.name);
+  if (w.length < 3) return Promise.resolve(null);
+  if (pegelCache.has(p.id)) return pegelCache.get(p.id);
+  const pr = allGauges().then((list) => {
+    let best = null;
+    for (const g of list) {
+      const gw = normWater(g.water);
+      if (!gw || !(gw === w || gw.includes(w) || w.includes(gw))) continue;
+      const d = haversine(p.lat, p.lon, g.lat, g.lon);
+      if (d <= PEGEL_RADIUS_M && (!best || d < best.d)) best = { g, d };
+    }
+    if (!best) return null;
+    let ampel = null;
+    try {
+      const a = JSON.parse(localStorage.getItem('watermap.ampel') || '{}');
+      if (a.pegel === best.g.id && Number.isFinite(a.min)) ampel = AMPEL_TAG[bewerte({ pegel: best.g, mindest: a.min }).status] || null;
+    } catch { /* ohne gespeicherte Ampel */ }
+    return { ...best, ampel };
+  }).catch(() => null);
+  pegelCache.set(p.id, pr);
+  return pr;
+}
+
+function pegelBox({ g, ampel }) {
+  const trend = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' }[g.trend];
+  return h('div', { class: 'pegel-box ' + (ampel ? ampel.box : 'is-neutral') },
+    h('div', {},
+      h('p', {}, h('strong', { text: `Pegel ${g.name}: ${fmtN(Math.round(g.value))} ${g.unit}${trend ? `, ${trend}` : ''}` })),
+      h('small', { text: ampel ? `${ampel.tag} für dein Boot (laut Pegel-Ampel)` : 'Passt dein Boot heute?' })),
+    h('a', { href: `./pegel-ampel?pegel=${encodeURIComponent(g.id)}`, text: 'Pegel-Ampel ›' }));
+}
+
+
+/** key: wer gezeigt wird – nur beim Neuzeichnen desselben Eintrags bleibt die Scroll-Position erhalten
+ *  (sonst öffnete ein anderer Standort mitten im Panel und der Kopf überdeckte die ersten Zeilen). */
+function mountDetail(head, body, key = '') {
   const scroll = el.detail.querySelector('.detail-scroll');
-  const prev = scroll ? scroll.scrollTop : 0;
+  const prev = scroll && el.detail.dataset.key === key ? scroll.scrollTop : 0;
+  el.detail.dataset.key = key;
   clear(el.detail).append(h('div', { class: 'detail-scroll' }, head, body));
   el.detail.hidden = false;
   el.detail.setAttribute('aria-labelledby', 'detail-name');
@@ -340,15 +576,21 @@ function mountDetail(head, body) {
   if (!el.detail.dataset.opened) { el.detail.dataset.opened = '1'; el.detail.tabIndex = -1; el.detail.focus({ preventScroll: true }); }
 }
 
+function closeDetailPanel() {
+  el.detail.hidden = true; clear(el.detail); delete el.detail.dataset.opened; el.detail.classList.remove('is-pegel');
+  document.body.classList.remove('has-detail');
+}
+
 function closeDetail() {
   const prev = state.selectedId;
   state.selectedId = null;
   if (state.gaugeId) { state.gaugeId = null; state.map?.selectGauge(null); }
   if (state.extraId) { state.extraId = null; state.map?.selectExtra(null); }
-  el.detail.hidden = true; clear(el.detail); delete el.detail.dataset.opened;
-  document.body.classList.remove('has-detail');
+  closeDetailPanel();
+  hidePeek();
+  hideGaugePeek();
   if (state.map) state.map.select(null);
-  history.replaceState(null, '', location.pathname + location.search);
+  setSelHash(null);
   $$('.place', el.list).forEach(b => b.classList.remove('is-selected'));
   if (prev) $(`.place[data-id="${CSS.escape(prev)}"]`, el.list)?.focus({ preventScroll: true });
 }
@@ -382,8 +624,9 @@ async function setGauges(on) {
 
 async function refreshGauges() {
   try {
-    const list = await loadGauges();
+    const st = await pegelLaden(), list = st.gauges;
     if (!state.gaugesOn) return;
+    if (st.offline) toast(`Pegeldaten sind gerade nicht erreichbar – angezeigt wird der Stand von ${new Date(st.zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr.`);
     state.gauges = list;
     state.gaugeById = new Map(list.map(g => [g.id, g]));
     state.map?.setGauges(list, (id) => selectGauge(id));
@@ -396,21 +639,162 @@ async function refreshGauges() {
   renderFilterbar();
 }
 
-function selectGauge(id, { fly = true } = {}) {
-  const g = state.gaugeById.get(id);
+/** Pegel-Marker auf der Karte: Handy → Vorschau-Karte über der Leiste, Desktop → rechtes Panel. Der Bereich bleibt „Karte“. */
+function selectGauge(id, { fly = true, full = false } = {}) {
+  const g = state.gaugeById.get(id) || pegelStand()?.byId.get(id);
   if (!g) return false;
   if (state.selectedId) { state.selectedId = null; state.map?.select(null); $$('.place', el.list).forEach(b => b.classList.remove('is-selected')); }
   if (state.extraId) { state.extraId = null; state.map?.selectExtra(null); }
-  state.gaugeId = id;
+  hidePeek();
   state.map?.selectGauge(id);
-  const dist = state.user ? formatDistance(haversine(state.user.lat, state.user.lon, g.lat, g.lon)) : null;
-  const [head, body] = renderGaugeDetail(g, { history: loadHistory(id), close: closeDetail, user: state.user, distance: dist, weather: weatherSection(g.lat, g.lon) });
-  mountDetail(head, body);
+  if (isMobile() && !full) {
+    closeDetailPanel(); state.gaugeId = null;
+    showGaugePeek(g);
+  } else {
+    hideGaugePeek();
+    state.gaugeId = id;
+    gaugePanel(g);
+  }
   if (state.map && fly) state.map.reveal(g, { zoom: 12, inset: detailInset() });
-  history.replaceState(null, '', '#g=' + encodeURIComponent(id));
+  setSelHash('g', id);
   announce(`Pegel ${g.name} ausgewählt`);
   return true;
 }
+
+/** Pegel-Detailseite im Panel über der Karte (Desktop rechts, Handy als Sheet). */
+function gaugePanel(g) {
+  const art = pegelDetail(g, {
+    verlauf: verlaufLaden(g.id), eingebettet: true,
+    wetter: weatherSection(g.lat, g.lon),
+    onBack: closeDetail, backLabel: 'Pegel-Details schließen',
+    onShare: () => sharePegel(g, true),
+    slips: slipsAmPegel(g, state.places), onSlip: (p) => selectPlace(p.id),
+    onStern: () => { gaugePanel(g); el.detail.querySelector('.pm-stern')?.focus(); },
+  });
+  mountDetail(art, h('div'), 'g:' + g.id);
+  el.detail.classList.add('is-pegel');
+  el.detail.setAttribute('aria-labelledby', 'pd-name');
+}
+
+// ---- Pegel-Vorschau (Handy)
+function showGaugePeek(g) {
+  state.gaugePeekId = g.id;
+  const card = h('div', { class: 'peek-card gpeek' },
+    h('span', { class: 'peek-ico gpeek-ico', html: icon('gauge', 26) }),
+    h('div', { class: 'peek-text' },
+      h('h2', { class: 'peek-name', id: 'peek-name', text: g.name }),
+      h('p', { class: 'peek-sub', text: [g.water, g.km !== null ? `km ${g.km.toLocaleString('de-DE')}` : ''].filter(Boolean).join(' · ') }),
+      h('div', { class: 'gpeek-wert' }, h('strong', { text: pegelFmt(g.value) }), h('span', { text: ` ${g.unit}` }),
+        h('span', { class: `gpeek-trend ${trendKlasse(g)}`, text: trendText(g) }), pegelEtikett(g))),
+    sternKnopf(g, { klein: true, onChange: () => showGaugePeek(g) }),
+    h('div', { class: 'peek-actions' },
+      h('button', { type: 'button', class: 'dbtn', text: 'Details', onclick: () => { hideGaugePeek(); state.gaugeId = g.id; gaugePanel(g); el.detail.focus({ preventScroll: true }); } }),
+      h('a', { class: 'dbtn dbtn-primary', href: `./pegel-ampel?pegel=${encodeURIComponent(g.id)}`, text: 'Passt mein Boot?' })));
+  clear(el.peek).append(card);
+  el.peek.setAttribute('aria-labelledby', 'peek-name');
+  el.peek.hidden = false;
+  document.body.classList.add('has-peek');
+  document.body.style.setProperty('--peek-h', `${el.peek.offsetHeight}px`);
+}
+
+function hideGaugePeek() {
+  if (!state.gaugePeekId) return;
+  state.gaugePeekId = null;
+  el.peek.hidden = true; clear(el.peek);
+  document.body.classList.remove('has-peek');
+}
+
+async function sharePegel(g, aufKarte = false) {
+  const url = location.origin + location.pathname + (aufKarte ? `#karte/pegel/${encodeURIComponent(g.id)}` : `#pegel/${encodeURIComponent(g.id)}`);
+  const data = { title: `Pegel ${g.name} – WaterMap`, text: `Pegel ${g.name} (${g.water}): ${pegelFmt(g.value)} ${g.unit}`, url };
+  try { if (navigator.share) { await navigator.share(data); return; } } catch (e) { if (e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(url); toast('Link kopiert.'); } catch { prompt('Link zum Kopieren:', url); }
+}
+
+// ============================================================ Bereich „Pegel“ (Dashboard und Detailseite)
+let dashboard = null, pegelTimer = null;
+function pegelCtx() {
+  return {
+    user: () => state.user, places: () => state.places, isMobile, toast,
+    open: (id) => {
+      state.pegelId = id; appliedHash = hashString();
+      history.pushState({ pegelVon: state.pegelFluss ? 'fluss' : 'dashboard' }, '', location.pathname + location.search + appliedHash);
+      pegelBereich();
+    },
+    fluss: (slug) => {
+      state.pegelFluss = slug; state.pegelId = null; appliedHash = hashString();
+      history.pushState({ pegelVon: 'dashboard' }, '', location.pathname + location.search + appliedHash);
+      pegelBereich();
+    },
+    // Zurück: in der App ein Schritt zurück (Detail → Fluss → Dashboard), sonst (direkter Link) zum Dashboard
+    back: () => {
+      if (history.state?.pegelVon) { history.back(); return; }
+      if (state.pegelId && state.pegelFluss) state.pegelId = null; else { state.pegelId = null; state.pegelFluss = null; }
+      writeHash(true); pegelBereich();
+    },
+    slipsAufKarte: (liste) => {
+      setView('karte');
+      if (!state.cats.has('slip')) toggleCat('slip', true);   // zusätzlich – andere Kategorien bleiben
+      setTimeout(() => { state.map?.invalidate(); state.map?.fitBounds(liste.map(p => [p.lat, p.lon]), { maxZoom: 13 }); }, 0);
+    },
+    share: (g) => sharePegel(g),
+    karte: (g) => pegelAufKarte(g),
+    slip: (p) => { setView('karte'); selectPlace(p.id, { full: !isMobile() }); },
+  };
+}
+
+/** Dashboard bzw. Detailseite zeichnen (je nach state.pegelId). */
+async function pegelBereich() {
+  const root = el.pegelseite;
+  if (!dashboard) dashboard = pegelDashboard(root, pegelCtx());
+  clearInterval(pegelTimer);
+  pegelTimer = setInterval(() => { if (state.view === 'pegel' && document.visibilityState === 'visible') pegelBereich(); }, CONFIG.PEGEL_REFRESH_MIN * 60e3);
+  document.body.classList.toggle('view-fluss', !!(state.pegelFluss && !state.pegelId));   // Handy: Flussseite ohne globales Suchfeld
+  if (state.pegelFluss && !state.pegelId) { await flussBereich(root); return; }
+  if (!state.pegelId) {
+    await dashboard.zeigen();
+    root.scrollTop = 0;
+    return;
+  }
+  let st;
+  try { st = await pegelLaden(); } catch { st = null; }
+  const g = st?.byId.get(state.pegelId);
+  if (!g) { root.replaceChildren(h('div', { class: 'pg-seite' }, h('p', { class: 'pg-fehler', role: 'alert', text: st ? 'Dieser Pegel wurde nicht gefunden.' : 'Pegeldaten sind gerade nicht erreichbar.' }),
+    h('a', { class: 'btn btn-outline', href: '#pegel', text: 'Zur Übersicht' }))); return; }
+  pegelSeite(root, g, pegelCtx());
+  root.scrollTop = 0;
+  root.querySelector('#pd-name')?.focus({ preventScroll: true });
+}
+
+/** Flussseite #pegel/fluss/<name> (aus der geladenen Stationsliste). */
+async function flussBereich(root) {
+  let st;
+  try { st = await pegelLaden(); } catch { st = null; }
+  const gr = st ? gruppeZu(gruppieren(st.gauges), state.pegelFluss) : null;
+  if (!gr) {
+    root.replaceChildren(h('div', { class: 'pg-seite' }, h('p', { class: 'pg-fehler', role: 'alert', text: st ? 'Dieses Gewässer wurde nicht gefunden.' : 'Pegeldaten sind gerade nicht erreichbar.' }),
+      h('a', { class: 'btn btn-outline', href: '#pegel', text: 'Zur Übersicht' })));
+    return;
+  }
+  flussSeite(root, gr, { ...pegelCtx(), onOpen: pegelCtx().open, stand: st, verlauf: verlaufLaden });
+  root.scrollTop = 0;
+  root.querySelector('#pf-name')?.focus({ preventScroll: true });
+}
+
+/** „Auf der Karte“: Karte mit Pegel-Ebene und Slipanlagen, Pegel ausgewählt. */
+async function pegelAufKarte(g) {
+  setView('karte');
+  const kat = istTidepegel(g) ? 'marina' : 'slip';   // Tidepegel: Häfen in der Nähe, sonst Slipanlagen
+  if (!state.cats.has(kat)) toggleCat(kat, true);
+  if (!state.gaugesOn) await setGauges(true);
+  selectGauge(g.id);
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && state.view === 'pegel' && dashboard) {
+    const st = dashboard.stand;
+    if (!st || Date.now() - st.zeit > CONFIG.PEGEL_REFRESH_MIN * 60e3) pegelBereich();
+  }
+});
 
 // ============================================================ Extras (Schleusen, Service …)
 const hasExtras = () => !!state.meta?.files?.extras;
@@ -460,33 +844,121 @@ function selectExtra(id, { fly = true } = {}) {
   state.extraId = id;
   state.map?.selectExtra(id);
   const [head, body] = renderExtraDetail(x, { close: closeDetail, user: state.user });
-  mountDetail(head, body);
+  mountDetail(head, body, 'x:' + id);
   if (state.map && fly) state.map.reveal(x, { zoom: 16, inset: detailInset() });
-  history.replaceState(null, '', '#x=' + encodeURIComponent(id));
+  hidePeek();
+  setSelHash('x', id);
   announce(`${x.name || 'Eintrag'} ausgewählt`);
   return true;
 }
 
-function handleHash() {
-  const xm = location.hash.match(/^#x=(.+)$/);
-  if (xm && hasExtras()) {
-    let id; try { id = decodeURIComponent(xm[1]); } catch { return; }
+// Adresse: Bereich („#naehe“, „#favoriten“; alt „#liste“) und/oder Auswahl („p=…“, „g=…“, „x=…“), verbunden mit „&“.
+// Bereichswechsel legen einen Verlaufseintrag an (Zurück-Taste), Auswahl ersetzt nur den aktuellen.
+const VIEWS = ['karte', 'naehe', 'favoriten', 'pegel'];
+let selHash = null, appliedHash = null;
+
+function readHash() {
+  const out = { view: null, sel: null, melden: false, pegel: null, fluss: null };
+  for (const part of location.hash.replace(/^#/, '').split('&').filter(Boolean)) {
+    const fl = part.match(/^pegel\/fluss\/([a-z0-9-]+)$/), pg = part.match(/^pegel\/(.+)$/), kp = part.match(/^karte\/pegel\/(.+)$/);
+    if (fl) { out.view = 'pegel'; out.fluss = fl[1]; }
+    else if (pg) { out.view = 'pegel'; try { out.pegel = decodeURIComponent(pg[1]); } catch { /* ungültig */ } }
+    else if (kp) { out.view = 'karte'; try { out.sel = { k: 'g', id: decodeURIComponent(kp[1]) }; } catch { /* ungültig */ } }
+    else if (VIEWS.includes(part)) out.view = part;
+    else if (part === 'liste') out.view = 'naehe';   // alte Links
+    else if (part === 'melden') out.melden = true;
+    else {
+      const m = part.match(/^([pgx])=(.+)$/);
+      if (m) { try { out.sel = { k: m[1], id: decodeURIComponent(m[2]) }; } catch { /* ungültig */ } }
+    }
+  }
+  return out;
+}
+
+function hashString() {
+  const parts = [];
+  if (state.view === 'pegel') return '#' + (state.pegelId ? `pegel/${encodeURIComponent(state.pegelId)}` : state.pegelFluss ? `pegel/fluss/${state.pegelFluss}` : 'pegel');
+  if (selHash?.k === 'g' && state.view === 'karte') return `#karte/pegel/${encodeURIComponent(selHash.id)}`;
+  if (state.view !== 'karte') parts.push(state.view);
+  if (selHash) parts.push(`${selHash.k}=${encodeURIComponent(selHash.id)}`);
+  return parts.length ? '#' + parts.join('&') : '';
+}
+
+function writeHash(push = false) {
+  appliedHash = hashString();
+  const url = location.pathname + location.search + appliedHash;
+  if (push) history.pushState(null, '', url); else history.replaceState(null, '', url);
+}
+
+function setSelHash(k, id) { selHash = k ? { k, id } : null; writeHash(false); }
+
+/** Bereich wechseln (Karte, In der Nähe, Favoriten, Pegel). push: neuer Eintrag für die Zurück-Taste. */
+function setView(view, { push = true, spaeter = false } = {}) {
+  if (!VIEWS.includes(view)) view = 'karte';
+  const changed = view !== state.view;
+  state.view = view;
+  if (view === 'naehe' || view === 'favoriten') state.tab = view === 'favoriten' ? 'fav' : 'list';
+  // Inhalt zeichnen. Nach einem Tipp in der Navigation erst nach dem nächsten Bild – so wechselt die Ansicht sofort
+  // (mit dem bisherigen Inhalt) und der Tipp „hängt“ nicht, während Liste bzw. Pegel neu aufgebaut werden.
+  const inhalt = () => {
+    if (state.view !== view) return;
+    if (view === 'naehe' && changed && nah && state.places.length && !state.loadFailed) nah.oeffnen();   // zeichnet selbst
+    else if (view === 'naehe' || view === 'favoriten') renderList();
+    if (view === 'pegel') pegelBereich();
+  };
+  if (view !== 'pegel') { state.pegelId = null; state.pegelFluss = null; }
+  document.body.classList.toggle('list-open', view === 'naehe' || view === 'favoriten');
+  document.body.classList.toggle('view-naehe', view === 'naehe');
+  document.body.classList.toggle('view-pegel', view === 'pegel');
+  if (view !== 'pegel') document.body.classList.remove('view-fluss');
+  el.pegelseite.hidden = view !== 'pegel';
+  if (spaeter) requestAnimationFrame(() => setTimeout(inhalt, 0)); else inhalt();
+  $('#list-title').textContent = 'Favoriten';
+  if (view !== 'karte' && isMobile()) { hidePeek(); closeDetailPanel(); }
+  nav?.setActive(view);
+  $('#cat-hint').hidden = !(state.places.length && !state.cats.size) || view !== 'karte';
+  if (changed) writeHash(push);
+  setTimeout(() => state.map?.invalidate(), 0);
+}
+
+/** Navigation: Karte/In der Nähe/Favoriten/Pegel ohne Neuladen; Melden öffnet die Auswahl. */
+function onNav(id, e) {
+  if (id === 'melden') { if (!reportPop.isOpen) renderReportMenu({ fragen: true }); reportPop.toggle(e.currentTarget); return true; }
+  if (id === 'pegel' && state.view === 'pegel' && (state.pegelId || state.pegelFluss)) { state.pegelId = null; state.pegelFluss = null; writeHash(true); pegelBereich(); return true; }
+  if (VIEWS.includes(id)) { setView(id, { spaeter: true }); return true; }
+  return false;
+}
+
+function handleHash({ initial = false } = {}) {
+  if (!initial && location.hash === appliedHash) return;
+  const { view, sel, melden, pegel, fluss } = readHash();
+  state.pegelId = view === 'pegel' ? pegel : null;
+  state.pegelFluss = view === 'pegel' ? fluss : null;
+  if (view === 'pegel' && state.view === 'pegel') pegelBereich();
+  setView(view || 'karte', { push: false });
+  if (melden) setTimeout(() => { renderReportMenu({ fragen: true }); reportPop.open($(isMobile() ? '#bottomnav [data-nav="melden"]' : '#btn-report')); }, 0);
+  selHash = sel;
+  writeHash(false);
+  if (!sel) {
+    if (!initial && (state.selectedId || state.gaugeId || state.extraId || state.peekId)) closeDetail();
+    return;
+  }
+  const { k, id } = sel;
+  if (k === 'x' && hasExtras()) {
     extrasList().then(() => { if (!selectExtra(id)) toast('Dieser Eintrag wurde nicht gefunden.'); }, () => toast('Die Zusatzdaten konnten nicht geladen werden.'));
     return;
   }
-  const g = location.hash.match(/^#g=(.+)$/);
-  if (g && state.mapOk) {
-    let id; try { id = decodeURIComponent(g[1]); } catch { return; }
+  if (k === 'g' && state.mapOk) {
+    if (id === state.gaugeId || id === state.gaugePeekId) return;
     (state.gaugesOn && state.gauges ? Promise.resolve() : setGauges(true))
       .then(() => { if (state.gauges && !selectGauge(id)) toast('Dieser Pegel wurde nicht gefunden.'); });
     return;
   }
-  const m = location.hash.match(/^#p=(.+)$/);
-  if (!m) return;
-  let id; try { id = decodeURIComponent(m[1]); } catch { return; }
-  if (!selectPlace(id, { updateHash: false }) && state.places.length) toast('Dieser Standort ist nicht mehr in der Datenbank.');
+  if (k === 'p' && id !== state.selectedId && !selectPlace(id, { updateHash: false }) && state.places.length) toast('Dieser Standort ist nicht mehr in der Datenbank.');
 }
-window.addEventListener('hashchange', handleHash);
+window.addEventListener('popstate', () => handleHash());
+
+window.addEventListener('hashchange', () => handleHash());
 
 // ============================================================ Standort des Nutzers
 function requestUserPos() {
@@ -506,23 +978,15 @@ async function locate({ fly = true } = {}) {
   try {
     const pos = await requestUserPos();
     state.user = pos;
+    geoFreigabe.merken(true);
     if (state.map) { state.map.showUser(pos.lat, pos.lon, pos.accuracy); if (fly) state.map.flyTo(pos.lat, pos.lon, 11); }
     renderList();
-    if (state.selectedId) showDetail(state.byId.get(state.selectedId));
+    if (state.peekId) showPeek(state.byId.get(state.peekId));
+    else if (state.selectedId) showDetail(state.byId.get(state.selectedId));
     announce('Karte auf deinen Standort ausgerichtet');
     return pos;
-  } catch (e) { toast(e.message); throw e; }
+  } catch (e) { if (/verweigert/.test(e.message)) geoFreigabe.merken(false); toast(e.message); throw e; }
   finally { btn.classList.remove('is-busy'); }
-}
-
-function offerLocation() {
-  if (!('geolocation' in navigator) || prefs.get('geoAsked') || !state.mapOk) return;
-  const card = h('div', { class: 'consent', role: 'region', 'aria-label': 'Standort verwenden' },
-    h('p', {}, h('strong', { text: 'Karte auf deinen Standort ausrichten?' }), ' Dein Standort bleibt auf deinem Gerät und wird nicht gespeichert oder gesendet.'),
-    h('div', { class: 'btn-row' },
-      h('button', { type: 'button', class: 'btn btn-primary small', text: 'Standort verwenden', onclick: () => { prefs.set('geoAsked', '1'); card.remove(); locate().catch(() => {}); } }),
-      h('button', { type: 'button', class: 'btn btn-outline small', text: 'Nein danke', onclick: () => { prefs.set('geoAsked', '1'); card.remove(); } })));
-  el.banner.append(card);
 }
 
 // ============================================================ Meldungen (Formulare)
@@ -559,6 +1023,7 @@ function pickLocation(initial) {
 
 // Menü → Meldung zu einem Standort: statt einer Auswahlliste den Standort auf der Karte (oder über die Suche) antippen
 const PLACE_PICK = {
+  'lage-melden': { text: 'Tippe auf der Karte auf die Slipanlage, an der du gerade bist.', type: 'slip' },
   'foto-einreichen': { text: 'Tippe auf der Karte auf die Slipanlage, Marina oder Tankstelle, zu der das Foto gehört.' },
   'fehler-melden': { text: 'Tippe auf der Karte auf den Standort, zu dem du etwas melden möchtest.', general: true },
   'tankpreis-melden': { text: 'Tippe auf der Karte auf die Bootstankstelle.', type: 'fuel' },
@@ -568,6 +1033,7 @@ function choosePlaceFor(formName, preset = {}) {
   const cfg = PLACE_PICK[formName];
   if (el.dlg?.open) el.dlg.close();
   closeMenu();
+  if (state.view !== 'karte') setView('karte');
   const bar = clear(el.pickbar);
   const cancel = h('button', { type: 'button', class: 'btn btn-outline small', text: 'Abbrechen', onclick: endPlacePick });
   const general = cfg.general ? h('button', { type: 'button', class: 'btn btn-outline small', text: 'Ohne Standort melden',
@@ -576,7 +1042,6 @@ function choosePlaceFor(formName, preset = {}) {
   el.pickbar.hidden = false;
   document.body.classList.add('is-choosing');
   state.placePick = { formName, type: cfg.type || null, preset };
-  if (isMobile()) openSheet(false);
 }
 
 function endPlacePick() {
@@ -590,12 +1055,13 @@ function openReport(formName, preset = {}) {
     dialog: el.dlg, places: state.places,
     requestUserPos, pickLocation, nearestSlips,
     showPlace: (id) => selectPlace(id),
-    choosePlace: (name) => choosePlaceFor(name),
+    choosePlace: (name, carry = {}) => choosePlaceFor(name, carry),
   };
   const p = preset.standort_id && state.byId.get(preset.standort_id);
   if (p && formName === 'tankpreis-melden') preset.standort_id = p.id;
   if (formName === 'slipanlage-melden' && !preset.lat && state.user) { /* Position wird nur auf Wunsch übernommen */ }
   closeMenu();
+  if (formName === 'lage-melden') { const pl = state.byId.get(preset.standort_id); if (pl?.type === 'slip') lageMelden(pl); return; }
   openForm(formName, ctx, preset);
 }
 
@@ -683,47 +1149,70 @@ function wireSearch() {
   document.addEventListener('click', (e) => { if (!e.target.closest('.search')) { el.suggest.hidden = true; } });
 }
 
-// ============================================================ Menü
-function closeMenu() { const m = $('#menu'); if (m.open) m.close(); }
+// ============================================================ Melden
+function closeMenu() { reportPop?.close(); }
 
-function buildMenu() {
-  const body = clear($('#menu-body'));
-  const item = (ico, label, run, sub) => h('li', {}, h('button', { type: 'button', class: 'menu-item', onclick: () => { closeMenu(); run(); } },
-    h('span', { class: 'menu-ico', html: icon(ico, 22) }), h('span', {}, h('strong', { text: label }), sub ? h('small', { text: sub }) : null)));
+const LAGE_NEU_BIS = Date.parse('2026-11-22T00:00:00Z');   // Etikett „NEU“ 30 Tage nach Einführung
+const LAGE_RADIUS_M = 300;
+
+/** Nächster Standort (alle Kategorien) im Umkreis von 300 m. */
+function standortInDerNaehe(pos) {
+  let best = null;
+  for (const p of state.places) {
+    if (p.type !== 'slip') continue;   // Lagemeldungen nur für Slipanlagen
+    const d = haversine(pos.lat, pos.lon, p.lat, p.lon);
+    if (d <= LAGE_RADIUS_M && (!best || d < best.d)) best = { p, d };
+  }
+  return best;
+}
+
+/**
+ * „Was möchtest du melden?“ – oben „Lage vor Ort melden“ (mit Standortvorschlag), darunter die vier Meldungen und die Links.
+ * fragen: Position jetzt abfragen (nur beim Öffnen durch den Nutzer, nie im Hintergrund).
+ */
+function renderReportMenu({ fragen = false } = {}) {
+  const body = clear($('#report-body'));
+  const item = (ico, cls, label, run) => h('li', {}, h('button', { type: 'button', class: 'menu-item rm-item', onclick: () => { closeMenu(); run(); } },
+    h('span', { class: `menu-ico rm-ico ${cls}`, html: icon(ico, 22) }), h('strong', { text: label }), h('span', { class: 'rm-chev', html: icon('chevron', 18), 'aria-hidden': 'true' })));
+  const offline = navigator.onLine === false;
+  const frage = h('div', { class: 'lage-frage', hidden: true });
+  const lageBtn = h('button', { type: 'button', class: 'lage-main', disabled: offline, onclick: () => { closeMenu(); choosePlaceFor('lage-melden'); } },
+    h('span', { class: 'lage-ico', html: icon('pin', 24) }),
+    h('span', { class: 'lage-text' }, h('strong', { text: 'Lage vor Ort melden' }), h('small', { text: offline ? 'Offline – gerade nicht möglich' : 'Parkplatz, Wartezeit, Rampe, Sperrung' })),
+    Date.now() < LAGE_NEU_BIS ? h('span', { class: 'lage-neu', text: 'NEU' }) : null);
   body.append(
-    h('h2', { id: 'menu-title', text: 'WaterMap' }),
-    h('p', { class: 'muted', text: 'Dein Revier. Deine Karte.' }),
-    h('ul', { class: 'menu-list' },
-      item('list', 'Standortliste', () => setListOpen(true, 'list'), 'Standorte im Kartenausschnitt'),
-      item('gauge', 'Pegel-Ampel', () => { location.href = './pegel-ampel'; }, 'Passt mein Boot heute aufs Wasser?'),
-      item('star', 'Favoriten', () => setListOpen(true, 'fav'), `${favorites.all().length} gespeichert`),
-      item('plus', 'Neue Slipanlage melden', () => openReport('slipanlage-melden')),
-      item('plus', 'Kraftstoffpreis melden', () => choosePlaceFor('tankpreis-melden')),
-      item('camera', 'Foto einreichen', () => choosePlaceFor('foto-einreichen')),
-      item('flag', 'Fehler oder Hinweis melden', () => choosePlaceFor('fehler-melden', { art: 'sonstiges' }))),
-    h('ul', { class: 'menu-links' },
-      h('li', {}, h('a', { href: './ueber.html', text: 'Über WaterMap und Datenquellen' })),
-      h('li', {}, h('a', { href: './datenschutz.html', text: 'Datenschutz' })),
-      h('li', {}, h('a', { href: './impressum.html', text: 'Impressum' }))),
-    h('p', { class: 'muted small', text: `Version ${CONFIG.VERSION} · Kartendaten © OpenStreetMap-Mitwirkende (ODbL)` }));
+    h('h2', { id: 'report-title', text: 'Was möchtest du melden?' }),
+    h('div', { class: 'lage-karte' }, lageBtn, frage),
+    h('ul', { class: 'menu-list rmenu' },
+      item('plus', 'rm-slip', 'Neue Slipanlage melden', () => openReport('slipanlage-melden')),
+      item('pump', 'rm-fuel', 'Kraftstoffpreis melden', () => choosePlaceFor('tankpreis-melden')),
+      item('camera', 'rm-foto', 'Foto einreichen', () => choosePlaceFor('foto-einreichen')),
+      item('flag', 'rm-fehler', 'Fehler oder Hinweis melden', () => choosePlaceFor('fehler-melden', { art: 'sonstiges' }))),
+    h('p', { class: 'rmenu-links' },
+      h('a', { href: './ueber.html', text: 'Über WaterMap' }), ' · ', h('a', { href: './datenschutz.html', text: 'Datenschutz' }), ' · ', h('a', { href: './impressum.html', text: 'Impressum' })),
+    h('p', { class: 'muted small rm-version', text: `Version ${CONFIG.VERSION}` }));
+  if (!fragen || offline || !('geolocation' in navigator)) return;
+  // Position nur jetzt (Nutzer hat „Melden“ geöffnet); abgelehnt → still bei der Standortauswahl bleiben
+  requestUserPos().then((pos) => {
+    state.user = pos;
+    const near = standortInDerNaehe(pos);
+    if (!near || !reportPop.isOpen) return;
+    const { p, d } = near;
+    frage.replaceChildren(
+      h('p', {}, 'Bist du an der ', h('strong', { text: displayName(p) }), p.water?.name ? `, ${p.water.name}?` : '?', h('span', { class: 'lage-dist', text: ` · ${formatDistance(d)} entfernt` })),
+      h('div', { class: 'lage-knoepfe' },
+        h('button', { type: 'button', class: 'lage-ja', text: 'Ja, hier bin ich', onclick: () => { closeMenu(); lageMelden(p, { distance: d, zurueck: true }); } }),
+        h('button', { type: 'button', class: 'lage-anders', text: 'Anderer Standort', onclick: () => { closeMenu(); choosePlaceFor('lage-melden'); } })));
+    frage.hidden = false;
+  }).catch(() => { /* ohne Position: Eintrag startet die Standortauswahl */ });
 }
 
 // ============================================================ Tabs, Sheet, Hilfen
-function updateTabs() {
-  const n = favorites.all().length;
-  $$('#tabs button[data-tab]').forEach(b => { const on = b.dataset.tab === state.tab; b.classList.toggle('is-active', on); b.setAttribute('aria-selected', String(on)); });
-  $('#tab-fav-n').textContent = n ? String(n) : '';
-}
+function updateTabs() { nav?.updateFavs(); }
 
-function openSheet(open = true) { el.sidebar.classList.toggle('is-open', open); $('#sheet-handle').setAttribute('aria-expanded', String(open)); }
-
-/** Standortliste nur bei Bedarf (Menü → Standortliste/Favoriten); der Zustand wird gemerkt. */
+/** Liste/Favoriten öffnen oder schließen (für ältere Aufrufe und Tests). */
 function setListOpen(open, tab) {
-  if (tab) { state.tab = tab; updateTabs(); renderList(); }
-  document.body.classList.toggle('list-open', open);
-  prefs.set('listOpen', open ? '1' : '0');
-  if (isMobile()) openSheet(open);
-  setTimeout(() => state.map?.invalidate(), 0);
+  setView(open ? (tab === 'fav' ? 'favoriten' : 'liste') : 'karte');
 }
 
 let toastTimer;
@@ -741,19 +1230,21 @@ function updateOnline(e) {
 
 function wireStatic() {
   wireSearch();
-  $('#btn-menu').addEventListener('click', () => { buildMenu(); $('#menu').showModal(); });
-  $('#menu-close').addEventListener('click', closeMenu);
+  renderReportMenu();
+  $('#btn-report').addEventListener('click', (e) => { if (!reportPop.isOpen) renderReportMenu({ fragen: true }); reportPop.toggle(e.currentTarget); });
+  $('#btn-filter').addEventListener('click', (e) => { if (!filterPop.isOpen) renderFilterPanel(); filterPop.toggle(e.currentTarget); });
   $('#dlg-close').addEventListener('click', () => el.dlg.close());
-  for (const d of [$('#menu'), el.dlg]) d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+  el.dlg.addEventListener('click', (e) => { if (e.target === el.dlg) el.dlg.close(); });
   $('#btn-locate').addEventListener('click', () => locate().catch(() => {}));
-  $$('#tabs button[data-tab]').forEach(b => b.addEventListener('click', () => { state.tab = b.dataset.tab; updateTabs(); renderList(); }));
-  $('#list-close').addEventListener('click', () => setListOpen(false));
-  $('#sheet-handle').addEventListener('click', () => openSheet(!el.sidebar.classList.contains('is-open')));
-  document.addEventListener('favorites-changed', updateTabs);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !el.dlg.open && !$('#menu').open && !$('dialog.lightbox[open]') && (state.selectedId || state.gaugeId || state.extraId) && !el.suggest.offsetParent) closeDetail(); });
+  $('#list-close').addEventListener('click', () => setView('karte'));
+  swipeToClose(el.peek, closeDetail, () => !!state.peekId);
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || el.dlg.open || filterPop.isOpen || reportPop.isOpen || $('#naehe-bezug[open]') || $('#pa-pop[open]') || $('dialog.lightbox[open]') || el.suggest.offsetParent) return;
+    if (state.selectedId || state.gaugeId || state.extraId || state.peekId || state.gaugePeekId) closeDetail();
+  });
   window.addEventListener('resize', debounce(() => state.map?.invalidate(), 150));
   window.addEventListener('online', updateOnline); window.addEventListener('offline', updateOnline);
-  updateOnline(); updateTabs();
+  updateOnline();
 }
 
 function registerServiceWorker() {
@@ -768,4 +1259,4 @@ init().catch((e) => {
 });
 
 // Für Tests und Fehlersuche in der Browser-Konsole
-window.__watermap = { state, selectPlace, applyFilters, toggleCat, setListOpen, setGauges, selectGauge, setExtras, selectExtra };
+window.__watermap = { state, pegelLaden, selectPlace, applyFilters, toggleCat, setListOpen, setView, setGauges, selectGauge, setExtras, selectExtra };

@@ -139,3 +139,13 @@ main { max-width: 720px; margin: 0 auto; padding: 18px 16px 40px; }
   .am-light span { width: 30px; height: 30px; }
 }
 @media (prefers-reduced-motion: reduce) { .am-light span, .am-seg span { transition: none; } }
+
+/* Hauptnavigation (css/nav.css): oben im dunklen Kopf, auf dem Handy als Leiste unten */
+.am-bar { max-width: 1080px; gap: 12px; }
+.am-topnav { margin-left: auto; }
+@media (max-width: 767px) {
+  body > .bottomnav { position: fixed; left: 0; right: 0; bottom: 0; }
+  body { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+}
+.am-topnav { gap: 4px; }
+.am-topnav .report-btn { margin-left: 8px; }

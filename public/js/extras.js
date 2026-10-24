@@ -94,13 +94,13 @@ function normalize(f) {
     opening_hours: p.opening_hours || null, operator: p.operator || null, website: p.website || null, phone: p.phone || null, osm: p.osm || null };
 }
 
-// ------------------------------------------------------------------ „In der Nähe“ live aus OpenStreetMap
+// ------------------------------------------------------------------ „Umgebung“ live aus OpenStreetMap
 // Beim Öffnen eines Standorts fragt die App den Umkreis über die eigene Netlify-Funktion ab
 // (netlify/functions/umgebung.mjs → Overpass API): keine IP-Adressen der Besucher bei Dritten, der Import bleibt klein.
 // Klappt das nicht (offline, Overpass überlastet), bleiben die importierten Daten.
 const LIVE_KINDS = new Set(['lock', 'toilets', 'water', 'food', 'rest', 'parking', 'shop']);   // diese Arten deckt die Abfrage ab
-const LIVE_TIMEOUT_MS = 20000;   // die Funktion fragt mehrere Overpass-Server gleichzeitig
-const DIREKT_TIMEOUT_MS = 12000;
+const LIVE_TIMEOUT_MS = 22000;   // die Funktion fragt mehrere Overpass-Server gleichzeitig
+const DIREKT_TIMEOUT_MS = 18000;
 const NOT_PUBLIC = new Set(['private', 'no', 'customers', 'permit', 'military', 'agricultural', 'forestry', 'delivery']);
 const liveCache = new Map();
 
@@ -146,7 +146,12 @@ export function liveNearby(lat, lon, radius, { fetchFn = fetch } = {}) {
     return fetchFn(url, { ...opts, signal: ctl?.signal })
       .catch((e) => { throw new Error(`${new URL(url, location.href).host}: ${e?.name === 'AbortError' ? 'Zeitüberschreitung' : 'nicht erreichbar'}`); })
       .then(r => { if (!r.ok) throw new Error(`${new URL(url, location.href).host}: HTTP ${r.status}`); return r.json(); })
-      .then(j => { if (!Array.isArray(j?.elements)) throw new Error('unerwartete Antwort'); return j.elements; })
+      .then(j => {
+        if (!Array.isArray(j?.elements)) throw new Error('unerwartete Antwort');
+        // Overpass meldet Überlastung oft mit HTTP 200, leerer Liste und „runtime error“ – das ist kein leeres Ergebnis
+        if (!j.elements.length && /runtime error/i.test(j.remark || '')) throw new Error(`${new URL(url, location.href).host}: überlastet`);
+        return j.elements;
+      })
       .finally(() => timer && clearTimeout(timer));
   };
   // Zuerst direkt beim Overpass-Server (Rechenzentrums-Adressen wie Netlify lehnt overpass-api.de ab),
@@ -261,11 +266,11 @@ export function renderExtraDetail(x, { close, user }) {
   return [head, body];
 }
 
-/** Abschnitt „In der Nähe“ für die Detailansicht eines Standorts. */
+/** Abschnitt „Umgebung“ für die Detailansicht eines Standorts. */
 export function nearbySection(listPromise, lat, lon, { onSelect, exclude, live = true }) {
   const R = CONFIG.NEARBY_EXTRAS_M;
   const box = h('div', { class: 'nearby-list', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Wird geladen …' }));
-  const section = h('section', { class: 'block' }, h('h3', { text: `In der Nähe (bis ${R} m)` }), box);
+  const section = h('section', { class: 'block' }, h('h3', { text: `Umgebung (bis ${R} m)` }), box);
   const imported = listPromise.catch(() => null);
   let liveFehler = '';
   const fresh = live ? liveNearby(lat, lon, R).catch((e) => { liveFehler = e?.message || 'Fehler'; return null; }) : Promise.resolve(null);

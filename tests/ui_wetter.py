@@ -102,6 +102,7 @@ with sync_playwright() as p:
         ctx = b.new_context(viewport=vp, device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile, locale='de-DE',
                             timezone_id='Europe/Berlin', service_workers='block',
                             geolocation={'latitude': 48.1, 'longitude': 11.6}, permissions=['geolocation'])
+        ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))   # „Heute vor Ort“ (eigener Test: ui_meldungen.py)
         ctx.route('**/api/wetter/**', api)
         ctx.route('**/.netlify/functions/umgebung*', lambda r: r.fulfill(status=200, content_type='application/json', body='{"elements": []}'))   # „In der Nähe“ live
         ctx.route('https://overpass-api.de/**', lambda r: r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body='{"elements": []}'))
@@ -121,7 +122,7 @@ with sync_playwright() as p:
 
         north = pg.evaluate(PICK, True)
         place = pg.evaluate(f"window.__watermap.state.byId.get({json.dumps(north)})")
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)})")
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)}, {{ full: true }})")
         pg.wait_for_selector('#detail .wx-wind', timeout=8000)
         txt = pg.inner_text('#detail .wx-block')
         check('Sturmböen'.upper() in txt and 'Markante Wetterwarnung' in txt, f'{name}: amtliche Warnung mit Stufe als Text')
@@ -157,25 +158,25 @@ with sync_playwright() as p:
 
         # Zwischenspeicher: gleicher Standort erneut → keine neuen Abfragen
         n = len(calls)
-        pg.keyboard.press('Escape'); pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)})"); pg.wait_for_selector('#detail .wx-wind')
+        pg.keyboard.press('Escape'); pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)}, {{ full: true }})"); pg.wait_for_selector('#detail .wx-wind')
         check(len(calls) == n, f'{name}: kurzzeitiger Zwischenspeicher je Ort')
 
         # Ohne Warnung
         south = pg.evaluate(PICK, False)
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(south)})"); pg.wait_for_selector('#detail .wx-noalert', timeout=8000)
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(south)}, {{ full: true }})"); pg.wait_for_selector('#detail .wx-noalert', timeout=8000)
         check('keine amtlichen Wetterwarnungen für Stadt Mainz' in pg.inner_text('#detail'), f'{name}: Hinweis ohne Warnung nennt den Warnbereich')
 
         # Pegel-Detail enthält ebenfalls Wetter
         pg.evaluate("window.__watermap.setGauges(true)"); pg.wait_for_selector('.wm-gauge')
-        pg.evaluate("window.__watermap.selectGauge('a6ee8177-107b-47dd-bcfd-30960ccc6e9c', { fly: false })")
+        pg.evaluate("window.__watermap.selectGauge('a6ee8177-107b-47dd-bcfd-30960ccc6e9c', { fly: false, full: true })")
         pg.wait_for_selector('#detail .wx-wind', timeout=8000)
-        check('Pegel' in pg.inner_text('#detail .detail-head') and pg.locator('#detail .wx-block').count() == 1, f'{name}: Wetter auch im Pegel-Detail')
+        check('pegel' in pg.inner_text('#detail .pd-kopf').lower() and pg.locator('#detail .wx-block').count() == 1, f'{name}: Wetter auch im Pegel-Detail')
         pg.evaluate("window.__watermap.setGauges(false)")
 
         # Dienst gestört (neuer Ort, damit nichts aus dem Zwischenspeicher kommt)
         fail['on'] = True
         other = pg.evaluate("window.__watermap.state.places.find(p => p.lat > 53 && p.lon > 10).id")
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(other)})"); pg.wait_for_timeout(800)
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(other)}, {{ full: true }})"); pg.wait_for_timeout(800)
         check('Wetterdaten sind gerade nicht erreichbar' in pg.inner_text('#detail'), f'{name}: Hinweis bei Ausfall')
         check(pg.locator('#detail .facts').count() == 1, f'{name}: restliche Details trotzdem da')
         fail['on'] = False

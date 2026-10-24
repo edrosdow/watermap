@@ -95,6 +95,10 @@ with sync_playwright() as p:
         check('Passt mein Boot heute aufs Wasser?' in pg.inner_text('body'), f'{name}: Untertitel')
         pg.wait_for_function('() => !document.getElementById("am-msg").textContent') if False else pg.wait_for_timeout(600)
         check(pg.locator('#am-result').is_hidden(), f'{name}: ohne Pegel kein Ergebnis')
+        navsel = '#bottomnav' if mobile else '#topnav'
+        check(pg.locator(navsel).is_visible() and pg.locator(f'{navsel} [data-nav=pegel]').get_attribute('aria-current') == 'page',
+              f'{name}: Hauptnavigation auf der Pegel-Ampel, „Pegel“ aktiv')
+        check(pg.locator(f'{navsel} [data-nav=naehe]').get_attribute('href') == './#naehe', f'{name}: „In der Nähe“ führt zur Karte mit Liste')
 
         # Suche
         pg.fill('#am-q', 'kau'); pg.locator('#am-list li').first.wait_for()
@@ -200,12 +204,19 @@ with sync_playwright() as p:
         check(not pg.evaluate('window.__csp || null'), f'{name}: keine CSP-Verstöße')
         ctx.close()
 
-    # Menü der Karte führt zur Pegel-Ampel
+    # Navigation: „Pegel“ führt zum Dashboard, Pegel-Ampel zurück zur Karte (Melden öffnet die Auswahl)
     ctx = b.new_context(service_workers='block'); ctx.route('**/api/**', lambda r: r.fulfill(status=200, content_type='application/json', body='[]'))
     ctx.route(re.compile(r'https?://(?!127\.0\.0\.1).*'), lambda r: r.abort())
-    pg = ctx.new_page(); pg.goto(BASE); pg.locator('#btn-menu').wait_for()
-    pg.click('#btn-menu'); pg.locator('#menu .menu-item', has_text='Pegel-Ampel').click(); pg.wait_for_url('**/pegel-ampel')
-    check(pg.locator('#am-q').count() == 1, 'Menü → Pegel-Ampel öffnet die Seite')
+    pg = ctx.new_page(); pg.goto(BASE); pg.locator('#topnav [data-nav=pegel]').wait_for()
+    pg.click('#topnav [data-nav=pegel]'); pg.wait_for_selector('#pegelseite:not([hidden])')
+    check(pg.url.endswith('/#pegel') and pg.inner_text('#topnav [data-nav=pegel]').strip() == 'Pegel', 'Navigation „Pegel“ öffnet das Pegel-Dashboard')
+    pg.goto(BASE + 'pegel-ampel'); pg.locator('#topnav [data-nav=pegel]').wait_for()
+    check((pg.get_attribute('#topnav [data-nav=pegel]', 'href') or '').endswith('#pegel'), 'Pegel-Ampel → „Pegel“ führt zum Dashboard')
+    pg.locator('#topnav [data-nav=favoriten]').wait_for()
+    pg.click('#topnav [data-nav=favoriten]'); pg.wait_for_selector('#list-title')
+    check(pg.url.endswith('/#favoriten') and pg.inner_text('#list-title') == 'Favoriten', 'Pegel-Ampel → Favoriten öffnet die Liste der Karte')
+    pg.goto(BASE + '#melden'); pg.wait_for_selector('#report-menu[open]')
+    check('Was möchtest du melden?' in pg.inner_text('#report-menu'), 'Adresse #melden öffnet „Was möchtest du melden?“')
     b.close()
 
 print('FEHLER:', problems or 'keine')

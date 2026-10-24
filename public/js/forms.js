@@ -5,6 +5,7 @@ import { h, clear, $, announce } from './dom.js';
 import { icon } from './icons.js';
 import { displayName, formatDistance } from './model.js';
 import { prefs } from './favorites.js';
+import { openPhotoForm } from './photo-form.js';
 
 const YNU = [['', 'Nicht bekannt'], ['ja', 'Ja'], ['nein', 'Nein']];
 
@@ -44,15 +45,15 @@ export const FORMS = {
     submit: 'Preis zur Prüfung senden',
   },
   'foto-einreichen': {
-    title: 'Foto einreichen',
-    intro: 'Fotos helfen anderen bei der Einschätzung vor Ort. Sie werden vor der Veröffentlichung geprüft.',
+    // eigene Oberfläche in photo-form.js; die Liste beschreibt nur die gesendeten Felder
+    title: 'Foto hinzufügen',
     fields: [
       { name: 'standort_ref', type: 'station', any: true },
-      { name: 'beschreibung', label: 'Bildbeschreibung', type: 'textarea', required: true, max: 500, placeholder: 'Was ist zu sehen? Aufnahmedatum?' },
-      { name: 'foto', label: 'Foto (max. 5 MB)', type: 'file', required: true },
+      { name: 'motiv', type: 'hidden' },                     // Chips, kommagetrennt, optional
+      { name: 'beschreibung', type: 'text', max: 140 },      // „Notiz (optional)“
+      { name: 'foto', type: 'file', required: true },
     ],
     rights: true,
-    submit: 'Foto zur Prüfung senden',
   },
   'fehler-melden': {
     title: 'Informationen korrigieren',
@@ -122,6 +123,24 @@ export async function prepareImage(file) {
   return new File([blob], 'foto.jpg', { type: 'image/jpeg' });
 }
 
+/**
+ * Schickt eine Meldung an Netlify Forms. fd muss form-name enthalten. Mit Anhang als multipart, sonst urlencoded.
+ * Beachtet Honeypot und Sende-Bremse; wirft Error mit nutzerfreundlicher Meldung.
+ */
+export async function sendReport(fd, { multipart = false } = {}) {
+  if (fd.get('bot-field')) return;   // Bots bekommen Erfolg vorgespielt
+  const last = Number(prefs.get('lastSubmit') || 0);
+  if (Date.now() - last < CONFIG.SUBMIT_COOLDOWN_MS) throw new Error('Bitte warte einen Moment, bevor du die nächste Meldung sendest.');
+  const body = multipart ? fd : new URLSearchParams([...fd.entries()].map(([k, v]) => [k, typeof v === 'string' ? v : '']));
+  let res;
+  try { res = await fetch('/', { method: 'POST', body }); }
+  catch { throw new Error(navigator.onLine === false ? 'Du bist offline. Bitte später erneut senden.' : 'Senden fehlgeschlagen. Bitte erneut versuchen.'); }
+  if (!res.ok) throw new Error(res.status === 404 || res.status === 405 || res.status === 501
+    ? 'Hier läuft die Seite nur lokal. Meldungen funktionieren erst auf der veröffentlichten Netlify-Website.'
+    : `Der Server hat die Meldung abgelehnt (HTTP ${res.status}). Bitte später erneut versuchen.`);
+  prefs.set('lastSubmit', String(Date.now()));
+}
+
 // ------------------------------------------------------------------ Formular-Dialog
 /**
  * ctx = {
@@ -131,6 +150,7 @@ export async function prepareImage(file) {
  * preset = { standort_id, standort_name, lat, lon, art }
  */
 export function openForm(formName, ctx, preset = {}) {
+  if (formName === 'foto-einreichen') return openPhotoForm(ctx, preset);
   const spec = FORMS[formName];
   const dlg = ctx.dialog;
   const root = clear($('#dlg-body', dlg));
@@ -299,9 +319,10 @@ export function openForm(formName, ctx, preset = {}) {
     }
   });
 
-  root.append(h('h2', { id: 'dlg-title', text: spec.title }), h('p', { class: 'muted', text: spec.intro }), form);
+  root.append(h('h2', { id: 'dlg-title', tabindex: '-1', text: spec.title }), h('p', { class: 'muted', text: spec.intro }), form);
   dlg.setAttribute('aria-labelledby', 'dlg-title');
   dlg.showModal();
+  $('#dlg-title', root).focus();   // nicht der Schließen-Knopf (sonst Fokus-Rahmen beim Öffnen)
   if (preset.lat != null && controls.setLocation) { /* bereits gesetzt */ }
 }
 

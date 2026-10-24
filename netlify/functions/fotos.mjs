@@ -158,7 +158,7 @@ export function submissionView(s) {
   return {
     id: s.id, created: s.created_at || null,
     standort_id: String(d.standort_id || ''), standort_name: String(d.standort_name || ''),
-    beschreibung: String(d.beschreibung || '').slice(0, 500), rechte: Boolean(d.foto_rechte),
+    beschreibung: String(d.beschreibung || '').slice(0, 500), motiv: String(d.motiv || '').slice(0, 120), rechte: Boolean(d.foto_rechte),
     hat_foto: Boolean(fileUrl(d.foto)),
   };
 }
@@ -415,7 +415,7 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
       if (!ID_RE.test(id)) throw new Error('Standort-ID fehlt oder ist ungültig');
       const { bytes, type } = await fetchPhoto(sub, fetchFn);
       const name = `${id.replace('/', '-')}-${now.getTime().toString(36)}.${type.ext}`;
-      const photo = { url: `photos/${name}`, credit: 'WaterMap-Community', alt: String(d.beschreibung || '').trim().slice(0, 200) };
+      const photo = { url: `photos/${name}`, credit: 'WaterMap-Community', alt: (String(d.beschreibung || '').trim() || String(d.motiv || '').trim()).slice(0, 200) };   // ohne Notiz: Motiv, z. B. „Rampe, Steg“
       await finish(`Foto freigegeben: ${id}`, async (read) => [
         { path: `public/photos/${name}`, content: bytes },
         jsonFile(OVERRIDES, addPhoto(await read(OVERRIDES, []), id, photo, today)),

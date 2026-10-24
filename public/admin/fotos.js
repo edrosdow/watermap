@@ -103,10 +103,11 @@ function submissionCard(f) {
     'Freigegeben – in etwa einer Minute in der App sichtbar.'));
   no.addEventListener('click', () => act(no, { aktion: 'ablehnen', id: f.id }, 'Abgelehnt und gelöscht.', 'Foto wirklich ablehnen? Die Einreichung wird gelöscht.'));
   return el('section', { className: 'card' },
-    f.hat_foto ? image(`?bild=${encodeURIComponent(f.id)}`, f.beschreibung) : el('p', { className: 'warn', textContent: 'Kein Foto in der Einreichung.' }),
+    f.hat_foto ? image(`?bild=${encodeURIComponent(f.id)}`, f.beschreibung || f.motiv) : el('p', { className: 'warn', textContent: 'Kein Foto in der Einreichung.' }),
     el('h2', {}, placeLink(hasId ? f.standort_id : '', f.standort_name || f.standort_id)),
     el('p', { className: 'meta', textContent: `Eingereicht ${when(f.created)}` }),
-    el('p', { textContent: f.beschreibung || '(keine Beschreibung)' }),
+    f.motiv ? el('p', { className: 'meta', textContent: `Motiv: ${f.motiv}` }) : null,
+    el('p', { textContent: f.beschreibung || '(keine Notiz)' }),
     f.rechte ? null : el('p', { className: 'warn', textContent: 'Rechte am Foto nicht bestätigt – nicht freigeben.' }),
     hasId ? null : el('p', { className: 'warn', textContent: `Kein Standort aus der Liste gewählt („${f.standort_name || 'ohne Namen'}“). Standort in der App öffnen, Link kopieren und hier einfügen:` }),
     where, el('div', { className: 'actions' }, yes, no));
