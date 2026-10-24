@@ -3,6 +3,7 @@ import { h } from './dom.js';
 import { icon, glyphSvg } from './icons.js';
 import { fmt } from './pegel-ansicht.js';
 import { FLUSS_ZUSTAND, flussZustand, punkte, profil, slipsAmFluss, artikel, abschnitt } from './pegel-fluss.js';
+import { istTidepegel, tendenz } from './gezeiten.js';
 
 const PFEIL = { 1: '↗', 0: '→', '-1': '↘' };
 const TREND = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' };
@@ -161,7 +162,7 @@ function profilKarte(gr, z, opts) {
   const tideZeile = pr.tide ? h('button', { type: 'button', class: 'pf-tidezeile', onclick: opts.zuTide },
     h('span', { class: 'pf-tidezeile-ico', html: WELLEN }),
     h('span', { class: 'pf-tidezeile-text' }, `Ab ${pr.tide.ab.name} `, h('strong', { text: `${pr.tide.pegel.length} ${pr.tide.mitTide ? 'Tidepegel' : `Pegel ohne Kennwerte`}` }),
-      pr.tide.mitTide ? ' – Ebbe und Flut, ohne Bewertung' : ''),
+      h('span', { class: 'pf-tide-live', text: pr.tide.mitTide ? ' – Ebbe und Flut, ohne Bewertung' : '' })),
     h('span', { class: 'pf-tidezeile-pfeil', html: icon('chevron', 20), 'aria-hidden': 'true' })) : null;
   const karte = h('section', { class: 'pf-karte pf-profilkarte', 'aria-labelledby': 'pf-profil-t' },
     h('h2', { id: 'pf-profil-t', class: 'pf-h2', text: `Wasserstand ${artikel(gr.name).entlang}` }),
@@ -172,6 +173,14 @@ function profilKarte(gr, z, opts) {
       .map(([f, t]) => h('span', {}, h('i', { style: `background:${f}` }), t))),
     tideZeile,
     h('p', { class: 'pf-tipp', text: 'Tippe auf einen Punkt für Details.' }));
+  // Live-Info: gerade auf- oder ablaufend (Verlauf eines Tidepegels – eine Abfrage pro Flussseite)
+  const tp = pr.tide?.pegel.find(istTidepegel);
+  if (tp && opts.verlauf) {
+    opts.verlauf(tp.id).then((pts) => {
+      const t = tendenz(pts);
+      if (t && t !== 'kentert') karte.querySelector('.pf-tide-live').textContent = ` · gerade ${t}`;
+    }, () => {});
+  }
   const zeichnen = () => { if (box.isConnected) profilZeichnen(box, pr, { ...opts, hervorId: hv?.id }); };
   requestAnimationFrame(zeichnen);
   let w = 0;
@@ -255,7 +264,7 @@ export function flussSeite(root, gr, ctx) {
     el?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     el?.querySelector('button')?.focus({ preventScroll: true });
   };
-  const profilK = pr ? profilKarte(gr, z, { onOpen: ctx.onOpen, isMobile: ctx.isMobile, zuTide }) : null;
+  const profilK = pr ? profilKarte(gr, z, { onOpen: ctx.onOpen, isMobile: ctx.isMobile, zuTide, verlauf: ctx.verlauf }) : null;
   // Raster: Handy Profil · Liste · Slipanlagen · Hinweis; Desktop links Profil (+ Slipanlagen, Hinweis), rechts die Liste
   root.replaceChildren(h('div', { class: 'pg-seite pf-seite' }, kopf,
     h('div', { class: 'pf-raster' + (profilK ? '' : ' ohne-profil') }, profilK, listenKarte, slipKarte, hinweis)));

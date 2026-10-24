@@ -8,7 +8,7 @@ import { fmt, kmText, zustand, ZUSTAND, etikett, trendText, trendKlasse, pegelKa
 import { formatTime } from './pegel.js';
 import { popover } from './nav.js';
 import { ENTWICKLUNG } from './config.js';
-import { normW, flussKm as flussKmRoh, gruppieren, kachelnSortieren } from './pegel-fluss.js';
+import { normW, flussKm as flussKmRoh, gruppieren, kachelnSortieren, istKueste, slug, KUESTE_SLUG } from './pegel-fluss.js';
 import { flussKachel, ohneBewertung } from './pegel-fluss-ansicht.js';
 import { umlautVerdacht } from './pegel-namen.js';
 
@@ -327,6 +327,7 @@ export function pegelSeite(root, g, ctx) {
     onBack: ctx.back, backLabel: 'Zurück zur Übersicht',
     onShare: () => ctx.share(g),
     onKarte: () => ctx.karte(g),
+    onFluss: g.water && ctx.fluss ? () => ctx.fluss(istKueste(g.water) ? KUESTE_SLUG : slug(g.water)) : null,
     slips: slipsAmPegel(g, ctx.places()), onSlip: ctx.slip,
     onStern: () => { const neu = pegelSeite(root, g, ctx); neu.querySelector('.pm-stern')?.focus(); },
   });

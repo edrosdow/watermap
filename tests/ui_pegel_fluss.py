@@ -52,8 +52,11 @@ def handler(route):
     if rest == 'stations.json': return route.fulfill(status=200, content_type='application/json', body=json.dumps(STATIONS))
     m = re.fullmatch(r'stations/([^/]+)/W/measurements\.json', rest)
     if m and m.group(1) in BY_ID:
-        cur = BY_ID[m.group(1)]['timeseries'][0]['currentMeasurement']['value']; start = NOW - dt.timedelta(days=7)
-        return route.fulfill(status=200, content_type='application/json', body=json.dumps([{'timestamp': (start + dt.timedelta(minutes=15 * i)).isoformat(), 'value': cur + 5 * math.sin(i / 30)} for i in range(673)]))
+        st_ = BY_ID[m.group(1)]; cur = st_['timeseries'][0]['currentMeasurement']['value']; start = NOW - dt.timedelta(days=7)
+        tide = any(c['shortname'] == 'MThw' for c in st_['timeseries'][0]['characteristicValues'])
+        # Tidepegel: Gezeitenkurve (12,42 h, ±150 cm), jetzt auflaufend; sonst leichte Schwankung
+        wert = (lambda i: cur + 150 * math.sin(2 * math.pi * (i - 672) * 0.25 / 12.42)) if tide else (lambda i: cur + 5 * math.sin(i / 30))
+        return route.fulfill(status=200, content_type='application/json', body=json.dumps([{'timestamp': (start + dt.timedelta(minutes=15 * i)).isoformat(), 'value': round(wert(i), 1)} for i in range(673)]))
     return route.fulfill(status=404, body='[]')
 
 problems = []
@@ -135,13 +138,16 @@ def run(b, w, hh, mobile):
     zeilen = pg.locator('.pf-zeile')
     check(zeilen.count() == 6 and 'Alle 13 Pegel' in pg.inner_text('.pf-listenkarte') and 'flussabwärts' in pg.inner_text('.pf-listenkarte'), f'{tag}: erst 6 Zeilen, „flussabwärts“')
     check('is-hervor' in zeilen.nth(1).get_attribute('class') and 'km 55 · tiefster' in zeilen.nth(1).inner_text(), f'{tag}: hervorgehobene Zeile „tiefster“')
+    pg.wait_for_function("document.querySelector('.pf-tide-live')?.textContent.includes('gerade')", timeout=5000)
+    check('Ab Neu Darchau 2 Tidepegel · gerade auflaufend' in pg.inner_text('.pf-tidezeile'), f'{tag}: Tide-Zeile mit Live-Info ({pg.inner_text(".pf-tidezeile")!r})')
     pg.click('.pf-tidezeile'); pg.wait_for_timeout(600)
     tb = pg.locator('#pf-tide-start').bounding_box()
     check(pg.locator('.pf-zeile').count() == 13 and tb['y'] >= -2 and tb['y'] < hh, f'{tag}: Tide-Zeile klappt die Liste auf und scrollt zu den Tidepegeln')
     check('Hamburg St. Pauli' in pg.inner_text('#pf-tide-start'), f'{tag}: Namen schön geschrieben („St. Pauli“)')
     texte = [t for t in pg.locator('.pf-zeile').all_inner_texts()]
     check(len(texte) == 13 and 'Tide' in texte[10] and 'km 623,1 · Tide' in texte[10] and texte[12].startswith('Elbe Ohne Km'), f'{tag}: alle Pegel, Tide markiert, ohne km am Ende')
-    check(len([c for c in calls if 'measurements' in c]) == n_mess, f'{tag}: keine Abfragen pro Pegel für Kacheln und Profil')
+    neu = [c for c in calls[len(calls) - 50:] if 'measurements' in c]
+    check(len([c for c in calls if 'measurements' in c]) - n_mess <= 1, f'{tag}: höchstens eine Abfrage (Tide-Zeile) für die Flussseite')
     if not mobile and w >= 1024:
         pk = pg.locator('.pf-profilkarte').bounding_box(); lk = pg.locator('.pf-listenkarte').bounding_box()
         check(lk['x'] > pk['x'] + pk['width'] - 1 and abs(lk['y'] - pk['y']) < 2, f'{tag}: Desktop zweispaltig (Profil links, Liste rechts)')
@@ -174,6 +180,28 @@ def run(b, w, hh, mobile):
     pg.click('.pf-zurueck'); pg.wait_for_selector('.fk')
     check(pg.url.endswith('#pegel'), f'{tag}: Zurück-Pfeil → Dashboard')
 
+    # Tidepegel-Detailseite (Cuxhaven)
+    pg.goto(uf.BASE + f'#pegel/{U(21)}'); pg.wait_for_selector('.pt-svg', timeout=8000); pg.wait_for_timeout(300)
+    kp = pg.inner_text('.pd-kopf')
+    check('TIDEPEGEL · ELBE · KM 727' in kp.upper() and 'Cuxhaven' in kp and '610' in kp and pg.inner_text('.pd-kopf .pz-tag') == 'Tide' and '↗ auflaufend' in kp,
+          f'{tag}: Tidepegel-Kopf mit „Tide“ und „auflaufend“ ({kp!r})')
+    check(pg.locator('.pd .ps').count() == 0 and 'Wo steht der Pegel' not in pg.inner_text('.pd'), f'{tag}: keine MNW/MHW-Skala')
+    tk = pg.locator('.pt-svg')
+    check('jetzt' in (tk.text_content() or '') and 'MThw' in (tk.text_content() or '') and tk.locator('circle').count() >= 3, f'{tag}: Tidekurve mit „jetzt“, MThw und Hoch-/Niedrigwassern')
+    eo = pg.inner_text('.pt-einordnung')
+    check('letztes Hochwasser' in eo and 'letztes Niedrigwasser' in eo and re.search(r'Tidehub \d+ cm', eo) and 'mittleren Tide' in eo, f'{tag}: Einordnung ({eo!r})')
+    check('Häfen in der Nähe' in pg.inner_text('.pd-kacheln') and 'alle Pegel' in pg.inner_text('.pd-kacheln'), f'{tag}: Kacheln Karte und Gewässer')
+    check('nicht für die Navigation' in pg.inner_text('.pd-hinweis'), f'{tag}: Hinweis ohne Gewähr')
+    pg.screenshot(path=str(SHOTS / f'fluss_{w}_4tide.png'), full_page=True)
+    pg.locator('.pd-kachel', has_text='alle Pegel').click(); pg.wait_for_selector('.pf-titel')
+    check(pg.url.endswith('#pegel/fluss/elbe'), f'{tag}: Kachel „Elbe – alle Pegel“ öffnet die Flussseite')
+    # Meine Pegel: Tidepegel-Karte mit auf-/ablaufend und letzten HW/NW statt Skala
+    pg.evaluate(f"localStorage.setItem('watermap.meinePegel', JSON.stringify(['{U(21)}']))")
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pm-karte .pm-tide'); pg.wait_for_timeout(400)
+    karte = pg.locator('.pm-karte').first
+    check('auflaufend' in karte.inner_text() and re.search(r'zuletzt (HW|NW) \d\d:\d\d', karte.inner_text()) and karte.locator('.ps').count() == 0, f'{tag}: „Meine Pegel“-Karte eines Tidepegels')
+    pg.evaluate("localStorage.removeItem('watermap.meinePegel')")
+
     # Küste und Kanal: ohne Profil, nur Liste
     pg.click('.fk:has-text("Küste")'); pg.wait_for_selector('.pf-titel')
     check(pg.url.endswith('#pegel/fluss/kueste') and pg.locator('.pf-svg').count() == 0 and pg.locator('.pf-zeile').count() == 3 and 'Tide' in pg.inner_text('.pf-kopf'), f'{tag}: Küste ohne Profil, Liste der Küstenpegel')
@@ -196,6 +224,11 @@ def run(b, w, hh, mobile):
     drin = pg.evaluate("""(ids) => { const b = window.__watermap.state.map.getBounds();
         return ids.map(id => window.__watermap.state.byId.get(id)).every(p => p.lat >= b.south && p.lat <= b.north && p.lon >= b.west && p.lon <= b.east); }""", ids)
     check(drin and len(ids) == n, f'{tag}: Karte zeigt alle {len(ids)} Slipanlagen des Gewässers')
+    # Prüfliste
+    pg.goto(uf.BASE + 'pruefung.html'); pg.wait_for_selector('h2')
+    pt = pg.inner_text('body')
+    check('Reihenfolge Elbe' in pt and '1. Schöna (km 2)' in pt and 'Hamburg St. Pauli (km 623,1) · Tide' in pt and 'Erkannte Tidepegel (3)' in pt and 'Mittellandkanal (2)' in pt,
+          f'{tag}: Prüfliste mit Reihenfolge, Tidepegeln und Gewässern ohne Bewertung')
     pg.goto(uf.BASE + '#pegel/fluss/gibtsnicht'); pg.wait_for_selector('.pg-fehler')
     check('nicht gefunden' in pg.inner_text('.pg-fehler'), f'{tag}: unbekanntes Gewässer → Hinweis')
     check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')

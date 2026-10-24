@@ -17,6 +17,7 @@ import { openLageForm } from './lage-form.js';
 import { naehe, geoFreigabe } from './naehe.js';
 import { gruppieren, gruppeZu } from './pegel-fluss.js';
 import { flussSeite } from './pegel-fluss-ansicht.js';
+import { istTidepegel } from './gezeiten.js';
 import { pegelLaden, pegelStand, verlaufLaden } from './pegel-daten.js';
 import { pegelDetail, etikett as pegelEtikett, fmt as pegelFmt, trendText, trendKlasse, sternKnopf } from './pegel-ansicht.js';
 import { pegelDashboard, pegelSeite, slipsAmPegel } from './pegel-dashboard.js';
@@ -775,7 +776,7 @@ async function flussBereich(root) {
       h('a', { class: 'btn btn-outline', href: '#pegel', text: 'Zur Übersicht' })));
     return;
   }
-  flussSeite(root, gr, { ...pegelCtx(), onOpen: pegelCtx().open, stand: st });
+  flussSeite(root, gr, { ...pegelCtx(), onOpen: pegelCtx().open, stand: st, verlauf: verlaufLaden });
   root.scrollTop = 0;
   root.querySelector('#pf-name')?.focus({ preventScroll: true });
 }
@@ -783,7 +784,8 @@ async function flussBereich(root) {
 /** „Auf der Karte“: Karte mit Pegel-Ebene und Slipanlagen, Pegel ausgewählt. */
 async function pegelAufKarte(g) {
   setView('karte');
-  if (!state.cats.has('slip')) toggleCat('slip', true);
+  const kat = istTidepegel(g) ? 'marina' : 'slip';   // Tidepegel: Häfen in der Nähe, sonst Slipanlagen
+  if (!state.cats.has(kat)) toggleCat(kat, true);
   if (!state.gaugesOn) await setGauges(true);
   selectGauge(g.id);
 }

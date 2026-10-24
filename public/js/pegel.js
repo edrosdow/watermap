@@ -37,7 +37,13 @@ export function normalizeStation(s, now = Date.now()) {
     if (c && REFS[c.shortname] && num(c.value) !== null && (!c.unit || c.unit === ts.unit)) refs[c.shortname] = c.value;
   }
   // Tide-Kennwerte (MThw/MTnw …) werden nicht bewertet, zeigen aber, dass es ein Tidepegel ist
-  const tide = (ts.characteristicValues || []).some(c => /^M[HN]?T[HN]W$/i.test(String(c?.shortname || '')));
+  // Tide-Kennwerte (MThw, MTnw, MTmw …) werden nicht als niedrig/hoch bewertet, zeigen aber einen Tidepegel an
+  const tideRefs = {};
+  for (const c of ts.characteristicValues || []) {
+    const k = { MTHW: 'MThw', MTNW: 'MTnw', MTMW: 'MTmw' }[String(c?.shortname || '').toUpperCase()];
+    if (k && num(c.value) !== null && (!c.unit || c.unit === ts.unit)) tideRefs[k] = c.value;
+  }
+  const tide = Object.keys(tideRefs).length > 0 || (ts.characteristicValues || []).some(c => /^M[HN]?T[HN]W$/i.test(String(c?.shortname || '')));
   const time = cm.timestamp ? Date.parse(cm.timestamp) : NaN;
   const old = !Number.isFinite(time) || now - time > CONFIG.PEGEL_STALE_HOURS * 3600e3;
   let state = 'unknown';
@@ -55,7 +61,7 @@ export function normalizeStation(s, now = Date.now()) {
     time: Number.isFinite(time) ? time : null,
     // PEGELONLINE liefert den Trend nicht immer (auch als Text); fehlt er, kommt er später aus dem Verlauf
     trend: cm.trend !== null && cm.trend !== undefined && cm.trend !== '' && [-1, 0, 1].includes(Number(cm.trend)) ? Number(cm.trend) : null,
-    state, refs, tide,
+    state, refs, tide, tideRefs,
   };
 }
 

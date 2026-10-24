@@ -6,15 +6,17 @@ import { icon } from './icons.js';
 import { s } from './chart.js';
 import { historyChart, formatTime } from './pegel.js';
 import { aenderung24h, trendAusVerlauf, meinePegel } from './pegel-daten.js';
+import { istTidepegel, auswerten } from './gezeiten.js';
+import { tideDetail, tendenzText, letzteText } from './pegel-tide-ansicht.js';
 
 export const fmt = (v) => Math.round(v).toLocaleString('de-DE');
 export const kmText = (g) => (g.km !== null && g.km !== undefined ? `km ${g.km.toLocaleString('de-DE', { maximumFractionDigits: 1 })}` : '');
 const ohneKennwerte = (g) => g.refs.MNW === undefined && g.refs.MHW === undefined;
 
-/** Zustand für Etiketten und Farben (veraltet und ohne Kennwerte eigens). */
+/** Zustand für Etiketten und Farben (veraltet, Tide und ohne Kennwerte eigens). */
 export function zustand(g) {
   if (g.state === 'old') return 'old';
-  if (g.state === 'unknown') return ohneKennwerte(g) ? 'none' : 'unknown';
+  if (g.state === 'unknown') return ohneKennwerte(g) ? (g.tide ? 'tide' : 'none') : 'unknown';
   return g.state;
 }
 export const ZUSTAND = {
@@ -22,6 +24,7 @@ export const ZUSTAND = {
   high:    { text: 'Hoch',           farbe: '#EC835A', cls: 'pz-high' },
   normal:  { text: 'Normal',         farbe: '#6CBF84', cls: 'pz-normal' },
   low:     { text: 'Niedrig',        farbe: '#FAB219', cls: 'pz-low' },
+  tide:    { text: 'Tide',           farbe: '#9CCEE3', cls: 'pz-tide' },
   none:    { text: 'ohne Kennwerte', farbe: '#DCE5EA', cls: 'pz-none' },
   unknown: { text: 'ohne Einordnung', farbe: '#DCE5EA', cls: 'pz-none' },
   old:     { text: 'veraltet',       farbe: '#DCE5EA', cls: 'pz-old' },
@@ -122,6 +125,7 @@ const aenderungText = (d) => (d === null ? null : `${d > 0 ? '+' : d < 0 ? '−'
 /** Karte für „Meine Pegel“ (Dashboard). verlauf: Promise<pts>. */
 export function pegelKarte(g, { verlauf, onOpen, bearbeiten = null }) {
   const z = zustand(g);
+  const tide = istTidepegel(g), tideZeile = tide ? h('p', { class: 'pm-tide' }) : null;
   const trend = h('p', { class: `pm-trend ${trendKlasse(g)}`, text: trendText(g) });
   const spark = h('div', { class: 'pm-spark-box', 'aria-hidden': 'false' });
   const karte = h('article', { class: `pm-karte ${ZUSTAND[z].cls}` + (z === 'hsw' ? ' is-hsw' : ''), dataset: { id: g.id } },
@@ -133,9 +137,19 @@ export function pegelKarte(g, { verlauf, onOpen, bearbeiten = null }) {
       h('p', { class: 'pm-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: ` ${g.unit}` })),
       spark),
     trend,
-    skala(g),
+    tide ? tideZeile : skala(g),
     bearbeiten);
   verlauf?.then((pts) => {
+    if (tide) {
+      // Tidepegel: auf-/ablaufend und die letzten Hoch-/Niedrigwasser statt Trend und Skala
+      const a = auswerten(g, pts);
+      trend.className = 'pm-trend pt-flat';
+      trend.textContent = tendenzText(a) || '';
+      tideZeile.textContent = letzteText(a) || '';
+      const sv = miniVerlauf(pts.filter(p => p.t >= pts[pts.length - 1].t - 2 * 864e5), g);
+      if (sv) spark.replaceChildren(sv);
+      return;
+    }
     const d = aenderung24h(pts), tg = mitTrend(g, pts);
     trend.className = `pm-trend ${trendKlasse(tg)}`;
     trend.textContent = [trendText(tg), d !== null ? aenderungText(d) : null].filter(Boolean).join(' · ');
@@ -150,6 +164,7 @@ export function pegelKarte(g, { verlauf, onOpen, bearbeiten = null }) {
  * opts = { verlauf: Promise<pts>, onBack, backLabel, onShare, onAmpel, onKarte, slips: [{p, d}], onSlip(p), onStern, eingebettet, wetter }
  */
 export function pegelDetail(g, opts) {
+  if (istTidepegel(g)) return tideDetail(g, opts);   // Tidepegel: Tidekurve und Einordnung statt MNW/MHW-Skala
   const z = zustand(g);
   const titel = h('h1', { class: 'pd-name', id: 'pd-name', tabindex: '-1', text: g.name });
   const aend = h('span', { class: `pd-aend ${trendKlasse(g)}`, text: trendText(g) });
