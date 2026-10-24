@@ -418,10 +418,11 @@ export function naehe(ctx) {
     async oeffnen() {
       zeichnen();
       scrollWiederherstellen();
+      const vorher = freigabe;
       await geoFreigabe.pruefen();
       if (!bezug && freigabe === 'granted') bezug = { art: 'position' };
       if (bezug?.art === 'position' && freigabe === 'granted') await positionHolen();
-      else zeichnen();
+      else if (freigabe !== vorher) zeichnen();   // nur neu zeichnen, wenn sich die Freigabe geändert hat
     },
     zeichnen,
     karte,

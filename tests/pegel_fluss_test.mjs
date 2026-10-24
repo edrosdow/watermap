@@ -118,6 +118,9 @@ const ems = [E('Emshörn', 74.3, 53.49, 6.84), E('Knock', 50.8, 53.34, 7.03), E(
 assert.deepEqual(flussReihenfolge(ems).map(g => g.name),
   ['Fuestrup', 'Rheine Unterschleuse', 'Lingen-Darme', 'Dalum', 'Versen Wehrdurchstich', 'Papenburg', 'Leerort', 'Knock', 'Emshörn'], 'Ems: Quelle → Mündung');
 
+// Gruppierung je Stationsliste nur einmal (Reihenfolge ist aufwendig)
+assert.equal(gruppieren(weser), gruppieren(weser));
+
 // Namen
 assert.equal(schoenerName('HANN.MUENDEN'), 'Hann. Münden');
 assert.equal(schoenerName('HAMBURG ST.PAULI'), 'Hamburg St. Pauli');

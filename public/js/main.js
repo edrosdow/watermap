@@ -893,19 +893,26 @@ function writeHash(push = false) {
 function setSelHash(k, id) { selHash = k ? { k, id } : null; writeHash(false); }
 
 /** Bereich wechseln (Karte, In der Nähe, Favoriten, Pegel). push: neuer Eintrag für die Zurück-Taste. */
-function setView(view, { push = true } = {}) {
+function setView(view, { push = true, spaeter = false } = {}) {
   if (!VIEWS.includes(view)) view = 'karte';
   const changed = view !== state.view;
   state.view = view;
-  if (view === 'naehe' || view === 'favoriten') { state.tab = view === 'favoriten' ? 'fav' : 'list'; renderList(); }
-  if (view === 'naehe' && changed) nah?.oeffnen();
+  if (view === 'naehe' || view === 'favoriten') state.tab = view === 'favoriten' ? 'fav' : 'list';
+  // Inhalt zeichnen. Nach einem Tipp in der Navigation erst nach dem nächsten Bild – so wechselt die Ansicht sofort
+  // (mit dem bisherigen Inhalt) und der Tipp „hängt“ nicht, während Liste bzw. Pegel neu aufgebaut werden.
+  const inhalt = () => {
+    if (state.view !== view) return;
+    if (view === 'naehe' && changed && nah && state.places.length && !state.loadFailed) nah.oeffnen();   // zeichnet selbst
+    else if (view === 'naehe' || view === 'favoriten') renderList();
+    if (view === 'pegel') pegelBereich();
+  };
   if (view !== 'pegel') { state.pegelId = null; state.pegelFluss = null; }
   document.body.classList.toggle('list-open', view === 'naehe' || view === 'favoriten');
   document.body.classList.toggle('view-naehe', view === 'naehe');
   document.body.classList.toggle('view-pegel', view === 'pegel');
   if (view !== 'pegel') document.body.classList.remove('view-fluss');
   el.pegelseite.hidden = view !== 'pegel';
-  if (view === 'pegel') pegelBereich();
+  if (spaeter) requestAnimationFrame(() => setTimeout(inhalt, 0)); else inhalt();
   $('#list-title').textContent = 'Favoriten';
   if (view !== 'karte' && isMobile()) { hidePeek(); closeDetailPanel(); }
   nav?.setActive(view);
@@ -918,7 +925,7 @@ function setView(view, { push = true } = {}) {
 function onNav(id, e) {
   if (id === 'melden') { if (!reportPop.isOpen) renderReportMenu({ fragen: true }); reportPop.toggle(e.currentTarget); return true; }
   if (id === 'pegel' && state.view === 'pegel' && (state.pegelId || state.pegelFluss)) { state.pegelId = null; state.pegelFluss = null; writeHash(true); pegelBereich(); return true; }
-  if (VIEWS.includes(id)) { setView(id); return true; }
+  if (VIEWS.includes(id)) { setView(id, { spaeter: true }); return true; }
   return false;
 }
 

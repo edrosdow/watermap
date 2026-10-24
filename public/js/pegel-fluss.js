@@ -53,20 +53,24 @@ export function flussReihenfolge(pegel) {
   const ohneKm = pegel.filter(g => g.km === null || g.km === undefined).sort(name);
   const sprung = mitKm.some((g, i) => i && hatOrt(g) && hatOrt(mitKm[i - 1]) && entfernungKm(mitKm[i - 1], g) > Math.abs(flussKm(g) - flussKm(mitKm[i - 1])) + 15);
   if (!sprung) return [...mitKm, ...ohneKm];
-  const orte = pegel.filter(hatOrt);
+  const orte = pegel.filter(hatOrt), n = orte.length;
+  // Entfernungen einmal berechnen (sonst n³ Winkelrechnungen bei großen Flüssen)
+  const D = new Float64Array(n * n);
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) D[i * n + j] = D[j * n + i] = entfernungKm(orte[i], orte[j]);
   const kette = (start) => {
-    const rest = new Set(orte); rest.delete(start);
+    const frei = new Uint8Array(n).fill(1); frei[start] = 0;
     const k = [start]; let laenge = 0;
-    while (rest.size) {
-      let best = null, d = Infinity;
-      for (const g of rest) { const e = entfernungKm(k[k.length - 1], g); if (e < d) { d = e; best = g; } }
-      k.push(best); rest.delete(best); laenge += d;
+    for (let schritt = 1; schritt < n; schritt++) {
+      const a = k[k.length - 1] * n;
+      let best = -1, d = Infinity;
+      for (let j = 0; j < n; j++) if (frei[j] && D[a + j] < d) { d = D[a + j]; best = j; }
+      k.push(best); frei[best] = 0; laenge += d;
     }
     return { k, laenge };
   };
-  let best = null;
-  for (const g of orte) { const c = kette(g); if (!best || c.laenge < best.laenge - 1e-9) best = c; }
-  let k = best.k;
+  let bestK = null;
+  for (let i = 0; i < n; i++) { const c = kette(i); if (!bestK || c.laenge < bestK.laenge - 1e-9) bestK = c; }
+  let k = bestK.k.map(i => orte[i]);
   // Richtung: Anfang ist das Ende mit dem kleineren km (bei Kilometrierung ab Mündung: dem größeren)
   const kmA = flussKm(k[0]), kmB = flussKm(k[k.length - 1]);
   if (kmA !== null && kmB !== null && (abMuendung ? kmA < kmB : kmA > kmB)) k = [...k].reverse();
@@ -93,7 +97,14 @@ export function rel(g) {
  * → { fluesse: [Gruppe], kueste: Gruppe|null, ohne: [Gruppe] }   Gruppe = { name, slug, art, pegel (in Fließrichtung) }
  *   art: 'fluss' (mind. ein Pegel mit Kennwerten) · 'kueste' · 'ohne' (Kanäle und Gewässer ohne Bewertung)
  */
+const gruppenCache = new WeakMap();   // je geladener Stationsliste nur einmal gruppieren (Reihenfolge ist aufwendig)
 export function gruppieren(gauges) {
+  if (gruppenCache.has(gauges)) return gruppenCache.get(gauges);
+  const gr = gruppierenNeu(gauges);
+  gruppenCache.set(gauges, gr);
+  return gr;
+}
+function gruppierenNeu(gauges) {
   const map = new Map(), kueste = [];
   for (const g of gauges) {
     if (!g.water) continue;
