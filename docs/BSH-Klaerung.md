@@ -10,7 +10,7 @@ für die Tidepegel in WaterMap anzeigen – abgerufen nur serverseitig über ein
 - Aktualisierung der Nordsee-Vorhersage laut BSH: 1, 8, 14 und 20 Uhr.
 - Eine Home-Assistant-Integration nutzt die Felder `hwnw_forecast` (Zeit, Wert, HW/NW) und `curve_forecast` (Kurve) – Stand etwa 2025.
 
-## 2. Prüf-Funktion (nur Vorschau)
+## 2. Prüf-Funktion (nur Vorschau, inzwischen entfernt)
 `/api/gezeiten/probe` (netlify/functions/gezeiten-probe.mjs) ruft einmalig auf:
 - `…/WaterLevelForecast?f=json` und `…/WaterLevelForecast/collections?f=json`
 - je Sammlung `…/collections/<id>/items?f=json&limit=2` (höchstens 6 Sammlungen)
@@ -61,4 +61,3 @@ Auf der Live-Seite (`CONTEXT=production`) antwortet sie mit 404. Kein Zwischensp
 ## 4. Offen
 - Orte ohne Zuordnung (Prüfliste `pruefung.html`, Abschnitt „BSH-Orte ohne PEGELONLINE-Pegel“) bei Bedarf in
   `netlify/lib/gezeiten-orte.mjs` eintragen.
-- Prüf-Funktion `/api/gezeiten/probe` vor dem Livegang entfernen (sie ist auf der Live-Seite ohnehin abgeschaltet).

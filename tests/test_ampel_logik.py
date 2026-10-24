@@ -31,10 +31,6 @@ class PegelAmpelLogikTests(unittest.TestCase):
         res = subprocess.run(["node", str(ROOT / "tests" / "pegel_fluss_test.mjs")], capture_output=True, text=True, timeout=60)
         self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
 
-    def test_gezeiten_probe(self):
-        res = subprocess.run(["node", str(ROOT / "tests" / "gezeiten_probe_test.mjs")], capture_output=True, text=True, timeout=60)
-        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
-
     def test_gezeiten_bsh(self):
         res = subprocess.run(["node", str(ROOT / "tests" / "gezeiten_bsh_test.mjs")], capture_output=True, text=True, timeout=60)
         self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
