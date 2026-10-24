@@ -131,6 +131,8 @@ assert.equal(schoenerName('BHV ALTER LEUCHTTURM'), 'Bremerhaven Alter Leuchtturm
 assert.equal(schoenerName('LT KIEL'), 'Leuchtturm Kiel');
 assert.equal(schoenerName('LIST AUF SYLT'), 'List auf Sylt');
 assert.equal(schoenerName('MEISSEN'), 'Meißen');
+assert.equal(schoenerName('RIEDENBURG_UP'), 'Riedenburg UP');
+assert.ok(!umlautVerdacht('UELZEN OW') && !umlautVerdacht('ITZEHOE HAFEN') && !umlautVerdacht('OESTRICH'));
 assert.ok(!umlautVerdacht('BERLIN-SPANDAUER-SCHIFFFAHRTSKANAL') && !umlautVerdacht('SCHWEDTER QUERFAHRT') && umlautVerdacht('BAD OEYNHAUSEN'));
 
 // Weser: Unterweser (eigene km ab Bremen) hinter der Mittelweser

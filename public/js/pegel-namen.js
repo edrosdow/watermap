@@ -7,7 +7,6 @@ export const KORREKTUR = {
   MEISSEN: 'Meißen',
   ROSSLAU: 'Roßlau',
   STORKOWERGEWAESSER: 'Storkower Gewässer',
-  OESTRICH: 'Oestrich',
 };
 
 // Kürzel, die groß bleiben (UW = Unterwasser, OW = Oberwasser, UP/OP = Unter-/Oberpegel, AP/BP = Außen-/Binnenpegel …)
@@ -17,9 +16,15 @@ const AUSGESCHRIEBEN = { BHV: 'Bremerhaven', WHV: 'Wilhelmshaven', LT: 'Leuchttu
 // kleine Wörter mitten im Namen („List auf Sylt“, „Itter zur Diemel“)
 const KLEIN = new Set(['auf', 'zur', 'zum', 'am', 'im', 'an', 'der', 'den', 'dem', 'bei', 'und', 'ob']);
 
+// Richtig geschriebene Namen mit ae/oe/ue (in der Prüfliste bestätigt) – nicht als Verdacht melden
+const ECHT = ['FLAESHEIM', 'FUESTRUP', 'ITZEHOE', 'POEL', 'UECKERMÜNDE', 'UELZEN', 'UETERSEN', 'OESTRICH'];
+
 const schluessel = (s) => String(s || '').normalize('NFC').toUpperCase().replace(/[^\p{L}]/gu, '');
 // Punkt-ähnliche Zeichen vereinheitlichen, Unicode zusammensetzen
-const vorbereiten = (s) => String(s || '').normalize('NFC').replace(/[․‧·．]/g, '.').replace(/[­​-‍﻿]/g, '').trim();
+const zeichen = (...codes) => new RegExp(`[${String.fromCharCode(...codes)}]`, 'g');
+const PUNKTE = zeichen(0x2024, 0x2027, 0x00B7, 0xFF0E);              // Punkt-ähnliche Zeichen
+const UNSICHTBAR = zeichen(0x00AD, 0x200B, 0x200C, 0x200D, 0xFEFF);   // weiches Trennzeichen, Nullbreite
+const vorbereiten = (s) => String(s || '').normalize('NFC').replace(PUNKTE, '.').replace(UNSICHTBAR, '').replace(/_/g, ' ').trim();
 
 function titel(s) {
   return s.toLowerCase().replace(/\p{L}+/gu, (w, i) => {
@@ -42,4 +47,8 @@ export function schoenerName(roh) {
 }
 
 /** Namen, die vermutlich Umlaute ohne Punkte enthalten (für die Prüfliste). „aue“, „que“, „eue“ sind unverdächtig. */
-export const umlautVerdacht = (roh) => /AE|OE|UE/i.test(String(roh || '').replace(/[AEQ]UE/gi, '')) && !KORREKTUR[schluessel(roh)];
+export const umlautVerdacht = (roh) => {
+  let s = String(roh || '').toUpperCase();
+  for (const w of ECHT) s = s.replaceAll(w, '');
+  return /AE|OE|UE/.test(s.replace(/[AEQ]UE/g, '')) && !KORREKTUR[schluessel(roh)];
+};

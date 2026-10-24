@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 24.10.2026 · App-Version **7.24.1**
+Stand: 24.10.2026 · App-Version **7.24.2**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.24.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.24.2 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -215,6 +215,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
 | 7.24.0 | Gezeiten aus PEGELONLINE: Tidepegel-Detailseite (Tidekurve, letztes HW/NW, Tidehub), Tide in „Meine Pegel“ und Flussseite; Prüfliste `pruefung.html` |
 | 7.24.1 | Nach Prüfliste: Ems-Reihenfolge (Unterems ab Papenburg neu ab km 0 → `flussKm` +240), Namen (Groß-/Straß-, Kürzel UW/AP/BP … groß, Bhv/Whv/LT ausgeschrieben, „auf/zur“ klein, Meißen, Roßlau, Storkower Gewässer), Tide-Kennwerte auch als Text/„cm …“, Prüfliste zeigt Datenstand, gelieferte Tide-Kennwerte und Sonderzeichen in Namen; Offline-Stand nur aus derselben Version |
+| 7.24.2 | Prüfliste bestätigt (Tide-Kennwerte kommen an): „_“ im Namen als Leerzeichen, bestätigte Namen mit ae/oe/ue (Flaesheim, Fuestrup, Itzehoe, Poel, Ueckermünde, Uelzen, Uetersen, Oestrich) nicht mehr als Verdacht |
 | 7.23.0 | Flussseite überarbeitet (Reihenfolge in Fließrichtung, Profil ohne Tidepegel, Zeile tiefster/höchster Pegel), Namen mit Umlauten, BSH-Prüf-Funktion |
 | 7.22.2 | Flussprofil: y-Achse passt sich an, x halb nach km/halb nach Reihenfolge, Handy 220 px |
 | 7.22.1 | „In der Nähe“ am Handy kompakt (Kopf, Hinweiszeile, Links am Listenende) |
@@ -231,7 +232,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.24.1): alle Tests grün (`ui_smoke` an den neuen Kopf von „In der Nähe“ auf dem Handy angepasst).**
+**Letzter Lauf (7.24.2): alle Tests grün (`ui_smoke` an den neuen Kopf von „In der Nähe“ auf dem Handy angepasst).**
 
 ## 6. Offene Aufgaben
 
