@@ -27,4 +27,7 @@ assert.deepEqual(r2.ergebnisse.map(e => e.name), ['Aufbau Station cuxhaven_steub
 assert.ok(j.ergebnisse.find(e => e.name === 'Wasserstand-Anwendung').skripte[0].adressen[0].includes('ldproxy'), 'Datenadressen aus Skripten');
 assert.ok(j.ergebnisse.find(e => e.name === 'Gezeiten-Anwendung').fehler, 'Ausfall wird gemeldet, kein Absturz');
 assert.deepEqual(verweise('<a href="/x/data.json">', 'https://a.bsh.de/'), ['https://a.bsh.de/x/data.json']);
+const r3 = await (await handle(new Request('https://x.test/api/gezeiten/probe?runde=3'), { env: {}, fetchFn })).json();
+assert.equal(r3.ergebnisse[0].name, 'Station cuxhaven_steubenhoeft im Detail', 'Runde 3: Detail');
+assert.ok(r3.ergebnisse.some(e => e.name.startsWith('Stationsliste')), 'Runde 3: Stationsliste');
 console.log('gezeiten_probe_test: ok');

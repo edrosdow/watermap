@@ -1,5 +1,5 @@
 // Prüf-Funktion (nur Vorschau): Welche Daten liefert das BSH für Gezeiten und Wasserstandsvorhersage?
-// Aufruf: GET /api/gezeiten/probe (?runde=2: nur Aufbau einer Station und Stationsliste) – fragt einmalig die BSH-Schnittstelle und die BSH-Webseiten ab und zeigt die
+// Aufruf: GET /api/gezeiten/probe (?runde=2: nur Aufbau einer Station und Stationsliste; ?runde=3: Kurve/HW-NW im Detail, Stationsliste in Varianten) – fragt einmalig die BSH-Schnittstelle und die BSH-Webseiten ab und zeigt die
 // Rohdaten gekürzt an, damit Adresse, Format, Orte, Zeitraum und Aktualisierung geklärt werden können (docs/BSH-Klaerung.md).
 // Auf der Live-Seite (CONTEXT=production) ist sie abgeschaltet. Kein Zwischenspeicher, keine Weitergabe an Nutzer.
 const USER_AGENT = (env) => `WaterMap/1.0 (+https://watermaps.netlify.app; Pruefung BSH-Datenabruf${env.WATERMAP_KONTAKT ? `; ${env.WATERMAP_KONTAKT}` : ''})`;
@@ -61,6 +61,7 @@ export async function handle(req, { fetchFn = fetch, env = process.env } = {}) {
   if (env.CONTEXT === 'production') return json(404, { fehler: 'Nur in der Vorschau verfügbar.' });
   if (req.method !== 'GET') return json(405, { fehler: 'Nur GET.' });
   const ua = USER_AGENT(env), ergebnisse = [];
+  if (new URL(req.url).searchParams.get('runde') === '3') return json(200, { zeit: new Date().toISOString(), userAgent: ua, ergebnisse: await runde3(fetchFn, ua) });
   // ?runde=2: nur Aufbau einer Station und Stationsliste (kürzere Ausgabe)
   const runde2 = new URL(req.url).searchParams.get('runde') === '2';
   for (const z of runde2 ? [] : ZIELE) {
@@ -87,6 +88,45 @@ export async function handle(req, { fetchFn = fetch, env = process.env } = {}) {
   const li = await abrufen(fetchFn, `${API}/collections/waterlevelforecastdata/items?f=json&limit=200&properties=gauge_label,operator_gauge_id,measurement_url,region,area`, ua);
   ergebnisse.push({ name: 'Liste aller Stationen', url: li.url, status: li.status ?? null, fehler: li.fehler ?? null, groesse: li.text?.length ?? null, stationen: li.text ? stationen(li.text) : null });
   return json(200, { zeit: new Date().toISOString(), userAgent: ua, ergebnisse });
+}
+
+/** Felder einer Liste von Objekten: Name → Anzahl der Einträge, die das Feld haben. */
+export function felder(liste) {
+  const z = {};
+  for (const e of liste || []) for (const k of Object.keys(e || {})) z[k] = (z[k] || 0) + 1;
+  return z;
+}
+
+/**
+ * Runde 3: Kurve und HW/NW im Detail (welche Felder es gibt, Werte um „jetzt“, Vorhersagetexte) und
+ * die Stationsliste in mehreren Varianten (Runde 2 bekam 400) – mit Fehlertext.
+ */
+async function runde3(fetchFn, ua, jetzt = Date.now()) {
+  const out = [];
+  const st = await abrufen(fetchFn, `${API}/collections/waterlevelforecastdata/items/cuxhaven_steubenhoeft?f=json`, ua);
+  let p = null; try { p = JSON.parse(st.text).properties; } catch { /* unten als Fehler sichtbar */ }
+  if (p) {
+    const zeit = (e) => Date.parse(String(e.timestamp || e.event_timestamp || '').replace(' ', 'T'));
+    const um = (liste, n) => { const i = Math.max(0, liste.findIndex(e => zeit(e) >= jetzt)); return liste.slice(Math.max(0, i - n), i + n); };
+    const kurve = p.curve || [], hn = p.high_water_low_water || [];
+    out.push({
+      name: 'Station cuxhaven_steubenhoeft im Detail', status: st.status,
+      kurve: { anzahl: kurve.length, felder: felder(kurve), abstandMinuten: kurve.length > 1 ? (zeit(kurve[1]) - zeit(kurve[0])) / 60e3 : null,
+        letzteMessung: [...kurve].reverse().find(e => e.measurement !== undefined) || null,
+        umJetzt: um(kurve, 3), letzteMitVorhersage: [...kurve].reverse().find(e => Object.keys(e).some(k => /forecast/i.test(k))) || null },
+      hwnw: { anzahl: hn.length, felder: felder(hn), umJetzt: um(hn, 2), ersterOhneVorhersage: hn.find(e => e.forecast_value === undefined) || null },
+      texte: Object.fromEntries(['forecast_text', 'forecast_text_additional', 'information_text', 'copyright'].map(k => [k, String(p[k]?.de ?? '').slice(0, 800)])),
+    });
+  } else out.push({ name: 'Station cuxhaven_steubenhoeft', status: st.status ?? null, fehler: st.fehler ?? null, anfang: st.text?.slice(0, 500) });
+  for (const q of ['limit=100', 'limit=50&properties=gauge_label,operator_gauge_id,measurement_url,region,area', 'limit=10']) {
+    const r = await abrufen(fetchFn, `${API}/collections/waterlevelforecastdata/items?f=json&${q}`, ua);
+    let gesamt = null, weiter = null;
+    try { const j = JSON.parse(r.text); gesamt = j.numberMatched ?? null; weiter = (j.links || []).find(l => l.rel === 'next')?.href ?? null; } catch { /* kein JSON */ }
+    out.push({ name: `Stationsliste (${q})`, url: r.url, status: r.status ?? null, fehler: r.fehler ?? null, groesse: r.text?.length ?? null, gesamt, weiter,
+      ...(r.status === 200 ? { stationen: stationen(r.text) } : { antwort: r.text?.slice(0, 700) }) });
+    if (r.status === 200) break;
+  }
+  return out;
 }
 
 export default (req) => handle(req);
