@@ -12,11 +12,12 @@ const REFRESH_MS = CONFIG.PEGEL_REFRESH_MIN * 60e3;
 let cache = null;          // { zeit, gauges, byId, offline }
 let laufend = null;
 
+// Offline-Stand nur aus derselben Version (Namen und Kennwerte werden beim Normalisieren berechnet)
 function snapshotLesen() {
-  try { const j = JSON.parse(localStorage.getItem(LS_SNAP) || 'null'); return j && Array.isArray(j.gauges) ? j : null; } catch { return null; }
+  try { const j = JSON.parse(localStorage.getItem(LS_SNAP) || 'null'); return j && Array.isArray(j.gauges) && j.version === CONFIG.VERSION ? j : null; } catch { return null; }
 }
 function snapshotSchreiben(zeit, gauges) {
-  try { localStorage.setItem(LS_SNAP, JSON.stringify({ zeit, gauges })); } catch { /* zu groß oder gesperrt: ohne Offline-Stand */ }
+  try { localStorage.setItem(LS_SNAP, JSON.stringify({ version: CONFIG.VERSION, zeit, gauges })); } catch { /* zu groß oder gesperrt: ohne Offline-Stand */ }
 }
 
 /** Alle Pegel (normalisiert). force: neu laden. Offline: letzter Stand mit offline: true. */

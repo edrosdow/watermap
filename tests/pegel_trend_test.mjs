@@ -19,4 +19,14 @@ assert.equal(normalizeStation(st('1')).trend, 1, 'Trend als Text');
 assert.equal(normalizeStation(st(undefined)).trend, null, 'ohne Trend');
 assert.equal(normalizeStation(st(null)).trend, null, 'Trend null');
 assert.equal(normalizeStation(st(-999)).trend, null, 'unbekannter Wert');
+// Tide-Kennwerte: auch als Text, Einheit „cm“ mit Zusatz; ohne erkannte Werte bleiben die gelieferten Namen sichtbar
+const tideSt = (cv) => ({ uuid: 't', latitude: 53.87, longitude: 8.72, water: { shortname: 'ELBE' },
+  timeseries: [{ shortname: 'W', unit: 'cm', characteristicValues: cv, currentMeasurement: { timestamp: new Date().toISOString(), value: 500 } }] });
+const t1 = normalizeStation(tideSt([{ shortname: 'MThw', unit: 'cm', value: 651 }, { shortname: 'MTnw', unit: 'cm über PNP', value: '358,5' }]));
+assert.deepEqual(t1.tideRefs, { MThw: 651, MTnw: 358.5 });
+assert.ok(t1.tide && !t1.tideRoh);
+const t2 = normalizeStation(tideSt([{ shortname: 'MHThw', unit: 'cm', value: 700 }]));
+assert.ok(t2.tide);
+assert.deepEqual(t2.tideRoh, ['MHThw=700 cm']);
+assert.ok(!normalizeStation(tideSt([{ shortname: 'MNW', unit: 'cm', value: 100 }])).tide, 'MNW ist kein Tidekennwert');
 console.log('pegel_trend_test: ok');

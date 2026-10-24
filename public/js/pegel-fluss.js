@@ -22,10 +22,12 @@ export const hatKennwerte = (g) => g.refs?.MNW !== undefined || g.refs?.MHW !== 
 /**
  * Reihenfolge von der Quelle zur Mündung. Die Weser hat zwei Kilometrierungen: Ober-/Mittelweser ab Hann. Münden
  * (bis Bremen, km 366,7), die Unterweser beginnt in Bremen (Große Weserbrücke) wieder bei km 0 – sie kommt ans Ende.
+ * Ebenso die Ems: oberhalb km bis Versen (~235), die Unterems ab Papenburg wieder ab km 0 bis Emshörn.
  */
 export function flussKm(g) {
   if (g.km === null || g.km === undefined) return null;
   if (normW(g.water) === 'weser' && g.lat > 52.9 && g.km < 130) return g.km + 366.7;
+  if (normW(g.water) === 'ems' && g.lat > 53.0 && g.km < 90) return g.km + 240;
   return g.km;
 }
 const nachKm = (a, b) => (flussKm(a) ?? 1e9) - (flussKm(b) ?? 1e9) || a.name.localeCompare(b.name, 'de');
@@ -47,9 +49,9 @@ export function flussReihenfolge(pegel) {
   if (pegel.length < 2) return [...pegel];
   const abMuendung = KM_AB_MUENDUNG.has(normW(pegel[0].water));
   const name = (a, b) => a.name.localeCompare(b.name, 'de');
-  const mitKm = pegel.filter(g => g.km !== null && g.km !== undefined).sort((a, b) => (abMuendung ? b.km - a.km : a.km - b.km) || name(a, b));
+  const mitKm = pegel.filter(g => g.km !== null && g.km !== undefined).sort((a, b) => (abMuendung ? flussKm(b) - flussKm(a) : flussKm(a) - flussKm(b)) || name(a, b));
   const ohneKm = pegel.filter(g => g.km === null || g.km === undefined).sort(name);
-  const sprung = mitKm.some((g, i) => i && hatOrt(g) && hatOrt(mitKm[i - 1]) && entfernungKm(mitKm[i - 1], g) > Math.abs(g.km - mitKm[i - 1].km) + 15);
+  const sprung = mitKm.some((g, i) => i && hatOrt(g) && hatOrt(mitKm[i - 1]) && entfernungKm(mitKm[i - 1], g) > Math.abs(flussKm(g) - flussKm(mitKm[i - 1])) + 15);
   if (!sprung) return [...mitKm, ...ohneKm];
   const orte = pegel.filter(hatOrt);
   const kette = (start) => {
@@ -66,7 +68,7 @@ export function flussReihenfolge(pegel) {
   for (const g of orte) { const c = kette(g); if (!best || c.laenge < best.laenge - 1e-9) best = c; }
   let k = best.k;
   // Richtung: Anfang ist das Ende mit dem kleineren km (bei Kilometrierung ab Mündung: dem größeren)
-  const kmA = k[0].km ?? null, kmB = k[k.length - 1].km ?? null;
+  const kmA = flussKm(k[0]), kmB = flussKm(k[k.length - 1]);
   if (kmA !== null && kmB !== null && (abMuendung ? kmA < kmB : kmA > kmB)) k = [...k].reverse();
   return [...k, ...pegel.filter(g => !hatOrt(g)).sort(name)];
 }

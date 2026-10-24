@@ -2,7 +2,7 @@
 // Start: node tests/pegel_fluss_test.mjs
 import assert from 'node:assert/strict';
 import { slug, rel, gruppieren, gruppeZu, flussZustand, kachelnSortieren, punkte, profil, flussKm, istKueste, slipsAmFluss, artikel, flussReihenfolge, abschnitt } from '../public/js/pegel-fluss.js';
-import { schoenerName } from '../public/js/pegel-namen.js';
+import { schoenerName, umlautVerdacht } from '../public/js/pegel-namen.js';
 
 const R = { MNW: 100, MW: 200, MHW: 300, HSW: 400 };
 let n = 0;
@@ -111,12 +111,27 @@ assert.equal(abschnitt(P('Elbe', 55, 62, 'low')), null, 'Abschnitt nur bei der W
 const M = (name, km, lat, lon) => ({ ...P('Mosel', km, 200, 'normal', { name }), lat, lon });
 assert.deepEqual(flussReihenfolge([M('Cochem', 51.6, 50.15, 7.17), M('Trier', 195.8, 49.76, 6.63), M('Koblenz', 2, 50.36, 7.6)]).map(g => g.name), ['Trier', 'Cochem', 'Koblenz'], 'Mosel: km ab Mündung');
 assert.deepEqual(flussReihenfolge(elbe.pegel).map(g => g.name), elbe.pegel.map(g => g.name), 'Elbe: km durchgehend');
+// Ems: Unterems ab Papenburg wieder ab km 0 (Koordinaten wie PEGELONLINE, gerundet); Wachendorf mit abweichender km
+const E = (name, km, lat, lon) => ({ ...P('Ems', km, 200, 'normal', { name }), lat, lon });
+const ems = [E('Emshörn', 74.3, 53.49, 6.84), E('Knock', 50.8, 53.34, 7.03), E('Leerort', 14.8, 53.21, 7.44), E('Papenburg', 0.4, 53.09, 7.38),
+  E('Versen Wehrdurchstich', 234.8, 52.73, 7.24), E('Dalum', 212, 52.60, 7.24), E('Lingen-Darme', 196.2, 52.49, 7.30), E('Rheine Unterschleuse', 153, 52.29, 7.43), E('Fuestrup', 102.2, 52.06, 7.67)];
+assert.deepEqual(flussReihenfolge(ems).map(g => g.name),
+  ['Fuestrup', 'Rheine Unterschleuse', 'Lingen-Darme', 'Dalum', 'Versen Wehrdurchstich', 'Papenburg', 'Leerort', 'Knock', 'Emshörn'], 'Ems: Quelle → Mündung');
 
 // Namen
 assert.equal(schoenerName('HANN.MUENDEN'), 'Hann. Münden');
 assert.equal(schoenerName('HAMBURG ST.PAULI'), 'Hamburg St. Pauli');
 assert.equal(schoenerName('MÜRITZ-ELDE-WASSERSTRASSE'), 'Müritz-Elde-Wasserstraße');
 assert.equal(schoenerName('NEUENKIRCHEN'), 'Neuenkirchen', 'keine allgemeine Regel ue → ü');
+assert.equal(schoenerName('HANN\u2024MUENDEN'), 'Hann. Münden', 'Punkt-ähnliches Zeichen');
+assert.equal(schoenerName('GROSSE WESERBRÜCKE'), 'Große Weserbrücke');
+assert.equal(schoenerName('FRIEDRICHSTADT STRASSENBRÜCKE'), 'Friedrichstadt Straßenbrücke');
+assert.equal(schoenerName('WESERWEHR UW'), 'Weserwehr UW', 'Kürzel bleiben groß');
+assert.equal(schoenerName('BHV ALTER LEUCHTTURM'), 'Bremerhaven Alter Leuchtturm');
+assert.equal(schoenerName('LT KIEL'), 'Leuchtturm Kiel');
+assert.equal(schoenerName('LIST AUF SYLT'), 'List auf Sylt');
+assert.equal(schoenerName('MEISSEN'), 'Meißen');
+assert.ok(!umlautVerdacht('BERLIN-SPANDAUER-SCHIFFFAHRTSKANAL') && !umlautVerdacht('SCHWEDTER QUERFAHRT') && umlautVerdacht('BAD OEYNHAUSEN'));
 
 // Weser: Unterweser (eigene km ab Bremen) hinter der Mittelweser
 const unterweser = { ...P('Weser', 17.8, 588, 'unknown'), lat: 53.17 };

@@ -22,6 +22,7 @@ const REFS = {
 };
 
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+const zahl = (v) => (typeof v === 'string' && /^\s*-?\d+([.,]\d+)?\s*$/.test(v) ? Number(v.replace(',', '.')) : num(v));
 
 /** Wandelt einen Eintrag aus stations.json in ein schlankes Objekt um; null, wenn unbrauchbar. */
 export function normalizeStation(s, now = Date.now()) {
@@ -36,14 +37,18 @@ export function normalizeStation(s, now = Date.now()) {
   for (const c of ts.characteristicValues || []) {
     if (c && REFS[c.shortname] && num(c.value) !== null && (!c.unit || c.unit === ts.unit)) refs[c.shortname] = c.value;
   }
-  // Tide-Kennwerte (MThw/MTnw …) werden nicht bewertet, zeigen aber, dass es ein Tidepegel ist
-  // Tide-Kennwerte (MThw, MTnw, MTmw …) werden nicht als niedrig/hoch bewertet, zeigen aber einen Tidepegel an
-  const tideRefs = {};
+  // Tide-Kennwerte (MThw, MTnw, MTmw …) werden nicht als niedrig/hoch bewertet, zeigen aber einen Tidepegel an.
+  // Werte auch als Text („651“, „651,0“), Einheit nur verwerfen, wenn sie eindeutig nicht cm ist.
+  const tideRefs = {}, tideRoh = [];
   for (const c of ts.characteristicValues || []) {
-    const k = { MTHW: 'MThw', MTNW: 'MTnw', MTMW: 'MTmw' }[String(c?.shortname || '').toUpperCase()];
-    if (k && num(c.value) !== null && (!c.unit || c.unit === ts.unit)) tideRefs[k] = c.value;
+    const name = String(c?.shortname || '').trim();
+    if (!/^[MHN]{0,2}T[HNM][WB]?$/i.test(name.replace(/\s+/g, ''))) continue;
+    tideRoh.push(`${name}=${c.value ?? '–'}${c.unit ? ' ' + c.unit : ''}`);
+    const k = { MTHW: 'MThw', MTNW: 'MTnw', MTMW: 'MTmw' }[name.replace(/\s+/g, '').toUpperCase()];
+    const v = zahl(c.value);
+    if (k && v !== null && (!c.unit || /^cm/i.test(c.unit))) tideRefs[k] = v;
   }
-  const tide = Object.keys(tideRefs).length > 0 || (ts.characteristicValues || []).some(c => /^M[HN]?T[HN]W$/i.test(String(c?.shortname || '')));
+  const tide = tideRoh.length > 0;
   const time = cm.timestamp ? Date.parse(cm.timestamp) : NaN;
   const old = !Number.isFinite(time) || now - time > CONFIG.PEGEL_STALE_HOURS * 3600e3;
   let state = 'unknown';
@@ -62,6 +67,8 @@ export function normalizeStation(s, now = Date.now()) {
     // PEGELONLINE liefert den Trend nicht immer (auch als Text); fehlt er, kommt er später aus dem Verlauf
     trend: cm.trend !== null && cm.trend !== undefined && cm.trend !== '' && [-1, 0, 1].includes(Number(cm.trend)) ? Number(cm.trend) : null,
     state, refs, tide, tideRefs,
+    // Roh-Kennwerte nur, wenn keine Tide-Kennwerte erkannt wurden (für die Prüfliste)
+    ...(tide && !Object.keys(tideRefs).length ? { tideRoh } : {}),
   };
 }
 

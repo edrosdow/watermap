@@ -56,19 +56,21 @@ with sync_playwright() as p:
         check(pg.locator('.place').count() == 8, f'{name}: 8 Slipanlagen in der Liste')
         check(pg.locator('.leaflet-marker-icon').count() >= 1, f'{name}: Marker im Kartenfenster ({pg.locator(".leaflet-marker-icon").count()})')
         pg.screenshot(path=str(SHOTS / f'{name}_start.png'))
-        # Kategorie ohne Daten
-        pg.click('.cat-slip'); pg.click('.cat-fuel'); pg.wait_for_timeout(150)      # nur Häfen
+        # Kategorie ohne Daten (Handy: Kategorien im Kopf von „In der Nähe“)
+        cat = (lambda t: f'.nh-cat[data-cat={t}]') if mobile else (lambda t: f'.cat-{t}')
+        pg.click(cat('slip')); pg.click(cat('fuel')); pg.wait_for_timeout(150)      # nur Häfen
         check('Noch keine Marinas' in pg.inner_text('#list'), f'{name}: Leerzustand Marinas ehrlich')
-        pg.click('.cat-slip'); pg.click('.cat-marina'); pg.wait_for_timeout(150)    # nur Slipanlagen (mindestens eine bleibt aktiv)
-        check(pg.locator('.cat-slip').get_attribute('aria-pressed') == 'true' and pg.locator('.cat-marina').get_attribute('aria-pressed') == 'false', f'{name}: Kategorie-Umschalter mit aria-pressed')
+        pg.click(cat('slip')); pg.click(cat('marina')); pg.wait_for_timeout(150)    # nur Slipanlagen (mindestens eine bleibt aktiv)
+        check(pg.locator(cat('slip')).get_attribute('aria-pressed') == 'true' and pg.locator(cat('marina')).get_attribute('aria-pressed') == 'false', f'{name}: Kategorie-Umschalter mit aria-pressed')
         # Unterfilter ohne Daten ist deaktiviert und blendet nichts aus
-        pg.click('#btn-filter'); pg.wait_for_selector('#filter-panel[open]')
+        fbtn = '.nh-filter' if mobile else '#btn-filter'
+        pg.click(fbtn); pg.wait_for_selector('#filter-panel[open]')
         chip = pg.locator('#filter-panel [data-key=sub-free]')
         check(chip.get_attribute('aria-disabled') == 'true', f'{name}: Filter "Kostenlos" ohne Daten ist als deaktiviert markiert')
         chip.click(force=True); pg.wait_for_timeout(150)
         check('bestätigten Angaben' in pg.inner_text('#toast'), f'{name}: Hinweis statt stiller Leere')
         pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
-        check(pg.locator('#filter-panel[open]').count() == 0 and pg.evaluate("document.activeElement.id") == 'btn-filter', f'{name}: Escape schließt Filter, Fokus zurück auf den Knopf')
+        check(pg.locator('#filter-panel[open]').count() == 0 and pg.evaluate("s => document.activeElement.matches(s)", fbtn), f'{name}: Escape schließt Filter, Fokus zurück auf den Knopf')
         check(pg.locator('.place').count() == 8, f'{name}: Filter "Kostenlos" ohne Daten blendet nichts aus')
         # Detail
         pg.click('.place >> nth=0')
