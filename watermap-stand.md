@@ -219,7 +219,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
 | 7.24.0 | Gezeiten aus PEGELONLINE: Tidepegel-Detailseite (Tidekurve, letztes HW/NW, Tidehub), Tide in „Meine Pegel“ und Flussseite; Prüfliste `pruefung.html` |
 | 7.24.1 | Nach Prüfliste: Ems-Reihenfolge (Unterems ab Papenburg neu ab km 0 → `flussKm` +240), Namen (Groß-/Straß-, Kürzel UW/AP/BP … groß, Bhv/Whv/LT ausgeschrieben, „auf/zur“ klein, Meißen, Roßlau, Storkower Gewässer), Tide-Kennwerte auch als Text/„cm …“, Prüfliste zeigt Datenstand, gelieferte Tide-Kennwerte und Sonderzeichen in Namen; Offline-Stand nur aus derselben Version |
-| 7.25.1 | BSH-Zuordnung nach Prüfliste (55 Tidepegel automatisch): Ausnahmen Grauerort Reede und Blankenese UF; `?orte=1` liefert `alias`, Prüfliste berücksichtigt sie |
+| 7.25.1 | (in der Vorschau mit echten Daten geprüft: Cuxhaven stimmt mit wasserstand.bsh.de überein) BSH-Zuordnung nach Prüfliste (55 Tidepegel automatisch): Ausnahmen Grauerort Reede und Blankenese UF; `?orte=1` liefert `alias`, Prüfliste berücksichtigt sie |
 | 7.25.0 | Gezeitenvorhersage des BSH: Funktion `/api/gezeiten`, Karte „Gezeiten“, Vorhersage in der Tidekurve, nächstes HW in „Meine Pegel“, Flussseite und Küsten-Kachel, Offline-Stand, Über-Seite |
 | 7.24.2 | Prüfliste bestätigt (Tide-Kennwerte kommen an): „_“ im Namen als Leerzeichen, bestätigte Namen mit ae/oe/ue (Flaesheim, Fuestrup, Itzehoe, Poel, Ueckermünde, Uelzen, Uetersen, Oestrich) nicht mehr als Verdacht |
 | 7.23.0 | Flussseite überarbeitet (Reihenfolge in Fließrichtung, Profil ohne Tidepegel, Zeile tiefster/höchster Pegel), Namen mit Umlauten, BSH-Prüf-Funktion |
@@ -251,7 +251,6 @@ Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.
 - „Heute vor Ort“ mit echten Blobs
 - Zustellung der Netlify Forms
 - Pegel-Alarm-Mails
-- BSH-Gezeitenvorhersage (`/api/gezeiten`): Zuordnung der Orte in der Prüfliste ansehen
 
 **Prüfen auf echten Geräten:** Safari (iOS) und Firefox. Bisher ist nur in Chromium getestet.
 
