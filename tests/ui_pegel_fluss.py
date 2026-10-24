@@ -1,7 +1,7 @@
 """UI-Test Fluss-Kacheln und Flussseite (#pegel/fluss/<name>) mit nachgebildetem PEGELONLINE und den Daten aus ui_full.py.
 Start: python3 tests/ui_pegel_fluss.py [screenshots-ordner]"""
 import datetime as dt, importlib.util, json, math, pathlib, re, sys
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from playwright.sync_api import sync_playwright
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -44,6 +44,27 @@ STATIONS += [
     station(U(81), 'TESTSEE SÜD', 'TEST-SEE', 5.0, 51.3, 7.6, 200, refs=R),
 ]
 BY_ID = {s['uuid']: s for s in STATIONS}
+
+# BSH-Gezeitenvorhersage (über /api/gezeiten) – nur für Cuxhaven (und den Cuxhaven-Pegel der Küsten-Kachel)
+CUX_ECHT = 'aad49293-242a-43ad-a8b1-e91d7792c4b2'
+def bsh_daten():
+    jetzt = dt.datetime.now(dt.timezone.utc)
+    ms = lambda d: int(d.timestamp() * 1000)
+    ereig = [{'t': ms(jetzt + dt.timedelta(minutes=70)), 'typ': 'HW', 'astro': 679, 'vh': 718, 'abw': '+0,5 bis +0,75 m', 'unsicher': 12.5}]
+    for i, typ in enumerate(['NW', 'HW', 'NW', 'HW']):
+        ereig.append({'t': ms(jetzt + dt.timedelta(minutes=70 + 372 * (i + 1))), 'typ': typ, 'astro': 368 if typ == 'NW' else 680})
+    kurve = [{'t': ms(jetzt + dt.timedelta(minutes=10 * i)), 'astro': round(520 + 150 * math.sin(2 * math.pi * (i * 10 + 116) / 745), 1),
+              **({'vh': round(560 + 150 * math.sin(2 * math.pi * (i * 10 + 116) / 745), 1)} if i > 0 else {})} for i in range(-6, 180)]
+    return {'ort': 'cuxhaven_steubenhoeft', 'name': 'Cuxhaven, Steubenhöft, Elbe', 'stand': ms(jetzt - dt.timedelta(hours=3)), 'ereignisse': ereig, 'kurve': kurve,
+            'text': 'Das Hochwasser wird 1/2 bis 3/4 m höher als das mittlere Hochwasser eintreten.', 'zusatz': None, 'link': 'https://wasserstand.bsh.de/cuxhaven_steubenhoeft', 'lizenz': 'CC BY 4.0', 'quelle': 'BSH'}
+bsh = {'aus': False}
+def bsh_handler(route):
+    q = parse_qs(urlparse(route.request.url).query)
+    calls.append(route.request.url)
+    if bsh['aus']: return route.fulfill(status=502, content_type='application/json', body='{"fehler": "nicht erreichbar"}')
+    if 'orte' in q: return route.fulfill(status=200, content_type='application/json', body=json.dumps({'orte': [{'id': 'cuxhaven_steubenhoeft', 'name': 'Cuxhaven', 'nr': None, 'uuid': U(21)}, {'id': 'helgoland', 'name': 'Helgoland', 'nr': '9510070', 'uuid': None}]}))
+    if q.get('pegel', [''])[0] in (U(21), CUX_ECHT): return route.fulfill(status=200, content_type='application/json', body=json.dumps(bsh_daten()))
+    return route.fulfill(status=404, content_type='application/json', body='{"keinOrt": true}')
 calls = []
 
 def handler(route):
@@ -68,6 +89,7 @@ def page(b, w, hh, mobile):
     ctx = b.new_context(viewport={'width': w, 'height': hh}, is_mobile=mobile, has_touch=mobile, device_scale_factor=1, locale='de-DE', service_workers='block')
     uf.lib_routes(ctx)
     ctx.route('**/api/pegel/**', handler)
+    ctx.route('**/api/gezeiten**', bsh_handler)
     ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))
     ctx.add_init_script("try { localStorage.setItem('watermap.geoAsked', '1'); localStorage.setItem('watermap.meinePegel.ampel', '1'); localStorage.setItem('watermap.cats', 'marina'); } catch {}")
     pg = ctx.new_page(); errs = []; infos = []
@@ -93,8 +115,9 @@ def run(b, w, hh, mobile):
     check('alle 5 Pegel' in nk and 'im Normalbereich' in nk and 'keine Auffälligkeiten' in nk, f'{tag}: Kachel Neckar normal')
     sa = pg.locator('.fk', has_text='Saale')
     check('keine Daten' in sa.inner_text() and 'keine aktuellen Daten' in sa.inner_text() and sa.locator('.fk-punkte').count() == 0, f'{tag}: Fluss nur mit veralteten Werten grau „keine aktuellen Daten“')
+    pg.wait_for_function("document.querySelector('.fk-kueste, .fk:last-child')?.textContent.includes('Cuxhaven: Hochwasser')", timeout=5000)
     ku = pg.locator('.fk', has_text='Küste').inner_text()
-    check('Tide' in ku and '3 Pegel' in ku, f'{tag}: Küste mit Nordsee, Ostsee und Außenjade ({ku!r})')
+    check('Tide' in ku and '3 Pegel' in ku and re.search(r'Cuxhaven: Hochwasser \d\d:\d\d', ku), f'{tag}: Küste mit Nordsee, Ostsee und Außenjade, nächstes HW Cuxhaven ({ku!r})')
     check(any('Mittellandkanal (2)' in m for m in pg.infos), f'{tag}: Vorschau: Gewässer ohne Zuordnung in der Konsole ({pg.infos[:1]})')
     pg.click('.pg-fl-alle'); pg.wait_for_timeout(200)
     check(pg.locator('.fk-ohne-zeile').count() == 1 and 'Mittellandkanal' in pg.inner_text('.fk-ohne'), f'{tag}: „Alle 7 Gewässer“: Kanal im eigenen Abschnitt')
@@ -146,6 +169,12 @@ def run(b, w, hh, mobile):
     check('Hamburg St. Pauli' in pg.inner_text('#pf-tide-start'), f'{tag}: Namen schön geschrieben („St. Pauli“)')
     texte = [t for t in pg.locator('.pf-zeile').all_inner_texts()]
     check(len(texte) == 13 and 'Tide' in texte[10] and 'km 623,1 · Tide' in texte[10] and texte[12].startswith('Elbe Ohne Km'), f'{tag}: alle Pegel, Tide markiert, ohne km am Ende')
+    pg.wait_for_function("[...document.querySelectorAll('.pf-zeile')].some(z => / HW \\d\\d:\\d\\d/.test(z.textContent))", timeout=5000)
+    texte = [t for t in pg.locator('.pf-zeile').all_inner_texts()]
+    check(re.search(r'km 727 · HW \d\d:\d\d', texte[11]) and 'km 623,1 · Tide' in texte[10], f'{tag}: Tidepegel mit BSH-Ort „HW 14:32“ statt „Tide“ ({texte[11]!r})')
+    check(len([c for c in calls if '/api/gezeiten' in c and 'pegel=' in c and U(20) in c]) == 0, f'{tag}: nur Pegel mit BSH-Ort werden abgefragt')
+    pg.wait_for_function("document.querySelector('.pf-tide-hw')", timeout=5000)
+    check(re.search(r'· HW Cuxhaven \d\d:\d\d', pg.inner_text('.pf-tidezeile')), f'{tag}: Tide-Zeile mit nächstem HW ({pg.inner_text(".pf-tidezeile")!r})')
     neu = [c for c in calls[len(calls) - 50:] if 'measurements' in c]
     check(len([c for c in calls if 'measurements' in c]) - n_mess <= 1, f'{tag}: höchstens eine Abfrage (Tide-Zeile) für die Flussseite')
     if not mobile and w >= 1024:
@@ -191,15 +220,38 @@ def run(b, w, hh, mobile):
     eo = pg.inner_text('.pt-einordnung')
     check('letztes Hochwasser' in eo and 'letztes Niedrigwasser' in eo and re.search(r'Tidehub \d+ cm', eo) and 'mittleren Tide' in eo, f'{tag}: Einordnung ({eo!r})')
     check('Häfen in der Nähe' in pg.inner_text('.pd-kacheln') and 'alle Pegel' in pg.inner_text('.pd-kacheln'), f'{tag}: Kacheln Karte und Gewässer')
-    check('nicht für die Navigation' in pg.inner_text('.pd-hinweis'), f'{tag}: Hinweis ohne Gewähr')
+    check('nicht für die Navigation' in pg.inner_text('.pd-hinweis') and 'BSH' in pg.inner_text('.pd-hinweis'), f'{tag}: Hinweis ohne Gewähr, Quelle BSH')
+    # Gezeiten (BSH): nächstes HW/NW, drei weitere als Pillen, Vorhersage gestrichelt in der Kurve
+    pg.wait_for_selector('.pt-gezeiten', timeout=5000); pg.wait_for_timeout(200)
+    gz = pg.inner_text('.pt-gezeiten')
+    check('Nächstes Hochwasser' in gz and 'Nächstes Niedrigwasser' in gz and re.search(r'in 1 Std\. (9|10|11) Min\.', gz) and '718 cm · +0,5 bis +0,75 m zum Mittel' in gz
+          and '368 cm (Gezeitenrechnung)' in gz, f'{tag}: Gezeiten-Karte ({gz[:160]!r})')
+    check(pg.locator('.pt-gz-pillen li').count() == 3 and 'Vorhersage BSH · Stand' in gz and 'nicht für die Navigation' in gz
+          and pg.locator('.pt-gz-quelle a', has_text='CC BY 4.0').count() == 1, f'{tag}: drei weitere Termine, Stand, Lizenz')
+    check(pg.locator('.pt-svg .pt-vorhersage').count() == 1 and pg.locator('.pt-svg .pt-zukunft').count() == 1 and pg.locator('.pt-svg .pt-vh-punkt').count() >= 1
+          and '12 h Vorhersage' in pg.inner_text('.pt-kurve + .pt-achse, .pd-karte-kopf >> nth=1') + pg.inner_text('.pd-body'), f'{tag}: Vorhersage gestrichelt in der Tidekurve')
+    gb, kb = pg.locator('.pt-gezeiten').bounding_box(), pg.locator('.pt-kurve').bounding_box()
+    check(gb['y'] < kb['y'] and gb['x'] + gb['width'] <= w + 1, f'{tag}: Gezeiten-Karte über der Tidekurve, passt in die Breite')
+    if w <= 400:
+        k = pg.locator('.pt-gz-kachel').all()
+        check(len(k) == 2 and abs(k[0].bounding_box()['y'] - k[1].bounding_box()['y']) < 2, f'{tag}: HW und NW nebeneinander')
     pg.screenshot(path=str(SHOTS / f'fluss_{w}_4tide.png'), full_page=True)
+    # offline: letzte Vorhersage mit „Stand von … (offline)“
+    bsh['aus'] = True
+    pg.reload(); pg.wait_for_selector('.pt-gezeiten', timeout=5000)
+    check('(offline)' in pg.inner_text('.pt-gezeiten') and 'Stand von' in pg.inner_text('.pt-gezeiten'), f'{tag}: offline letzte Vorhersage mit „Stand von …“')
+    pg.evaluate("Object.keys(localStorage).filter(k => k.startsWith('watermap.gezeiten.')).forEach(k => localStorage.removeItem(k))")
+    pg.reload(); pg.wait_for_selector('.pt-svg', timeout=8000); pg.wait_for_timeout(500)
+    check(pg.locator('.pt-gezeiten').count() == 0 and pg.locator('.pt-vorhersage').count() == 0 and '24 h gemessen' in pg.inner_text('.pd-body'), f'{tag}: BSH nicht erreichbar → nur Messwerte')
+    bsh['aus'] = False
     pg.locator('.pd-kachel', has_text='alle Pegel').click(); pg.wait_for_selector('.pf-titel')
     check(pg.url.endswith('#pegel/fluss/elbe'), f'{tag}: Kachel „Elbe – alle Pegel“ öffnet die Flussseite')
     # Meine Pegel: Tidepegel-Karte mit auf-/ablaufend und letzten HW/NW statt Skala
     pg.evaluate(f"localStorage.setItem('watermap.meinePegel', JSON.stringify(['{U(21)}']))")
     pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pm-karte .pm-tide'); pg.wait_for_timeout(400)
     karte = pg.locator('.pm-karte').first
-    check('auflaufend' in karte.inner_text() and re.search(r'zuletzt (HW|NW) \d\d:\d\d', karte.inner_text()) and karte.locator('.ps').count() == 0, f'{tag}: „Meine Pegel“-Karte eines Tidepegels')
+    pg.wait_for_function("document.querySelector('.pm-tide')?.textContent.includes('nächstes')", timeout=5000)
+    check('auflaufend' in karte.inner_text() and re.search(r'nächstes HW \d\d:\d\d · NW \d\d:\d\d', karte.inner_text()) and karte.locator('.ps').count() == 0, f'{tag}: „Meine Pegel“-Karte eines Tidepegels mit nächstem HW/NW ({karte.inner_text()!r})')
     pg.evaluate("localStorage.removeItem('watermap.meinePegel')")
 
     # Küste und Kanal: ohne Profil, nur Liste
@@ -227,6 +279,7 @@ def run(b, w, hh, mobile):
     # Prüfliste
     pg.goto(uf.BASE + 'pruefung.html'); pg.wait_for_selector('h2')
     pt = pg.inner_text('body')
+    check('Tidepegel mit BSH-Vorhersage (1)' in pt and 'Elbe: Cuxhaven' in pt and 'BSH-Orte ohne PEGELONLINE-Pegel (1)' in pt and 'helgoland | Helgoland | Nr. 9510070' in pt, f'{tag}: Prüfliste mit BSH-Zuordnung')
     check('Reihenfolge Elbe' in pt and '1. Schöna (km 2)' in pt and 'Hamburg St. Pauli (km 623,1) · Tide' in pt and 'Erkannte Tidepegel (3)' in pt and 'Mittellandkanal (2)' in pt,
           f'{tag}: Prüfliste mit Reihenfolge, Tidepegeln und Gewässern ohne Bewertung')
     pg.goto(uf.BASE + '#pegel/fluss/gibtsnicht'); pg.wait_for_selector('.pg-fehler')

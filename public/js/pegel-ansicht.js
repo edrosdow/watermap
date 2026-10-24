@@ -7,7 +7,8 @@ import { s } from './chart.js';
 import { historyChart, formatTime } from './pegel.js';
 import { aenderung24h, trendAusVerlauf, meinePegel } from './pegel-daten.js';
 import { istTidepegel, auswerten } from './gezeiten.js';
-import { tideDetail, tendenzText, letzteText } from './pegel-tide-ansicht.js';
+import { tideDetail, tendenzText, letzteText, naechsteText } from './pegel-tide-ansicht.js';
+import { vorhersageLaden } from './gezeiten-bsh.js';
 
 export const fmt = (v) => Math.round(v).toLocaleString('de-DE');
 export const kmText = (g) => (g.km !== null && g.km !== undefined ? `km ${g.km.toLocaleString('de-DE', { maximumFractionDigits: 1 })}` : '');
@@ -139,13 +140,15 @@ export function pegelKarte(g, { verlauf, onOpen, bearbeiten = null }) {
     trend,
     tide ? tideZeile : skala(g),
     bearbeiten);
+  // Tidepegel mit BSH-Vorhersage: die nächsten Hoch-/Niedrigwasser statt der letzten gemessenen
+  if (tide) vorhersageLaden(g).then((v) => { const t = naechsteText(v); if (t) { tideZeile.textContent = t; tideZeile.dataset.bsh = '1'; } }, () => {});
   verlauf?.then((pts) => {
     if (tide) {
       // Tidepegel: auf-/ablaufend und die letzten Hoch-/Niedrigwasser statt Trend und Skala
       const a = auswerten(g, pts);
       trend.className = 'pm-trend pt-flat';
       trend.textContent = tendenzText(a) || '';
-      tideZeile.textContent = letzteText(a) || '';
+      if (!tideZeile.dataset.bsh) tideZeile.textContent = letzteText(a) || '';
       const sv = miniVerlauf(pts.filter(p => p.t >= pts[pts.length - 1].t - 2 * 864e5), g);
       if (sv) spark.replaceChildren(sv);
       return;

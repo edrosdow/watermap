@@ -432,5 +432,21 @@ body.view-pegel .toolbar, body.view-pegel .shell { display: none; }
 .pt-einordnung strong { font-size: 19px; color: var(--navy); }
 .pt-einordnung small { font-size: 14px; color: var(--ink); }
 .pd-kopf.is-tide .pt-tendenz { color: #fff; font-weight: 800; }
+.pt-legende i.is-vorhersage { border-top: 2.5px dashed #087F9C; }
+.pt-klein.is-alt { color: #8A5A00; }
+/* Gezeiten (BSH-Vorhersage) */
+.pt-gezeiten .pd-karte-kopf { flex-wrap: wrap; gap: 4px 12px; }
+.pt-gz-reihe { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.pt-gz-kachel { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 12px 14px; border-radius: 14px; background: #EAF5F8; }
+.pt-gz-kachel.is-nw { background: #F1F4F6; }
+.pt-gz-zeit { font-size: 28px; line-height: 1.15; color: var(--navy); font-weight: 800; font-variant-numeric: tabular-nums; }
+.pt-gz-in { font-size: 15px; font-weight: 700; color: #087F9C; }
+.pt-gz-kachel small { font-size: 14px; color: var(--ink); }
+.pt-gz-pillen { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 12px 0 0; padding: 0; }
+.pt-gz-pillen li { padding: 6px 12px; border-radius: 999px; background: #F1F4F6; font-size: 14px; font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; }
+.pt-gz-text { margin: 12px 0 0; font-size: 14px; color: var(--ink); }
+.pt-gz-quelle { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+.pt-gz-quelle a { color: inherit; }
+@media (max-width: 400px) { .pt-gz-zeit { font-size: 24px; } .pt-gz-kachel { padding: 10px 12px; } }
 .pm-tide { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
 .pm-karte.pz-tide { --z: #9CCEE3; }

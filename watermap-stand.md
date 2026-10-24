@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 24.10.2026 · App-Version **7.24.2**
+Stand: 24.10.2026 · App-Version **7.25.0**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.24.2 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.25.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -148,7 +148,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 - Flussseite `#pegel/fluss/<name>`: SVG-Profil nach km (Unterweser hinten angehängt; seit 7.22.2 x halb nach km, halb nach Reihenfolge, damit Häufungen nicht aufeinanderliegen; y-Achse nur so weit wie nötig, MNW/MHW immer sichtbar; Handy 220 px hoch), Normalbereich, MNW/MHW gestrichelt, keine HSW-Linie. Abschnitt nach dem letzten Pegel mit Kennwerten abgetrennt: „Tidebereich“, wenn diese Pegel Tide-Kennwerte (MThw/MTnw) haben, sonst „ohne Kennwerte“. Handy: Tipp zeigt Blase des nächstgelegenen Punkts, „Details ›“ öffnet; Desktop Hover + Klick.
 - Seit 7.23: Pegel in Fließrichtung (`flussReihenfolge`: nach km, bei Sprüngen Kette über die Lage; km ab Mündung bei Mosel, Saar, Main, Neckar, Lahn, Saale). Profil mit gleichen Abständen nur aus bewerteten Pegeln; Höhe passt sich an (MNW immer, MHW nur wenn im Bereich, sonst Hinweis); Flächen normal/niedrig/hoch; tiefster/höchster Pegel als Zeile über dem Diagramm; Tidepegel nicht im Diagramm, sondern Zeile „Ab <Pegel> <n> Tidepegel“ darunter. Kompakter Kopf, am Handy ohne globales Suchfeld. Liste „flussabwärts“, Weser mit Abschnitt („Oberweser km 0,7“).
 - Namen: `js/pegel-namen.js` (Korrekturliste für Umlaute, „.“ mit Leerzeichen, „-strasse“ → „-straße“). Die Vorschau-Konsole listet Reihenfolge (Weser, Elbe, Rhein, Ems) und Namen mit ae/oe/ue.
-- BSH: Prüf-Funktion `/api/gezeiten/probe` (nur Vorschau, `?runde=2` kurz) – Stand der Klärung in `docs/BSH-Klaerung.md`.
+- BSH: Prüf-Funktion `/api/gezeiten/probe` (nur Vorschau, `?runde=2`/`?runde=3`) – Ergebnis in `docs/BSH-Klaerung.md`.
 
 **Gezeiten (7.24, ohne BSH)**
 - Tidepegel = Tide-Kennwerte (MThw/MTnw/MTmw, `g.tideRefs`) statt MNW/MHW; Zustand/Etikett „Tide“ (#9CCEE3).
@@ -156,7 +156,11 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 - Tidepegel-Detailseite (`js/pegel-tide-ansicht.js`): Kopf „Tidepegel · Gewässer · km“, „Tide“, Tendenz; Tidekurve 24 h gemessen mit MThw/MTnw, HW/NW mit Uhrzeit, „jetzt“; Einordnung; Kacheln „Häfen in der Nähe“ und „<Gewässer> – alle Pegel“. Gilt auch im Kartenpanel.
 - „Meine Pegel“: Tidepegel-Karte mit Tendenz und „zuletzt HW … · NW …“ statt Skala. Flussseite: Tide-Zeile „· gerade auflaufend“ (eine Abfrage pro Flussseite).
 - Prüfliste `pruefung.html` (nicht verlinkt): Reihenfolge Weser/Elbe/Rhein/Ems, Namen mit ae/oe/ue, erkannte Tidepegel, Küste, Gewässer ohne Bewertung – „Alles kopieren“.
-- BSH-Vorhersage (Gezeiten-Kachel, Vorhersage in der Kurve, Küsten-Kachel) folgt nach Auswertung der Prüf-Funktion.
+
+**Gezeitenvorhersage BSH (7.25)**
+- Funktion `/api/gezeiten?pegel=<UUID>&nr=<Nr>` (`netlify/functions/gezeiten.mjs`, Logik `netlify/lib/gezeiten-kern.mjs`, Ausnahmen `netlify/lib/gezeiten-orte.mjs`); `?orte=1` = BSH-Orte. Zuordnung automatisch über UUID/Pegelnummer. Ortsliste 24 h (Blobs „gezeiten“), Vorhersage 1 h im CDN, Fehler 502, kein Ort 404. Aus: `GEZEITEN_BSH_AKTIV` (config.js) bzw. Env `GEZEITEN_BSH_AUS=1`. Kontakt im User-Agent: Env `WATERMAP_KONTAKT`.
+- App: `js/gezeiten-bsh.js` (Laden, Offline-Stand je Pegel ≤ 24 h, Texte). Tidepegel-Seite: Karte „Gezeiten“ (nächstes HW/NW, „in X Std. Y Min.“, Höhe – amtliche Vorhersage mit Abweichung zum Mittel, sonst Gezeitenrechnung; drei weitere als Pillen; BSH-Text), Vorhersage gestrichelt +12 h in der Tidekurve. „Meine Pegel“: „nächstes HW … · NW …“. Flussseite: Tide-Zeile „· HW <Pegel> 14:32“, Liste „HW 14:32“ (nur Pegel mit BSH-Ort). Küsten-Kachel „Cuxhaven: Hochwasser 14:32“.
+- Quelle „Gezeitenvorhersage: BSH (CC BY 4.0)“, „nicht für die Navigation“, Abschnitt in `ueber.html`. Prüfliste zeigt Zuordnung und BSH-Orte ohne Pegel.
 - „<n> Slipanlagen an der <Fluss>“: schaltet Slipanlagen zusätzlich ein und zoomt auf alle (fitBounds). Keine Abfragen pro Pegel.
 
 **In der Nähe (7.21)**
@@ -215,6 +219,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
 | 7.24.0 | Gezeiten aus PEGELONLINE: Tidepegel-Detailseite (Tidekurve, letztes HW/NW, Tidehub), Tide in „Meine Pegel“ und Flussseite; Prüfliste `pruefung.html` |
 | 7.24.1 | Nach Prüfliste: Ems-Reihenfolge (Unterems ab Papenburg neu ab km 0 → `flussKm` +240), Namen (Groß-/Straß-, Kürzel UW/AP/BP … groß, Bhv/Whv/LT ausgeschrieben, „auf/zur“ klein, Meißen, Roßlau, Storkower Gewässer), Tide-Kennwerte auch als Text/„cm …“, Prüfliste zeigt Datenstand, gelieferte Tide-Kennwerte und Sonderzeichen in Namen; Offline-Stand nur aus derselben Version |
+| 7.25.0 | Gezeitenvorhersage des BSH: Funktion `/api/gezeiten`, Karte „Gezeiten“, Vorhersage in der Tidekurve, nächstes HW in „Meine Pegel“, Flussseite und Küsten-Kachel, Offline-Stand, Über-Seite |
 | 7.24.2 | Prüfliste bestätigt (Tide-Kennwerte kommen an): „_“ im Namen als Leerzeichen, bestätigte Namen mit ae/oe/ue (Flaesheim, Fuestrup, Itzehoe, Poel, Ueckermünde, Uelzen, Uetersen, Oestrich) nicht mehr als Verdacht |
 | 7.23.0 | Flussseite überarbeitet (Reihenfolge in Fließrichtung, Profil ohne Tidepegel, Zeile tiefster/höchster Pegel), Namen mit Umlauten, BSH-Prüf-Funktion |
 | 7.22.2 | Flussprofil: y-Achse passt sich an, x halb nach km/halb nach Reihenfolge, Handy 220 px |
@@ -232,7 +237,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.24.2): alle Tests grün (`ui_smoke` an den neuen Kopf von „In der Nähe“ auf dem Handy angepasst).**
+**Letzter Lauf (7.25.0): alle Tests grün.**
 
 ## 6. Offene Aufgaben
 
@@ -245,6 +250,7 @@ Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.
 - „Heute vor Ort“ mit echten Blobs
 - Zustellung der Netlify Forms
 - Pegel-Alarm-Mails
+- BSH-Gezeitenvorhersage (`/api/gezeiten`): Zuordnung der Orte in der Prüfliste ansehen
 
 **Prüfen auf echten Geräten:** Safari (iOS) und Firefox. Bisher ist nur in Chromium getestet.
 

@@ -4,7 +4,7 @@ const host = typeof location !== 'undefined' ? location.hostname : '';
 export const ENTWICKLUNG = /^(localhost|127\.0\.0\.1)$|^deploy-preview-/.test(host);
 
 export const CONFIG = {
-  VERSION: '7.24.2',
+  VERSION: '7.25.0',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -33,6 +33,11 @@ export const CONFIG = {
   // Küstengewässer: eigene Kachel „Küste“ (Tide, ohne Niedrig/Hoch-Bewertung) statt Flussseite. Groß-/Kleinschreibung egal.
   PEGEL_KUESTE: ['Nordsee', 'Ostsee', 'Jade', 'Jadebusen', 'Außenjade', 'Außenems', 'Außenweser', 'Außenelbe', 'Dollart', 'Wattenmeer',
     'Strelasund', 'Peenestrom', 'Kleines Haff', 'Greifswalder Bodden', 'Kieler Förde', 'Flensburger Förde', 'Schlei', 'Trave-Mündung'],
+  // Gezeitenvorhersage des BSH (über die eigene Funktion /api/gezeiten, Lizenz CC BY 4.0). false = aus.
+  GEZEITEN_BSH_AKTIV: true,
+  GEZEITEN_BASE: '/api/gezeiten',
+  GEZEITEN_OFFLINE_STUNDEN: 24,      // so lange wird die letzte Vorhersage offline noch gezeigt
+  GEZEITEN_KUESTE_PEGEL: { id: 'aad49293-242a-43ad-a8b1-e91d7792c4b2', number: '5990020', name: 'Cuxhaven' },   // Küsten-Kachel
   PEGEL_ATTRIBUTION: 'Pegel: <a href="https://www.pegelonline.wsv.de" target="_blank" rel="noopener noreferrer">WSV/PEGELONLINE</a>',
 
   // Wetter und Wind (DWD-Daten über Bright Sky). Abruf über die eigene Domain (public/_redirects).

@@ -51,10 +51,11 @@ python3 -I -m unittest discover -s tests -v     # Importer, Validator, Moderatio
 python3 -I tests/ui_full.py                     # Oberfläche (braucht: pip install playwright pillow)
 python3 -I tests/ui_ampel.py                    # Pegel-Ampel
 python3 -I tests/ui_pegel_dashboard.py          # Pegel-Dashboard (375/390/1024/1440 px)
-python3 -I tests/ui_pegel_fluss.py              # Fluss-Kacheln und Flussseite (375/390/1024/1440 px)
+python3 -I tests/ui_pegel_fluss.py              # Fluss-Kacheln, Flussseite, Tidepegel mit BSH-Vorhersage (375/390/1024/1440 px)
 python3 -I tests/ui_naehe.py                    # „In der Nähe“ (Bezugspunkt, Standortfreigabe, Liste; 375/390/1024/1440 px)
 ```
 Die Oberflächentests laufen mit einem Leaflet-Ersatz. Siehe [docs/STATUS.md](docs/STATUS.md) für das, was damit **nicht** geprüft ist.
 
 ## Lizenzen und Quellen
 Kartendaten und Standorte © OpenStreetMap-Mitwirkende, [ODbL 1.0](https://www.openstreetmap.org/copyright). Die Namensnennung steht in der Karte und in jeder Standortansicht. Leaflet (BSD-2) und Leaflet.markercluster (MIT) werden eingebunden.
+Pegel: WSV/PEGELONLINE. Gezeitenvorhersage: BSH, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.de) – über `/api/gezeiten` (Abschalten: `GEZEITEN_BSH_AKTIV` in `config.js` oder Umgebungsvariable `GEZEITEN_BSH_AUS=1`; Kontakt im User-Agent: `WATERMAP_KONTAKT`), siehe `docs/BSH-Klaerung.md`.

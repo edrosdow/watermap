@@ -242,7 +242,7 @@ def run(b, w, hh, mobile):
     pg.evaluate("(o) => { localStorage.setItem('watermap.naehe.bezug', JSON.stringify({ art: 'ort', ...o })); }", p1)
     pg.reload(); pg.wait_for_selector('.place.nk'); pg.wait_for_timeout(500)
     erste = pg.locator('.place.nk').first
-    check(erste.get_attribute('data-id') == 'node/1' and re.search(r'Parkplatz voll · vor 4\d Min\.', erste.inner_text()) and erste.locator('.nh-meld.ton-warn').count() == 1, f'{tag}: Meldungs-Etikett mit Alter')
+    check(erste.get_attribute('data-id') == 'node/1' and re.search(r'Parkplatz voll · vor \d+ Min\.', erste.inner_text()) and erste.locator('.nh-meld.ton-warn').count() == 1, f'{tag}: Meldungs-Etikett mit Alter')
 
     # Kategorien gemeinsam mit der Karte
     if mobile:

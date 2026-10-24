@@ -4,6 +4,8 @@ import { icon, glyphSvg } from './icons.js';
 import { fmt } from './pegel-ansicht.js';
 import { FLUSS_ZUSTAND, flussZustand, punkte, profil, slipsAmFluss, artikel, abschnitt } from './pegel-fluss.js';
 import { istTidepegel, tendenz } from './gezeiten.js';
+import { vorhersageLaden, bshOrte, hatBsh, kommende, tagUhr } from './gezeiten-bsh.js';
+import { CONFIG } from './config.js';
 
 const PFEIL = { 1: '↗', 0: '→', '-1': '↘' };
 const TREND = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' };
@@ -43,13 +45,25 @@ export function flussKachel(f, onOpen) {
     reihe = h('span', { class: 'fk-punkte', 'aria-hidden': 'true' }, punkte(f).map(g => h('i', { style: `background:${PUNKT_FARBE[g.state]}` })));
   }
   const label = `${f.name}: ${fz.text}. ${z.hervor ? `${z.hervorArt} Pegel ${z.hervor.name} ${fmt(z.hervor.value)} ${z.hervor.unit}. ` : ''}${z.kachel}. Alle Pegel zeigen`;
-  return h('a', { class: `fk fk-${z.key}`, href: `#pegel/fluss/${f.slug}`, style: `--fk:${fz.farbe}`, 'aria-label': label,
+  const kachel = h('a', { class: `fk fk-${z.key}`, href: `#pegel/fluss/${f.slug}`, style: `--fk:${fz.farbe}`, 'aria-label': label,
     onclick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); onOpen(f.slug); } },
     h('span', { class: 'fk-kopf' }, h('strong', { class: 'fk-name', text: f.name }), fzEtikett(z.key)),
     h('span', { class: 'fk-klein', text: klein }),
     h('span', { class: 'fk-gross' }, gross),
     reihe,
     h('span', { class: 'fk-zus', text: z.kachel }));
+  // Küste: nächstes Hochwasser in Cuxhaven (BSH-Vorhersage), sonst bleibt die Pegelzahl
+  if (f.art === 'kueste' && CONFIG.GEZEITEN_BSH_AKTIV) {
+    const ort = CONFIG.GEZEITEN_KUESTE_PEGEL;
+    vorhersageLaden(ort).then((v) => {
+      const hw = kommende(v?.d).find(e => e.typ === 'HW');
+      if (!hw) return;
+      kachel.querySelector('.fk-klein').textContent = `Nord- und Ostsee · ${f.pegel.length} Pegel`;
+      kachel.querySelector('.fk-gross').replaceChildren(`${ort.name}: Hochwasser ${tagUhr(hw.t)}`);
+      kachel.setAttribute('aria-label', `${label.replace(/\. Alle Pegel zeigen$/, '')}. ${ort.name}: nächstes Hochwasser ${tagUhr(hw.t)} (Vorhersage BSH). Alle Pegel zeigen`);
+    }, () => {});
+  }
+  return kachel;
 }
 
 /** Abschnitt „Kanäle und Gewässer ohne Bewertung“ (nur unter „Alle Gewässer“). */
@@ -180,6 +194,12 @@ function profilKarte(gr, z, opts) {
       const t = tendenz(pts);
       if (t && t !== 'kentert') karte.querySelector('.pf-tide-live').textContent = ` · gerade ${t}`;
     }, () => {});
+    // nächstes Hochwasser am ersten Tidepegel mit BSH-Vorhersage
+    bshOrte().then(async (o) => {
+      const bp = pr.tide.pegel.find(g => g.tide && hatBsh(o, g));
+      const hw = bp && kommende((await vorhersageLaden(bp))?.d).find(e => e.typ === 'HW');
+      if (hw) karte.querySelector('.pf-tide-live').after(h('span', { class: 'pf-tide-hw', text: ` · HW ${bp.name} ${tagUhr(hw.t)}` }));
+    }).catch(() => {});
   }
   const zeichnen = () => { if (box.isConnected) profilZeichnen(box, pr, { ...opts, hervorId: hv?.id }); };
   requestAnimationFrame(zeichnen);
@@ -227,7 +247,8 @@ export function flussSeite(root, gr, ctx) {
     const ist = z.hervor?.id === g.id;
     const zusatz = ist ? (z.hervorArt === 'tiefster' ? 'tiefster' : 'höchster') : (pr?.tide?.ids.has(g.id) && g.tide ? 'Tide' : null);
     const km = g.km !== null && g.km !== undefined ? [abschnitt(g), `km ${kmZahl(g.km)}`].filter(Boolean).join(' ') : null;
-    const ort = [gr.art === 'kueste' ? g.water : null, km, zusatz].filter(Boolean).join(' · ');
+    const hw = hwZeit.get(g.id);
+    const ort = [gr.art === 'kueste' ? g.water : null, km, hw ? `HW ${hw}` : zusatz].filter(Boolean).join(' · ');
     const ersteTide = pr?.tide?.pegel[0]?.id === g.id;
     return h('li', { id: ersteTide ? 'pf-tide-start' : null }, h('button', { type: 'button', class: 'pf-zeile' + (ist ? ` is-hervor is-${z.key}` : ''), onclick: () => ctx.onOpen(g.id),
       'aria-label': `${g.name}${ort ? `, ${ort}` : ''}: ${fmt(g.value)} ${g.unit}${g.trend !== null && g.trend !== undefined ? `, ${TREND[g.trend]}` : ''}, ${pegelEtikett(g).textContent}. Details öffnen` },
@@ -235,6 +256,22 @@ export function flussSeite(root, gr, ctx) {
       h('span', { class: 'pf-z-wert', text: `${fmt(g.value)} ${g.unit}` }),
       h('span', { class: 'pf-z-trend', 'aria-hidden': 'true' }, trendPfeil(g)),
       pegelEtikett(g)));
+  }
+  // Tidepegel mit BSH-Vorhersage: „HW 14:32“ statt „Tide“ (nur Pegel mit BSH-Ort, höchstens 4 Abfragen gleichzeitig)
+  const hwZeit = new Map();
+  if (CONFIG.GEZEITEN_BSH_AKTIV && gr.pegel.some(g => g.tide)) {
+    bshOrte().then(async (o) => {
+      const warte = gr.pegel.filter(g => g.tide && hatBsh(o, g));
+      const arbeiter = async () => {
+        for (let g = warte.shift(); g; g = warte.shift()) {
+          const hw = kommende((await vorhersageLaden(g))?.d).find(e => e.typ === 'HW');
+          if (hw) hwZeit.set(g.id, tagUhr(hw.t));
+        }
+      };
+      await Promise.all([1, 2, 3, 4].map(arbeiter));
+      // einmal neu zeichnen (nicht, während jemand in der Liste ist)
+      if (hwZeit.size && liste.isConnected && !liste.contains(document.activeElement)) listeZeichnen();
+    }).catch(() => {});
   }
   function listeZeichnen() {
     const alle = gr.pegel, zeigen = offen ? alle : alle.slice(0, 6);
