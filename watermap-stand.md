@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 24.10.2026 · App-Version **7.25.4**
+Stand: 24.10.2026 · App-Version **7.25.5**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.25.4 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.25.5 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -219,6 +219,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
 | 7.24.0 | Gezeiten aus PEGELONLINE: Tidepegel-Detailseite (Tidekurve, letztes HW/NW, Tidehub), Tide in „Meine Pegel“ und Flussseite; Prüfliste `pruefung.html` |
 | 7.24.1 | Nach Prüfliste: Ems-Reihenfolge (Unterems ab Papenburg neu ab km 0 → `flussKm` +240), Namen (Groß-/Straß-, Kürzel UW/AP/BP … groß, Bhv/Whv/LT ausgeschrieben, „auf/zur“ klein, Meißen, Roßlau, Storkower Gewässer), Tide-Kennwerte auch als Text/„cm …“, Prüfliste zeigt Datenstand, gelieferte Tide-Kennwerte und Sonderzeichen in Namen; Offline-Stand nur aus derselben Version |
+| 7.25.5 | Ohne Wartezeit: „In der Nähe“ und Pegel-Dashboard werden nach dem Start im Leerlauf unsichtbar vorbereitet (Pegelliste wird dafür einmal geladen); beim erneuten Öffnen bleibt der fertige Inhalt stehen, wenn sich nichts geändert hat (Bezugspunkt ≈ 1 km, Filter, Meldungen, Sortierung, Freigabe, Datenstand); Listeneinträge außerhalb des Bildschirms mit `content-visibility: auto` |
 | 7.25.4 | Weiter schneller: Marker-Cluster in 40-ms-Portionen (Tipps warten beim Start nicht mehr Sekunden), „In der Nähe“ zeigt erst 20 Einträge und lädt den Rest nach, Symbole geklont, kein doppeltes Zeichnen beim Öffnen; Tipp-Rückmeldung in der unteren Leiste; Vorschau zeigt oben die Messung „Tipp wartet … · Aufbau …“ |
 | 7.25.3 | Schnellerer Wechsel zu „In der Nähe“/„Pegel“: Ansicht wechselt sofort, Inhalt wird im nächsten Bild gezeichnet; Flussgruppen je Datenstand nur einmal berechnet (Entfernungen vorab statt n³); „In der Nähe“ zeichnet beim Öffnen einmal statt dreimal |
 | 7.25.2 | Pegel-Dashboard am Handy: „Meine Pegel“ vor „Flüsse im Überblick“ (CSS-Reihenfolge, Desktop unverändert) |
@@ -241,7 +242,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.25.4): alle Tests grün.**
+**Letzter Lauf (7.25.5): alle Tests grün.**
 
 ## 6. Offene Aufgaben
 

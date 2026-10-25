@@ -393,11 +393,23 @@ export function naehe(ctx) {
   }
 
   let ziel = null;   // { kopfHandy, kopfDesktop, head, ul }
-  function zeichnen() {
-    if (!ziel || !ziel.aktiv()) return;
+  let zuletzt_ = null;   // { schluessel, erstes } des zuletzt gezeichneten Inhalts
+  /**
+   * opts.wennNoetig: nur zeichnen, wenn sich etwas geändert hat (Bezugspunkt, Filter, Meldungen, Sortierung, Freigabe) –
+   * beim erneuten Öffnen bleibt die fertige Liste stehen. opts.vorab: auch unsichtbar zeichnen (Vorbereitung nach dem Start).
+   */
+  function zeichnen({ wennNoetig = false, vorab = false } = {}) {
+    if (!ziel || !(vorab ? ctx.allPlaces().length : ziel.aktiv())) return;
+    const p = punkt();
+    // Kartenmitte grob (≈ 1 km): kleine Verschiebungen der Karte zeichnen die Liste nicht neu
+    const st = p.art === 'kartenmitte' ? 2 : 4;
+    const schluessel = [ctx.places(), ctx.meld(), `${p.art}|${p.lat.toFixed(st)}|${p.lon.toFixed(st)}|${sortierung}|${positionLaeuft}|${freigabe}|${ctx.isMobile()}`];
+    if (wennNoetig && zuletzt_ && ziel.ul.firstChild === zuletzt_.erstes && ziel.head.firstChild === zuletzt_.kopf
+      && schluessel.every((x, i) => x === zuletzt_.schluessel[i])) return;
     ziel.kopfHandy.replaceChildren(...kopfHandy());
     ziel.kopfDesktop.replaceChildren(...kopf().filter(Boolean));
     liste(ziel.head, ziel.ul);
+    zuletzt_ = { schluessel, erstes: ziel.ul.firstChild, kopf: ziel.head.firstChild };
   }
 
   /** Nach dem Zurückkehren (Zurück-Taste) an dieselbe Stelle scrollen. */
@@ -434,7 +446,7 @@ export function naehe(ctx) {
     binden(z) { ziel = z; ziehenAktualisiert(z.ul); },
     /** Tab geöffnet: Freigabe prüfen (ohne Dialog), Position nur bei bestehender Freigabe holen. */
     async oeffnen() {
-      zeichnen();
+      zeichnen({ wennNoetig: true });
       scrollWiederherstellen();
       const vorher = freigabe;
       oeffnetGerade = true;
@@ -443,7 +455,10 @@ export function naehe(ctx) {
       if (bezug?.art === 'position' && freigabe === 'granted') await positionHolen();
       else if (freigabe !== vorher) zeichnen();   // nur neu zeichnen, wenn sich die Freigabe geändert hat
     },
-    zeichnen,
+    // von außen (Filter, Kartenbewegung, Meldungen): nur, wenn sich etwas Sichtbares geändert hat
+    zeichnen: () => zeichnen({ wennNoetig: true }),
+    /** Unsichtbar vorbereiten (nach dem Start im Leerlauf); Freigabe vorher klären, damit beim Öffnen nichts nachkommt. */
+    async vorbereiten() { await geoFreigabe.pruefen(); zeichnen({ wennNoetig: true, vorab: true }); },
     karte,
     get treffer() { return aktuelleTreffer; },
   };

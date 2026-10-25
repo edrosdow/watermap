@@ -140,3 +140,6 @@ body.list-open .sidebar { background: var(--bg); }
   .nh-fuss { padding: 14px 16px 4px; font-size: 13px; color: var(--muted); }
   .nh-fuss .version { display: block; margin-top: 4px; }
 }
+
+/* Lange Liste: Einträge außerhalb des Bildschirms erst bei Bedarf layouten (schnelleres Öffnen) */
+.list > li:has(> .place.nk) { content-visibility: auto; contain-intrinsic-size: auto 76px; }

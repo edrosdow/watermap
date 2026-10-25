@@ -26,6 +26,7 @@ def route_libs(ctx):
         return route.fulfill(status=200, content_type='application/json', body=f.read_bytes()) if f.is_file() else route.fulfill(status=404, body='')
     ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))   # „Heute vor Ort“ (eigener Test: ui_meldungen.py)
     ctx.route('**/data/**', data)
+    ctx.route('**/api/pegel/**', lambda r: r.fulfill(status=200, content_type='application/json', body='[]'))   # Pegel werden nach dem Start im Leerlauf vorbereitet
     # Details laden auch das Wetter (eigener Test: ui_wetter.py) – hier nur leere Antworten
     ctx.route('**/.netlify/functions/umgebung*', lambda r: r.fulfill(status=200, content_type='application/json', body='{"elements": []}'))   # „In der Nähe“ live
     ctx.route('https://overpass-api.de/**', lambda r: r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body='{"elements": []}'))

@@ -138,7 +138,7 @@ def run(b, w, hh, mobile):
     erwartet = next((r for r in (25, 50, 100) if sum(1 for p in pts if km(POS, p) <= r) >= 5), 100)
     n = sum(1 for p in pts if km(POS, p) <= erwartet)
     check((f'{n} Slipanlagen · bis {erwartet} km' if mobile else f'{n} Standorte im Umkreis von {erwartet} km') in zahl.replace('\n', ' '), f'{tag}: Umkreis {erwartet} km mit {n} Treffern ({zahl!r})')
-    d = [t for t in pg.locator('.nk-dist').all_inner_texts()]
+    d = [t for t in pg.locator('.nk-dist').all_text_contents()]
     werte = [float(x[:-3].replace(',', '.')) if x.endswith(' km') else float(x[:-2]) / 1000 for x in d]
     check(werte == sorted(werte), f'{tag}: „Nächste zuerst“ ({d[:4]})')
     check('Standorte in der Nähe' in pg.inner_text('#live'), f'{tag}: Trefferzahl wird angesagt')
@@ -147,7 +147,7 @@ def run(b, w, hh, mobile):
     check('um deine Position' in kopf(pg, mobile) and pg.locator(HINT).count() == 0 and pg.evaluate('window.__geoCalls') == 1, f'{tag}: nach Neuladen wieder „um deine Position“')
     # Sortierung Name A–Z
     pg.select_option('.nh-sort', 'name'); pg.wait_for_timeout(200)
-    namen = [t.strip() for t in pg.locator('.nk-name').all_inner_texts()]
+    namen = [t.strip() for t in pg.locator('.nk-name').all_text_contents()]
     check(namen == sorted(namen, key=lambda s: s.lower()) or len(namen) < 2, f'{tag}: Sortierung „Name A–Z“')
     pg.select_option('.nh-sort', 'naechste'); pg.wait_for_timeout(200)
     ctx.close()

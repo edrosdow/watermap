@@ -104,6 +104,7 @@ async function init() {
   if (state.loadFailed) setView('naehe', { push: false });   // Fehlermeldung mit „Erneut laden“ steht in der Liste
   registerServiceWorker();
   meldAktualisieren();
+  vorbereiten();
   setInterval(() => { if (document.visibilityState === 'visible') meldAktualisieren(); }, 2 * 60e3);
   window.addEventListener('online', () => meldAktualisieren(true));
 }
@@ -368,10 +369,10 @@ function naeheCtx() {
 
 // ============================================================ Liste
 function renderList() {
+  if (state.tab === 'list' && !state.loadFailed && state.places.length) { nah?.zeichnen(); return; }   // „In der Nähe“ zeichnet Kopf und Liste selbst
   clear(el.listHead);
   if (state.loadFailed && state.tab === 'list') { renderLoadError(); return; }
   if (state.tab === 'list') {
-    if (state.places.length) { nah?.zeichnen(); return; }
     clear(el.list).append(emptyState());
     return;
   }
@@ -741,6 +742,22 @@ function pegelCtx() {
     karte: (g) => pegelAufKarte(g),
     slip: (p) => { setView('karte'); selectPlace(p.id, { full: !isMobile() }); },
   };
+}
+
+/**
+ * Nach dem Start im Leerlauf „In der Nähe“ und das Pegel-Dashboard unsichtbar aufbauen (Pegelliste wird dafür einmal
+ * geladen), damit beide beim ersten Tippen ohne Wartezeit erscheinen.
+ */
+function vorbereiten() {
+  const leerlauf = (f) => (window.requestIdleCallback ? requestIdleCallback(f, { timeout: 3000 }) : setTimeout(f, 300));
+  setTimeout(() => leerlauf(() => {
+    if (state.view !== 'naehe' && !state.loadFailed) nah?.vorbereiten();
+    leerlauf(() => {
+      if (state.view === 'pegel') return;
+      if (!dashboard) dashboard = pegelDashboard(el.pegelseite, pegelCtx());
+      dashboard.vorbereiten();
+    });
+  }), 2500);
 }
 
 /** Dashboard bzw. Detailseite zeichnen (je nach state.pegelId). */

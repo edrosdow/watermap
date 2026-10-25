@@ -31,13 +31,17 @@ export function slipsAmPegel(g, places, max = 5, radius = 30000) {
  */
 export function pegelDashboard(root, ctx) {
   const ui = { filter: null, sort: null, suche: '', alleOffen: false, alleGewaesser: false, bearbeiten: false, zeilen: 60 };
-  let stand = null;
+  let stand = null, seite = null, veraltet = false;   // seite: zuletzt gezeichneter Inhalt (wird beim erneuten Öffnen wiederverwendet)
 
   const entfernung = (g) => { const u = ctx.user(); return u ? haversine(u.lat, u.lon, g.lat, g.lon) : null; };
 
   async function laden(force = false) {
-    try { stand = await pegelLaden({ force }); }
-    catch { stand = null; }
+    let neu;
+    try { neu = await pegelLaden({ force }); }
+    catch { neu = null; }
+    // Gleicher Datenstand und Inhalt noch da: nichts neu aufbauen (Wechsel zu „Pegel“ ohne Wartezeit)
+    if (!force && neu && neu === stand && seite?.isConnected && !veraltet) return;
+    stand = neu;
     zeichnen();
   }
 
@@ -309,13 +313,16 @@ export function pegelDashboard(root, ctx) {
         h('div', { class: 'pg-rechts pg-o-rechts' }, werkzeuge(),
           h('p', { class: 'pg-fuss', text: 'Pegel der WSV (PEGELONLINE). Kleinere Gewässer und Talsperren teils nicht erfasst. Angaben ohne Gewähr.' })))));
     zeichneAlle();
+    seite = root.firstElementChild; veraltet = false;
     if (fokus) { const f = root.querySelector('.pg-suche'); f.focus(); f.setSelectionRange(f.value.length, f.value.length); }
   }
 
-  document.addEventListener('meine-pegel', () => { if (root.isConnected && !root.hidden && stand) zeichnen(); });
+  document.addEventListener('meine-pegel', () => { if (root.isConnected && !root.hidden && stand) zeichnen(); else veraltet = true; });
   return {
     zeigen: (force = false) => { if (!stand) root.replaceChildren(h('div', { class: 'pg-seite' }, kopf(), h('p', { class: 'muted pg-laden', text: 'Pegel werden geladen …' }))); return laden(force); },
     neuZeichnen: () => { if (stand) zeichnen(); },
+    /** Im Hintergrund laden und (unsichtbar) aufbauen, damit das erste Öffnen sofort geht. */
+    vorbereiten: () => laden(false),
     get stand() { return stand; },
   };
 }
