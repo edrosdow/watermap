@@ -1,4 +1,4 @@
-import { CONFIG, ENTWICKLUNG } from './config.js';
+import { CONFIG } from './config.js';
 import { h, $, $$, clear, debounce, announce } from './dom.js';
 import { icon, glyphSvg, logoSvg } from './icons.js';
 import {
@@ -919,9 +919,9 @@ function setView(view, { push = true, spaeter = false } = {}) {
   // (mit dem bisherigen Inhalt) und der Tipp „hängt“ nicht, während Liste bzw. Pegel neu aufgebaut werden.
   const inhalt = () => {
     if (state.view !== view) return;
-    if (view === 'naehe' && changed && nah && state.places.length && !state.loadFailed) inhaltFertig = nah.oeffnen();   // zeichnet selbst
+    if (view === 'naehe' && changed && nah && state.places.length && !state.loadFailed) nah.oeffnen();   // zeichnet selbst
     else if (view === 'naehe' || view === 'favoriten') renderList();
-    if (view === 'pegel') inhaltFertig = pegelBereich();
+    if (view === 'pegel') pegelBereich();
   };
   if (view !== 'pegel') { state.pegelId = null; state.pegelFluss = null; }
   document.body.classList.toggle('list-open', view === 'naehe' || view === 'favoriten');
@@ -938,53 +938,11 @@ function setView(view, { push = true, spaeter = false } = {}) {
   setTimeout(() => state.map?.invalidate(), 0);
 }
 
-/**
- * Vorschau: Dauer eines Bereichswechsels anzeigen (Wartezeit bis der Tipp verarbeitet wird + Aufbau bis zum nächsten
- * ruhigen Bild), damit sich Langsamkeit auf echten Geräten messen lässt. Nur im Entwicklungsmodus.
- */
-// Vorschau: zeigt bei jedem Tipp, welches Element ihn bekommt und welche Fenster offen sind (Fehlersuche „Tipp kommt nicht an“)
-if (ENTWICKLUNG) {
-  const name = (el) => !el ? '–' : el.nodeType !== 1 ? el.nodeName : `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : ''}`;
-  document.addEventListener('pointerdown', (e) => {
-    const nav = document.querySelector('#bottomnav');
-    const r = nav?.getBoundingClientRect();
-    const aufNav = r && e.clientY >= r.top && e.clientY <= r.bottom;
-    const offen = [...document.querySelectorAll('dialog[open]')].map(name).join(', ') || 'keine';
-    const ziel = e.target.closest?.('a, button') || e.target;
-    let b = $('#perf-tipp');
-    if (!b) { b = h('div', { id: 'perf-tipp', 'aria-hidden': 'true' }); document.body.append(b); }
-    b.textContent = `Tipp ${Math.round(e.clientX)},${Math.round(e.clientY)} → ${name(ziel)}${aufNav && !nav.contains(e.target) ? ' ⚠ NICHT die Leiste' : ''} · offene Fenster: ${offen}`;
-    b.hidden = false; clearTimeout(b._t); b._t = setTimeout(() => { b.hidden = true; }, 8000);
-  }, { capture: true, passive: true });
-}
-
-let inhaltFertig = null;   // Promise des zuletzt angestoßenen Aufbaus (Pegel: inkl. Laden der Daten; In der Nähe: inkl. Position)
-function messen(id, e) {
-  if (!ENTWICKLUNG) return;
-  const start = performance.now(), warten = Math.max(0, Math.round(start - (e?.timeStamp || start)));
-  inhaltFertig = null;
-  const zeigen = (text) => {
-    let b = $('#perf-messung');
-    if (!b) { b = h('div', { id: 'perf-messung', 'aria-hidden': 'true' }); document.body.append(b); }
-    b.textContent = text;
-    b.hidden = false; clearTimeout(b._t); b._t = setTimeout(() => { b.hidden = true; }, 8000);
-  };
-  // „Aufbau“: bis zum ersten ruhigen Bild nach dem Zeichnen; „ganz fertig“: bis Daten bzw. Position da sind
-  requestAnimationFrame(() => setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => {
-    const aufbau = Math.round(performance.now() - start), p = inhaltFertig;
-    zeigen(`${id}: Tipp wartet ${warten} ms · Aufbau ${aufbau} ms`);
-    p?.then(() => {
-      const ganz = Math.round(performance.now() - start);
-      if (ganz - aufbau > 50) zeigen(`${id}: Tipp wartet ${warten} ms · Aufbau ${aufbau} ms · ganz fertig ${ganz} ms`);
-    }, () => {});
-  })), 0));
-}
-
 /** Navigation: Karte/In der Nähe/Favoriten/Pegel ohne Neuladen; Melden öffnet die Auswahl. */
 function onNav(id, e) {
   if (id === 'melden') { if (!reportPop.isOpen) renderReportMenu({ fragen: true }); reportPop.toggle(e.currentTarget); return true; }
   if (id === 'pegel' && state.view === 'pegel' && (state.pegelId || state.pegelFluss)) { state.pegelId = null; state.pegelFluss = null; writeHash(true); pegelBereich(); return true; }
-  if (VIEWS.includes(id)) { messen(id, e); setView(id, { spaeter: true }); return true; }
+  if (VIEWS.includes(id)) { setView(id, { spaeter: true }); return true; }
   return false;
 }
 

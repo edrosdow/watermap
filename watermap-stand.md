@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 24.10.2026 · App-Version **7.25.7**
+Stand: 24.10.2026 · App-Version **7.25.8**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.25.7 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.25.8 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -219,6 +219,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
 | 7.24.0 | Gezeiten aus PEGELONLINE: Tidepegel-Detailseite (Tidekurve, letztes HW/NW, Tidehub), Tide in „Meine Pegel“ und Flussseite; Prüfliste `pruefung.html` |
 | 7.24.1 | Nach Prüfliste: Ems-Reihenfolge (Unterems ab Papenburg neu ab km 0 → `flussKm` +240), Namen (Groß-/Straß-, Kürzel UW/AP/BP … groß, Bhv/Whv/LT ausgeschrieben, „auf/zur“ klein, Meißen, Roßlau, Storkower Gewässer), Tide-Kennwerte auch als Text/„cm …“, Prüfliste zeigt Datenstand, gelieferte Tide-Kennwerte und Sonderzeichen in Namen; Offline-Stand nur aus derselben Version |
+| 7.25.8 | Messzeile und Tipp-Anzeige wieder entfernt. Ergebnis: Tipps, die „nicht ankamen“, fing der In-App-Browser (Link aus einer App) ab – in Safari bzw. als Home-Bildschirm-App tritt das nicht auf |
 | 7.25.7 | Vorschau: Fehlersuche „Tipp kommt nicht an“ – rote Zeile zeigt bei jedem Tipp das getroffene Element und offene Fenster |
 | 7.25.6 | „In der Nähe“ mit eigener Position: beim Öffnen nur neu orten, wenn die Position älter als 2 Min. ist; „Position wird bestimmt …“ ändert nur den Kopf, die Liste nur bei > ~100 m Bewegung; Messzeile in der Vorschau zeigt zusätzlich „ganz fertig“ (inkl. Pegeldaten bzw. Ortung) |
 | 7.25.5 | Ohne Wartezeit: „In der Nähe“ und Pegel-Dashboard werden nach dem Start im Leerlauf unsichtbar vorbereitet (Pegelliste wird dafür einmal geladen); beim erneuten Öffnen bleibt der fertige Inhalt stehen, wenn sich nichts geändert hat (Bezugspunkt ≈ 1 km, Filter, Meldungen, Sortierung, Freigabe, Datenstand); Listeneinträge außerhalb des Bildschirms mit `content-visibility: auto` |
@@ -244,7 +245,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.25.7): alle Tests grün.**
+**Letzter Lauf (7.25.8): alle Tests grün.**
 
 ## 6. Offene Aufgaben
 
