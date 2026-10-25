@@ -942,6 +942,22 @@ function setView(view, { push = true, spaeter = false } = {}) {
  * Vorschau: Dauer eines Bereichswechsels anzeigen (Wartezeit bis der Tipp verarbeitet wird + Aufbau bis zum nächsten
  * ruhigen Bild), damit sich Langsamkeit auf echten Geräten messen lässt. Nur im Entwicklungsmodus.
  */
+// Vorschau: zeigt bei jedem Tipp, welches Element ihn bekommt und welche Fenster offen sind (Fehlersuche „Tipp kommt nicht an“)
+if (ENTWICKLUNG) {
+  const name = (el) => !el ? '–' : el.nodeType !== 1 ? el.nodeName : `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : ''}`;
+  document.addEventListener('pointerdown', (e) => {
+    const nav = document.querySelector('#bottomnav');
+    const r = nav?.getBoundingClientRect();
+    const aufNav = r && e.clientY >= r.top && e.clientY <= r.bottom;
+    const offen = [...document.querySelectorAll('dialog[open]')].map(name).join(', ') || 'keine';
+    const ziel = e.target.closest?.('a, button') || e.target;
+    let b = $('#perf-tipp');
+    if (!b) { b = h('div', { id: 'perf-tipp', 'aria-hidden': 'true' }); document.body.append(b); }
+    b.textContent = `Tipp ${Math.round(e.clientX)},${Math.round(e.clientY)} → ${name(ziel)}${aufNav && !nav.contains(e.target) ? ' ⚠ NICHT die Leiste' : ''} · offene Fenster: ${offen}`;
+    b.hidden = false; clearTimeout(b._t); b._t = setTimeout(() => { b.hidden = true; }, 8000);
+  }, { capture: true, passive: true });
+}
+
 let inhaltFertig = null;   // Promise des zuletzt angestoßenen Aufbaus (Pegel: inkl. Laden der Daten; In der Nähe: inkl. Position)
 function messen(id, e) {
   if (!ENTWICKLUNG) return;
