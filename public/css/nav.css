@@ -30,6 +30,8 @@
   .bn-item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 56px; padding: 4px 0 6px;
     color: #566878; text-decoration: none; font-size: 12px; font-weight: 600; -webkit-tap-highlight-color: transparent; }
   .bn-item.is-active { color: #087F9C; font-weight: 800; }
+  .bottomnav { touch-action: manipulation; }
+  .bn-item:not(.bn-center):active .bn-ico { background: #E3F1F5; border-radius: 12px; }   /* sofort sichtbar: Tipp kam an */
   .bn-ico { display: grid; }
   .bn-ico svg { display: block; }
   .bn-item .nav-badge { position: absolute; top: 2px; left: calc(50% + 6px); height: 18px; min-width: 18px; padding: 0 5px; font-size: 11px; background: #087F9C; color: #fff; }

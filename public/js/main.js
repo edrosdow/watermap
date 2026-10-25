@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js';
+import { CONFIG, ENTWICKLUNG } from './config.js';
 import { h, $, $$, clear, debounce, announce } from './dom.js';
 import { icon, glyphSvg, logoSvg } from './icons.js';
 import {
@@ -117,7 +117,7 @@ async function meldAktualisieren(force = false) {
 function meldSetzen(map, offline = state.meldOffline) {
   state.meld = map; state.meldOffline = offline;
   state.map?.setMeldungen(map);
-  if (state.meldOnly) applyFilters(); else renderFilterbar();
+  if (state.meldOnly) applyFilters(); else { renderFilterbar(); if (state.view === 'naehe') renderList(); }   // Etiketten in der Liste
 }
 
 /** Eigene Meldung/Bestätigung: Marker, Vorschau und Filter sofort aktualisieren. */
@@ -921,11 +921,29 @@ function setView(view, { push = true, spaeter = false } = {}) {
   setTimeout(() => state.map?.invalidate(), 0);
 }
 
+/**
+ * Vorschau: Dauer eines Bereichswechsels anzeigen (Wartezeit bis der Tipp verarbeitet wird + Aufbau bis zum nächsten
+ * ruhigen Bild), damit sich Langsamkeit auf echten Geräten messen lässt. Nur im Entwicklungsmodus.
+ */
+function messen(id, e) {
+  if (!ENTWICKLUNG) return;
+  const start = performance.now(), warten = Math.max(0, Math.round(start - (e?.timeStamp || start)));
+  const fertig = () => {
+    const ms = Math.round(performance.now() - start);
+    let b = $('#perf-messung');
+    if (!b) { b = h('div', { id: 'perf-messung', 'aria-hidden': 'true' }); document.body.append(b); }
+    b.textContent = `${id}: Tipp wartet ${warten} ms · Aufbau ${ms} ms`;
+    b.hidden = false; clearTimeout(b._t); b._t = setTimeout(() => { b.hidden = true; }, 6000);
+  };
+  // „fertig“, wenn nach dem Aufbau ein Bild ohne weitere Arbeit kommt (zweimal requestAnimationFrame nach dem Zeitgeber)
+  requestAnimationFrame(() => setTimeout(() => { const ende = () => requestAnimationFrame(() => requestAnimationFrame(fertig)); ende(); }, 0));
+}
+
 /** Navigation: Karte/In der Nähe/Favoriten/Pegel ohne Neuladen; Melden öffnet die Auswahl. */
 function onNav(id, e) {
   if (id === 'melden') { if (!reportPop.isOpen) renderReportMenu({ fragen: true }); reportPop.toggle(e.currentTarget); return true; }
   if (id === 'pegel' && state.view === 'pegel' && (state.pegelId || state.pegelFluss)) { state.pegelId = null; state.pegelFluss = null; writeHash(true); pegelBereich(); return true; }
-  if (VIEWS.includes(id)) { setView(id, { spaeter: true }); return true; }
+  if (VIEWS.includes(id)) { messen(id, e); setView(id, { spaeter: true }); return true; }
   return false;
 }
 

@@ -301,7 +301,8 @@ export function naehe(ctx) {
   }
 
   // ---------------------------------------------------------------- Liste
-  let aktuelleTreffer = [];
+  let aktuelleTreffer = [], listenLauf = 0;
+  const SOFORT = 20, PORTION = 25;
   const gastSortierbar = () => ctx.cats().size === 1 && ctx.cats().has('marina');
 
   function meldEtikett(p) {
@@ -312,11 +313,18 @@ export function naehe(ctx) {
     return h('span', { class: `nh-meld ton-${t.ton}` }, h('i', { 'aria-hidden': 'true' }), [t.zeile, wann].filter(Boolean).join(' · '));
   }
 
+  // Symbol je Typ einmal erzeugen und dann klonen (SVG-Text für jede Karte neu zu parsen kostet bei 120 Einträgen spürbar)
+  const symbole = new Map();
+  function symbol(type) {
+    if (!symbole.has(type)) symbole.set(type, h('span', { class: `nk-ico bg-${type}`, html: glyphSvg(type, 26), 'aria-hidden': 'true' }));
+    return symbole.get(type).cloneNode(true);
+  }
+
   function karte(p, d) {
     const merkmale = (FILTERS[p.type] || []).filter(f => f.test(p)).slice(0, 2).map(f => f.label);
     const sub = [p.water?.name || p.locality || TYPES[p.type].label, ...merkmale].join(' · ');
     return h('li', {}, h('button', { type: 'button', class: 'place nk', dataset: { id: p.id }, onclick: () => { scrollMerken = ctx.liste().scrollTop; ctx.waehlen(p); } },
-      h('span', { class: `nk-ico bg-${p.type}`, html: glyphSvg(p.type, 26), 'aria-hidden': 'true' }),
+      symbol(p.type),
       h('span', { class: 'nk-text' },
         h('span', { class: 'place-name nk-name', text: displayName(p) }),
         h('span', { class: 'place-sub nk-sub', text: sub }),
@@ -364,7 +372,16 @@ export function naehe(ctx) {
           h('button', { type: 'button', class: 'btn btn-outline', text: 'Filter zurücksetzen', onclick: () => ctx.filterZuruecksetzen() }))));
       return;
     }
-    ul.replaceChildren(...treffer.map(x => karte(x.p, x.d)), fuss());
+    // Erst die ersten Einträge (sofort sichtbar), den Rest in kleinen Portionen danach – so bleibt die Seite bedienbar
+    const lauf = ++listenLauf;
+    ul.replaceChildren(...treffer.slice(0, SOFORT).map(x => karte(x.p, x.d)), ...(treffer.length <= SOFORT ? [fuss()] : []));
+    const weiter = (ab) => {
+      if (lauf !== listenLauf) return;   // inzwischen neu gezeichnet
+      const teil = treffer.slice(ab, ab + PORTION);
+      ul.append(...teil.map(x => karte(x.p, x.d)));
+      if (ab + PORTION < treffer.length) setTimeout(() => weiter(ab + PORTION), 0); else ul.append(fuss());
+    };
+    if (treffer.length > SOFORT) setTimeout(() => weiter(SOFORT), 0);
     if (scrollMerken !== null && !ctx.isMobile()) scrollMerken = null;
   }
 
@@ -409,7 +426,8 @@ export function naehe(ctx) {
     else zeichnen();
   }
 
-  geoFreigabe.beobachten(() => zeichnen());
+  let oeffnetGerade = false;
+  geoFreigabe.beobachten(() => { if (!oeffnetGerade) zeichnen(); });   // beim Öffnen zeichnet oeffnen() selbst
 
   return {
     /** Ziele setzen und Ziehen-zum-Aktualisieren anbinden. */
@@ -419,7 +437,8 @@ export function naehe(ctx) {
       zeichnen();
       scrollWiederherstellen();
       const vorher = freigabe;
-      await geoFreigabe.pruefen();
+      oeffnetGerade = true;
+      try { await geoFreigabe.pruefen(); } finally { oeffnetGerade = false; }
       if (!bezug && freigabe === 'granted') bezug = { art: 'position' };
       if (bezug?.art === 'position' && freigabe === 'granted') await positionHolen();
       else if (freigabe !== vorher) zeichnen();   // nur neu zeichnen, wenn sich die Freigabe geändert hat

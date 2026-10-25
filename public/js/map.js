@@ -59,7 +59,7 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
   let meld = new Map();   // Standort-ID → { n, typ } aktiver Lagemeldungen („Heute vor Ort“)
   const layer = useCluster
     ? L.markerClusterGroup({
-        showCoverageOnHover: false, chunkedLoading: true, maxClusterRadius: 52, disableClusteringAtZoom: 15,
+        showCoverageOnHover: false, chunkedLoading: true, chunkInterval: 40, chunkDelay: 16, maxClusterRadius: 52, disableClusteringAtZoom: 15,
         iconCreateFunction: (c) => {
           const n = c.getChildCount();
           const size = n < 10 ? 38 : n < 100 ? 44 : 50;
@@ -189,7 +189,7 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
       if (!list) return;
       const color = GROUPS[group].color;
       const layer = useCluster
-        ? L.markerClusterGroup({ showCoverageOnHover: false, chunkedLoading: true, maxClusterRadius: 40, disableClusteringAtZoom: 15,
+        ? L.markerClusterGroup({ showCoverageOnHover: false, chunkedLoading: true, chunkInterval: 40, chunkDelay: 16, maxClusterRadius: 40, disableClusteringAtZoom: 15,
             iconCreateFunction: (c) => L.divIcon({ html: `<span style="--c:${color}">${c.getChildCount()}</span>`, className: 'wm-extra-cluster', iconSize: [30, 30] }) })
         : L.layerGroup();
       const ms = list.map((x) => {
