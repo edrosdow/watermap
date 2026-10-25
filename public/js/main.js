@@ -919,9 +919,9 @@ function setView(view, { push = true, spaeter = false } = {}) {
   // (mit dem bisherigen Inhalt) und der Tipp „hängt“ nicht, während Liste bzw. Pegel neu aufgebaut werden.
   const inhalt = () => {
     if (state.view !== view) return;
-    if (view === 'naehe' && changed && nah && state.places.length && !state.loadFailed) nah.oeffnen();   // zeichnet selbst
+    if (view === 'naehe' && changed && nah && state.places.length && !state.loadFailed) inhaltFertig = nah.oeffnen();   // zeichnet selbst
     else if (view === 'naehe' || view === 'favoriten') renderList();
-    if (view === 'pegel') pegelBereich();
+    if (view === 'pegel') inhaltFertig = pegelBereich();
   };
   if (view !== 'pegel') { state.pegelId = null; state.pegelFluss = null; }
   document.body.classList.toggle('list-open', view === 'naehe' || view === 'favoriten');
@@ -942,18 +942,26 @@ function setView(view, { push = true, spaeter = false } = {}) {
  * Vorschau: Dauer eines Bereichswechsels anzeigen (Wartezeit bis der Tipp verarbeitet wird + Aufbau bis zum nächsten
  * ruhigen Bild), damit sich Langsamkeit auf echten Geräten messen lässt. Nur im Entwicklungsmodus.
  */
+let inhaltFertig = null;   // Promise des zuletzt angestoßenen Aufbaus (Pegel: inkl. Laden der Daten; In der Nähe: inkl. Position)
 function messen(id, e) {
   if (!ENTWICKLUNG) return;
   const start = performance.now(), warten = Math.max(0, Math.round(start - (e?.timeStamp || start)));
-  const fertig = () => {
-    const ms = Math.round(performance.now() - start);
+  inhaltFertig = null;
+  const zeigen = (text) => {
     let b = $('#perf-messung');
     if (!b) { b = h('div', { id: 'perf-messung', 'aria-hidden': 'true' }); document.body.append(b); }
-    b.textContent = `${id}: Tipp wartet ${warten} ms · Aufbau ${ms} ms`;
-    b.hidden = false; clearTimeout(b._t); b._t = setTimeout(() => { b.hidden = true; }, 6000);
+    b.textContent = text;
+    b.hidden = false; clearTimeout(b._t); b._t = setTimeout(() => { b.hidden = true; }, 8000);
   };
-  // „fertig“, wenn nach dem Aufbau ein Bild ohne weitere Arbeit kommt (zweimal requestAnimationFrame nach dem Zeitgeber)
-  requestAnimationFrame(() => setTimeout(() => { const ende = () => requestAnimationFrame(() => requestAnimationFrame(fertig)); ende(); }, 0));
+  // „Aufbau“: bis zum ersten ruhigen Bild nach dem Zeichnen; „ganz fertig“: bis Daten bzw. Position da sind
+  requestAnimationFrame(() => setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => {
+    const aufbau = Math.round(performance.now() - start), p = inhaltFertig;
+    zeigen(`${id}: Tipp wartet ${warten} ms · Aufbau ${aufbau} ms`);
+    p?.then(() => {
+      const ganz = Math.round(performance.now() - start);
+      if (ganz - aufbau > 50) zeigen(`${id}: Tipp wartet ${warten} ms · Aufbau ${aufbau} ms · ganz fertig ${ganz} ms`);
+    }, () => {});
+  })), 0));
 }
 
 /** Navigation: Karte/In der Nähe/Favoriten/Pegel ohne Neuladen; Melden öffnet die Auswahl. */

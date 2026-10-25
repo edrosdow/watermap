@@ -95,17 +95,21 @@ export function naehe(ctx) {
     zeichnen();
   }
 
-  async function positionHolen() {
+  let positionZeit = 0;   // wann die Position zuletzt bestimmt wurde
+  /** Position bestimmen. Beim bloßen Öffnen (nurWennAlt) reicht eine höchstens 2 Minuten alte Position. */
+  async function positionHolen({ nurWennAlt = false } = {}) {
     if (positionLaeuft) return;
-    positionLaeuft = true; zeichnen();
+    if (nurWennAlt && ctx.user() && Date.now() - positionZeit < 2 * 60e3) return;
+    positionLaeuft = true; zeichnen({ wennNoetig: true });
     try {
       const pos = await ctx.requestUserPos();
       ctx.setUser(pos);
+      positionZeit = Date.now();
       geoFreigabe.merken(true);
     } catch (e) {
       if (/verweigert/.test(e.message)) geoFreigabe.merken(false);
       ctx.toast(e.message);
-    } finally { positionLaeuft = false; zeichnen(); }
+    } finally { positionLaeuft = false; zeichnen({ wennNoetig: true }); }
   }
 
   function positionVerwenden() {
@@ -401,15 +405,20 @@ export function naehe(ctx) {
   function zeichnen({ wennNoetig = false, vorab = false } = {}) {
     if (!ziel || !(vorab ? ctx.allPlaces().length : ziel.aktiv())) return;
     const p = punkt();
-    // Kartenmitte grob (≈ 1 km): kleine Verschiebungen der Karte zeichnen die Liste nicht neu
-    const st = p.art === 'kartenmitte' ? 2 : 4;
-    const schluessel = [ctx.places(), ctx.meld(), `${p.art}|${p.lat.toFixed(st)}|${p.lon.toFixed(st)}|${sortierung}|${positionLaeuft}|${freigabe}|${ctx.isMobile()}`];
-    if (wennNoetig && zuletzt_ && ziel.ul.firstChild === zuletzt_.erstes && ziel.head.firstChild === zuletzt_.kopf
-      && schluessel.every((x, i) => x === zuletzt_.schluessel[i])) return;
-    ziel.kopfHandy.replaceChildren(...kopfHandy());
-    ziel.kopfDesktop.replaceChildren(...kopf().filter(Boolean));
+    // Kartenmitte grob (≈ 1 km), eigene Position ≈ 100 m: kleine Verschiebungen zeichnen die Liste nicht neu
+    const st = p.art === 'kartenmitte' ? 2 : p.art === 'position' ? 3 : 4;
+    const schluessel = [ctx.places(), ctx.meld(), `${p.art}|${p.lat.toFixed(st)}|${p.lon.toFixed(st)}|${sortierung}|${freigabe}|${ctx.isMobile()}`];
+    const kopfText = `${positionLaeuft}|${p.art}|${p.name}|${ctx.filterZahl()}`;
+    const gleich = zuletzt_ && ziel.ul.firstChild === zuletzt_.erstes && ziel.head.firstChild === zuletzt_.kopf
+      && schluessel.every((x, i) => x === zuletzt_.schluessel[i]);
+    // Kopf (Titel, Bezugspunkt, „Position wird bestimmt …“) ist klein – die Liste nur, wenn sich wirklich etwas geändert hat
+    if (!wennNoetig || !gleich || kopfText !== zuletzt_.kopfText) {
+      ziel.kopfHandy.replaceChildren(...kopfHandy());
+      ziel.kopfDesktop.replaceChildren(...kopf().filter(Boolean));
+    }
+    if (wennNoetig && gleich) { zuletzt_.kopfText = kopfText; return; }
     liste(ziel.head, ziel.ul);
-    zuletzt_ = { schluessel, erstes: ziel.ul.firstChild, kopf: ziel.head.firstChild };
+    zuletzt_ = { schluessel, kopfText, erstes: ziel.ul.firstChild, kopf: ziel.head.firstChild };
   }
 
   /** Nach dem Zurückkehren (Zurück-Taste) an dieselbe Stelle scrollen. */
@@ -452,7 +461,7 @@ export function naehe(ctx) {
       oeffnetGerade = true;
       try { await geoFreigabe.pruefen(); } finally { oeffnetGerade = false; }
       if (!bezug && freigabe === 'granted') bezug = { art: 'position' };
-      if (bezug?.art === 'position' && freigabe === 'granted') await positionHolen();
+      if (bezug?.art === 'position' && freigabe === 'granted') await positionHolen({ nurWennAlt: true });
       else if (freigabe !== vorher) zeichnen();   // nur neu zeichnen, wenn sich die Freigabe geändert hat
     },
     // von außen (Filter, Kartenbewegung, Meldungen): nur, wenn sich etwas Sichtbares geändert hat
