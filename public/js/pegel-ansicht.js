@@ -162,6 +162,12 @@ export function pegelKarte(g, { verlauf, onOpen, bearbeiten = null }) {
   return karte;
 }
 
+/** Zeile „Weser · KM 201,4“ in der Kopfleiste; die Art („Pegel“/„Tidepegel“) nur für Screenreader (Etikett zeigt sie sichtbar). */
+export function kicker(art, g) {
+  return h('p', { class: 'pd-kicker' }, h('span', { class: 'sr-only', text: `${art} · ` }),
+    [g.water, kmText(g).replace('km', 'KM')].filter(Boolean).join(' · ') || art);
+}
+
 /**
  * Pegel-Detailseite (Dashboard, Sheet auf dem Handy, rechtes Panel am Desktop).
  * opts = { verlauf: Promise<pts>, onBack, backLabel, onShare, onAmpel, onKarte, slips: [{p, d}], onSlip(p), onStern, eingebettet, wetter }
@@ -174,17 +180,16 @@ export function pegelDetail(g, opts) {
   const kopf = h('header', { class: 'pd-kopf' },
     h('div', { class: 'pd-leiste' },
       h('button', { type: 'button', class: 'pd-icon', 'aria-label': opts.backLabel || 'Zurück', html: icon(opts.eingebettet ? 'close' : 'back', 24), onclick: opts.onBack }),
-      h('span', { class: 'pd-luecke' }),
+      kicker('Pegel', g),
       h('button', { type: 'button', class: 'pd-icon', 'aria-label': 'Pegel teilen', html: icon('share', 22), onclick: opts.onShare }),
       sternKnopf(g, { onChange: opts.onStern })),
-    h('p', { class: 'pd-kicker', text: ['Pegel', g.water, kmText(g).replace('km', 'KM')].filter(Boolean).join(' · ') }),
     titel,
     h('div', { class: 'pd-wertzeile' },
       h('p', { class: 'pd-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: g.unit })),
-      h('div', { class: 'pd-wertinfo' }, etikett(g), aend)),
-    h('p', { class: 'pd-zeit' + (g.state === 'old' ? ' is-alt' : '') },
-      g.state === 'old' ? h('span', { html: icon('clock', 15) }) : null,
-      g.state === 'old' ? `Veraltet – gemessen ${formatTime(g.time)}` : `Gemessen ${formatTime(g.time)}`));
+      h('div', { class: 'pd-wertinfo' }, etikett(g), aend,
+        h('p', { class: 'pd-zeit' + (g.state === 'old' ? ' is-alt' : '') },
+          g.state === 'old' ? h('span', { html: icon('clock', 15) }) : null,
+          g.state === 'old' ? `Veraltet – gemessen ${formatTime(g.time)}` : `Gemessen ${formatTime(g.time)}`))));
 
   const body = h('div', { class: 'pd-body' });
   // Wo steht der Pegel?

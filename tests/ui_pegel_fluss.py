@@ -211,7 +211,7 @@ def run(b, w, hh, mobile):
 
     # Tidepegel-Detailseite (Cuxhaven)
     pg.goto(uf.BASE + f'#pegel/{U(21)}'); pg.wait_for_selector('.pt-svg', timeout=8000); pg.wait_for_timeout(300)
-    kp = pg.inner_text('.pd-kopf')
+    kp = ' '.join(pg.inner_text('.pd-kopf').split())
     check('TIDEPEGEL · ELBE · KM 727' in kp.upper() and 'Cuxhaven' in kp and '610' in kp and pg.inner_text('.pd-kopf .pz-tag') == 'Tide' and '↗ auflaufend' in kp,
           f'{tag}: Tidepegel-Kopf mit „Tide“ und „auflaufend“ ({kp!r})')
     check(pg.locator('.pd .ps').count() == 0 and 'Wo steht der Pegel' not in pg.inner_text('.pd'), f'{tag}: keine MNW/MHW-Skala')
@@ -251,7 +251,7 @@ def run(b, w, hh, mobile):
     pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pm-karte .pm-tide'); pg.wait_for_timeout(400)
     karte = pg.locator('.pm-karte').first
     pg.wait_for_function("document.querySelector('.pm-tide')?.textContent.includes('nächstes')", timeout=5000)
-    check('auflaufend' in karte.inner_text() and re.search(r'nächstes HW \d\d:\d\d · NW \d\d:\d\d', karte.inner_text()) and karte.locator('.ps').count() == 0, f'{tag}: „Meine Pegel“-Karte eines Tidepegels mit nächstem HW/NW ({karte.inner_text()!r})')
+    check('auflaufend' in karte.inner_text() and re.search(r'nächstes HW (morgen )?\d\d:\d\d · NW (morgen )?\d\d:\d\d', karte.inner_text()) and karte.locator('.ps').count() == 0, f'{tag}: „Meine Pegel“-Karte eines Tidepegels mit nächstem HW/NW ({karte.inner_text()!r})')
     pg.evaluate("localStorage.removeItem('watermap.meinePegel')")
 
     # Küste und Kanal: ohne Profil, nur Liste

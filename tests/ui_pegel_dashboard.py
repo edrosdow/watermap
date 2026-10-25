@@ -168,7 +168,7 @@ def run(b, w, hh, mobile):
     pg.locator('.pg-tabelle .pg-zeile-btn', has_text='Vlotho').click(); pg.wait_for_selector('.pd-name')
     check(pg.url.endswith('#pegel/' + U(1)) and pg.locator(f'{nav} [data-nav=pegel]').get_attribute('aria-current') == 'page', f'{tag}: Detailseite #pegel/<id>, Tab bleibt „Pegel“')
     t = pg.inner_text('.pd')
-    check('PEGEL · WESER · KM 201,4' in pg.inner_text('.pd-kicker').upper() and pg.inner_text('.pd-name') == 'Vlotho' and '182' in pg.inner_text('.pd-wert'), f'{tag}: Kopf mit Kicker, Name, Wert')
+    check('PEGEL · WESER · KM 201,4' in ' '.join(pg.inner_text('.pd-kicker').split()).upper() and pg.inner_text('.pd-name') == 'Vlotho' and '182' in pg.inner_text('.pd-wert'), f'{tag}: Kopf mit Kicker, Name, Wert')
     check(re.search(r'Gemessen \d\d:\d\d Uhr', t) is not None, f'{tag}: „Gemessen …“')
     check(pg.inner_text('.pd-klartext') == 'Etwas unter Mittelwasser, im normalen Bereich. 84 cm über dem mittleren Niedrigwasser.', f'{tag}: Klartext aus den Kennwerten ({pg.inner_text(".pd-klartext")})')
     check(pg.locator('.pd .ps.is-gross .ps-labels b').all_inner_texts() == ['98', '210', '480', '590'], f'{tag}: große Skala mit Kennwerten')

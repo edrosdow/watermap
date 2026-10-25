@@ -5,7 +5,7 @@ import { icon } from './icons.js';
 import { formatTime } from './pegel.js';
 import { auswerten, TENDENZ } from './gezeiten.js';
 import { vorhersageLaden, kommende, hoehe, inText, tagUhr, standText, ART } from './gezeiten-bsh.js';
-import { fmt, kmText, sternKnopf, etikett } from './pegel-ansicht.js';
+import { fmt, sternKnopf, etikett, kicker } from './pegel-ansicht.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const uhr = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -119,15 +119,14 @@ export function tideDetail(g, opts) {
   const kopf = h('header', { class: 'pd-kopf is-tide' },
     h('div', { class: 'pd-leiste' },
       h('button', { type: 'button', class: 'pd-icon', 'aria-label': opts.backLabel || 'Zurück', html: icon(opts.eingebettet ? 'close' : 'back', 24), onclick: opts.onBack }),
-      h('span', { class: 'pd-luecke' }),
+      kicker('Tidepegel', g),
       h('button', { type: 'button', class: 'pd-icon', 'aria-label': 'Pegel teilen', html: icon('share', 22), onclick: opts.onShare }),
       sternKnopf(g, { onChange: opts.onStern })),
-    h('p', { class: 'pd-kicker', text: ['Tidepegel', g.water, kmText(g).replace('km', 'KM')].filter(Boolean).join(' · ') }),
     h('h1', { class: 'pd-name', id: 'pd-name', tabindex: '-1', text: g.name }),
     h('div', { class: 'pd-wertzeile' },
       h('p', { class: 'pd-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: g.unit })),
-      h('div', { class: 'pd-wertinfo' }, etikett(g), tend)),
-    h('p', { class: 'pd-zeit' + (g.state === 'old' ? ' is-alt' : '') }, g.state === 'old' ? `Veraltet – gemessen ${formatTime(g.time)}` : `Gemessen ${formatTime(g.time)}`));
+      h('div', { class: 'pd-wertinfo' }, etikett(g), tend,
+        h('p', { class: 'pd-zeit' + (g.state === 'old' ? ' is-alt' : '') }, g.state === 'old' ? `Veraltet – gemessen ${formatTime(g.time)}` : `Gemessen ${formatTime(g.time)}`))));
 
   const box = h('div', { class: 'pt-kurve', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Tidekurve wird geladen …' }));
   const achse = h('p', { class: 'pt-achse' });
