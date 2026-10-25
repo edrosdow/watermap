@@ -175,6 +175,20 @@ with sync_playwright() as p:
         pg.mouse.move(svg['x'] + svg['width'] * 0.5, svg['y'] + svg['height'] * 0.5); pg.wait_for_timeout(150)
         tip = pg.locator('#detail .gc-tip')
         check(tip.is_visible() and 'cm' in tip.inner_text(), f'{name}: Tooltip im Verlauf ({tip.inner_text() if tip.is_visible() else "-"})')
+        if mobile:
+            # Finger: gedrückt halten und seitlich ziehen fährt die Kurve ab, ohne dass die Seite scrollt; der Wert bleibt danach stehen
+            cdp = ctx.new_cdp_session(pg)
+            tp = lambda typ, fx, fy=0.5: cdp.send('Input.dispatchTouchEvent', {'type': typ, 'touchPoints': [] if typ == 'touchEnd' else [{'x': svg['x'] + svg['width'] * fx, 'y': svg['y'] + svg['height'] * fy}]})
+            scroll0 = pg.locator('#detail .detail-scroll').evaluate('e => e.scrollTop')
+            tp('touchStart', 0.8); pg.wait_for_timeout(300)
+            vorher = tip.inner_text()
+            for fx, fy in [(0.7, 0.55), (0.5, 0.62), (0.3, 0.7)]: tp('touchMove', fx, fy); pg.wait_for_timeout(40)
+            nachher = tip.inner_text()
+            tp('touchEnd', 0); pg.wait_for_timeout(150)
+            check(tip.is_visible() and nachher != vorher and pg.locator('#detail .detail-scroll').evaluate('e => e.scrollTop') == scroll0,
+                  f'{name}: Finger fährt die Kurve ab, Seite scrollt nicht, Wert bleibt stehen ({vorher!r} → {nachher!r})')
+            tp('touchStart', 0.95); tp('touchEnd', 0); pg.wait_for_timeout(150)
+            check(tip.is_visible() and tip.inner_text() != nachher, f'{name}: Antippen zeigt den Wert an der Stelle')
         pg.screenshot(path=str(SHOTS / f'{name}_3_detail.png'))
         pg.locator('#detail .detail-scroll').evaluate('e => e.scrollTop = 99999'); pg.wait_for_timeout(100)
         pg.screenshot(path=str(SHOTS / f'{name}_4_detail_unten.png'))

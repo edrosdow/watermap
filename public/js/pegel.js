@@ -5,7 +5,7 @@ import { CONFIG } from './config.js';
 import { schoenerName } from './pegel-namen.js';
 import { h } from './dom.js';
 import { icon } from './icons.js';
-import { s, niceStep, fmtNum } from './chart.js';
+import { s, niceStep, fmtNum, abfahren } from './chart.js';
 
 // Zustände (Status-Farben: nie allein – immer mit Wert, Pfeil bzw. Symbol und Text)
 export const GAUGE_STATES = {
@@ -242,9 +242,9 @@ export function historyChart(pts, g, { threshold = null } = {}) {
   svg.append(cross, hdot, hit);
   const tip = h('div', { class: 'gc-tip', hidden: true });
   const wrap = h('div', { class: 'gc-wrap' }, svg, tip);
-  const move = (ev) => {
+  const move = (clientX) => {
     const r = svg.getBoundingClientRect();
-    const px = (ev.clientX - r.left) / r.width * W;
+    const px = Math.min(Math.max((clientX - r.left) / r.width * W, L), W - R);
     const t = t0 + (px - L) / (W - L - R) * (t1 - t0);
     let i = 0, best = Infinity;
     for (let j = 0; j < pts.length; j++) { const dd = Math.abs(pts[j].t - t); if (dd < best) { best = dd; i = j; } }
@@ -258,7 +258,7 @@ export function historyChart(pts, g, { threshold = null } = {}) {
     tip.style.left = `${Math.min(Math.max(left, half), r.width - half)}px`;
   };
   const leave = () => { cross.setAttribute('visibility', 'hidden'); hdot.setAttribute('visibility', 'hidden'); tip.hidden = true; };
-  hit.addEventListener('pointermove', move); hit.addEventListener('pointerdown', move); hit.addEventListener('pointerleave', leave);
+  abfahren(wrap, { zeigen: move, verstecken: leave });
 
   // Tabellenansicht (Tageswerte) für Screenreader und zum Nachlesen
   const days = new Map();

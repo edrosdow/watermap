@@ -5,7 +5,7 @@
 import { CONFIG } from './config.js';
 import { h } from './dom.js';
 import { icon } from './icons.js';
-import { s, sText, niceStep, fmtNum } from './chart.js';
+import { s, sText, niceStep, fmtNum, abfahren } from './chart.js';
 
 // ------------------------------------------------------------------ Umrechnungen
 const BFT_KMH = [1, 6, 12, 20, 29, 39, 50, 62, 75, 89, 103, 118];
@@ -255,9 +255,9 @@ function windChart(hours) {
   svg.append(cross, dG, dW, hit);
   const tip = h('div', { class: 'gc-tip', hidden: true });
   const wrap = h('div', { class: 'gc-wrap' }, svg, tip);
-  const move = (ev) => {
+  const move = (clientX) => {
     const r = svg.getBoundingClientRect();
-    const t = t0 + ((ev.clientX - r.left) / r.width * W - L) / (W - L - R) * (t1 - t0);
+    const t = t0 + (Math.min(Math.max((clientX - r.left) / r.width * W, L), W - R) - L) / (W - L - R) * (t1 - t0);
     let p = hours[0];
     for (const q of hours) if (Math.abs(q.t - t) < Math.abs(p.t - t)) p = q;
     const cx = x(p.t);
@@ -270,7 +270,7 @@ function windChart(hours) {
     tip.style.left = `${Math.min(Math.max(cx / W * r.width, half), r.width - half)}px`;
   };
   const leave = () => { for (const e of [cross, dW, dG]) e.setAttribute('visibility', 'hidden'); tip.hidden = true; };
-  hit.addEventListener('pointermove', move); hit.addEventListener('pointerdown', move); hit.addEventListener('pointerleave', leave);
+  abfahren(wrap, { zeigen: move, verstecken: leave });
 
   // Tabelle (alle 3 Stunden)
   const rows = hours.filter((_, i) => i % 3 === 0);
