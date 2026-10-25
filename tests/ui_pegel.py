@@ -119,6 +119,9 @@ with sync_playwright() as p:
                   body=json.dumps({'current_weather': {'weather': None}, 'weather': {'weather': []}}.get(urlparse(r.request.url).path.rsplit('/', 1)[1], {'alerts': []}))))
         ctx.route(re.compile(r'https://([a-c]\.)?tile\.openstreetmap\.org/.*'), lambda r: r.fulfill(status=200, content_type='image/png', body=TILE))
         ctx.route(re.compile(r'https://(?!([a-c]\.)?tile\.openstreetmap\.org).*'), lambda r: (foreign.append(r.request.url), r.abort()))
+        # Standortansicht (Slipanlage mit Pegel-Kasten) lädt „In der Nähe“ live – hier leere Antworten
+        ctx.route('**/.netlify/functions/umgebung*', lambda r: r.fulfill(status=200, content_type='application/json', body='{"elements": []}'))
+        ctx.route('https://overpass-api.de/**', lambda r: r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body='{"elements": []}'))
         ctx.add_init_script(CSP_HOOK)
         ctx.add_init_script("try { localStorage.setItem('watermap.geoAsked', '1'); } catch {}")
         ctx.add_init_script("try { if (localStorage.getItem('watermap.cats') === null) { localStorage.setItem('watermap.cats', 'slip,marina,fuel'); localStorage.setItem('watermap.listOpen', '1'); } } catch {}")   # alte Ansicht: alle Kategorien, Liste offen
@@ -192,6 +195,17 @@ with sync_playwright() as p:
         pg.screenshot(path=str(SHOTS / f'{name}_3_detail.png'))
         pg.locator('#detail .detail-scroll').evaluate('e => e.scrollTop = 99999'); pg.wait_for_timeout(100)
         pg.screenshot(path=str(SHOTS / f'{name}_4_detail_unten.png'))
+
+        # Slipanlage am selben Gewässer: Pegel-Kasten führt zur Pegel-Detailseite, Zurück wieder zur Slipanlage
+        sid = pg.evaluate("""(k) => { const st = window.__watermap.state, g = st.gauges.find(x => x.id === k), p = st.places.find(x => x.type === 'slip');
+            p.water = { name: 'Rhein' }; p.lat = g.lat + 0.01; p.lon = g.lon; return p.id; }""", KOELN)
+        pg.evaluate("(id) => window.__watermap.selectPlace(id, { full: true })", sid); pg.wait_for_selector('#detail .pegel-box', timeout=8000)
+        box = pg.locator('#detail .pegel-box')
+        check(box.get_attribute('href') == '#pegel/' + KOELN and 'Details ›' in box.inner_text() and 'Pegel-Ampel' not in box.inner_text(), f'{name}: Pegel-Kasten „Details ›“ ({box.inner_text()!r})')
+        box.click(); pg.wait_for_selector('.pegelseite .pd-name', timeout=8000)
+        check(pg.url.endswith('#pegel/' + KOELN) and pg.inner_text('.pegelseite .pd-name') == 'Köln', f'{name}: Klick öffnet die Pegel-Detailseite')
+        pg.locator('.pegelseite .pd-icon').first.click(); pg.wait_for_timeout(500)
+        check('#pegel/' not in pg.url and pg.locator('.pegelseite').is_hidden(), f'{name}: Zurück führt wieder zum Standort ({pg.url[-40:]})')
 
         # Weitere Zustände
         for uuid, expect in [(STATIONS[1]['uuid'], 'Niedrig'), (STATIONS[2]['uuid'], 'Hoch'),

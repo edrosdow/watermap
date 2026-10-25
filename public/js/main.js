@@ -546,11 +546,20 @@ function pegelInfo(p) {
 function pegelBox({ g, d, ampel }) {
   const trend = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' }[g.trend];
   const weit = d > 2000 ? `Pegel ${formatDistance(d)} entfernt` : null;   // weiter weg: ehrlich dazusagen
-  return h('div', { class: 'pegel-box ' + (ampel ? ampel.box : 'is-neutral') },
+  // ganzer Kasten führt zur Pegel-Detailseite (Zurück kommt wieder hierher)
+  return h('a', { class: 'pegel-box ' + (ampel ? ampel.box : 'is-neutral'), href: `#pegel/${encodeURIComponent(g.id)}`,
+    onclick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); pegelSeiteOeffnen(g.id); } },
     h('div', {},
       h('p', {}, h('strong', { text: `Pegel ${g.name}: ${fmtN(Math.round(g.value))} ${g.unit}${trend ? `, ${trend}` : ''}` })),
-      h('small', { text: [ampel ? `${ampel.tag} für dein Boot (laut Pegel-Ampel)` : 'Passt dein Boot heute?', weit].filter(Boolean).join(' · ') })),
-    h('a', { href: `./pegel-ampel?pegel=${encodeURIComponent(g.id)}`, text: 'Pegel-Ampel ›' }));
+      h('small', { text: [ampel ? `${ampel.tag} für dein Boot (laut Pegel-Ampel)` : 'Verlauf, Kennwerte und Trend', weit].filter(Boolean).join(' · ') })),
+    h('span', { class: 'pegel-box-mehr', text: 'Details ›' }));
+}
+
+/** Pegel-Detailseite aus einer Standortansicht öffnen; „Zurück“ führt wieder zum Standort. */
+function pegelSeiteOeffnen(id) {
+  state.pegelId = id; state.pegelFluss = null;
+  setView('pegel');
+  history.replaceState({ pegelVon: 'standort' }, '', location.pathname + location.search + appliedHash);
 }
 
 
