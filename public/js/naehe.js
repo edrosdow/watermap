@@ -138,6 +138,17 @@ export function naehe(ctx) {
     document.body.append(dlg);
     const pop = popover(dlg, { isMobile: ctx.isMobile, align: 'right' });
     window.addEventListener('hashchange', () => pop.close());
+    // Handy: beim Tippen ins Suchfeld oben am Bildschirm verankern, damit Suchfeld und Treffer über der Tastatur stehen
+    const vv = window.visualViewport;
+    const anpassen = () => {
+      if (!dlg.classList.contains('is-oben')) return;
+      dlg.style.setProperty('--vv-top', `${Math.round(vv ? vv.offsetTop : 0)}px`);
+      dlg.style.setProperty('--vv-h', `${Math.round(vv ? vv.height : window.innerHeight)}px`);
+    };
+    feld.addEventListener('focus', () => { if (dlg.classList.contains('is-sheet')) { dlg.classList.add('is-oben'); anpassen(); } });
+    dlg.addEventListener('close', () => dlg.classList.remove('is-oben'));
+    vv?.addEventListener('resize', anpassen);
+    vv?.addEventListener('scroll', anpassen);
 
     let timer = null, ctrl = null, letzteSuche = '';
     feld.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => suchen(false), 600); });

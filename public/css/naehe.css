@@ -63,6 +63,10 @@ body.list-open .sidebar { background: var(--bg); }
 
 /* Fenster „Entfernungen messen ab …“ */
 .nb-pop.is-drop { width: min(420px, calc(100vw - 24px)); }
+/* Handy mit Tastatur: oben verankert (Höhe = sichtbarer Bereich über der Tastatur) */
+.nb-pop.is-sheet.is-oben { inset: calc(var(--vv-top, 0px) + 8px) 8px auto 8px; width: auto; max-width: none; border-radius: 20px;
+  max-height: calc(var(--vv-h, 100dvh) - 16px); transition: none; }
+.nb-pop.is-sheet.is-oben .pop-grip { display: none; }
 .nb-oben { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px 4px; }
 .nb-oben h2 { margin: 0; font-size: 20px; color: var(--navy); }
 .nb-x { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--bg); color: var(--navy); display: grid; place-items: center; flex: none; }

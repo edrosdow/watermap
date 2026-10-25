@@ -211,6 +211,9 @@ def run(b, w, hh, mobile):
     mp = pg.locator('#naehe-bezug .nb-zeile', has_text='Meine Position')
     check('nicht gespeichert, nicht gesendet' in mp.inner_text(), f'{tag}: Datenschutz-Satz unter „Meine Position“ im Fenster')
     check(pg.evaluate("document.activeElement.classList.contains('nb-suche')"), f'{tag}: „Ort eingeben“ → Fokus im Suchfeld')
+    if mobile:
+        bb = pg.locator('#naehe-bezug').bounding_box()
+        check(bb['y'] <= 20 and pg.locator('#naehe-bezug.is-oben').count() == 1, f'{tag}: Suchfeld aktiv → Fenster oben (über der Tastatur), y={bb["y"]:.0f}')
     check(pg.get_attribute('.nb-suche', 'placeholder') == 'Ort, Gewässer oder Postleitzahl', f'{tag}: Suchfeld „Ort, Gewässer oder Postleitzahl“')
     zeilen = [t.split('\n')[0] for t in pg.locator('#naehe-bezug .nb-liste:not(.nb-treffer) .nb-zeile').all_inner_texts()]
     check(zeilen[:2] == ['Meine Position', 'Kartenmitte'], f'{tag}: Fenster mit „Meine Position“ und „Kartenmitte“ ({zeilen})')

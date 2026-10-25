@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 24.10.2026 · App-Version **7.26.0**
+Stand: 24.10.2026 · App-Version **7.26.1**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.26.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.26.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -219,6 +219,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
 | 7.24.0 | Gezeiten aus PEGELONLINE: Tidepegel-Detailseite (Tidekurve, letztes HW/NW, Tidehub), Tide in „Meine Pegel“ und Flussseite; Prüfliste `pruefung.html` |
 | 7.24.1 | Nach Prüfliste: Ems-Reihenfolge (Unterems ab Papenburg neu ab km 0 → `flussKm` +240), Namen (Groß-/Straß-, Kürzel UW/AP/BP … groß, Bhv/Whv/LT ausgeschrieben, „auf/zur“ klein, Meißen, Roßlau, Storkower Gewässer), Tide-Kennwerte auch als Text/„cm …“, Prüfliste zeigt Datenstand, gelieferte Tide-Kennwerte und Sonderzeichen in Namen; Offline-Stand nur aus derselben Version |
+| 7.26.1 | „Entfernungen messen ab …“ auf dem Handy: beim Tippen ins Suchfeld oben verankert (Höhe nach `visualViewport`), Suchfeld und Treffer stehen über der Tastatur |
 | 7.26.0 | Kompakter Kopf der Pegel- und Tidepegel-Seite: „Gewässer · KM“ in der Leiste zwischen Zurück und Teilen (Art „Pegel“/„Tidepegel“ nur für Screenreader), Name 26/30 px, Wert 54/64 px, daneben Etikett, Trend und „Gemessen …“ (Kopf ≈ 40 % niedriger) |
 | 7.25.9 | Verlauf (Pegel) und Wind-Diagramm mit dem Finger: kurz gedrückt halten oder seitlich ziehen fährt die Kurve ab (Seite scrollt dabei nicht), Antippen zeigt den Wert und lässt ihn stehen, senkrecht wischen scrollt; kein Auswahlmenü beim langen Drücken (`abfahren` in `js/chart.js`) |
 | 7.25.8 | Messzeile und Tipp-Anzeige wieder entfernt. Ergebnis: Tipps, die „nicht ankamen“, fing der In-App-Browser (Link aus einer App) ab – in Safari bzw. als Home-Bildschirm-App tritt das nicht auf |
@@ -247,7 +248,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.26.0): alle Tests grün.**
+**Letzter Lauf (7.26.1): alle Tests grün.**
 
 ## 6. Offene Aufgaben
 
