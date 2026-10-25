@@ -1,7 +1,7 @@
 // Tests der Fluss-Logik (public/js/pegel-fluss.js): Gruppierung Küste/Tide/Kanäle, Zustand eines Flusses, rel, Profil.
 // Start: node tests/pegel_fluss_test.mjs
 import assert from 'node:assert/strict';
-import { slug, rel, gruppieren, gruppeZu, flussZustand, kachelnSortieren, punkte, profil, flussKm, istKueste, slipsAmFluss, artikel, flussReihenfolge, abschnitt } from '../public/js/pegel-fluss.js';
+import { naechsterPegel, slug, rel, gruppieren, gruppeZu, flussZustand, kachelnSortieren, punkte, profil, flussKm, istKueste, slipsAmFluss, artikel, flussReihenfolge, abschnitt } from '../public/js/pegel-fluss.js';
 import { schoenerName, umlautVerdacht } from '../public/js/pegel-namen.js';
 
 const R = { MNW: 100, MW: 200, MHW: 300, HSW: 400 };
@@ -120,6 +120,19 @@ assert.deepEqual(flussReihenfolge(ems).map(g => g.name),
 
 // Gruppierung je Stationsliste nur einmal (Reihenfolge ist aufwendig)
 assert.equal(gruppieren(weser), gruppieren(weser));
+
+// Nächster Pegel am selben Gewässer (Slipanlage → Pegel)
+const G = (id, water, lat, lon) => ({ id, water, lat, lon });
+const pegelListe = [G('vlotho', 'Weser', 52.17, 8.86), G('minden', 'Weser', 52.29, 8.92), G('rhk', 'Rhein-Herne-Kanal', 51.5, 7.0), G('rhein', 'Rhein', 51.43, 6.76),
+  G('esk', 'Elbeseitenkanal', 52.6, 10.6), G('elk', 'Elbe-Lübeck-Kanal', 53.7, 10.7)];
+assert.equal(naechsterPegel({ lat: 52.20, lon: 8.87, water: { name: 'Weser' } }, pegelListe).g.id, 'vlotho');
+assert.equal(naechsterPegel({ lat: 51.0, lon: 7.9, water: { name: 'Weser' } }, pegelListe), null, 'über 80 km: keiner');
+assert.equal(naechsterPegel({ lat: 51.5, lon: 7.01, water: { name: 'Rhein' } }, pegelListe).g.id, 'rhein', 'Rhein ≠ Rhein-Herne-Kanal');
+assert.equal(naechsterPegel({ lat: 52.6, lon: 10.61, water: { name: 'Elbe' } }, pegelListe), null, 'Elbe ≠ Elbeseitenkanal');
+assert.equal(naechsterPegel({ lat: 53.7, lon: 10.71, water: { name: 'ELBE-LUEBECK-KANAL' } }, pegelListe).g.id, 'elk', 'ü = ue');
+assert.equal(naechsterPegel({ lat: 52.6, lon: 10.6, water: { name: 'Mittelweser (Weser)' } }, [G('x', 'Weser', 52.7, 10.6)]).g.id, 'x', 'Wörter enthalten');
+assert.equal(naechsterPegel({ lat: 52.171, lon: 8.861 }, pegelListe).g.id, 'vlotho', 'ohne Gewässernamen: Pegel direkt nebenan');
+assert.equal(naechsterPegel({ lat: 52.25, lon: 8.86 }, pegelListe), null, 'ohne Gewässernamen: nicht weiter als 1,5 km');
 
 // Namen
 assert.equal(schoenerName('HANN.MUENDEN'), 'Hann. Münden');

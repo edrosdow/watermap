@@ -15,7 +15,7 @@ import { bewerte } from './ampel-logik.js';
 import { aktivLaden, standortLaden, statusZeile, vorOrtKarte, zusammenfassen } from './meldungen.js';
 import { openLageForm } from './lage-form.js';
 import { naehe, geoFreigabe } from './naehe.js';
-import { gruppieren, gruppeZu } from './pegel-fluss.js';
+import { gruppieren, gruppeZu, naechsterPegel } from './pegel-fluss.js';
 import { flussSeite } from './pegel-fluss-ansicht.js';
 import { istTidepegel } from './gezeiten.js';
 import { pegelLaden, pegelStand, verlaufLaden } from './pegel-daten.js';
@@ -519,9 +519,7 @@ function hidePeek() {
   document.body.classList.remove('has-peek');
 }
 
-// ---- Pegel am selben Gewässer (nächster PEGELONLINE-Pegel bis 15 km)
-const PEGEL_RADIUS_M = 15000;
-const normWater = (s) => String(s || '').toLowerCase().replace(/[^a-zäöüß]/g, '');
+// ---- Pegel am selben Gewässer (nächster PEGELONLINE-Pegel, siehe naechsterPegel)
 function allGauges() { return pegelLaden().then(st => st.gauges); }
 const AMPEL_TAG = {
   gruen: { tag: 'Pegel gut', cls: 'is-good', box: 'is-gruen' },
@@ -530,17 +528,9 @@ const AMPEL_TAG = {
 };
 const pegelCache = new Map();
 function pegelInfo(p) {
-  const w = normWater(p.water?.name);
-  if (w.length < 3) return Promise.resolve(null);
   if (pegelCache.has(p.id)) return pegelCache.get(p.id);
   const pr = allGauges().then((list) => {
-    let best = null;
-    for (const g of list) {
-      const gw = normWater(g.water);
-      if (!gw || !(gw === w || gw.includes(w) || w.includes(gw))) continue;
-      const d = haversine(p.lat, p.lon, g.lat, g.lon);
-      if (d <= PEGEL_RADIUS_M && (!best || d < best.d)) best = { g, d };
-    }
+    const best = naechsterPegel(p, list);
     if (!best) return null;
     let ampel = null;
     try {
@@ -553,12 +543,13 @@ function pegelInfo(p) {
   return pr;
 }
 
-function pegelBox({ g, ampel }) {
+function pegelBox({ g, d, ampel }) {
   const trend = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' }[g.trend];
+  const weit = d > 2000 ? `Pegel ${formatDistance(d)} entfernt` : null;   // weiter weg: ehrlich dazusagen
   return h('div', { class: 'pegel-box ' + (ampel ? ampel.box : 'is-neutral') },
     h('div', {},
       h('p', {}, h('strong', { text: `Pegel ${g.name}: ${fmtN(Math.round(g.value))} ${g.unit}${trend ? `, ${trend}` : ''}` })),
-      h('small', { text: ampel ? `${ampel.tag} für dein Boot (laut Pegel-Ampel)` : 'Passt dein Boot heute?' })),
+      h('small', { text: [ampel ? `${ampel.tag} für dein Boot (laut Pegel-Ampel)` : 'Passt dein Boot heute?', weit].filter(Boolean).join(' · ') })),
     h('a', { href: `./pegel-ampel?pegel=${encodeURIComponent(g.id)}`, text: 'Pegel-Ampel ›' }));
 }
 

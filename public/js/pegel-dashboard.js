@@ -8,7 +8,7 @@ import { fmt, kmText, zustand, ZUSTAND, etikett, trendText, trendKlasse, pegelKa
 import { formatTime } from './pegel.js';
 import { popover } from './nav.js';
 import { ENTWICKLUNG } from './config.js';
-import { normW, flussKm as flussKmRoh, gruppieren, kachelnSortieren, istKueste, slug, KUESTE_SLUG } from './pegel-fluss.js';
+import { normW, gleichesGewaesser, flussKm as flussKmRoh, gruppieren, kachelnSortieren, istKueste, slug, KUESTE_SLUG } from './pegel-fluss.js';
 import { flussKachel, ohneBewertung } from './pegel-fluss-ansicht.js';
 import { umlautVerdacht } from './pegel-namen.js';
 
@@ -19,9 +19,8 @@ const standText = (st) => (st.offline ? `Offline · Stand von ${new Date(st.zeit
 
 /** Nächste Slipanlagen am selben Gewässer (für Detailseite). */
 export function slipsAmPegel(g, places, max = 5, radius = 30000) {
-  const w = normW(g.water);
-  if (!w) return [];
-  return places.filter(p => p.type === 'slip' && p.water?.name && (normW(p.water.name) === w || normW(p.water.name).includes(w) || w.includes(normW(p.water.name))))
+  if (!normW(g.water)) return [];
+  return places.filter(p => p.type === 'slip' && p.water?.name && gleichesGewaesser(p.water.name, g.water))
     .map(p => ({ p, d: haversine(g.lat, g.lon, p.lat, p.lon), name: displayName(p) }))
     .filter(e => e.d <= radius).sort((a, b) => a.d - b.d).slice(0, max);
 }

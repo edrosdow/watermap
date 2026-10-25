@@ -210,9 +210,47 @@ export function profil(gr) {
 
 /** Slipanlagen an diesem Gewässer (Gewässername aus OSM, gleiche Namensprüfung wie auf der Pegel-Detailseite). */
 export function slipsAmFluss(name, places) {
-  const w = normW(name);
-  if (!w) return [];
-  return places.filter(p => p.type === 'slip' && p.water?.name && (normW(p.water.name) === w || normW(p.water.name).includes(w) || w.includes(normW(p.water.name))));
+  if (!normW(name)) return [];
+  return places.filter(p => p.type === 'slip' && p.water?.name && gleichesGewaesser(p.water.name, name));
+}
+
+/** Gewässername zum Vergleichen: klein, Umlaute/ß ausgeschrieben („Elbe-Lübeck-Kanal“ = „ELBE-LUEBECK-KANAL“), nur Buchstaben. */
+export const gewaesserSchluessel = (s) => String(s || '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z]/g, '');
+const woerter = (s) => String(s || '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').split(/[^a-z]+/).filter(w => w.length >= 3);
+/**
+ * Gleiches Gewässer: gleicher Name (ohne Satzzeichen) oder alle Wörter des kürzeren im längeren („Weser“ ~ „Weser (Mittelweser)“).
+ * Fluss und Kanal werden nie verwechselt („Rhein“ ≠ „Rhein-Herne-Kanal“, „Elbe“ ≠ „Elbeseitenkanal“).
+ */
+export function gleichesGewaesser(a, b) {
+  if (gewaesserSchluessel(a).length < 3 || gewaesserSchluessel(b).length < 3) return false;
+  if (gewaesserSchluessel(a) === gewaesserSchluessel(b)) return true;
+  const kanal = (s) => /kanal/.test(gewaesserSchluessel(s));
+  if (kanal(a) !== kanal(b)) return false;
+  const [k, l] = [woerter(a), woerter(b)].sort((x, y) => x.length - y.length);
+  return k.length > 0 && k.every(w => l.includes(w));
+}
+export const PEGEL_MAX_M = 80000;     // nächster Pegel am selben Gewässer – auch, wenn er weiter weg liegt
+export const PEGEL_OHNE_NAME_M = 1500; // ohne Gewässernamen nur ein Pegel direkt nebenan
+function entfernungM(a, b) {
+  const r = Math.PI / 180, x = (b.lon - a.lon) * r * Math.cos((a.lat + b.lat) / 2 * r), y = (b.lat - a.lat) * r;
+  return Math.hypot(x, y) * 6371000;
+}
+
+/**
+ * Nächster Pegel zu einem Standort am selben Gewässer (Name aus OSM ↔ PEGELONLINE), bis PEGEL_MAX_M.
+ * Ohne Gewässernamen: nur ein Pegel bis PEGEL_OHNE_NAME_M. → { g, d (m) } | null
+ */
+export function naechsterPegel(p, gauges) {
+  const name = p.water?.name, w = gewaesserSchluessel(name).length >= 3;
+  let best = null;
+  for (const g of gauges) {
+    if (!Number.isFinite(g.lat) || !Number.isFinite(g.lon)) continue;
+    const passt = w ? gleichesGewaesser(name, g.water) : true;
+    if (!passt) continue;
+    const d = entfernungM(p, g);
+    if (d <= (w ? PEGEL_MAX_M : PEGEL_OHNE_NAME_M) && (!best || d < best.d)) best = { g, d };
+  }
+  return best;
 }
 
 /** „entlang der Elbe“ / „entlang des Rheins“, „an der Elbe“ / „am Rhein“. */
