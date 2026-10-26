@@ -320,6 +320,17 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .fk-ohne-name { flex: 1; font-weight: 700; color: var(--navy); }
 .fk-ohne-n { color: var(--muted); font-size: 14px; }
 .fk-ohne-zeile > span:last-child { display: grid; color: var(--muted); }
+/* „Alle Gewässer“: kompakte Liste unter den Kacheln (statt weiterer Kacheln) */
+.fk-weitere { margin-top: 8px; }
+.fk-suche-box { margin-bottom: 4px; }
+.fk-suche { width: 100%; max-width: 420px; min-height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font: inherit; font-size: 16px; color: var(--ink); }
+.fk-weitere .fk-ohne { margin-top: 14px; }
+.fk-wz { gap: 10px; }
+.fk-wz-punkt { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.fk-wz .pz-tag { flex: none; }
+.fk-wz .fk-ohne-name { min-width: 0; overflow-wrap: anywhere; }
+.fk-leer { margin: 12px 4px 0; color: var(--muted); font-size: 14.5px; }
+.fk-ohne li[hidden], .fk-ohne[hidden] { display: none; }
 
 /* ---------------------------------------------------------------- Flussseite */
 .pf-seite { max-width: 1280px; }

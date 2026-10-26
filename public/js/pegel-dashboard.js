@@ -9,10 +9,11 @@ import { formatTime } from './pegel.js';
 import { popover } from './nav.js';
 import { ENTWICKLUNG } from './config.js';
 import { normW, gleichesGewaesser, flussKm as flussKmRoh, gruppieren, kachelnSortieren, istKueste, slug, KUESTE_SLUG } from './pegel-fluss.js';
-import { flussKachel, ohneBewertung } from './pegel-fluss-ansicht.js';
+import { flussKachel, weitereGewaesser } from './pegel-fluss-ansicht.js';
 import { umlautVerdacht } from './pegel-namen.js';
 
 const flussKm = (g) => flussKmRoh(g) ?? 1e9;
+const UEBERSICHT = ['rhein', 'elbe', 'weser', 'donau', 'main'];   // feste Kacheln (dazu die Küste); alle anderen Gewässer in der Liste
 const zeitText = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 const standText = (st) => (st.offline ? `Offline · Stand von ${new Date(st.zeit).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}, ${zeitText(st.zeit)} Uhr`
   : `Stand ${zeitText(st.zeit)} · alle 15 Min. aktualisiert`);
@@ -197,18 +198,21 @@ export function pegelDashboard(root, ctx) {
       const verdacht = [...new Set(stand.gauges.flatMap(g => [g.nameRoh, g.water]).filter(umlautVerdacht))].sort();
       if (verdacht.length) console.info('[WaterMap] Namen mit ae/oe/ue (Umlaut prüfen, Korrektur in js/pegel-namen.js):', verdacht.join(', '));
     }
+    // Übersicht: feste Kacheln der großen Flüsse und der Küste; alle übrigen Gewässer als kompakte Liste darunter
     const fl = kachelnSortieren(gr.fluesse, meinePegel.alle());
-    const alle = [...fl, ...(gr.kueste ? [gr.kueste] : [])];
-    const anzahl = alle.length + gr.ohne.length;
-    const zeigen = ui.alleGewaesser ? alle : [...fl.slice(0, gr.kueste ? 5 : 6), ...(gr.kueste ? [gr.kueste] : [])];
+    const haupt = UEBERSICHT.map(n => fl.find(f => f.name.toLowerCase() === n)).filter(Boolean);
+    const weitere = fl.filter(f => !haupt.includes(f));
+    const zeigen = [...haupt, ...(gr.kueste ? [gr.kueste] : [])];
+    const anzahl = zeigen.length + weitere.length + gr.ohne.length;
+    const mehr = weitere.length + gr.ohne.length;
     return h('section', { class: 'pg-fluesse', 'aria-labelledby': 'pg-fl-t' },
       h('h2', { id: 'pg-fl-t', class: 'pg-h2', text: 'Flüsse im Überblick' }),
       h('p', { class: 'pg-klein', text: 'Tippe auf einen Fluss für alle Pegel' }),
       h('div', { class: 'fk-raster' }, zeigen.map(f => flussKachel(f, ctx.fluss))),
-      ui.alleGewaesser ? ohneBewertung(gr.ohne, ctx.fluss) : null,
-      anzahl > zeigen.length || ui.alleGewaesser ? h('button', { type: 'button', class: 'pg-link pg-fl-alle', 'aria-expanded': String(ui.alleGewaesser),
+      mehr ? h('button', { type: 'button', class: 'pg-link pg-fl-alle', 'aria-expanded': String(ui.alleGewaesser), 'aria-controls': 'fk-weitere',
         text: ui.alleGewaesser ? 'Weniger Gewässer anzeigen' : `Alle ${anzahl} Gewässer anzeigen ›`,
-        onclick: () => { ui.alleGewaesser = !ui.alleGewaesser; zeichnen(); root.querySelector('.pg-fl-alle')?.focus(); } }) : null);
+        onclick: () => { ui.alleGewaesser = !ui.alleGewaesser; zeichnen(); root.querySelector('.pg-fl-alle')?.focus({ preventScroll: true }); } }) : null,
+      ui.alleGewaesser && mehr ? weitereGewaesser(weitere, gr.ohne, ctx.fluss) : null);
   }
 
   function werkzeuge() {

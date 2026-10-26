@@ -103,12 +103,10 @@ def run(b, w, hh, mobile):
     # Flüsse im Überblick: Kacheln statt Bänder (Weser zuerst wegen „Meine Pegel“, dann nach Schwere; Küste zuletzt)
     check(pg.locator('.pg-band, .pg-legende').count() == 0, f'{tag}: keine Farbbänder und keine Band-Legende mehr')
     namen = [t.strip() for t in pg.locator('.fk .fk-name').all_inner_texts()]
-    check(namen == ['Weser', 'Mosel', 'Rhein', 'Küste'], f'{tag}: Kacheln: Meine Pegel zuerst, dann Schwere, Küste zuletzt ({namen})')
+    check(namen == ['Rhein', 'Weser', 'Küste'], f'{tag}: feste Kacheln (Rhein, Elbe, Weser, Donau, Main, Küste – soweit vorhanden) ({namen})')
     check('Tippe auf einen Fluss für alle Pegel' in pg.inner_text('.pg-fluesse'), f'{tag}: Unterzeile der Kacheln')
-    mosel = pg.locator('.fk', has_text='Mosel')
-    check('über HSW' in mosel.inner_text() and 'Schifffahrt eingeschränkt' in mosel.inner_text() and 'höchster Pegel' in mosel.inner_text() and 'Trier 640 cm' in mosel.inner_text(),
-          f'{tag}: Kachel Mosel über HSW mit höchstem Pegel')
-    check(mosel.get_attribute('href') == '#pegel/fluss/mosel' and mosel.evaluate("e => getComputedStyle(e).borderTopColor") == 'rgb(208, 59, 59)', f'{tag}: Kachel ist Link, Kante in Zustandsfarbe')
+    rhein = pg.locator('.fk', has_text='Rhein')
+    check(rhein.get_attribute('href') == '#pegel/fluss/rhein' and 'Kaub 72 cm' in rhein.inner_text(), f'{tag}: Kachel ist Link, tiefster Pegel')
     weser = pg.locator('.fk', has_text='Weser')
     check('teils niedrig' in weser.inner_text() and '1 von 5 niedrig' in weser.inner_text() and 'Minden 96 cm' in weser.inner_text() and weser.locator('.fk-punkte i').count() == 5,
           f'{tag}: Kachel Weser „teils niedrig“, tiefster Pegel, Punkte nur mit Kennwerten')
@@ -120,7 +118,9 @@ def run(b, w, hh, mobile):
         b0, b1, b2 = [pg.locator('.fk').nth(i).bounding_box() for i in range(3)]
         check(abs(b0['y'] - b1['y']) < 2 and b2['y'] > b0['y'], f'{tag}: Handy zwei Spalten')
     pg.click('.pg-fl-alle'); pg.wait_for_timeout(200)
-    check(pg.locator('.fk-ohne').is_visible() and 'Kanäle und Gewässer ohne Bewertung' in pg.inner_text('.fk-ohne') and 'Test-See' in pg.inner_text('.fk-ohne'), f'{tag}: „Alle Gewässer“ mit Abschnitt ohne Bewertung')
+    mo = pg.locator('.fk-wz', has_text='Mosel')
+    check(mo.count() == 1 and 'über HSW' in mo.inner_text() and '2 Pegel' in mo.inner_text() and mo.get_attribute('href') == '#pegel/fluss/mosel', f'{tag}: Mosel in der kompakten Liste (über HSW)')
+    check(pg.locator('.fk-ohne').first.is_visible() and 'Kanäle und Gewässer ohne Bewertung' in pg.inner_text('.fk-weitere') and 'Test-See' in pg.inner_text('.fk-weitere'), f'{tag}: „Alle Gewässer“ mit Abschnitt ohne Bewertung')
     pg.click('.pg-fl-alle'); pg.wait_for_timeout(200)
     pg.screenshot(path=str(SHOTS / f'pegel_{w}_1dashboard.png'), full_page=True)
     # Alle Pegel / Filter

@@ -31,15 +31,15 @@ STATIONS += [
     station(U(20), 'HAMBURG ST.PAULI', 'ELBE', 623.1, ELAT(623.1), ELON(623.1), 520, state='unknown', refs=TIDE),
     station(U(21), 'CUXHAVEN', 'ELBE', 727.0, ELAT(727), ELON(727), 610, state='unknown', refs=TIDE),
     station(U(22), 'ELBE OHNE KM', 'ELBE', None, 52.0, 11.0, 100, refs=R),
-    station(U(30), 'TRIER', 'MOSEL', 195.8, 49.76, 6.63, 640, state='high', hsw='high', refs=R, trend=1),
-    station(U(31), 'COCHEM', 'MOSEL', 51.6, 50.15, 7.17, 500, state='high', refs=R),
-    *[station(U(40 + i), f'NECKAR {i}', 'NECKAR', 10.0 + i * 30, 49.0 + i * 0.1, 9.0, 200, refs=R) for i in range(5)],
+    station(U(30), 'TRIER', 'MAIN', 195.8, 49.76, 6.63, 640, state='high', hsw='high', refs=R, trend=1),
+    station(U(31), 'COCHEM', 'MAIN', 51.6, 50.15, 7.17, 500, state='high', refs=R),
+    *[station(U(40 + i), f'NECKAR {i}', 'DONAU', 10.0 + i * 30, 49.0 + i * 0.1, 9.0, 200, refs=R) for i in range(5)],
     station(U(50), 'MITTELLAND A', 'MITTELLANDKANAL', 100.0, 52.3, 9.0, 300, state='unknown'),
     station(U(51), 'MITTELLAND B', 'MITTELLANDKANAL', 200.0, 52.3, 10.0, 300, state='unknown'),
     station(U(60), 'HELGOLAND', 'NORDSEE', None, 54.18, 7.89, 500, state='unknown'),
     station(U(61), 'KIEL', 'OSTSEE', None, 54.32, 10.14, 500, state='unknown'),
     station(U(62), 'WILHELMSHAVEN', 'AUSSENJADE', 10.0, 53.5, 8.15, 450, state='unknown', refs=TIDE),
-    station(U(70), 'HALLE', 'SAALE', 90.0, 51.48, 11.97, 200, refs=R, age_h=30),
+    station(U(70), 'HALLE', 'RHEIN', 90.0, 51.48, 11.97, 200, refs=R, age_h=30),
     station(U(80), 'TESTSEE NORD', 'TEST-SEE', 1.0, 51.4, 7.6, 200, refs=R),
     station(U(81), 'TESTSEE SÜD', 'TEST-SEE', 5.0, 51.3, 7.6, 200, refs=R),
 ]
@@ -105,22 +105,34 @@ def run(b, w, hh, mobile):
     ctx, pg = page(b, w, hh, mobile)
     pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.fk')
     namen = [t.strip() for t in pg.locator('.fk .fk-name').all_inner_texts()]
-    check(namen == ['Mosel', 'Elbe', 'Neckar', 'Test-See', 'Saale', 'Küste'], f'{tag}: 6 Kacheln, Schwere vor Anzahl, Küste zuletzt ({namen})')
+    check(namen == ['Rhein', 'Elbe', 'Donau', 'Main', 'Küste'], f'{tag}: feste Übersicht Rhein, Elbe, (Weser), Donau, Main, Küste ({namen})')
     elbe = pg.locator('.fk', has_text='Elbe')
     t = elbe.inner_text()
     check('niedrig' in t and 'tiefster Pegel' in t and 'Dresden 62 cm' in t and '7 von 11 niedrig' in t and elbe.locator('.fk-punkte i').count() == 11, f'{tag}: Kachel Elbe ({t!r})')
     check(elbe.locator('.pf-trend').get_attribute('aria-label') == 'fallend', f'{tag}: Trendpfeil mit Text')
-    check(pg.locator('.fk', has_text='Mosel').locator('.fk-punkte i').count() == 2 and 'über HSW' in pg.locator('.fk', has_text='Mosel').inner_text(), f'{tag}: Kachel Mosel über HSW')
-    nk = pg.locator('.fk', has_text='Neckar').inner_text()
-    check('alle 5 Pegel' in nk and 'im Normalbereich' in nk and 'keine Auffälligkeiten' in nk, f'{tag}: Kachel Neckar normal')
-    sa = pg.locator('.fk', has_text='Saale')
+    check(pg.locator('.fk', has_text='Main').locator('.fk-punkte i').count() == 2 and 'über HSW' in pg.locator('.fk', has_text='Main').inner_text(), f'{tag}: Kachel Main über HSW')
+    nk = pg.locator('.fk', has_text='Donau').inner_text()
+    check('alle 5 Pegel' in nk and 'im Normalbereich' in nk and 'keine Auffälligkeiten' in nk, f'{tag}: Kachel Donau normal')
+    sa = pg.locator('.fk', has_text='Rhein')
     check('keine Daten' in sa.inner_text() and 'keine aktuellen Daten' in sa.inner_text() and sa.locator('.fk-punkte').count() == 0, f'{tag}: Fluss nur mit veralteten Werten grau „keine aktuellen Daten“')
     pg.wait_for_function("document.querySelector('.fk-kueste, .fk:last-child')?.textContent.includes('Cuxhaven: Hochwasser')", timeout=5000)
     ku = pg.locator('.fk', has_text='Küste').inner_text()
     check('Tide' in ku and '3 Pegel' in ku and re.search(r'Cuxhaven: Hochwasser \d\d:\d\d', ku), f'{tag}: Küste mit Nordsee, Ostsee und Außenjade, nächstes HW Cuxhaven ({ku!r})')
     check(any('Mittellandkanal (2)' in m for m in pg.infos), f'{tag}: Vorschau: Gewässer ohne Zuordnung in der Konsole ({pg.infos[:1]})')
+    check(pg.locator('.fk-weitere').count() == 0 and 'Alle 7 Gewässer anzeigen' in pg.inner_text('.pg-fl-alle'), f'{tag}: Liste zu, „Alle 7 Gewässer anzeigen“')
+    pg.locator('.pg-fl-alle').scroll_into_view_if_needed(); pg.wait_for_timeout(100)
+    y0 = pg.locator('.pg-fl-alle').bounding_box()['y']
     pg.click('.pg-fl-alle'); pg.wait_for_timeout(200)
-    check(pg.locator('.fk-ohne-zeile').count() == 1 and 'Mittellandkanal' in pg.inner_text('.fk-ohne'), f'{tag}: „Alle 7 Gewässer“: Kanal im eigenen Abschnitt')
+    check(abs(pg.locator('.pg-fl-alle').bounding_box()['y'] - y0) < 2 and pg.locator('.fk').count() == 5, f'{tag}: Aufklappen ohne Sprung, Kacheln bleiben')
+    wl = pg.locator('.fk-weitere-liste').inner_text()
+    check('Weitere Flüsse (1)' in wl and 'Test-See' in wl and 'normal' in wl and '2 Pegel' in wl, f'{tag}: kompakte Liste mit Zustand und Pegelzahl ({wl!r})')
+    check(pg.locator('.fk-ohne-zeile:not(.fk-wz)').count() == 1 and 'Mittellandkanal' in pg.inner_text('.fk-ohne:not(.fk-weitere-liste)'), f'{tag}: Kanal im eigenen Abschnitt')
+    pg.fill('.fk-suche', 'mittel'); pg.wait_for_timeout(100)
+    check(pg.locator('.fk-weitere-liste').is_hidden() and pg.locator('.fk-ohne-zeile:visible').count() == 1, f'{tag}: Gewässer-Suche filtert die Liste')
+    pg.fill('.fk-suche', 'xyz'); pg.wait_for_timeout(100)
+    check('Kein Gewässer zu „xyz“' in pg.inner_text('.fk-weitere'), f'{tag}: Suche ohne Treffer mit Hinweis')
+    pg.fill('.fk-suche', ''); pg.wait_for_timeout(100)
+    check(pg.evaluate('document.documentElement.scrollWidth') <= w, f'{tag}: Liste ohne waagerechtes Scrollen')
     pg.screenshot(path=str(SHOTS / f'fluss_{w}_1kacheln.png'), full_page=True)
     n_mess = len([c for c in calls if 'measurements' in c])
 
@@ -259,7 +271,7 @@ def run(b, w, hh, mobile):
     check(pg.url.endswith('#pegel/fluss/kueste') and pg.locator('.pf-svg').count() == 0 and pg.locator('.pf-zeile').count() == 3 and 'Tide' in pg.inner_text('.pf-kopf'), f'{tag}: Küste ohne Profil, Liste der Küstenpegel')
     pg.go_back(); pg.wait_for_selector('.fk')
     if pg.locator('.fk-ohne').count() == 0: pg.click('.pg-fl-alle'); pg.wait_for_timeout(150)
-    pg.click('.fk-ohne-zeile'); pg.wait_for_selector('.pf-titel')
+    pg.click('.fk-ohne-zeile:not(.fk-wz)'); pg.wait_for_selector('.pf-titel')
     check(pg.url.endswith('#pegel/fluss/mittellandkanal') and pg.locator('.pf-svg').count() == 0 and 'ohne Kennwerte' in pg.inner_text('.pf-kopf')
           and pg.locator('.pf-zeile .pz-tag').first.inner_text() == 'ohne Kennw.', f'{tag}: Kanal ohne Profil, Pegel „ohne Kennw.“')
     pg.screenshot(path=str(SHOTS / f'fluss_{w}_3kanal.png'))

@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 26.10.2026 · App-Version **7.27.0**
+Stand: 26.10.2026 · App-Version **7.27.1**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.27.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.27.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -224,6 +224,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
 | 7.24.0 | Gezeiten aus PEGELONLINE: Tidepegel-Detailseite (Tidekurve, letztes HW/NW, Tidehub), Tide in „Meine Pegel“ und Flussseite; Prüfliste `pruefung.html` |
 | 7.24.1 | Nach Prüfliste: Ems-Reihenfolge (Unterems ab Papenburg neu ab km 0 → `flussKm` +240), Namen (Groß-/Straß-, Kürzel UW/AP/BP … groß, Bhv/Whv/LT ausgeschrieben, „auf/zur“ klein, Meißen, Roßlau, Storkower Gewässer), Tide-Kennwerte auch als Text/„cm …“, Prüfliste zeigt Datenstand, gelieferte Tide-Kennwerte und Sonderzeichen in Namen; Offline-Stand nur aus derselben Version |
+| 7.27.1 | „Flüsse im Überblick“: feste Kacheln Rhein, Elbe, Weser, Donau, Main und Küste; „Alle Gewässer anzeigen“ klappt darunter eine kompakte Liste auf (Zustand, Pegelzahl, Suche, Kanäle ohne Bewertung extra) – ohne Sprung, Kacheln bleiben stehen |
 | 7.27.0 | Sportboot-Community, Schritt 1: Navigation Karte · Pegel · Melden · Meldungen · Mehr; neue Übersicht „Aktuelle Meldungen“ (`#meldungen`, ein Abruf `GET /api/meldungen/liste`, Filter nach Art, Überall/Kartenausschnitt, Neueste/Wichtigste/Nächste, „Stimmt noch“/„Nicht mehr aktuell“, offline letzter Stand); „Mehr“ (`#mehr`) mit In der Nähe, Merkliste, Hilfe und Feedback, Über, Datenschutz, Impressum; Merkliste (`#mehr/merkliste`) aus Favoriten und „Meine Pegel“ mit Pegelwerten; Knopf „In der Nähe“ auf der Karte (Handy) bzw. in der Werkzeugleiste (Desktop); Meldungen-Backend schreibt mit ETag-Prüfung (`sicherAendern`, keine verlorenen Bestätigungen bei gleichzeitigen Zugriffen) |
 | 7.26.3 | Pegel-Kasten in der Standortansicht: ganzer Kasten führt zur Pegel-Detailseite („Details ›“ statt „Pegel-Ampel ›“), Zurück führt wieder zum Standort |
 | 7.26.2 | Pegel bei Slipanlagen: immer der nächste Pegel am selben Gewässer bis 80 km (vorher 15 km), Entfernung wird ab 2 km dazugeschrieben; Namensvergleich mit ü=ue/ß=ss und ganzen Wörtern, Fluss ≠ Kanal („Rhein“ ≠ „Rhein-Herne-Kanal“); ohne Gewässernamen nur ein Pegel bis 1,5 km (`naechsterPegel`, `gleichesGewaesser` in `js/pegel-fluss.js`, auch für „Slipanlagen am Pegel/Fluss“) |
@@ -256,15 +257,14 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.27.0): alle Tests grün.**
+**Letzter Lauf (7.27.1): alle Tests grün.**
 
 ## 6. Offene Aufgaben
 
 **Als Nächstes**
 1. Navigation, „Aktuelle Meldungen“, „Mehr“ und Merkliste (7.27.0) in der Vorschau prüfen.
 2. Weitere Schritte der Community-Vorgabe: „Heute vor Ort“ mit Link zur Übersicht, unpassende Meldungen melden, Slip-Detail („Wichtig für dein Boot“), Melden-Menü mit Abschnitten, Einstellungen, Foto-Kategorien.
-3. Offen: „Alle Gewässer anzeigen“ als kompakte Liste ohne Sprung (Vorschau gezeigt, Antwort steht aus).
-4. Danach PR #4 auf „übernehmen“ zusammenführen.
+3. Danach PR #4 auf „übernehmen“ zusammenführen.
 
 **Nach der Veröffentlichung live prüfen.** Diese Punkte sind nur gegen Testdaten geprüft, weil die echten Dienste in der Entwicklungsumgebung nicht erreichbar waren:
 - Pegel (PEGELONLINE-Proxy) und Wetter (Bright Sky)

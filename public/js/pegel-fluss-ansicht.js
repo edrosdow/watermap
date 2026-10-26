@@ -66,13 +66,46 @@ export function flussKachel(f, onOpen) {
   return kachel;
 }
 
+const oeffnen = (onOpen, f) => (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); onOpen(f.slug); };
+let gewSuche = '';   // Suchtext der Liste „Weitere Gewässer“ (bleibt beim Neuzeichnen erhalten)
+
+/** Kompakte Liste unter den Kacheln: weitere Flüsse (Zustand, Pegelzahl), danach Kanäle ohne Bewertung; Suche blendet nur Zeilen aus. */
+export function weitereGewaesser(fluesse, ohne, onOpen) {
+  const zeilen = fluesse.map((f) => {
+    const z = f.zustand || flussZustand(f), fz = FLUSS_ZUSTAND[z.key];
+    return h('li', { dataset: { name: f.name.toLowerCase() } }, h('a', { href: `#pegel/fluss/${f.slug}`, class: 'fk-ohne-zeile fk-wz', onclick: oeffnen(onOpen, f),
+      'aria-label': `${f.name}: ${fz.text}, ${f.pegel.length} Pegel` },
+      h('i', { class: 'fk-wz-punkt', style: `background:${fz.farbe}`, 'aria-hidden': 'true' }),
+      h('span', { class: 'fk-ohne-name', text: f.name }), fzEtikett(z.key), h('span', { class: 'fk-ohne-n', text: `${f.pegel.length} Pegel` }),
+      h('span', { html: icon('chevron', 18), 'aria-hidden': 'true' })));
+  });
+  const liste = fluesse.length ? h('section', { class: 'fk-ohne fk-weitere-liste', 'aria-labelledby': 'fk-wl-t' },
+    h('h3', { id: 'fk-wl-t', text: `Weitere Flüsse (${fluesse.length})` }), h('ul', {}, zeilen)) : null;
+  const ohneTeil = ohneBewertung(ohne, onOpen);
+  const leer = h('p', { class: 'fk-leer', role: 'status', hidden: true });
+  const filtern = () => {
+    const q = gewSuche.trim().toLowerCase();
+    let n = 0;
+    for (const sec of [liste, ohneTeil].filter(Boolean)) {
+      let sichtbar = 0;
+      for (const li of sec.querySelectorAll('li')) { const an = !q || li.dataset.name.includes(q); li.hidden = !an; sichtbar += an; }
+      sec.hidden = !sichtbar; n += sichtbar;
+    }
+    leer.hidden = !!n; leer.textContent = n ? '' : `Kein Gewässer zu „${gewSuche.trim()}“ gefunden.`;
+  };
+  const suche = h('input', { type: 'search', class: 'fk-suche', placeholder: 'Gewässer suchen', 'aria-label': 'Gewässer suchen', value: gewSuche, autocomplete: 'off',
+    oninput: (e) => { gewSuche = e.target.value; filtern(); } });
+  const box = h('div', { class: 'fk-weitere', id: 'fk-weitere' }, h('div', { class: 'fk-suche-box' }, suche), leer, liste, ohneTeil);
+  filtern();
+  return box;
+}
+
 /** Abschnitt „Kanäle und Gewässer ohne Bewertung“ (nur unter „Alle Gewässer“). */
 export function ohneBewertung(ohne, onOpen) {
   if (!ohne.length) return null;
   return h('section', { class: 'fk-ohne', 'aria-labelledby': 'fk-ohne-t' },
-    h('h3', { id: 'fk-ohne-t', text: 'Kanäle und Gewässer ohne Bewertung' }),
-    h('ul', {}, ohne.map(f => h('li', {}, h('a', { href: `#pegel/fluss/${f.slug}`, class: 'fk-ohne-zeile',
-      onclick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); onOpen(f.slug); } },
+    h('h3', { id: 'fk-ohne-t', text: `Kanäle und Gewässer ohne Bewertung (${ohne.length})` }),
+    h('ul', {}, ohne.map(f => h('li', { dataset: { name: f.name.toLowerCase() } }, h('a', { href: `#pegel/fluss/${f.slug}`, class: 'fk-ohne-zeile', onclick: oeffnen(onOpen, f) },
       h('span', { class: 'fk-ohne-name', text: f.name }), h('span', { class: 'fk-ohne-n', text: `${f.pegel.length} Pegel` }),
       h('span', { html: icon('chevron', 18), 'aria-hidden': 'true' }))))));
 }
