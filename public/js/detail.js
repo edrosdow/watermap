@@ -2,7 +2,7 @@
 import { h } from './dom.js';
 import { icon, glyphSvg } from './icons.js';
 import {
-  TYPES, UNKNOWN, FILTERS, displayName, subtitle, describeFacts, describePrices, formatDate, navUrl,
+  TYPES, UNKNOWN, FILTERS, displayName, subtitle, describeFacts, describePrices, bootPunkte, formatDate, navUrl,
   osmUrl, safeHttpUrl, safeTel, formatDistance, haversine,
 } from './model.js';
 import { favorites } from './favorites.js';
@@ -92,14 +92,24 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
     h('button', { type: 'button', class: 'dbtn', title: 'Link teilen', onclick: actions.share }, h('span', { html: icon('share', 18) }), h('span', { text: 'Teilen' }))));
 
   // Pegel am selben Gewässer (wird nachgeladen; ohne Pegel bleibt der Platz leer)
-  if (pegel) {
+  const pegelTeil = () => {
+    if (!pegel) return;
     const slot = h('div', { class: 'pegel-slot' });
     body.append(slot);
     pegel.then(box => { if (box) slot.replaceWith(box); else slot.remove(); }, () => slot.remove());
-  }
+  };
+  const slip = p.type === 'slip';
 
-  // „Heute vor Ort“ direkt unter Titel und Knöpfen, vor Fotos und Wetter
-  if (vorOrt?.section) body.append(vorOrt.section);
+  if (slip) {
+    // Slipanlage: Heute vor Ort → Wichtig für dein Boot → Pegel
+    if (vorOrt?.section) body.append(vorOrt.section);
+    body.append(bootBox(p, actions));
+    pegelTeil();
+  } else {
+    pegelTeil();
+    // „Heute vor Ort“ direkt unter Titel und Knöpfen, vor Fotos und Wetter
+    if (vorOrt?.section) body.append(vorOrt.section);
+  }
 
   // Fotos
   if (p.photos.length) body.append(photoCarousel(p.photos, { name: displayName(p), onReport: actions.reportPhoto }));
@@ -121,11 +131,13 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
       h('button', { type: 'button', class: 'btn btn-outline small', html: icon('plus', 16) + '<span>Preis melden</span>', onclick: actions.reportPrice })));
   }
 
-  // Fakten (Hafeninfos von der Website füllen die Tabelle nach, sobald sie geladen sind)
-  const facts = describeFacts(p);
-  const factsBlock = h('section', { class: 'block facts-block' }, h('h3', { text: 'Eigenschaften' }), factList(facts));
-  body.append(factsBlock);
-  if (enrichFacts) enrichFacts(factsBlock, facts, factList);
+  // Fakten (Hafeninfos von der Website füllen die Tabelle nach, sobald sie geladen sind) – bei Slipanlagen steht alles in „Wichtig für dein Boot“
+  if (!slip) {
+    const facts = describeFacts(p);
+    const factsBlock = h('section', { class: 'block facts-block' }, h('h3', { text: 'Eigenschaften' }), factList(facts));
+    body.append(factsBlock);
+    if (enrichFacts) enrichFacts(factsBlock, facts, factList);
+  }
 
   if (nearby) body.append(nearby);
 
@@ -157,6 +169,23 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
     h('button', { type: 'button', onclick: actions.report, text: 'Fehler melden' })));
 
   return [head, body];
+}
+
+/** „Wichtig für dein Boot“: sechs Angaben mit Ampel (Text, nie nur Farbe), fehlende Angaben zum Ergänzen. */
+function bootBox(p, actions) {
+  const punkte = bootPunkte(p);
+  const fehlen = punkte.filter(x => x.ton === 'unb').length;
+  const TON = { ok: 'passt', warn: 'mit Einschränkung', stop: 'nicht möglich', unb: 'unbekannt' };
+  const extra = [p.opening_hours ? `Öffnungszeiten: ${p.opening_hours}` : null, p.operator ? `Betreiber: ${p.operator}` : null].filter(Boolean);
+  return h('section', { class: 'wb', 'aria-labelledby': 'wb-titel' },
+    h('div', { class: 'wb-kopf' }, h('span', { class: 'wb-ico', html: icon('boat', 18), 'aria-hidden': 'true' }), h('h3', { id: 'wb-titel', text: 'Wichtig für dein Boot' })),
+    h('ul', { class: 'wb-liste' }, punkte.map(x => h('li', { class: `wb-p is-${x.ton}` },
+      h('i', { 'aria-hidden': 'true' }),
+      h('div', {}, h('small', { text: x.titel }), h('strong', { text: x.wert }), h('span', { class: 'sr-only', text: ` (${TON[x.ton]})` }))))),
+    extra.length ? h('p', { class: 'wb-extra', text: extra.join(' · ') }) : null,
+    h('div', { class: 'wb-fuss' },
+      h('span', { text: fehlen ? `${fehlen} ${fehlen === 1 ? 'Angabe fehlt' : 'Angaben fehlen'}` : 'Angaben laut OpenStreetMap' }),
+      h('button', { type: 'button', class: 'wb-link', onclick: actions.report }, fehlen ? 'Weißt du mehr? Ergänzen' : 'Korrektur melden', h('span', { html: icon('chevron', 16), 'aria-hidden': 'true' }))));
 }
 
 /** Kleine Herkunftszeile unter dem Namen; Antippen zeigt den Hinweis. */

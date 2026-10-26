@@ -82,9 +82,12 @@ with sync_playwright() as p:
             pg.click('#peek button:has-text("Details")')
         pg.wait_for_selector('#detail:not([hidden])')
         txt = pg.inner_text('#detail')
-        check('Nicht bekannt' not in txt and pg.locator('#detail .facts-more').is_visible(), f'{name}: unbekannte Angaben eingeklappt')
-        pg.click('#detail .facts-more')
-        check('Nicht bekannt' in pg.inner_text('#detail'), f'{name}: aufgeklappt als "Nicht bekannt"')
+        check('Nicht bekannt' not in txt and (pg.locator('#detail .facts-more').is_visible() or pg.locator('#detail .wb').count() == 1), f'{name}: unbekannte Angaben eingeklappt bzw. „Wichtig für dein Boot“')
+        if pg.locator('#detail .wb').count():   # Slipanlage: fehlende Angaben stehen als „Unbekannt“ im Kasten
+            check(pg.locator('#detail .wb-p').count() == 6 and pg.locator('#detail .wb-link').is_visible(), f'{name}: „Wichtig für dein Boot“ mit Ergänzen-Link')
+        else:
+            pg.click('#detail .facts-more')
+            check('Nicht bekannt' in pg.inner_text('#detail'), f'{name}: aufgeklappt als "Nicht bekannt"')
         check('keine Wasserroute' in (pg.get_attribute('#detail .dbtn-primary', 'title') or ''), f'{name}: Hinweis Straßenroute ≠ Wasserroute')
         check(pg.locator('#detail', has_text='OpenStreetMap-Route').count() == 0, f'{name}: keine OpenStreetMap-Route')
         check('OpenStreetMap · ungeprüft' in txt and 'nicht vor ort geprüft' not in txt.lower(), f'{name}: OSM-Herkunft dezent')

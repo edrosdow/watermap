@@ -178,7 +178,7 @@ with sync_playwright() as p:
         other = pg.evaluate("window.__watermap.state.places.find(p => p.lat > 53 && p.lon > 10).id")
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(other)}, {{ full: true }})"); pg.wait_for_timeout(800)
         check('Wetterdaten sind gerade nicht erreichbar' in pg.inner_text('#detail'), f'{name}: Hinweis bei Ausfall')
-        check(pg.locator('#detail .facts').count() == 1, f'{name}: restliche Details trotzdem da')
+        check(pg.locator('#detail .facts, #detail .wb').count() == 1, f'{name}: restliche Details trotzdem da')
         fail['on'] = False
 
         csp = pg.evaluate('window.__csp || []')

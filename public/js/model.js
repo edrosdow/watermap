@@ -152,6 +152,30 @@ export function describeFacts(p) {
   return rows;
 }
 
+/**
+ * „Wichtig für dein Boot“ (Slipanlagen): die sechs entscheidenden Angaben mit Ampel.
+ * ton: 'ok' (passt), 'warn' (Einschränkung), 'stop' (nicht möglich), 'unb' (unbekannt). Nichts wird erfunden.
+ */
+export function bootPunkte(p) {
+  const a = p.attrs || {};
+  const pkt = (titel, wert, ton) => ({ titel, wert: wert || 'Unbekannt', ton: wert ? ton : 'unb' });
+  const zugang = { public: 'ok', permissive: 'ok', customers: 'warn', members: 'warn', permit: 'warn', private: 'stop' }[p.access];
+  const gebuehr = p.fee === false ? ['Kostenlos', 'ok'] : p.fee === true ? [p.fee_note ? `Kostenpflichtig – ${p.fee_note}` : 'Kostenpflichtig', 'warn'] : [p.fee_note || null, 'warn'];
+  const rampe = [a.surface, a.incline].filter(Boolean).join(' · ');
+  const trailer = a.trailer_parking === true ? ['Ja', 'ok'] : a.trailer_parking === false ? ['Nein', 'stop']
+    : a.parking === true ? ['Parkplatz da, Trailer unklar', 'warn'] : [null];
+  const motor = a.motorboat === true ? ['Erlaubt', 'ok'] : a.motorboat === false ? ['Nicht erlaubt', 'stop'] : [null];
+  const groesse = [a.suitable_boats, a.suitable_trailers ? `Trailer: ${a.suitable_trailers}` : null].filter(Boolean).join(' · ');
+  return [
+    pkt('Zugang', p.access ? ACCESS_LABEL[p.access] : null, zugang || 'warn'),
+    pkt('Gebühr', gebuehr[0], gebuehr[1]),
+    pkt('Rampe', rampe, 'ok'),
+    pkt('Trailer parken', trailer[0], trailer[1]),
+    pkt('Motorboote', motor[0], motor[1]),
+    pkt('Bootsgröße', groesse, 'ok'),
+  ];
+}
+
 /** Preis-Anzeige je Kraftstoff mit Aktualitätshinweis. */
 export function describePrices(p, now = new Date()) {
   const out = [];

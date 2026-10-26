@@ -26,6 +26,8 @@ class Handler(SimpleHTTPRequestHandler):
 slips = json.loads((ROOT / 'data/osm/slip.geojson').read_text(encoding='utf-8'))['features']
 ANCHOR = next(f for f in slips if f['properties'].get('name') and 50.5 < f['geometry']['coordinates'][1] < 52)
 LON, LAT = ANCHOR['geometry']['coordinates']
+# Hafeninfos gibt es nur für Häfen (Slipanlagen zeigen „Wichtig für dein Boot“ statt der Eigenschaften-Tabelle)
+HAFEN = next(f for f in json.loads((ROOT / 'data/osm/marina.geojson').read_text(encoding='utf-8'))['features'] if f['properties'].get('name'))
 D = 0.0009   # ≈ 100 m
 
 def feat(i, kind, dlat, dlon, **p):
@@ -50,7 +52,7 @@ FC = json.dumps({'type': 'FeatureCollection', 'features': EXTRAS})
 META = json.loads((ROOT / 'data/meta.json').read_text(encoding='utf-8'))
 META.setdefault('files', {})['extras'] = 'osm/extras.geojson'
 META['files']['hafeninfo'] = 'hafeninfo.json'
-HAFENINFO = json.dumps({'generated': '2026-10-20', 'places': {ANCHOR['id']: {
+HAFENINFO = json.dumps({'generated': '2026-10-20', 'places': {HAFEN['id']: {
     'checked': '2026-10-20', 'status': 'ok', 'source': 'https://www.marina-test.de/', 'facts': [
         {'key': 'gast_liegeplatz', 'value': '3,00 € pro lfd. Meter und Tag (mind. 7 m), inkl. Strom', 'price_eur': 3.0,
          'quote': '3,00 € / lfd. Meter / Tag (Berechnung mind. 7m) inkl. Strom', 'url': 'https://www.marina-test.de/hafen/'},
@@ -168,11 +170,12 @@ with sync_playwright() as p:
         pg.locator('#detail .nearby-list').scroll_into_view_if_needed()
         pg.screenshot(path=str(SHOTS / f'{name}_1_in_der_naehe.png'))
 
-        # Hafeninfos laut Website füllen die Eigenschaften-Tabelle
+        # Hafeninfos laut Website füllen die Eigenschaften-Tabelle (Hafen)
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(HAFEN['id'])}, {{ full: true }})")
         pg.wait_for_selector('#detail .facts-block .hi-note', timeout=8000)
         fb = pg.locator('#detail .facts-block')
         hi = fb.inner_text()
-        check('Eigenschaften' in hi and 'Gastliegeplatz' in hi and '3,00 € pro lfd. Meter und Tag' in hi and 'Fäkalienabsaugung' in hi and 'WLAN' in hi,
+        check('Eigenschaften' in hi and 'Liegeplatzgebühr' in hi and '3,00 € pro lfd. Meter und Tag' in hi and 'Fäkalienabsaugung' in hi and 'WLAN' in hi,
               f'{name}: Website-Angaben als Zeilen der Eigenschaften')
         check(pg.locator('#detail .facts-block .facts').count() == 1 and pg.locator('#detail .hi-block').count() == 0, f'{name}: eine Tabelle, kein eigener Block')
         check(pg.locator('#detail .facts-block dd.from-web .web-mark').count() == 3, f'{name}: Website-Werte markiert')
@@ -187,6 +190,8 @@ with sync_playwright() as p:
         check(rows == [['Zugang', None, ''], ['Gastliegeplätze', 'Ja', ''], ['Liegeplatzgebühr', None, '3 €'], ['Stromanschluss', None, '0,70 €/kWh'],
                        ['Kran', None, 'Kran bis 10 t'], ['Öffnungszeiten', None, '']], f'{name}: Marina-Felder werden gefüllt, Rest als eigene Zeilen ({rows})')
         fb.scroll_into_view_if_needed(); pg.screenshot(path=str(SHOTS / f'{name}_0_hafeninfo.png'))
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])}, {{ full: true }})")
+        pg.wait_for_selector('#detail .nearby-item', timeout=8000)
 
         # Eintrag anklicken → Detail
         pg.locator('#detail .nearby-item', has_text='Hubbrücke').click()

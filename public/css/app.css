@@ -948,3 +948,26 @@ p.rmenu-links a { display: inline; min-height: 0; }
 #map.leaflet-container { background: #DDE0E3; }
 /* Zwischenzoomstufen (zoomSnap 0,25): Kacheln minimal überlappen, sonst zeigt Chrome feine Fugen */
 #map .leaflet-tile-container img.leaflet-tile { width: 256.5px !important; height: 256.5px !important; mix-blend-mode: normal; }
+
+/* „Wichtig für dein Boot“ (Slipanlagen) */
+.wb { margin: 14px 0 4px; border: 1px solid #DCE5EA; border-radius: 18px; background: #fff; overflow: hidden; }
+.wb-kopf { display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px; }
+.wb-kopf h3 { margin: 0; font-size: 17px; color: var(--navy); }
+.wb-ico { width: 32px; height: 32px; border-radius: 10px; background: var(--navy); color: #fff; display: grid; place-items: center; flex: none; }
+.wb-liste { list-style: none; margin: 0; padding: 0 6px 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.wb-p { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border-radius: 12px; background: #F4F7F9; min-width: 0; }
+.wb-p i { width: 10px; height: 10px; border-radius: 50%; flex: none; margin-top: 5px; background: #9AAAB5; }
+.wb-p.is-ok i { background: #15803D; } .wb-p.is-warn i { background: #D97706; } .wb-p.is-stop i { background: #B91C1C; }
+.wb-p div { display: flex; flex-direction: column; min-width: 0; }
+.wb-p small { color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.wb-p strong { color: var(--navy); font-size: 15px; overflow-wrap: anywhere; }
+.wb-p.is-unb strong { color: var(--muted); font-weight: 600; }
+.wb-extra { margin: 0; padding: 4px 14px 8px; color: var(--muted); font-size: 13.5px; overflow-wrap: anywhere; }
+.wb-fuss { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 2px 8px 2px 14px; border-top: 1px solid #EEF3F5; color: var(--muted); font-size: 13px; }
+.wb-link { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 6px; margin-left: auto; border: 0; background: none; color: #06667E; font-weight: 750; font-size: 14px; }
+.wb-link span { display: grid; }
+@media (max-width: 767px) {
+  .wb-p { padding: 8px; gap: 8px; }
+  .wb-p strong { font-size: 14px; }
+  .wb-p small { font-size: 11.5px; }
+}

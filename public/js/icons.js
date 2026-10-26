@@ -67,6 +67,7 @@ const P = {
   slippery: '<path d="m4 17 5-5 3.5 3L20 7"/><path d="M15 7h5v5"/>',
   blocked: '<circle cx="12" cy="12" r="9"/><path d="M7.5 12h9"/>',
   chevron: '<path d="m9 6 6 6-6 6"/>',
+  boat: '<path d="M3 17h18l-2.5 3.5h-13z"/><path d="M12 3v11M12 4.5l6 9h-6"/>',
   chat: '<path d="M4 5h16v11H9l-4 4v-4H4z"/><path d="M8 9.5h8M8 12.5h5"/>',
   doc: '<path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6M9 13h6M9 17h4"/>',
   mail: '<path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/>',

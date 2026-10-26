@@ -224,7 +224,15 @@ def desktop(b):
     # Override
     pg.evaluate("window.__watermap.selectPlace('node/2')"); pg.wait_for_selector('#detail:not([hidden])')
     d = pg.inner_text('#detail')
-    check('Kostenpflichtig – 10 € pro Slipvorgang' in d and 'Trailerparkplatz' in d, 'Freigegebene Korrektur überlagert OSM-Wert')
+    check('Kostenpflichtig – 10 € pro Slipvorgang' in d and 'trailer parken' in d.lower(), 'Freigegebene Korrektur überlagert OSM-Wert')
+    # Slipanlage: „Wichtig für dein Boot“ statt „Eigenschaften“, Ampel mit Text, Ergänzen-Link
+    wb = pg.locator('#detail .wb')
+    check(wb.count() == 1 and pg.locator('#detail .facts-block').count() == 0 and 'Eigenschaften' not in d, 'Slipanlage: „Wichtig für dein Boot“, keine „Eigenschaften“')
+    check(wb.locator('.wb-p').count() == 6 and wb.locator('.wb-p.is-warn', has_text='Kostenpflichtig').count() == 1, 'Sechs Angaben, Gebühr orange')
+    check(pg.evaluate("(() => { const b = [...document.querySelectorAll('#detail .detail-body > *')]; const i = (s) => b.findIndex(e => e.matches(s)); return i('.wb') > i('.dbtns') && (i('.vo-karte') < 0 || i('.vo-karte') < i('.wb')); })()"), 'Reihenfolge: Knöpfe → Heute vor Ort → Wichtig für dein Boot')
+    wb.locator('.wb-link').click(); pg.wait_for_timeout(300)
+    check(pg.locator('dialog[open]').count() >= 1 and 'Informationen korrigieren' in pg.inner_text('dialog[open]'), '„Ergänzen“ öffnet „Fehler melden“')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     check('+ Community' in d, 'Herkunft Community-Anteil sichtbar')
     # Community-Ort
     pg.evaluate("window.__watermap.selectPlace('c/test-1')")

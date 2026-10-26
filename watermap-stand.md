@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 26.10.2026 · App-Version **7.30.0**
+Stand: 26.10.2026 · App-Version **7.31.0**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.30.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.31.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -226,6 +226,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
 | 7.24.0 | Gezeiten aus PEGELONLINE: Tidepegel-Detailseite (Tidekurve, letztes HW/NW, Tidehub), Tide in „Meine Pegel“ und Flussseite; Prüfliste `pruefung.html` |
 | 7.24.1 | Nach Prüfliste: Ems-Reihenfolge (Unterems ab Papenburg neu ab km 0 → `flussKm` +240), Namen (Groß-/Straß-, Kürzel UW/AP/BP … groß, Bhv/Whv/LT ausgeschrieben, „auf/zur“ klein, Meißen, Roßlau, Storkower Gewässer), Tide-Kennwerte auch als Text/„cm …“, Prüfliste zeigt Datenstand, gelieferte Tide-Kennwerte und Sonderzeichen in Namen; Offline-Stand nur aus derselben Version |
+| 7.31.0 | Slipanlagen: Kasten „Wichtig für dein Boot“ (Zugang, Gebühr, Rampe, Trailer parken, Motorboote, Bootsgröße mit Ampel und Text; fehlende Angaben „Unbekannt“ + „Weißt du mehr? Ergänzen“ → „Fehler melden“), Reihenfolge Knöpfe → Heute vor Ort → Wichtig für dein Boot → Pegel → Fotos → Wetter → Umgebung → Kontakt; „Eigenschaften“ bei Slipanlagen entfernt (Öffnungszeiten/Betreiber als Zeile im Kasten). Häfen und Tankstellen unverändert (`bootPunkte` in `model.js`) |
 | 7.30.0 | Europa-Übersicht: Herauszoomen und Verschieben bis Europa, Länder leicht grau; hervorgehoben nur deutsches Land (Nord-/Ostsee nicht mehr als helle Fläche); Straßenkacheln ab Zoom 9 nur um Deutschland; Suche/Standort weiter nur in Deutschland |
 | 7.29.1 | Nachbarländer zur Orientierung leicht sichtbar (abgeblendet statt abgedeckt, `CONFIG.GEBIET.nachbarn`), deutsche Grenze deutlicher; Begrenzung von Verschieben und Zoom bleibt |
 | 7.29.0 | Karte auf Deutschland mit Nord- und Ostsee begrenzt: `maxBounds` + `minZoom` (ganz Deutschland), Maske über fremdem Land (OSM-Grenze, `data/gebiet-de.json`), Kacheln nur im Gebiet, Startansicht ganz Deutschland, Ortssuche nur im Gebiet (Hinweis bei Moskau/London), kein Sprung zum Standort im Ausland, neue Slipanlage nur im Gebiet. Details: `docs/KARTENGEBIET.md` |
@@ -258,18 +259,18 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | Bereich | Tests |
 |---|---|
 | Unit (Python) | `python3 -I -m unittest discover -s tests` (Importer, Validator, Hafeninfo, Moderation) |
-| Node | `ampel_logik`, `fotos_function`, `meldungen`, `pegel_alarm`, `pegel_trend`, `pegel_fluss`, `gezeiten`, `gezeiten_bsh`, `umgebung`, `gebiet` |
+| Node | `ampel_logik`, `fotos_function`, `meldungen`, `pegel_alarm`, `pegel_trend`, `pegel_fluss`, `gezeiten`, `gezeiten_bsh`, `umgebung`, `gebiet`, `boot` |
 | Oberfläche (Playwright) | `ui_gebiet` (echtes Leaflet), `ui_bereiche`, `ui_full`, `ui_smoke`, `pwa_test`, `ui_naehe`, `ui_meldungen`, `ui_extras`, `ui_karussell`, `ui_pegel`, `ui_pegel_dashboard`, `ui_pegel_fluss`, `ui_wetter`, `ui_ampel`, `ui_fotos` |
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.30.0): alle Tests grün.**
+**Letzter Lauf (7.31.0): alle Tests grün.**
 
 ## 6. Offene Aufgaben
 
 **Als Nächstes**
 1. Navigation, „Aktuelle Meldungen“, „Mehr“ und Merkliste (7.27.0) in der Vorschau prüfen.
-2. Weitere Schritte der Community-Vorgabe: Slip-Detail („Wichtig für dein Boot“), Melden-Menü mit Abschnitten, Einstellungen, Foto-Kategorien.
+2. Weitere Schritte der Community-Vorgabe: Melden-Menü mit Abschnitten, Einstellungen, Foto-Kategorien.
 3. Danach PR #4 auf „übernehmen“ zusammenführen.
 
 **Nach der Veröffentlichung live prüfen.** Diese Punkte sind nur gegen Testdaten geprüft, weil die echten Dienste in der Entwicklungsumgebung nicht erreichbar waren:
