@@ -85,10 +85,10 @@ def run(b, w, hh, mobile):
     # 1) Erstes Öffnen ohne Freigabe: kein Browser-Dialog, Erklär-Karte, Liste um die Kartenmitte
     ctx, pg = page(b, w, hh, mobile)
     pg.goto(uf.BASE); pg.wait_for_selector('.cat-slip'); pg.wait_for_timeout(300)
-    item = pg.locator(f'{nav} [data-nav=naehe]')
-    check(item.inner_text().strip() == 'In der Nähe' and item.get_attribute('href') == './#naehe', f'{tag}: Tab „In der Nähe“ (#naehe)')
+    item = pg.locator('#btn-naehe-m' if mobile else '#btn-naehe-d')
+    check(item.is_visible() and item.inner_text().strip() == 'In der Nähe' and item.get_attribute('href') == '#naehe', f'{tag}: Schnellzugriff „In der Nähe“ (#naehe)')
     item.click(); pg.wait_for_selector('.place.nk'); pg.wait_for_timeout(300)
-    check(pg.url.endswith('#naehe') and item.get_attribute('aria-current') == 'page', f'{tag}: Adresse #naehe, Tab aktiv')
+    check(pg.url.endswith('#naehe') and pg.locator(f'{nav} [data-nav=mehr]').get_attribute('aria-current') == 'page', f'{tag}: Adresse #naehe, „Mehr“ markiert')
     check(pg.evaluate('window.__geoCalls') == 0, f'{tag}: beim Öffnen keine Standortabfrage')
     if mobile:
         check(pg.locator(HINT).is_visible() and pg.inner_text(HINT).startswith('Genauere Entfernungen mit deiner Position') and pg.locator('.nh-erklaer:visible').count() == 0,

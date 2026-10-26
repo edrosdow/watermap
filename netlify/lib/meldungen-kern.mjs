@@ -64,25 +64,64 @@ async function lesen(store, key, fallback) {
   try { return (await store.get(key, { type: 'json' })) ?? fallback; } catch { return fallback; }
 }
 
+export const MAX_LISTE = 300;   // Übersicht: höchstens so viele Standorte (neueste zuerst)
+const VERSUCHE = 6;
+const warten = (ms) => new Promise(r => setTimeout(r, ms));
+
+/**
+ * Eintrag lesen, ändern, schreiben – sicher bei gleichzeitigen Zugriffen: geschrieben wird nur, wenn sich der Eintrag
+ * seit dem Lesen nicht geändert hat (ETag, Netlify Blobs „onlyIfMatch“/„onlyIfNew“); sonst neu lesen und noch einmal.
+ * aendern(alt) gibt den neuen Inhalt zurück, null = löschen, undefined = nichts tun. Kann Fehler werfen (wird weitergereicht).
+ * Speicher ohne getWithMetadata (Tests): einfaches Lesen und Schreiben.
+ */
+export async function sicherAendern(store, key, fallback, aendern) {
+  if (typeof store.getWithMetadata !== 'function') {
+    const neu = aendern(structuredClone(await lesen(store, key, fallback)));
+    if (neu === null) await store.delete(key); else if (neu !== undefined) await store.setJSON(key, neu);
+    return neu;
+  }
+  for (let i = 0; i < VERSUCHE; i++) {
+    let r = null;
+    try { r = await store.getWithMetadata(key, { type: 'json' }); } catch { r = null; }
+    const neu = aendern(structuredClone(r?.data ?? fallback));
+    if (neu === undefined) return neu;
+    if (neu === null) { if (r) await store.delete(key); return null; }
+    const res = await store.setJSON(key, neu, r?.etag ? { onlyIfMatch: r.etag } : { onlyIfNew: true });
+    if (!res || res.modified !== false) return neu;
+    await warten(15 * (i + 1) + Math.random() * 20);   // jemand war schneller: kurz warten, neu lesen
+  }
+  throw new Fehler(503, 'Gerade melden sehr viele gleichzeitig – bitte gleich noch einmal versuchen.');
+}
+
+const frische = (ort, jetzt) => (Array.isArray(ort?.meldungen) ? ort.meldungen : []).filter(m => jetzt - m.erstelltAm < SICHTBAR_MS);
+
 /** Standort laden, Abgelaufenes entfernen (und dabei gleich aufräumen). */
 async function ortLaden(store, id, jetzt) {
   const ort = await lesen(store, ortKey(id), { meldungen: [] });
   const alle = Array.isArray(ort.meldungen) ? ort.meldungen : [];
-  const behalten = alle.filter(m => jetzt - m.erstelltAm < SICHTBAR_MS);
+  const behalten = frische(ort, jetzt);
   if (behalten.length !== alle.length) {
-    if (behalten.length) await store.setJSON(ortKey(id), { meldungen: behalten });
-    else await store.delete(ortKey(id));
-    await indexSetzen(store, id, zusammenfassung(sichtbare(behalten, jetzt)), jetzt);
+    const neu = await sicherAendern(store, ortKey(id), { meldungen: [] }, (o) => { const b = frische(o, jetzt); return b.length ? { meldungen: b } : null; });
+    const rest = neu?.meldungen || [];
+    await indexSetzen(store, id, zusammenfassung(sichtbare(rest, jetzt)), jetzt);
+    return rest;
   }
   return behalten;
 }
 
+/** Meldungen eines Standorts sicher ändern (aendern(liste) → neue Liste); Abgelaufenes fällt dabei weg. */
+async function ortAendern(store, id, jetzt, aendern) {
+  const neu = await sicherAendern(store, ortKey(id), { meldungen: [] }, (o) => { const l = aendern(frische(o, jetzt)); return l.length ? { meldungen: l } : null; });
+  return neu?.meldungen || [];
+}
+
 async function indexSetzen(store, id, eintrag, jetzt) {
-  const idx = await lesen(store, 'index', {});
-  if (eintrag) idx[id] = eintrag; else delete idx[id];
-  // Abgelaufene Einträge anderer Standorte gleich mit entfernen
-  for (const [k, v] of Object.entries(idx)) if (!v || jetzt - v.at >= SICHTBAR_MS) delete idx[k];
-  await store.setJSON('index', idx);
+  await sicherAendern(store, 'index', {}, (idx) => {
+    if (eintrag) idx[id] = eintrag; else delete idx[id];
+    // Abgelaufene Einträge anderer Standorte gleich mit entfernen
+    for (const [k, v] of Object.entries(idx)) if (!v || jetzt - v.at >= SICHTBAR_MS) delete idx[k];
+    return idx;
+  });
 }
 
 /** Sperre prüfen und (falls frei) setzen. true = gesperrt. */
@@ -122,6 +161,18 @@ export function meldungenApi(deps) {
       return sichtbare(await ortLaden(deps.store, id, jetzt), jetzt).map(oeffentlich);
     },
 
+    /**
+     * Alle aktiven Meldungen (öffentliche Felder), neueste zuerst – für die Übersicht „Aktuelle Meldungen“.
+     * Liest den Index und dann höchstens MAX_LISTE Standorte (die mit den neuesten Meldungen).
+     */
+    async liste() {
+      const jetzt = now();
+      const idx = await lesen(deps.store, 'index', {});
+      const ids = Object.entries(idx).filter(([, v]) => v && jetzt - v.at < SICHTBAR_MS).sort((a, b) => b[1].at - a[1].at).slice(0, MAX_LISTE).map(([id]) => id);
+      const orte = await Promise.all(ids.map(id => lesen(deps.store, ortKey(id), { meldungen: [] })));
+      return orte.flatMap(o => sichtbare(frische(o, jetzt), jetzt)).map(oeffentlich).sort((a, b) => b.erstelltAm - a.erstelltAm);
+    },
+
     /** Kompakte Liste aller Standorte mit aktiven Meldungen. */
     async aktiv() {
       const jetzt = now();
@@ -141,10 +192,8 @@ export function meldungenApi(deps) {
       const jetzt = now();
       const keys = await kennungen(wer, `melden|${id}`);
       if (await gesperrt(deps.store, keys, SPERRE_MS, jetzt)) throw new Fehler(429, 'Du hast hier gerade schon gemeldet. Bitte warte eine Stunde.');
-      const alle = await ortLaden(deps.store, id, jetzt);
       const m = { id: deps.neueId(), standortId: id, typ, notiz: saeubereNotiz(body.notiz) || null, erstelltAm: jetzt, bestaetigt: 0, widersprochen: 0, fotos: [] };
-      alle.push(m);
-      await deps.store.setJSON(ortKey(id), { meldungen: alle });
+      const alle = await ortAendern(deps.store, id, jetzt, (l) => [...l, m]);
       await deps.store.setJSON(`mid/${m.id}`, { standortId: id, at: jetzt });
       await sperren(deps.store, keys, jetzt);
       const sicht = sichtbare(alle, jetzt);
@@ -160,13 +209,18 @@ export function meldungenApi(deps) {
       const zu = await lesen(deps.store, `mid/${meldungId}`, null);
       const standortId = zu?.standortId;
       if (!gueltigeId(standortId)) throw new Fehler(404, 'Diese Meldung ist nicht mehr aktiv.');
-      const alle = await ortLaden(deps.store, standortId, jetzt);
-      const m = alle.find(x => x.id === meldungId);
-      if (!m || !sichtbare(alle, jetzt).includes(m)) throw new Fehler(404, 'Diese Meldung ist nicht mehr aktiv.');
+      const vorher = await ortLaden(deps.store, standortId, jetzt);
+      const m0 = vorher.find(x => x.id === meldungId);
+      if (!m0 || !sichtbare(vorher, jetzt).includes(m0)) throw new Fehler(404, 'Diese Meldung ist nicht mehr aktiv.');
       const keys = await kennungen(wer, `bestaetigen|${meldungId}`);
       if (await gesperrt(deps.store, keys, HASH_MS, jetzt)) throw new Fehler(429, 'Du hast diese Meldung schon bewertet.');
-      if (stimmt) m.bestaetigt += 1; else m.widersprochen += 1;
-      await deps.store.setJSON(ortKey(standortId), { meldungen: alle });
+      // Zählen auf dem frisch gelesenen Stand (gleichzeitige Bewertungen anderer gehen nicht verloren)
+      const alle = await ortAendern(deps.store, standortId, jetzt, (l) => {
+        const m = l.find(x => x.id === meldungId);
+        if (!m) throw new Fehler(404, 'Diese Meldung ist nicht mehr aktiv.');
+        if (stimmt) m.bestaetigt += 1; else m.widersprochen += 1;
+        return l;
+      });
       await sperren(deps.store, keys, jetzt);
       const sicht = sichtbare(alle, jetzt);
       await indexSetzen(deps.store, standortId, zusammenfassung(sicht), jetzt);

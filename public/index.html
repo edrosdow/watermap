@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="./css/nav.css">
   <link rel="stylesheet" href="./css/pegel.css">
   <link rel="stylesheet" href="./css/naehe.css">
+  <link rel="stylesheet" href="./css/bereiche.css">
 </head>
 <body>
   <a class="skip" href="#map">Zur Karte springen</a>
@@ -41,6 +42,7 @@
     <button type="button" id="btn-filter" class="filter-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="filter-panel"><span id="btn-filter-ico"></span><span>Filter</span><span id="filter-n" class="filter-n" hidden></span></button>
     <div id="filter-tags" class="filter-tags" aria-label="Aktive Filter"></div>
     <p id="inview" class="inview" aria-live="polite"></p>
+    <a id="btn-naehe-d" class="toolbar-naehe" href="#naehe"><span id="btn-naehe-d-ico"></span><span>In der Nähe</span></a>
   </div>
 
   <main class="shell">
@@ -67,6 +69,7 @@
       <div id="map" role="region" aria-label="Interaktive Karte"></div>
       <p id="cat-hint" class="cat-hint" hidden>Wähle oben Slipanlagen, Häfen oder Tanken, um sie auf der Karte zu zeigen.</p>
       <button type="button" id="btn-locate" class="fab" aria-label="Meine Position anzeigen" title="Meine Position"></button>
+      <a id="btn-naehe-m" class="map-naehe" href="#naehe"><span id="btn-naehe-m-ico"></span><span>In der Nähe</span></a>
       <div id="banner" class="banner"></div>
       <div id="pickbar" class="pickbar" hidden></div>
       <section id="peek" class="peek" aria-label="Standort-Vorschau" hidden></section>
@@ -76,6 +79,8 @@
   </main>
 
   <section id="pegelseite" class="pegelseite" aria-label="Pegel" tabindex="-1" hidden></section>
+  <section id="meldungsseite" class="pegelseite seite" aria-label="Aktuelle Meldungen" tabindex="-1" hidden></section>
+  <section id="mehrseite" class="pegelseite seite" aria-label="Mehr" tabindex="-1" hidden></section>
 
   <nav id="bottomnav" class="bottomnav" aria-label="Hauptnavigation unten"></nav>
 

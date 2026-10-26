@@ -1,6 +1,7 @@
 // „Heute vor Ort“: Lagemeldungen lesen, abgeben, bestätigen. Logik: ../lib/meldungen-kern.mjs.
 //   GET  /api/meldungen?standort=<id>          aktive Meldungen eines Standorts
 //   GET  /api/meldungen/aktiv                  kompakte Liste (Standort-ID, Anzahl, wichtigster Typ)
+//   GET  /api/meldungen/liste                  alle aktiven Meldungen (öffentliche Felder, neueste zuerst) – Übersicht „Aktuelle Meldungen“
 //   POST /api/meldungen                        { standortId, typ, notiz }
 //   POST /api/meldungen/<id>/bestaetigen       { stimmt: true|false }
 // Gerät: Kopfzeile „x-geraet“ (zufällige ID aus dem Browser). IP nur gesalzen gehasht (MELDUNG_SALZ).
@@ -51,6 +52,9 @@ export async function handle(req, { store, salz, ip, jetzt = () => Date.now(), s
   try {
     if (req.method === 'GET' && pfad === '/api/meldungen/aktiv') {
       return json(200, { aktiv: await api.aktiv(), zeit: jetzt() }, 'public, s-maxage=60, stale-while-revalidate=30');
+    }
+    if (req.method === 'GET' && pfad === '/api/meldungen/liste') {
+      return json(200, { meldungen: await api.liste(), zeit: jetzt() }, 'public, s-maxage=60, stale-while-revalidate=30');
     }
     if (req.method === 'GET' && pfad === '/api/meldungen') {
       return json(200, { meldungen: await api.standort(u.searchParams.get('standort') || ''), zeit: jetzt() });

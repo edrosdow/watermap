@@ -1,27 +1,22 @@
-// Hauptnavigation (Karte · In der Nähe · Melden · Pegel · Favoriten) – oben auf dem Desktop, unten auf dem Handy.
+// Hauptnavigation (Karte · Pegel · Melden · Meldungen · Mehr) – oben auf dem Desktop, unten auf dem Handy.
+// „In der Nähe“ und die Favoriten (Merkliste) liegen unter „Mehr“; ihre Adressen (#naehe, #favoriten) gelten weiter.
 // Wird von der Karte (main.js) und der Pegel-Ampel (ampel.js) genutzt.
 import { h } from './dom.js';
 import { icon } from './icons.js';
-import { favorites } from './favorites.js';
 
 /** Ziele; `href` gilt von jeder Seite aus (die Karte fängt die Klicks ab und schaltet ohne Neuladen um). */
 export const NAV = [
   { id: 'karte', label: 'Karte', top: 'Karte', ico: 'map', href: './#karte' },
-  { id: 'naehe', label: 'In der Nähe', top: 'In der Nähe', ico: 'pin', href: './#naehe' },
-  { id: 'melden', label: 'Melden', ico: 'plus', href: './#melden', center: true },
   { id: 'pegel', label: 'Pegel', top: 'Pegel', ico: 'gauge', href: './#pegel' },
-  { id: 'favoriten', label: 'Favoriten', top: 'Favoriten', ico: 'star', href: './#favoriten' },
+  { id: 'melden', label: 'Melden', ico: 'plus', href: './#melden', center: true },
+  { id: 'meldungen', label: 'Meldungen', top: 'Meldungen', ico: 'chat', href: './#meldungen' },
+  { id: 'mehr', label: 'Mehr', top: 'Mehr', ico: 'menu', href: './#mehr' },
 ];
-
-const favCount = () => favorites.all().length;
-
-function badge() {
-  const n = favCount();
-  return h('span', { class: 'nav-badge', 'aria-label': n ? `${n} gespeichert` : null, hidden: !n, text: n ? String(n) : '' });
-}
+/** Bereiche ohne eigenen Navigationspunkt: welcher Punkt dabei hervorgehoben wird. */
+export const NAV_ZIEL = { naehe: 'mehr', favoriten: 'mehr' };
 
 /**
- * Navigation in die Seite einhängen. active: 'karte' | 'naehe' | 'pegel' | 'favoriten'
+ * Navigation in die Seite einhängen. active: 'karte' | 'pegel' | 'meldungen' | 'mehr' (oder ein Bereich aus NAV_ZIEL)
  * onSelect(id, event) – optional; gibt true zurück, wenn der Klick ohne Seitenwechsel erledigt wurde.
  */
 export function mountNav({ top, bottom, active, onSelect, reportLink = false }) {
@@ -31,7 +26,7 @@ export function mountNav({ top, bottom, active, onSelect, reportLink = false }) 
   };
   if (top) {
     top.replaceChildren(...NAV.filter(n => !n.center).map(n => h('a', { class: 'tn-item', href: n.href, dataset: { nav: n.id }, onclick: click(n) },
-      h('span', { class: 'tn-ico', html: icon(n.ico, 20) }), h('span', { text: n.top }), n.id === 'favoriten' ? badge() : null)));
+      h('span', { class: 'tn-ico', html: icon(n.ico, 20) }), h('span', { text: n.top }))));
     // Auf Unterseiten (Pegel-Ampel) führt „+ Melden“ zur Karte und öffnet dort die Auswahl
     if (reportLink) top.append(h('a', { class: 'report-btn', href: './#melden' }, h('span', { html: icon('plus', 20) }), h('span', { text: 'Melden' })));
   }
@@ -40,10 +35,11 @@ export function mountNav({ top, bottom, active, onSelect, reportLink = false }) 
       ? h('a', { class: 'bn-item bn-center', href: n.href, dataset: { nav: n.id }, onclick: click(n), 'aria-haspopup': 'dialog' },
         h('span', { class: 'bn-plus', html: icon('plus', 28) }), h('span', { class: 'bn-label', text: n.label }))
       : h('a', { class: 'bn-item', href: n.href, dataset: { nav: n.id }, onclick: click(n) },
-        h('span', { class: 'bn-ico', html: icon(n.ico, 24) }), h('span', { class: 'bn-label', text: n.label }), n.id === 'favoriten' ? badge() : null)));
+        h('span', { class: 'bn-ico', html: icon(n.ico, 24) }), h('span', { class: 'bn-label', text: n.label }))));
   }
   const api = {
-    setActive(id) {
+    setActive(bereich) {
+      const id = NAV_ZIEL[bereich] || bereich;
       for (const root of [top, bottom]) {
         if (!root) continue;
         for (const a of root.querySelectorAll('[data-nav]')) {
@@ -53,16 +49,8 @@ export function mountNav({ top, bottom, active, onSelect, reportLink = false }) 
         }
       }
     },
-    updateFavs() {
-      const n = favCount();
-      for (const root of [top, bottom]) root?.querySelectorAll('.nav-badge').forEach(b => {
-        b.hidden = !n; b.textContent = n ? String(n) : ''; b.setAttribute('aria-label', `${n} gespeichert`);
-      });
-    },
   };
   api.setActive(active);
-  document.addEventListener('favorites-changed', api.updateFavs);
-  window.addEventListener('storage', (e) => { if (e.key && e.key.startsWith('watermap.favorites')) api.updateFavs(); });
   return api;
 }
 

@@ -27,6 +27,9 @@ def fake_api():
         if r.method == 'GET' and u.endswith('/api/meldungen/aktiv'):
             return route.fulfill(status=200, content_type='application/json', body=json.dumps({'aktiv': [
                 {'standortId': k, 'n': len(v), 'typ': sortiert(v)[0]['typ']} for k, v in st['M'].items() if v], 'zeit': NOW}))
+        if r.method == 'GET' and u.endswith('/api/meldungen/liste'):
+            alle = sorted([m for v in st['M'].values() for m in v], key=lambda m: -m['erstelltAm'])
+            return route.fulfill(status=200, content_type='application/json', body=json.dumps({'meldungen': alle, 'zeit': NOW}))
         if r.method == 'GET':
             sid = u.split('standort=')[1].replace('%2F', '/')
             return route.fulfill(status=200, content_type='application/json', body=json.dumps({'meldungen': sortiert(st['M'].get(sid, [])), 'zeit': NOW}))

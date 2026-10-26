@@ -205,7 +205,7 @@ with sync_playwright() as p:
         box.click(); pg.wait_for_selector('.pegelseite .pd-name', timeout=8000)
         check(pg.url.endswith('#pegel/' + KOELN) and pg.inner_text('.pegelseite .pd-name') == 'Köln', f'{name}: Klick öffnet die Pegel-Detailseite')
         pg.locator('.pegelseite .pd-icon').first.click(); pg.wait_for_timeout(500)
-        check('#pegel/' not in pg.url and pg.locator('.pegelseite').is_hidden(), f'{name}: Zurück führt wieder zum Standort ({pg.url[-40:]})')
+        check('#pegel/' not in pg.url and pg.locator('#pegelseite').is_hidden(), f'{name}: Zurück führt wieder zum Standort ({pg.url[-40:]})')
 
         # Weitere Zustände
         for uuid, expect in [(STATIONS[1]['uuid'], 'Niedrig'), (STATIONS[2]['uuid'], 'Hoch'),

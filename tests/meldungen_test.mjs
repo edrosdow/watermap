@@ -1,7 +1,7 @@
 // Tests für „Heute vor Ort“ (netlify/lib/meldungen-kern.mjs, netlify/functions/meldungen.mjs) mit nachgebautem Blob-Speicher und Uhr.
 // Start: node tests/meldungen_test.mjs
 import assert from 'node:assert/strict';
-import { meldungenApi, saeubereNotiz, sichtbare, TYPEN, WICHTIGKEIT } from '../netlify/lib/meldungen-kern.mjs';
+import { meldungenApi, saeubereNotiz, sichtbare, sicherAendern, TYPEN, WICHTIGKEIT } from '../netlify/lib/meldungen-kern.mjs';
 import { handle } from '../netlify/functions/meldungen.mjs';
 
 function fakeStore() {
@@ -138,5 +138,55 @@ res = await handle(req('DELETE', '/api/meldungen'), ctx());
 assert.equal(res.status, 405);
 res = await handle(new Request('https://test.example/api/meldungen', { method: 'POST', body: '{kaputt', headers: { 'x-geraet': 'http-geraet-000000000001' } }), ctx());
 assert.equal(res.status, 400);
+
+// Übersicht: alle aktiven Meldungen, neueste zuerst, nur öffentliche Felder
+uhr += 60e3;
+res = await handle(req('POST', '/api/meldungen', { standortId: 'way/3', typ: 'warteschlange', notiz: 'ca. 20 min' }, { 'x-geraet': 'drittes-geraet-0000001' }), ctx({ ip: '198.51.100.2' }));
+assert.equal(res.status, 201);
+uhr += 60e3;
+res = await handle(req('GET', '/api/meldungen/liste'), ctx());
+assert.equal(res.status, 200);
+assert.ok(res.headers.get('netlify-cdn-cache-control').includes('s-maxage=60'), 'Übersicht 1 Min. im CDN');
+const uebersicht = (await res.json()).meldungen;
+assert.deepEqual(uebersicht.map(m => [m.standortId, m.typ]), [['way/3', 'warteschlange'], ['node/1', 'gesperrt']], 'neueste zuerst');
+assert.deepEqual(Object.keys(uebersicht[0]).sort(), ['bestaetigt', 'erstelltAm', 'id', 'notiz', 'standortId', 'typ', 'widersprochen'], 'nur öffentliche Felder');
+assert.ok(!JSON.stringify(uebersicht).includes('geraet') && !JSON.stringify(uebersicht).includes('198.51'), 'keine Geräte- oder IP-Daten');
+uhr += 25 * H;
+res = await handle(req('GET', '/api/meldungen/liste'), ctx());
+assert.deepEqual((await res.json()).meldungen, [], 'nach 24 h leer');
+
+// Gleichzeitige Änderungen: Speicher mit ETags – wer zu spät schreibt, liest neu und versucht es noch einmal
+function etagStore() {
+  const m = new Map(); let n = 0;
+  return {
+    m, konflikte: 0,
+    async get(k) { return m.has(k) ? structuredClone(m.get(k).v) : null; },
+    async getWithMetadata(k) { return m.has(k) ? { data: structuredClone(m.get(k).v), etag: m.get(k).etag } : null; },
+    async setJSON(k, v, o = {}) {
+      const alt = m.get(k);
+      if ((o.onlyIfMatch && alt?.etag !== o.onlyIfMatch) || (o.onlyIfNew && alt)) { this.konflikte++; return { modified: false }; }
+      m.set(k, { v: structuredClone(v), etag: `e${++n}` }); return { modified: true, etag: `e${n}` };
+    },
+    async delete(k) { m.delete(k); },
+    async list({ prefix }) { return { blobs: [...m.keys()].filter(k => k.startsWith(prefix)).map(key => ({ key })) }; },
+  };
+}
+const es = etagStore();
+// zwei „gleichzeitige“ Änderungen: die zweite liest den alten Stand, schreibt nach der ersten → Konflikt → neuer Versuch
+await sicherAendern(es, 'zaehler', { n: 0 }, (o) => ({ n: o.n + 1 }));
+let einmal = false;
+await sicherAendern(es, 'zaehler', { n: 0 }, (o) => {
+  if (!einmal) { einmal = true; es.m.set('zaehler', { v: { n: o.n + 10 }, etag: 'fremd' }); }   // jemand anderes schreibt dazwischen
+  return { n: o.n + 1 };
+});
+assert.equal((await es.get('zaehler')).n, 12, 'fremde Änderung bleibt erhalten, eigene kommt dazu');
+assert.equal(es.konflikte, 1);
+// Meldungen an zwei Standorten parallel: beide landen im Index
+const api3 = meldungenApi({ store: es, salz: 's', jetzt: () => uhr, standortGibtEs: async () => true, neueId: () => Math.random().toString(16).slice(2, 14).padEnd(12, '0') });
+await Promise.all([api3.melden({ standortId: 'node/1', typ: 'gesperrt' }, anna), api3.melden({ standortId: 'node/2', typ: 'parkplatz_voll' }, bob),
+  api3.melden({ standortId: 'node/1', typ: 'hindernis' }, carl)]);
+assert.deepEqual((await api3.aktiv()).map(a => a.standortId).sort(), ['node/1', 'node/2'], 'Index vollständig');
+assert.equal((await api3.standort('node/1')).length, 2, 'beide Meldungen am selben Standort erhalten');
+assert.equal((await api3.liste()).length, 3);
 
 console.log('meldungen: alle Tests OK');

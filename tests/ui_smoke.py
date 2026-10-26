@@ -95,7 +95,6 @@ with sync_playwright() as p:
         pg.click('#detail .fav'); pg.wait_for_timeout(100)
         check(pg.locator('#detail .fav[aria-pressed=true]').count() == 1 and 'Gemerkt' in pg.inner_text('#detail .fav'), f'{name}: Favorit gesetzt („Merken“)')
         nav = '#bottomnav' if mobile else '#topnav'
-        check(pg.locator(f'{nav} [data-nav=favoriten] .nav-badge').inner_text() == '1', f'{name}: Favoriten mit Anzahl in der Navigation')
         pg.evaluate('window.__watermap.applyFilters()')   # Stub zeichnet setIcon in Gruppen nicht neu
         check(pg.locator('.wm-pin.is-fav .wm-fav').count() >= 1, f'{name}: Favorit-Pin mit Stern')
         # Formular Fehler melden
@@ -117,14 +116,18 @@ with sync_playwright() as p:
         pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
         check(pg.locator('#report-menu[open]').count() == 0, f'{name}: Escape schließt „Melden“')
         # Navigation und Zurück-Taste
-        pg.click(f'{nav} [data-nav=favoriten]'); pg.wait_for_timeout(150)
-        check(pg.url.endswith('#favoriten') and pg.locator('#list-title').inner_text() == 'Favoriten' and pg.locator('.place').count() == 1, f'{name}: Favoriten in der Liste, Adresse #favoriten')
+        pg.click(f'{nav} [data-nav=mehr]'); pg.wait_for_selector('#mehrseite:not([hidden]) .bs-zeile')
+        check(pg.url.endswith('#mehr') and '1 Ort' in pg.inner_text('#mehrseite'), f'{name}: „Mehr“ zeigt die Merkliste mit 1 Ort')
+        pg.click('#mehrseite .bs-zeile:has-text("Merkliste")'); pg.wait_for_selector('#mehrseite h2:has-text("Gespeicherte Orte (1)")')
+        check(pg.url.endswith('#mehr/merkliste') and pg.locator('#mehrseite .bs-gruppe .bs-zeile').count() >= 1, f'{name}: Merkliste mit dem Favoriten (#mehr/merkliste)')
         pg.click(f'{nav} [data-nav=karte]'); pg.wait_for_timeout(150)
-        check(pg.locator('#sidebar').is_hidden(), f'{name}: Karte schließt die Liste')
+        check(pg.locator('#mehrseite').is_hidden(), f'{name}: Karte schließt „Mehr“')
         pg.go_back(); pg.wait_for_timeout(300)
-        check(pg.locator('#list-title').inner_text() == 'Favoriten' and pg.locator('#sidebar').is_visible(), f'{name}: Zurück-Taste öffnet wieder die Favoriten')
-        pg.reload(); pg.wait_for_selector('.place', timeout=8000)
-        check(pg.locator(f'{nav} [data-nav=favoriten]').get_attribute('aria-current') == 'page', f'{name}: Neuladen behält den Bereich')
+        check(pg.url.endswith('#mehr/merkliste') and pg.locator('#mehrseite h2:has-text("Gespeicherte Orte")').is_visible(), f'{name}: Zurück-Taste öffnet wieder die Merkliste')
+        pg.reload(); pg.wait_for_selector('#mehrseite h2:has-text("Gespeicherte Orte (1)")', timeout=8000)
+        check(pg.locator(f'{nav} [data-nav=mehr]').get_attribute('aria-current') == 'page', f'{name}: Neuladen behält den Bereich')
+        pg.goto(BASE + '#favoriten'); pg.wait_for_selector('.place', timeout=8000)
+        check(pg.locator('#list-title').inner_text() == 'Favoriten' and pg.locator('.place').count() == 1, f'{name}: alter Link #favoriten zeigt weiter die Favoritenliste')
         check(not errors, f'{name}: keine JS-Fehler {errors[:3]}')
         ctx.close()
     b.close()

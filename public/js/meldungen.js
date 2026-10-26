@@ -64,6 +64,36 @@ export async function aktivLaden({ fetchFn = fetch, force = false } = {}) {
   return { ...aktivCache, map: mitLokalen(aktivCache.map) };
 }
 
+// Übersicht „Aktuelle Meldungen“: alle aktiven Meldungen in einem Abruf (1 Minute im Speicher; offline: letzter Stand)
+const LS_LISTE = 'watermap.meldungen.liste';
+let listeCache = null;   // { zeit, geladen, meldungen, offline }
+export async function listeLaden({ fetchFn = fetch, force = false } = {}) {
+  if (force || !listeCache || listeCache.offline || Date.now() - listeCache.geladen >= 60e3) await listeAbrufen(fetchFn);
+  // eigene, gerade abgegebene Meldungen/Bewertungen sofort zeigen (bis der Zwischenspeicher nachzieht)
+  const eigene = [...standortMem.entries()].filter(([, v]) => !v.offline && Date.now() - v.zeit < 90e3);
+  if (!eigene.length || listeCache.offline) return listeCache;
+  const ersetzt = new Set(eigene.map(([id]) => id));
+  return { ...listeCache, meldungen: [...listeCache.meldungen.filter(m => !ersetzt.has(m.standortId)), ...eigene.flatMap(([, v]) => v.meldungen)]
+    .sort((a, b) => b.erstelltAm - a.erstelltAm) };
+}
+
+async function listeAbrufen(fetchFn) {
+  try {
+    const r = await fetchFn(`${API}/liste`, { headers: { Accept: 'application/json' } });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    const meldungen = Array.isArray(j?.meldungen) ? j.meldungen : [];
+    listeCache = { zeit: j.zeit || Date.now(), geladen: Date.now(), meldungen, offline: false };
+    try { localStorage.setItem(LS_LISTE, JSON.stringify({ zeit: listeCache.zeit, meldungen })); } catch { /* egal */ }
+  } catch {
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(LS_LISTE) || 'null'); } catch { /* ohne Speicher */ }
+    // Offline: nur noch nicht abgelaufene Meldungen des letzten Stands (sie gelten 24 h)
+    const meldungen = (Array.isArray(s?.meldungen) ? s.meldungen : []).filter(m => Date.now() - m.erstelltAm < 24 * 3600e3);
+    listeCache = { zeit: s?.zeit || null, geladen: Date.now(), meldungen, offline: true, unbekannt: !s };
+  }
+}
+
 const standortMem = new Map();   // id → { zeit, meldungen }
 /** Meldungen eines Standorts – immer frisch; offline der zuletzt geladene Stand. */
 export async function standortLaden(id, { fetchFn = fetch } = {}) {

@@ -53,6 +53,7 @@ python3 -I tests/ui_ampel.py                    # Pegel-Ampel
 python3 -I tests/ui_pegel_dashboard.py          # Pegel-Dashboard (375/390/1024/1440 px)
 python3 -I tests/ui_pegel_fluss.py              # Fluss-Kacheln, Flussseite, Tidepegel mit BSH-Vorhersage (375/390/1024/1440 px)
 python3 -I tests/ui_naehe.py                    # „In der Nähe“ (Bezugspunkt, Standortfreigabe, Liste; 375/390/1024/1440 px)
+python3 -I tests/ui_bereiche.py                 # Navigation, „Aktuelle Meldungen“, „Mehr“, Merkliste (360–1440 px)
 ```
 Die Oberflächentests laufen mit einem Leaflet-Ersatz. Siehe [docs/STATUS.md](docs/STATUS.md) für das, was damit **nicht** geprüft ist.
 
