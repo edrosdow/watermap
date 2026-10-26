@@ -23,7 +23,7 @@ const OVERRIDES = 'public/data/community/overrides.json';
 const HISTORY = 'admin/verlauf.json';
 const PLACES = 'public/data/community/places.json';
 const PRICES = 'public/data/community/prices.json';
-const SLIP_FORM = 'slipanlage-melden', PRICE_FORM = 'tankpreis-melden';
+const SLIP_FORM = 'slipanlage-melden', PRICE_FORM = 'tankpreis-melden', ERG_FORM = 'slip-ergaenzen';
 const FILE_FIELD = { [FORM]: 'foto', [SLIP_FORM]: 'foto', [PRICE_FORM]: 'beleg' };   // Datei-Feld je Formular
 const ACCESS = { oeffentlich: 'public', privat: 'private', kunden: 'customers' };
 const YNU = { ja: true, nein: false };
@@ -154,6 +154,62 @@ export function hintView(s) {
   return { id: s.id, created: s.created_at || null, standort_id: text(d.standort_id), standort_name: text(d.standort_name, 120),
     art: text(d.art), art_text: ART[text(d.art)] || text(d.art), details: text(d.details, 1000), kontakt: text(d.kontakt, 120),
     meldung_id: text(d.art) === 'meldung' ? meldungIdAus(d.details) : null };
+}
+
+// „Angaben ergänzen“ (public/js/slip-ergaenzen.js): erlaubte Werte → Felder in community/overrides.json
+const ERGAENZUNG = {
+  access: { public: ['Öffentlich', { access: 'public' }], customers: ['Nur Kunden', { access: 'customers' }], members: ['Nur Mitglieder', { access: 'members' }], private: ['Privat', { access: 'private' }] },
+  fee: { kostenlos: ['Kostenlos', { fee: false, fee_note: null }], kostenpflichtig: ['Kostenpflichtig', { fee: true }] },
+  surface: Object.fromEntries(['Beton', 'Pflaster', 'Asphalt', 'Kies', 'Holz', 'Naturboden'].map(v => [v, [v, null, { surface: v }]])),
+  incline: Object.fromEntries(['flach', 'mittel', 'steil'].map(v => [v, [v, null, { incline: v }]])),
+  trailer: { ja: ['Ja, am Slip', null, { trailer_parking: true, trailer_note: 'am Slip' }], naehe: ['In der Nähe', null, { trailer_parking: true, trailer_note: 'in der Nähe' }],
+    nein: ['Nein', null, { trailer_parking: false, trailer_note: null }] },
+  motorboat: { ja: ['Erlaubt', null, { motorboat: true }], nein: ['Nicht erlaubt', null, { motorboat: false }] },
+  boote: { bis5: ['bis 5 m', null, { suitable_boats: 'bis 5 m' }], bis7: ['bis 7 m', null, { suitable_boats: 'bis 7 m' }], bis9: ['bis 9 m', null, { suitable_boats: 'bis 9 m' }],
+    groesser: ['größer als 9 m', null, { suitable_boats: 'größer als 9 m' }] },
+};
+const ERG_TITEL = { access: 'Zugang', fee: 'Gebühr', surface: 'Belag', incline: 'Neigung', trailer: 'Trailer parken', motorboat: 'Motorboote', boote: 'Bootsgröße' };
+
+/** Angaben aus dem Formular prüfen → { fields, attrs, liste: [[Titel, Text]] }; Unbekanntes fällt weg. */
+export function ergaenzungLesen(roh) {
+  let a = {};
+  try { a = JSON.parse(String(roh || '{}')); } catch { a = {}; }
+  if (!a || typeof a !== 'object' || Array.isArray(a)) a = {};
+  const fields = {}, attrs = {}, liste = [];
+  for (const [k, tabelle] of Object.entries(ERGAENZUNG)) {
+    const e = Object.hasOwn(tabelle, a[k]) ? tabelle[a[k]] : null;
+    if (!e) continue;
+    const [anzeige, f, at] = e;
+    Object.assign(fields, f || {}); Object.assign(attrs, at || {});
+    liste.push([ERG_TITEL[k], anzeige]);
+  }
+  if (fields.fee === true && typeof a.fee_note === 'string' && a.fee_note.trim()) {
+    fields.fee_note = text(a.fee_note.replace(/[<>]/g, ''), 80);
+    liste.push(['Betrag', fields.fee_note]);
+  }
+  return { fields, attrs, liste };
+}
+
+export function ergaenzungView(s) {
+  const d = s.data || {};
+  const e = ergaenzungLesen(d.angaben);
+  return { id: s.id, created: s.created_at || null, standort_id: text(d.standort_id), standort_name: text(d.standort_name, 120),
+    angaben: e.liste, bemerkung: text(d.bemerkung, 300), leer: !e.liste.length };
+}
+
+/** Ergänzung in overrides.json eintragen (bestehenden Eintrag des Standorts erweitern; null-Werte löschen ein Feld). */
+export function ergaenzungEintragen(overrides, id, { fields, attrs }, today) {
+  const list = Array.isArray(overrides) ? overrides.map(o => ({ ...o })) : [];
+  let ov = list.find(o => o && o.id === id && o.status === 'approved');
+  if (!ov) { ov = { id, status: 'approved' }; list.push(ov); }
+  const setzen = (ziel, quelle) => {
+    const neu = { ...(ov[ziel] || {}) };
+    for (const [k, v] of Object.entries(quelle)) { if (v === null) delete neu[k]; else neu[k] = v; }
+    if (Object.keys(neu).length) ov[ziel] = neu; else delete ov[ziel];
+  };
+  setzen('fields', fields); setzen('attrs', attrs);
+  ov.updated = today;
+  return list;
 }
 
 /** ID der Lagemeldung aus dem Hinweistext („Meldung-ID: 3f2a…“). */
@@ -340,7 +396,7 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
 
     // Einreichungen eines Formulars: auflisten, Datei zeigen, freigeben/ablehnen/erledigen
     const formName = body.form || q.get('form') || FORM;
-    if (![FORM, SLIP_FORM, PRICE_FORM, REPORT_FORM].includes(formName)) return json(400, { fehler: 'Unbekanntes Formular.' });
+    if (![FORM, SLIP_FORM, PRICE_FORM, REPORT_FORM, ERG_FORM].includes(formName)) return json(400, { fehler: 'Unbekanntes Formular.' });
     const subs = await formSubmissions(nf, siteId, formName);
     if (req.method === 'GET' && q.has('bild')) {
       const sub = subs.find(s => s.id === q.get('bild'));
@@ -356,6 +412,7 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
       if (formName === SLIP_FORM) return json(200, { slips: subs.map(slipView) });
       if (formName === PRICE_FORM) return json(200, { preise: subs.map(priceView) });
       if (formName === REPORT_FORM) return json(200, { hinweise: subs.filter(s => !photoReport(s)).map(hintView) });
+      if (formName === ERG_FORM) return json(200, { ergaenzungen: subs.map(ergaenzungView) });
       return json(200, { fotos: subs.map(submissionView) });
     }
     if (req.method !== 'POST') return json(405, { fehler: 'Nicht erlaubt.' });
@@ -405,6 +462,24 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
           await history({ bereich: 'preis', aktion: 'abgelehnt', standort_id: text(d.tankstelle_id), standort_name: text(d.tankstelle_name, 120), beschreibung: label })(read)]);
         return json(200, { ok: true });
       }
+    }
+    // Angaben zu einer Slipanlage übernehmen (→ overrides.json) oder ablehnen
+    if (formName === ERG_FORM && (body.aktion === 'uebernehmen' || body.aktion === 'ablehnen')) {
+      const v = ergaenzungView(sub);
+      if (body.aktion === 'uebernehmen') {
+        const e = ergaenzungLesen(d.angaben);
+        if (!ID_RE.test(v.standort_id)) return json(400, { fehler: 'Standort-ID fehlt oder ist ungültig.' });
+        if (!e.liste.length) return json(400, { fehler: 'Keine Angaben zum Übernehmen.' });
+        await finish(`Angaben übernommen: ${v.standort_id}`, async (read) => [
+          jsonFile(OVERRIDES, ergaenzungEintragen(await read(OVERRIDES, []), v.standort_id, e, today)),
+          await history({ bereich: 'ergaenzung', aktion: 'übernommen', standort_id: v.standort_id, standort_name: v.standort_name,
+            beschreibung: e.liste.map(([t, w]) => `${t}: ${w}`).join(', ').slice(0, 300) })(read)]);
+        return json(200, { ok: true });
+      }
+      await finish(`Angaben abgelehnt: ${v.standort_id || 'ohne Standort'}`, async (read) => [
+        await history({ bereich: 'ergaenzung', aktion: 'abgelehnt', standort_id: v.standort_id, standort_name: v.standort_name,
+          beschreibung: v.angaben.map(([t, w]) => `${t}: ${w}`).join(', ').slice(0, 300) })(read)]);
+      return json(200, { ok: true });
     }
     // Als unpassend gemeldete Lagemeldung entfernen (ist sie schon abgelaufen, wird nur der Hinweis erledigt)
     if (formName === REPORT_FORM && body.aktion === 'lagemeldung_entfernen') {

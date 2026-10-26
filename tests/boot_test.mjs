@@ -22,4 +22,5 @@ assert.deepEqual(k({ fee: false, attrs: {} })['Gebühr'], ['Kostenlos', 'ok']);
 assert.deepEqual(k({ attrs: { parking: true } })['Trailer parken'], ['Parkplatz da, Trailer unklar', 'warn']);
 assert.deepEqual(k({ attrs: { trailer_parking: false } })['Trailer parken'], ['Nein', 'stop']);
 assert.deepEqual(k({ attrs: { suitable_trailers: 'Kleintrailer' } })['Bootsgröße'], ['Trailer: Kleintrailer', 'ok']);
+assert.deepEqual(k({ attrs: { trailer_parking: true, trailer_note: 'in der Nähe' } })['Trailer parken'], ['Ja, in der Nähe', 'ok']);
 console.log('boot: alle Tests OK');

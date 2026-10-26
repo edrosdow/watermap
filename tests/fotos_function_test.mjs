@@ -1,6 +1,6 @@
 // Tests für netlify/functions/fotos.mjs mit nachgebauter Netlify- und GitHub-API (node tests/fotos_function_test.mjs).
 import assert from 'node:assert/strict';
-import { handle, imageType, addPhoto, passwordOk, fileUrl, standortAus, addHistory, photoReport, slug, slipFromSubmission, priceFromSubmission } from '../netlify/functions/fotos.mjs';
+import { handle, ergaenzungLesen, ergaenzungEintragen, imageType, addPhoto, passwordOk, fileUrl, standortAus, addHistory, photoReport, slug, slipFromSubmission, priceFromSubmission } from '../netlify/functions/fotos.mjs';
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
 const env = { FOTO_ADMIN_PASSWORT: 'geheim-123', NETLIFY_API_TOKEN: 'nf', GITHUB_TOKEN: 'gh' };
@@ -8,29 +8,30 @@ const OV = 'public/data/community/overrides.json', HIST = 'admin/verlauf.json';
 const NOW = new Date('2026-10-20T12:34:56Z');
 
 /** Nachgebaute Welt: Netlify-Formulare + ein Git-Zweig „main“ (Dateien als Buffer). */
-function fakeWorld({ photo = JPEG, rights = 'ja', beschreibung = 'Rampe bei Niedrigwasser', motiv = undefined, standort = 'node/632876845', overrides = [], files = {}, reports = [], slips = [], prices = [], raceOnce = false } = {}) {
+function fakeWorld({ photo = JPEG, rights = 'ja', beschreibung = 'Rampe bei Niedrigwasser', motiv = undefined, standort = 'node/632876845', overrides = [], files = {}, reports = [], slips = [], prices = [], ergaenzungen = [], raceOnce = false } = {}) {
   const repo = { [OV]: Buffer.from(JSON.stringify(overrides)) };
   for (const [k, v] of Object.entries(files)) repo[k] = Buffer.from(v);
   const state = {
     subs: [{ id: 's1', created_at: '2026-10-20T12:00:00Z', data: {
       standort_id: standort, standort_name: 'Slip Vössen', beschreibung, ...(motiv ? { motiv } : {}), foto_rechte: rights,
       foto: { filename: 'x.jpg', url: 'https://files.netlify.example/s1/x.jpg' } } }],
-    reports, slips, prices, repo, commits: { c0: { files: repo } }, head: 'c0', n: 0, blobs: {}, trees: {}, messages: [], deleted: [], calls: [], raceOnce,
+    reports, slips, prices, ergaenzungen, repo, commits: { c0: { files: repo } }, head: 'c0', n: 0, blobs: {}, trees: {}, messages: [], deleted: [], calls: [], raceOnce,
   };
   const json = (body, status = 200) => new Response(body === null ? null : JSON.stringify(body), { status });
   const fetchFn = async (url, init = {}) => {
     const method = init.method || 'GET';
     state.calls.push(`${method} ${url}`);
     const nf = 'https://api.netlify.com/api/v1';
-    if (url === `${nf}/sites/site-1/forms`) return json([{ id: 'f9', name: 'foto-einreichen' }, { id: 'f1', name: 'fehler-melden' }, { id: 'f2', name: 'slipanlage-melden' }, { id: 'f3', name: 'tankpreis-melden' }]);
+    if (url === `${nf}/sites/site-1/forms`) return json([{ id: 'f9', name: 'foto-einreichen' }, { id: 'f1', name: 'fehler-melden' }, { id: 'f2', name: 'slipanlage-melden' }, { id: 'f3', name: 'tankpreis-melden' }, { id: 'f4', name: 'slip-ergaenzen' }]);
     if (url.startsWith(`${nf}/forms/f9/submissions`)) return json(state.subs);
     if (url.startsWith(`${nf}/forms/f1/submissions`)) return json(state.reports);
     if (url.startsWith(`${nf}/forms/f2/submissions`)) return json(state.slips);
     if (url.startsWith(`${nf}/forms/f3/submissions`)) return json(state.prices);
+    if (url.startsWith(`${nf}/forms/f4/submissions`)) return json(state.ergaenzungen);
     if (url.startsWith(`${nf}/submissions/`) && method === 'DELETE') {
       const id = url.split('/').pop();
       state.deleted.push(id);
-      for (const k of ['subs', 'reports', 'slips', 'prices']) state[k] = state[k].filter(s => s.id !== id);
+      for (const k of ['subs', 'reports', 'slips', 'prices', 'ergaenzungen']) state[k] = state[k].filter(s => s.id !== id);
       return new Response(null, { status: 204 });
     }
     if (url === 'https://files.netlify.example/s1/x.jpg') return new Response(photo, { status: 200 });
@@ -276,5 +277,31 @@ assert.equal(slug('Slip „Großer Müggelsee“ – Nord'), 'slip-grosser-mugge
   assert.equal(w.state.messages.at(-1), 'Lagemeldung entfernt: node/5');
   assert.equal((await run(req('POST', '', { form: 'fehler-melden', aktion: 'lagemeldung_entfernen', id: 'u2' }), w, { meldungEntfernen: entf })).status, 400, 'ohne Meldung-ID');
   assert.equal((await run(req('POST', '', { form: 'fehler-melden', aktion: 'lagemeldung_entfernen', id: 'u2' }), w)).status, 400); }
+
+// „Angaben ergänzen“: nur erlaubte Werte, Übernehmen schreibt overrides.json (bestehenden Eintrag erweitern), Ablehnen nur Verlauf
+{ const e = ergaenzungLesen(JSON.stringify({ access: 'public', fee: 'kostenpflichtig', fee_note: '<b>5 €</b> pro Tag', surface: 'Beton', incline: 'quer', trailer: 'naehe', motorboat: 'nein', boote: 'bis7', boese: 'x' }));
+  assert.deepEqual(e.fields, { access: 'public', fee: true, fee_note: 'b5 €/b pro Tag' });
+  assert.deepEqual(e.attrs, { surface: 'Beton', trailer_parking: true, trailer_note: 'in der Nähe', motorboat: false, suitable_boats: 'bis 7 m' });
+  assert.deepEqual(e.liste.map(x => x[0]), ['Zugang', 'Gebühr', 'Belag', 'Trailer parken', 'Motorboote', 'Bootsgröße', 'Betrag'], 'unbekannter Wert (Neigung „quer“) fällt weg');
+  assert.deepEqual(ergaenzungLesen('kaputt').liste, []);
+  assert.deepEqual(ergaenzungLesen(JSON.stringify({ access: '__proto__' })).liste, []);
+  const ov = ergaenzungEintragen([{ id: 'node/1', status: 'approved', photos: [{ url: 'photos/a.jpg' }], fields: { fee: true, fee_note: 'alt' } }],
+    'node/1', ergaenzungLesen(JSON.stringify({ fee: 'kostenlos', trailer: 'ja' })), '2026-10-26');
+  assert.deepEqual(ov[0], { id: 'node/1', status: 'approved', photos: [{ url: 'photos/a.jpg' }], fields: { fee: false }, attrs: { trailer_parking: true, trailer_note: 'am Slip' }, updated: '2026-10-26' }, 'Fotos bleiben, fee_note gelöscht');
+  assert.equal(ergaenzungEintragen([], 'node/2', ergaenzungLesen('{"motorboat":"ja"}'), 'x')[0].attrs.motorboat, true);
+
+  const w = fakeWorld({ ergaenzungen: [
+    { id: 'e1', created_at: '2026-10-26T10:00:00Z', data: { standort_id: 'node/5', standort_name: 'Slip Nord', angaben: JSON.stringify({ access: 'public', boote: 'bis5' }), bemerkung: 'Schlüssel beim Hafenmeister' } },
+    { id: 'e2', data: { standort_id: 'node/5', angaben: '{}', bemerkung: 'nur Text' } }] });
+  const list = (await (await run(req('GET', '?form=slip-ergaenzen'), w)).json()).ergaenzungen;
+  assert.deepEqual(list.map(x => [x.id, x.angaben, x.bemerkung, x.leer]), [['e1', [['Zugang', 'Öffentlich'], ['Bootsgröße', 'bis 5 m']], 'Schlüssel beim Hafenmeister', false], ['e2', [], 'nur Text', true]]);
+  assert.equal((await run(req('POST', '', { form: 'slip-ergaenzen', aktion: 'uebernehmen', id: 'e2' }), w)).status, 400, 'ohne Angaben nichts zu übernehmen');
+  assert.equal((await run(req('POST', '', { form: 'slip-ergaenzen', aktion: 'uebernehmen', id: 'e1' }), w)).status, 200);
+  const o = w.jsonAt('public/data/community/overrides.json').find(x => x.id === 'node/5');
+  assert.deepEqual([o.status, o.fields, o.attrs], ['approved', { access: 'public' }, { suitable_boats: 'bis 5 m' }]);
+  assert.equal(w.jsonAt(HIST)[0].aktion, 'übernommen'); assert.equal(w.jsonAt(HIST)[0].beschreibung, 'Zugang: Öffentlich, Bootsgröße: bis 5 m');
+  assert.equal(w.state.messages.at(-1), 'Angaben übernommen: node/5'); assert.ok(w.state.deleted.includes('e1'));
+  assert.equal((await run(req('POST', '', { form: 'slip-ergaenzen', aktion: 'ablehnen', id: 'e2' }), w)).status, 200);
+  assert.equal(w.state.messages.at(-1), 'Angaben abgelehnt: node/5'); }
 
 console.log('fotos.mjs: alle Tests OK');

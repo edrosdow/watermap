@@ -51,7 +51,7 @@ export function normalizePlace(raw, source) {
     description: str(raw.description),
     attrs: {
       surface: str(a.surface), incline: str(a.incline),
-      motorboat: tri(a.motorboat), parking: tri(a.parking), trailer_parking: tri(a.trailer_parking),
+      motorboat: tri(a.motorboat), parking: tri(a.parking), trailer_parking: tri(a.trailer_parking), trailer_note: str(a.trailer_note),
       suitable_boats: str(a.suitable_boats), suitable_trailers: str(a.suitable_trailers),
       berths: num(a.berths), visitor_berths: tri(a.visitor_berths), berth_fee: str(a.berth_fee),
       electricity: tri(a.electricity), water_tap: tri(a.water_tap), toilets: tri(a.toilets),

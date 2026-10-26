@@ -10,7 +10,7 @@ import { CONFIG } from './config.js';
 import { photoCarousel } from './photos.js';
 
 /**
- * actions = { close, share, report, addPhoto, reportPhoto, reportPrice, onFavorite }
+ * actions = { close, share, report, addPhoto, reportPhoto, reportPrice, onFavorite, ergaenzen }
  */
 /** Tabelle der Eigenschaften; Zeilen mit `web` zeigen die wörtlichen Website-Angaben (markiert).
  *  Unbekannte Zeilen sind eingeklappt („N weitere unbekannt“). */
@@ -185,7 +185,7 @@ function bootBox(p, actions) {
     extra.length ? h('p', { class: 'wb-extra', text: extra.join(' · ') }) : null,
     h('div', { class: 'wb-fuss' },
       h('span', { text: fehlen ? `${fehlen} ${fehlen === 1 ? 'Angabe fehlt' : 'Angaben fehlen'}` : 'Angaben laut OpenStreetMap' }),
-      h('button', { type: 'button', class: 'wb-link', onclick: actions.report }, fehlen ? 'Weißt du mehr? Ergänzen' : 'Korrektur melden', h('span', { html: icon('chevron', 16), 'aria-hidden': 'true' }))));
+      h('button', { type: 'button', class: 'wb-link', onclick: actions.ergaenzen || actions.report }, fehlen ? 'Weißt du mehr? Ergänzen' : 'Angaben ändern', h('span', { html: icon('chevron', 16), 'aria-hidden': 'true' }))));
 }
 
 /** Kleine Herkunftszeile unter dem Namen; Antippen zeigt den Hinweis. */

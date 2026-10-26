@@ -231,7 +231,8 @@ def desktop(b):
     check(wb.locator('.wb-p').count() == 6 and wb.locator('.wb-p.is-warn', has_text='Kostenpflichtig').count() == 1, 'Sechs Angaben, Gebühr orange')
     check(pg.evaluate("(() => { const b = [...document.querySelectorAll('#detail .detail-body > *')]; const i = (s) => b.findIndex(e => e.matches(s)); return i('.wb') > i('.dbtns') && (i('.vo-karte') < 0 || i('.vo-karte') < i('.wb')); })()"), 'Reihenfolge: Knöpfe → Heute vor Ort → Wichtig für dein Boot')
     wb.locator('.wb-link').click(); pg.wait_for_timeout(300)
-    check(pg.locator('dialog[open]').count() >= 1 and 'Informationen korrigieren' in pg.inner_text('dialog[open]'), '„Ergänzen“ öffnet „Fehler melden“')
+    check(pg.locator('.ae-dlg[open]').count() == 1 and 'Angaben ergänzen' in pg.inner_text('.ae-dlg'), '„Ergänzen“ öffnet „Angaben ergänzen“')
+    check(pg.locator('#detail .detail-links button', has_text='Fehler melden').count() == 1, '„Fehler melden“ bleibt unten für echte Fehler')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     check('+ Community' in d, 'Herkunft Community-Anteil sichtbar')
     # Community-Ort

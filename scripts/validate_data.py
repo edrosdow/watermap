@@ -21,7 +21,7 @@ TYPES = {"slip", "marina", "fuel"}
 ACCESS = {None, "public", "permissive", "customers", "members", "permit", "private"}
 TRI_ATTRS = {"motorboat", "parking", "trailer_parking", "visitor_berths", "electricity", "water_tap", "toilets", "showers",
              "restaurant", "harbour_master", "diesel", "petrol", "reach_water", "reach_land"}
-STR_ATTRS = {"surface", "incline", "suitable_boats", "suitable_trailers", "berth_fee"}
+STR_ATTRS = {"surface", "incline", "suitable_boats", "suitable_trailers", "berth_fee", "trailer_note"}
 PATCH_FIELDS = {"name", "locality", "access", "fee", "fee_note", "opening_hours", "operator", "website", "phone", "email", "description", "lat", "lon"}
 STATUS = {"pending", "approved", "rejected"}
 ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}")

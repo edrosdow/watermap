@@ -23,6 +23,7 @@ import { pegelDetail, etikett as pegelEtikett, fmt as pegelFmt, trendText, trend
 import { mehrSeite, merkliste } from './mehr.js';
 import { meldungenSeite } from './meldungen-uebersicht.js';
 import { unpassendMelden } from './meldung-unpassend.js';
+import { slipErgaenzen } from './slip-ergaenzen.js';
 import { imGebiet, aufGebietBeschneiden, gebietLaden } from './gebiet.js';
 import { pegelDashboard, pegelSeite, slipsAmPegel } from './pegel-dashboard.js';
 import { weatherSection } from './wetter.js';
@@ -456,6 +457,7 @@ function showDetail(p, { scrollTo = null } = {}) {
       addPhoto: () => openReport('foto-einreichen', { standort_id: p.id }),
       reportPhoto: (ph) => openReport('fehler-melden', { standort_id: p.id, art: 'foto', details: `Foto unpassend: ${ph.url}\nGrund: ` }),
       reportPrice: () => openReport('tankpreis-melden', { standort_id: p.id }),
+      ergaenzen: () => slipErgaenzen({ place: p, toast }),
     },
     pegel: pegelInfo(p).then(info => info && pegelBox(info)),
     vorOrt: p.type === 'slip' ? vorOrtTeile(p) : null,   // „Heute vor Ort“ nur bei Slipanlagen

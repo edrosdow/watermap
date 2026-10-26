@@ -43,6 +43,11 @@
   .near.ok { background: #EAF6EE; color: #1E7B3A; }
   .tag { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 99px; background: #EEF3F5; color: #0B3045; font-size: 12px; font-weight: 600; }
   @media (max-width: 560px) { .log li { grid-template-columns: 1fr; } .log .detail { grid-column: 1; } }
+  .vgl { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 14px; }
+  .vgl th, .vgl td { text-align: left; padding: 6px 8px; border-top: 1px solid #E3EAEE; vertical-align: top; }
+  .vgl th { font-weight: 600; color: #5B6B75; width: 30%; }
+  .vgl td.alt { color: #5B6B75; } .vgl td.neu { font-weight: 700; color: #0B3045; }
+  .vgl td.neu.gleich { font-weight: 400; color: #5B6B75; }
 </style></head>
 <body><header><a href="../">WaterMap</a><small>Verwaltung</small></header><main>
 <h1>WaterMap verwalten</h1>
@@ -53,6 +58,7 @@
   <button type="button" role="tab" data-tab="gemeldet">Gemeldete Fotos <span class="n" id="n-gemeldet"></span></button>
   <button type="button" role="tab" data-tab="slips">Slipanlagen <span class="n" id="n-slips"></span></button>
   <button type="button" role="tab" data-tab="preise">Preise <span class="n" id="n-preise"></span></button>
+  <button type="button" role="tab" data-tab="ergaenzungen">Ergänzungen <span class="n" id="n-ergaenzungen"></span></button>
   <button type="button" role="tab" data-tab="hinweise">Hinweise <span class="n" id="n-hinweise"></span></button>
   <button type="button" role="tab" data-tab="veroeffentlicht">Veröffentlicht <span class="n" id="n-veroeffentlicht"></span></button>
   <button type="button" role="tab" data-tab="verlauf">Verlauf</button>
@@ -72,6 +78,10 @@
 <section id="tab-preise" hidden>
   <p class="meta">Gemeldete Kraftstoffpreise. Freigegebene Preise erscheinen mit Datum an der Tankstelle; ältere bleiben gespeichert.</p>
   <div id="preise"></div>
+</section>
+<section id="tab-ergaenzungen" hidden>
+  <p class="meta">Angaben zu Slipanlagen aus „Weißt du mehr? Ergänzen“ in der App. „Übernehmen“ trägt sie ein (bisher → neu); nach etwa einer Minute sind sie für alle sichtbar.</p>
+  <div id="ergaenzungen"></div>
 </section>
 <section id="tab-hinweise" hidden>
   <p class="meta">Fehler und Hinweise zu Standorten. Die Korrektur selbst machst du von Hand (am besten direkt in OpenStreetMap); hier schließt du den Hinweis ab.</p>

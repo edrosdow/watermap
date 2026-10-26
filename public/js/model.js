@@ -162,7 +162,7 @@ export function bootPunkte(p) {
   const zugang = { public: 'ok', permissive: 'ok', customers: 'warn', members: 'warn', permit: 'warn', private: 'stop' }[p.access];
   const gebuehr = p.fee === false ? ['Kostenlos', 'ok'] : p.fee === true ? [p.fee_note ? `Kostenpflichtig – ${p.fee_note}` : 'Kostenpflichtig', 'warn'] : [p.fee_note || null, 'warn'];
   const rampe = [a.surface, a.incline].filter(Boolean).join(' · ');
-  const trailer = a.trailer_parking === true ? ['Ja', 'ok'] : a.trailer_parking === false ? ['Nein', 'stop']
+  const trailer = a.trailer_parking === true ? [a.trailer_note ? `Ja, ${a.trailer_note}` : 'Ja', 'ok'] : a.trailer_parking === false ? ['Nein', 'stop']
     : a.parking === true ? ['Parkplatz da, Trailer unklar', 'warn'] : [null];
   const motor = a.motorboat === true ? ['Erlaubt', 'ok'] : a.motorboat === false ? ['Nicht erlaubt', 'stop'] : [null];
   const groesse = [a.suitable_boats, a.suitable_trailers ? `Trailer: ${a.suitable_trailers}` : null].filter(Boolean).join(' · ');

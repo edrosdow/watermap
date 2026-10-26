@@ -179,6 +179,34 @@ def run(b, w, hh):
     pg.click(f'{nav} [data-nav=mehr]'); pg.wait_for_timeout(200)
     check(pg.url.endswith('#mehr') and 'Unterwegs' in pg.locator('#mehrseite').text_content(), f'{tag}: „Mehr“ in der Merkliste führt zur Übersicht')
 
+    # Slipanlage: „Weißt du mehr? Ergänzen“ öffnet „Angaben ergänzen“ (kein „Fehler melden“)
+    pg.goto(uf.BASE + '#karte'); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(500)
+    pg.evaluate(f"window.__watermap.selectPlace({ids[2]!r}, {{full: true}})"); pg.wait_for_selector('#detail .wb-link')
+    pg.locator('#detail .wb-link').click(); pg.wait_for_selector('.ae-dlg[open]')
+    dlg = pg.locator('.ae-dlg'); sb = dlg.locator('.ae-senden')
+    check('Angaben ergänzen' in dlg.inner_text() and 'Informationen korrigieren' not in pg.inner_text('body') and sb.is_disabled() and sb.inner_text() == 'Nichts ausgewählt',
+          f'{tag}: Formular „Angaben ergänzen“, ohne Auswahl gesperrt')
+    bx = dlg.bounding_box()
+    check(bx['x'] >= 0 and bx['x'] + bx['width'] <= w + 1 and bx['y'] + bx['height'] <= hh + 1, f'{tag}: Formular passt ins Fenster')
+    if dlg.locator('fieldset[data-key=fee]').count() == 0: dlg.locator('.ae-aendern').click()
+    fee = dlg.locator('fieldset[data-key=fee]')
+    fee.locator('.ae-opt', has_text='Kostenlos').click()
+    check(sb.inner_text() == '1 Angabe senden' and not sb.is_disabled(), f'{tag}: eine Angabe gewählt')
+    fee.locator('.ae-opt', has_text='Kostenlos').click()
+    check(sb.is_disabled() and fee.locator('.ae-opt[aria-pressed=true]').count() == 0, f'{tag}: nochmal antippen hebt die Auswahl auf')
+    fee.locator('.ae-opt', has_text='Kostenpflichtig').click(); fee.locator('input[name=fee_note]').fill('5 € pro Tag')
+    if dlg.locator('select[name=surface]').count() == 0: dlg.locator('.ae-aendern').click()
+    dlg.locator('select[name=surface]').select_option('Beton')
+    dlg.locator('fieldset[data-key=trailer] .ae-opt', has_text='In der Nähe').click()
+    check(sb.inner_text() == '3 Angaben senden', f'{tag}: Zähler „3 Angaben senden“ ({sb.inner_text()})')
+    pg.screenshot(path=str(SHOTS / f'bereiche_{w}_5ergaenzen.png'))
+    pg.evaluate("localStorage.removeItem('watermap.lastSubmit')")   # Sendebremse nach „Unpassend melden“ oben
+    n0 = len(pg.st['forms']); sb.click(); pg.wait_for_selector('.ae-dlg', state='detached')
+    f = pg.st['forms'][-1] if len(pg.st['forms']) > n0 else {}
+    check(f.get('form-name') == 'slip-ergaenzen' and f.get('standort_id') == ids[2] and json.loads(f.get('angaben', '{}')) == {'fee': 'kostenpflichtig', 'fee_note': '5 € pro Tag', 'surface': 'Beton', 'trailer': 'naehe'},
+          f'{tag}: nur gewählte Angaben gesendet ({f.get("angaben")})')
+    check('Deine Angaben werden geprüft' in pg.inner_text('body'), f'{tag}: Danke-Hinweis')
+
     # Alte Adressen
     for adresse, sel in [('#pegel', '.pegelseite .fk, .pegelseite .pg-titel'), ('#favoriten', '#list-title'), ('#naehe', '.place.nk, .nh-leer'), ('#melden', '#report-menu[open]')]:
         pg.goto(uf.BASE + adresse); pg.wait_for_selector(sel, timeout=10000)

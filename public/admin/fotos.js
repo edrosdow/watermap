@@ -63,8 +63,8 @@ async function loadAll() {
     call('GET').then(r => r.json()), call('GET', '?meldungen=1').then(r => r.json()),
     call('GET', '?veroeffentlicht=1').then(r => r.json()), call('GET', '?verlauf=1').then(r => r.json()),
     call('GET', '?form=slipanlage-melden').then(r => r.json()), call('GET', '?form=tankpreis-melden').then(r => r.json()),
-    call('GET', '?form=fehler-melden').then(r => r.json())]);
-  const [neu, gemeldet, veroeffentlicht, verlauf, slips, preise, hinweise] = all;
+    call('GET', '?form=fehler-melden').then(r => r.json()), call('GET', '?form=slip-ergaenzen').then(r => r.json())]);
+  const [neu, gemeldet, veroeffentlicht, verlauf, slips, preise, hinweise, ergaenzungen] = all;
   const failed = all.find(x => x.status === 'rejected');
   if (failed && /Passwort/.test(failed.reason?.message)) throw failed.reason;
   try { sessionStorage.setItem('wm.fotoPw', pw); } catch { /* privat */ }
@@ -76,6 +76,7 @@ async function loadAll() {
   renderSlips(slips.status === 'fulfilled' ? slips.value.slips : null, slips.reason);
   renderPrices(preise.status === 'fulfilled' ? preise.value.preise : null, preise.reason);
   renderHints(hinweise.status === 'fulfilled' ? hinweise.value.hinweise : null, hinweise.reason);
+  renderErgaenzungen(ergaenzungen.status === 'fulfilled' ? ergaenzungen.value.ergaenzungen : null, ergaenzungen.reason);
   showTab(tab);
 }
 
@@ -153,8 +154,9 @@ function renderPublished(list, err) {
 
 // ---------------------------------------------------------------- Verlauf
 const LABEL = { freigegeben: ['Freigegeben', 'a-freigegeben'], abgelehnt: ['Abgelehnt', 'a-abgelehnt'], entfernt: ['Entfernt', 'a-entfernt'],
-  'meldung verworfen': ['Meldung verworfen', 'a-meldung'], erledigt: ['Erledigt', 'a-freigegeben'], verworfen: ['Verworfen', 'a-abgelehnt'] };
-const BEREICH = { foto: 'Foto', slip: 'Slipanlage', preis: 'Preis', hinweis: 'Hinweis' };
+  'meldung verworfen': ['Meldung verworfen', 'a-meldung'], erledigt: ['Erledigt', 'a-freigegeben'], verworfen: ['Verworfen', 'a-abgelehnt'],
+  'übernommen': ['Übernommen', 'a-freigegeben'], 'lagemeldung entfernt': ['Lagemeldung entfernt', 'a-entfernt'], 'lagemeldung war schon abgelaufen': ['Lagemeldung war abgelaufen', 'a-meldung'] };
+const BEREICH = { foto: 'Foto', slip: 'Slipanlage', preis: 'Preis', hinweis: 'Hinweis', ergaenzung: 'Ergänzung' };
 
 function renderLog(list, err) {
   const box = $('#log');
@@ -269,6 +271,56 @@ function renderHints(list, err) {
       el('p', { textContent: x.details }),
       x.kontakt ? el('p', { className: 'meta' }, 'Rückfragen: ', el('a', { href: `mailto:${x.kontakt}`, textContent: x.kontakt })) : null,
       el('div', { className: 'actions' }, weg, done, drop)));
+  }
+}
+
+// ---------------------------------------------------------------- Ergänzungen (Angaben zu Slipanlagen)
+// Bisherige Werte aus den veröffentlichten Daten (OSM + freigegebene Overrides), wie die App sie zeigt („Wichtig für dein Boot“)
+let bisherDaten = null;
+async function bisherLaden() {
+  bisherDaten ||= (async () => {
+    const [osm, ov, model] = await Promise.all([fetch('../data/osm/slip.geojson').then(r => r.json()), fetch('../data/community/overrides.json').then(r => r.json()).catch(() => []), import('../js/model.js')]);
+    const map = new Map((osm.features || []).map(f => [f.id, { ...f.properties, attrs: { ...(f.properties.attrs || {}) } }]));
+    for (const o of Array.isArray(ov) ? ov : []) {
+      const p = o && o.status === 'approved' && map.get(o.id);
+      if (!p) continue;
+      Object.assign(p, o.fields || {}); Object.assign(p.attrs, o.attrs || {});
+    }
+    return { map, bootPunkte: model.bootPunkte };
+  })().catch(() => null);
+  return bisherDaten;
+}
+const ALT_TITEL = { Zugang: 'Zugang', Gebühr: 'Gebühr', Betrag: 'Gebühr', Belag: 'Rampe', Neigung: 'Rampe', 'Trailer parken': 'Trailer parken', Motorboote: 'Motorboote', Bootsgröße: 'Bootsgröße' };
+
+function renderErgaenzungen(list, err) {
+  const box = $('#ergaenzungen');
+  box.replaceChildren();
+  setCount('ergaenzungen', list ? list.length : 0, true);
+  if (!list) { box.append(failNote(err)); return; }
+  if (!list.length) { box.append(el('p', { className: 'empty', textContent: 'Keine offenen Ergänzungen.' })); return; }
+  for (const x of list) {
+    const yes = el('button', { className: 'ok', type: 'button', textContent: 'Übernehmen', disabled: x.leer || !ID.test(x.standort_id) });
+    const no = el('button', { type: 'button', textContent: 'Ablehnen' });
+    yes.addEventListener('click', () => act(yes, { form: 'slip-ergaenzen', aktion: 'uebernehmen', id: x.id }, 'Angaben übernommen – in etwa einer Minute in der App.'));
+    no.addEventListener('click', () => act(no, { form: 'slip-ergaenzen', aktion: 'ablehnen', id: x.id }, 'Angaben abgelehnt.', 'Angaben wirklich ablehnen?'));
+    const tabelle = el('table', { className: 'vgl' }, el('thead', {}, el('tr', {}, el('th', { textContent: 'Angabe' }), el('th', { textContent: 'bisher' }), el('th', { textContent: 'neu' }))),
+      el('tbody', {}, x.angaben.map(([t, w]) => el('tr', {}, el('th', { textContent: t }), el('td', { className: 'alt', textContent: '…' }), el('td', { className: 'neu', textContent: w })))));
+    box.append(el('section', { className: 'card' },
+      el('h2', {}, placeLink(x.standort_id, x.standort_name || x.standort_id)),
+      el('p', { className: 'meta', textContent: `eingegangen ${when(x.created)}` }),
+      x.angaben.length ? tabelle : el('p', { className: 'warn', textContent: 'Keine gültigen Angaben – nur Bemerkung.' }),
+      x.bemerkung ? el('p', {}, el('strong', { textContent: 'Bemerkung: ' }), x.bemerkung) : null,
+      el('div', { className: 'actions' }, yes, no)));
+    // bisher nachtragen
+    bisherLaden().then((b) => {
+      const p = b?.map.get(x.standort_id);
+      const alt = p ? Object.fromEntries(b.bootPunkte(p).map(pk => [pk.titel, pk.wert])) : {};
+      for (const tr of tabelle.querySelectorAll('tbody tr')) {
+        const wert = alt[ALT_TITEL[tr.querySelector('th').textContent]] || (p ? 'Unbekannt' : '–');
+        tr.querySelector('.alt').textContent = wert;
+        if (wert === tr.querySelector('.neu').textContent) tr.querySelector('.neu').classList.add('gleich');
+      }
+    });
   }
 }
 

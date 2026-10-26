@@ -42,6 +42,10 @@ HINWEISE = [{'id': 'h1', 'created': '2026-10-20T11:00:00Z', 'standort_id': 'node
             {'id': 'u1', 'created': '2026-10-20T12:00:00Z', 'standort_id': 'node/9', 'standort_name': 'Slip Nord', 'art': 'meldung', 'art_text': 'Unpassende Lagemeldung',
              'details': 'Lagemeldung unpassend\nMeldung-ID: 00ab12cd34ef5678\nGrund: Beleidigend', 'kontakt': '', 'meldung_id': '00ab12cd34ef5678'}]
 LOG.append({'zeit': '2026-10-20T14:00:00Z', 'bereich': 'slip', 'aktion': 'freigegeben', 'standort_id': 'c/neu-20261020-abc', 'standort_name': 'Neue Rampe', 'beschreibung': 'Weser'})
+# Ergänzung zu einer echten Slipanlage (bisher-Werte kommen aus public/data)
+_SLIP = next(f for f in json.loads((ROOT / 'data/osm/slip.geojson').read_text(encoding='utf-8'))['features'] if f['properties'].get('access') == 'public')
+ERG = [{'id': 'e1', 'created': '2026-10-26T10:00:00Z', 'standort_id': _SLIP['id'], 'standort_name': 'Slip Süd', 'angaben': [['Zugang', 'Öffentlich'], ['Bootsgröße', 'bis 7 m']],
+        'bemerkung': 'Schlüssel beim <b>Hafenmeister</b>', 'leer': False}]
 posted = []
 
 def api(route):
@@ -57,6 +61,7 @@ def api(route):
         if 'form=slipanlage-melden' in r.url: return j({'slips': SLIPS})
         if 'form=tankpreis-melden' in r.url: return j({'preise': PREISE})
         if 'form=fehler-melden' in r.url: return j({'hinweise': HINWEISE})
+        if 'form=slip-ergaenzen' in r.url: return j({'ergaenzungen': ERG})
         return j({'fotos': FOTOS})
     posted.append(json.loads(r.post_data))
     j({'ok': True})
@@ -170,6 +175,21 @@ with sync_playwright() as p:
           and hi.locator('a[href="mailto:x@y.de"]').count() == 1, 'Hinweis mit Art, Text und Rückfrage-Adresse')
     hi.locator('button', has_text='Erledigt').click(); pg.locator('#msg', has_text='erledigt').wait_for()
     check(posted == [{'form': 'fehler-melden', 'aktion': 'erledigt', 'id': 'h1'}], f'Hinweis erledigt ({posted})')
+    # Ergänzungen: bisher → neu, Übernehmen
+    pg.click('#tabs [data-tab=ergaenzungen]')
+    er = pg.locator('#tab-ergaenzungen .card')
+    for _ in range(40):
+        if '…' not in er.inner_text(): break
+        pg.wait_for_timeout(150)
+    et = er.inner_text()
+    check(pg.inner_text('#n-ergaenzungen') == '1' and 'Slip Süd' in et and 'bis 7 m' in et and 'Schlüssel beim <b>Hafenmeister</b>' in et and er.locator('b').count() == 0,
+          'Ergänzung mit Angaben und Bemerkung (als Text)')
+    zug = er.locator('tbody tr', has_text='Zugang')
+    check(zug.locator('.alt').inner_text() == 'Öffentlich' and 'gleich' in (zug.locator('.neu').get_attribute('class') or '')
+          and er.locator('tbody tr', has_text='Bootsgröße').locator('.alt').inner_text() == 'Unbekannt', f'bisher → neu aus den veröffentlichten Daten ({et!r})')
+    er.locator('button.ok', has_text='Übernehmen').click(); pg.locator('#msg', has_text='übernommen').wait_for()
+    check(posted[-1:] == [{'form': 'slip-ergaenzen', 'aktion': 'uebernehmen', 'id': 'e1'}], f'Übernehmen ({posted})')
+    posted.clear()
     # Verlauf
     pg.click('#tabs [data-tab=verlauf]')
     log = pg.inner_text('#log')
