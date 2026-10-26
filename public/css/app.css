@@ -945,6 +945,6 @@ p.rmenu-links a { display: inline; min-height: 0; }
 }
 
 /* Kartengebiet: außerhalb Deutschlands (keine Kacheln) dieselbe neutrale Fläche wie die Maske (CONFIG.GEBIET.maske) */
-#map.leaflet-container { background: #DCE5EA; }
+#map.leaflet-container { background: #DDE0E3; }
 /* Zwischenzoomstufen (zoomSnap 0,25): Kacheln minimal überlappen, sonst zeigt Chrome feine Fugen */
 #map .leaflet-tile-container img.leaflet-tile { width: 256.5px !important; height: 256.5px !important; mix-blend-mode: normal; }

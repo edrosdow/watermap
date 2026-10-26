@@ -52,11 +52,11 @@ export async function loadMapLibraries() {
 // ------------------------------------------------------------------ Karte
 export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, onAusserhalb, useCluster }) {
   const L = window.L;
-  // Kartengebiet (CONFIG.GEBIET): Verschieben nur im Rechteck um Deutschland, Herauszoomen nur bis ganz Deutschland.
+  // Kartengebiet (CONFIG.GEBIET): Verschieben und Herauszoomen bis Europa, Deutschland hervorgehoben.
   // maxBounds begrenzt auch setView/flyTo/fitBounds (Leaflet verschiebt die Mitte ins Rechteck).
-  const G = CONFIG.GEBIET, [[gs, gw], [gn, ge]] = G.bounds;
-  const rahmen = L.latLngBounds([[gs - G.rand, gw - G.rand * 1.6], [gn + G.rand, ge + G.rand * 1.6]]);
-  const map = L.map(el, { zoomControl: false, worldCopyJump: false, tap: true, maxBounds: rahmen, maxBoundsViscosity: 0.9, minZoom: 5, bounceAtZoomLimits: false,
+  const G = CONFIG.GEBIET;
+  const rahmen = L.latLngBounds(G.europa);
+  const map = L.map(el, { zoomControl: false, worldCopyJump: false, tap: true, maxBounds: rahmen, maxBoundsViscosity: 0.9, minZoom: 2.5, bounceAtZoomLimits: false,
     zoomSnap: 0.25, zoomDelta: 1 });   // Viertelstufen: ganz Deutschland füllt das Fenster möglichst gut
   // gleich mit ganz Deutschland beginnen (keine Kacheln eines Zwischenausschnitts)
   if (map.getSize().x > 50) map.fitBounds(L.latLngBounds(G.bounds), { padding: [6, 6], animate: false });
@@ -68,20 +68,21 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, onAusserha
   });
   new Kacheln(CONFIG.TILE_URL, { maxZoom: CONFIG.TILE_MAX_ZOOM, attribution: CONFIG.TILE_ATTRIBUTION }).addTo(map);
   map.attributionControl.setPrefix(false);
-  // Kleinster Zoom: ganz Deutschland passt gerade ins Kartenfenster (je nach Fenstergröße neu)
+  // Kleinster Zoom: ganz Europa passt ins Kartenfenster – auf sehr breiten Bildschirmen höchstens ≈ 120 Längengrade (keine Weltkarte)
   const minZoomSetzen = () => {
     const s = map.getSize();
     if (s.x < 50 || s.y < 50) return;
-    map.setMinZoom(Math.max(4, Math.min(8, map.getBoundsZoom(L.latLngBounds(G.bounds), false))));   // getBoundsZoom rundet auf zoomSnap ab
+    const breite = Math.ceil(Math.log2(s.x * 360 / (256 * 120)) * 4) / 4;
+    map.setMinZoom(Math.max(2.5, Math.min(6, Math.max(map.getBoundsZoom(rahmen, false), breite))));   // getBoundsZoom rundet auf zoomSnap ab
   };
   map.on('resize', minZoomSetzen); minZoomSetzen();
-  // Maske: außerhalb des Gebiets eine neutrale Fläche (Canvas, eigene Ebene über den Kacheln, unter Markern)
+  // Schleier: außerhalb des deutschen Landes leicht grau (Canvas, eigene Ebene über den Kacheln, unter Markern)
   gebietLaden().then((g) => {
     const pane = map.createPane('wm-maske');
     pane.style.zIndex = 250; pane.style.pointerEvents = 'none';
-    const welt = [[25, -45], [25, 65], [75, 65], [75, -45]];
-    L.polygon([welt, ...g.ringe], { pane: 'wm-maske', renderer: L.canvas({ pane: 'wm-maske', padding: 0.5 }), interactive: false,
-      color: '#0B3045', opacity: 0.5, weight: 1.6, fillColor: G.maske, fillOpacity: G.nachbarn ?? 1, smoothFactor: 1 }).addTo(map);
+    const welt = [[-85, -180], [-85, 180], [85, 180], [85, -180]];
+    L.polygon([welt, ...g.anzeige], { pane: 'wm-maske', renderer: L.canvas({ pane: 'wm-maske', padding: 0.5 }), interactive: false,
+      color: '#0B3045', opacity: 0.4, weight: 1.3, fillColor: G.maske, fillOpacity: G.nachbarn ?? 1, smoothFactor: 1 }).addTo(map);
   }, () => { /* ohne Grenze bleibt das Rechteck */ });
 
   let meld = new Map();   // Standort-ID → { n, typ } aktiver Lagemeldungen („Heute vor Ort“)

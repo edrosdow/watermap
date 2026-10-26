@@ -73,12 +73,12 @@ def ziehen(pg, dx, dy, mobile, mal=6):
     ruhe(pg, 900)
 
 def kacheln_ausserhalb(pg):
-    """Abgerufene Kacheln ab z 8, die weiter als ≈ 1,5° (bzw. 2,4° in Ost-West) von Deutschland entfernt liegen.
-    Nachbarländer werden abgeblendet gezeigt (CONFIG.GEBIET.nachbarn), bis z 7 sind alle Kacheln erlaubt."""
+    """Abgerufene Kacheln ab z 9 (Straßenkarten), die weiter als ≈ 1,5° (bzw. 2,4° in Ost-West) von Deutschland entfernt liegen.
+    Europa wird leicht grau gezeigt (CONFIG.GEBIET.nachbarn), bis z 8 sind alle Kacheln erlaubt."""
     (s, w), (n, e) = [[47.2613, 5.8586], [55.1047, 15.0471]]
     falsch = []
     for z, x, y in pg.tiles:
-        if z <= 7: continue
+        if z <= 8: continue
         k = 2 ** z; lw, le = x / k * 360 - 180, (x + 1) / k * 360 - 180
         lat = lambda yy: math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * yy / k))))
         if le < w - 2.41 or lw > e + 2.41 or lat(y + 1) > n + 1.51 or lat(y) < s - 1.51: falsch.append((z, x, y))
@@ -92,8 +92,8 @@ def run(b, w, hh):
     # Test 1: Startansicht ganz Deutschland, keine Weltkarte
     s = zustand(pg)
     check(s['s'] <= 47.4 and s['n'] >= 55.0 and s['w'] <= 6.0 and s['e'] >= 14.9, f'{tag}: Start zeigt ganz Deutschland mit Küsten ({s})')
-    check(s['e'] - s['w'] < 45 and s['z'] >= 5, f'{tag}: keine Welt-/Europakarte (Breite {s["e"] - s["w"]:.1f}°, Zoom {s["z"]})')
-    check(pg.locator('.leaflet-wm-maske-pane canvas').count() == 1, f'{tag}: Abblendung außerhalb Deutschlands (Canvas-Ebene)')
+    check(s['e'] - s['w'] < 45 and s['z'] >= 5, f'{tag}: Start auf Deutschland, nicht auf Europa (Breite {s["e"] - s["w"]:.1f}°, Zoom {s["z"]})')
+    check(pg.locator('.leaflet-wm-maske-pane canvas').count() == 1, f'{tag}: grauer Schleier außerhalb Deutschlands (Canvas-Ebene)')
     check('OpenStreetMap' in pg.inner_text('.leaflet-control-attribution'), f'{tag}: OSM-Namensnennung sichtbar')
     pg.screenshot(path=str(SHOTS / f'gebiet_{w}_1start.png'))
     # Test 2: Herauszoomen
@@ -103,22 +103,25 @@ def run(b, w, hh):
         else: pg.click('.leaflet-control-zoom-out', force=True)
         pg.wait_for_timeout(400)
     s2 = zustand(pg)
-    check(s2['z'] == s2['min'] and s2['e'] - s2['w'] < 45, f'{tag}: Herauszoomen endet bei ganz Deutschland (Zoom {s2["z"]}, min {s2["min"]})')
+    check(s2['z'] == s2['min'] and 25 < s2['e'] - s2['w'] <= 125 and s2['n'] - s2['s'] > 20, f'{tag}: Herauszoomen endet bei Europa, keine Weltkarte (Zoom {s2["z"]}, Breite {s2["e"] - s2["w"]:.0f}°)')
     if not mobile: check(pg.locator('.leaflet-control-zoom-out.leaflet-disabled').count() == 1, f'{tag}: Minus-Knopf am kleinsten Zoom deaktiviert')
-    pg.evaluate(f"{MAP}.setZoom(2, {{animate: false}})"); ruhe(pg, 300)
+    pg.evaluate(f"{MAP}.setZoom(1, {{animate: false}})"); ruhe(pg, 300)
     check(zustand(pg)['z'] == s2['min'], f'{tag}: auch per Programm kein kleinerer Zoom')
-    # Test 3/4: Ziehen nach Osten (Russland) und Westen (Großbritannien) – auch eingezoomt
-    pg.evaluate(f"{MAP}.setView([52.5, 13.4], 9, {{animate: false}})"); ruhe(pg)
-    ziehen(pg, -350 if w > 500 else -250, 0, mobile, mal=10)
+    pg.screenshot(path=str(SHOTS / f'gebiet_{w}_2europa.png'))
+    # Test 3/4: Ziehen – nur bis zum Rand Europas (Ural, Atlantik, Nordkap)
+    pg.evaluate(f"{MAP}.setView([52.5, 13.4], 5, {{animate: false}})"); ruhe(pg)
+    ziehen(pg, -350 if w > 500 else -250, 0, mobile, mal=12)
     o = zustand(pg)
-    check(o['lon'] <= 15.65 and o['e'] < 17.5, f'{tag}: nach Osten nicht über Polen hinaus (Mitte {o["lon"]:.2f}, Rand {o["e"]:.2f})')
-    pg.evaluate(f"{MAP}.setView([53.5, 7.0], 9, {{animate: false}})"); ruhe(pg)
-    ziehen(pg, 350 if w > 500 else 250, 0, mobile, mal=10)
+    check(o['lon'] <= 42.2, f'{tag}: nach Osten höchstens bis zum Rand Europas (Mitte {o["lon"]:.1f})')
+    ziehen(pg, 350 if w > 500 else 250, 0, mobile, mal=24)
     we = zustand(pg)
-    check(we['lon'] >= 5.29 and we['w'] > 3.0, f'{tag}: nach Westen nicht bis Großbritannien (Mitte {we["lon"]:.2f}, Rand {we["w"]:.2f})')
-    ziehen(pg, 0, 300 if w > 500 else 220, mobile, mal=8)
+    check(we['lon'] >= -12.2, f'{tag}: nach Westen höchstens bis zum Atlantik (Mitte {we["lon"]:.1f})')
+    ziehen(pg, 0, 300 if w > 500 else 220, mobile, mal=12)
     nn = zustand(pg)
-    check(nn['lat'] <= 55.46, f'{tag}: nach Norden nicht bis Skandinavien (Mitte {nn["lat"]:.2f})')
+    check(nn['lat'] <= 71.7, f'{tag}: nach Norden höchstens bis zum Nordkap (Mitte {nn["lat"]:.1f})')
+    # eingezoomt im Ausland (z. B. London): keine Straßenkarten
+    pg.tiles.clear(); pg.evaluate(f"{MAP}.setView([51.5, -0.12], 12, {{animate: false}})"); ruhe(pg, 900)
+    check(not [t for t in pg.tiles if t[0] >= 9], f'{tag}: London eingezoomt lädt keine Straßenkacheln ({pg.tiles[:3]})')
     pg.screenshot(path=str(SHOTS / f'gebiet_{w}_2rand.png'))
     # Test 5/6: Nordsee (Helgoland) und Ostsee (Rügen) bleiben erreichbar
     for name, (la, lo) in {'Helgoland': (54.18, 7.885), 'Rügen': (54.45, 13.4), 'Bodensee': (47.6, 9.4)}.items():

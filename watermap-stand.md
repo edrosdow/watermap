@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 26.10.2026 · App-Version **7.29.1**
+Stand: 26.10.2026 · App-Version **7.30.0**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.29.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.30.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -226,6 +226,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
 | 7.24.0 | Gezeiten aus PEGELONLINE: Tidepegel-Detailseite (Tidekurve, letztes HW/NW, Tidehub), Tide in „Meine Pegel“ und Flussseite; Prüfliste `pruefung.html` |
 | 7.24.1 | Nach Prüfliste: Ems-Reihenfolge (Unterems ab Papenburg neu ab km 0 → `flussKm` +240), Namen (Groß-/Straß-, Kürzel UW/AP/BP … groß, Bhv/Whv/LT ausgeschrieben, „auf/zur“ klein, Meißen, Roßlau, Storkower Gewässer), Tide-Kennwerte auch als Text/„cm …“, Prüfliste zeigt Datenstand, gelieferte Tide-Kennwerte und Sonderzeichen in Namen; Offline-Stand nur aus derselben Version |
+| 7.30.0 | Europa-Übersicht: Herauszoomen und Verschieben bis Europa, Länder leicht grau; hervorgehoben nur deutsches Land (Nord-/Ostsee nicht mehr als helle Fläche); Straßenkacheln ab Zoom 9 nur um Deutschland; Suche/Standort weiter nur in Deutschland |
 | 7.29.1 | Nachbarländer zur Orientierung leicht sichtbar (abgeblendet statt abgedeckt, `CONFIG.GEBIET.nachbarn`), deutsche Grenze deutlicher; Begrenzung von Verschieben und Zoom bleibt |
 | 7.29.0 | Karte auf Deutschland mit Nord- und Ostsee begrenzt: `maxBounds` + `minZoom` (ganz Deutschland), Maske über fremdem Land (OSM-Grenze, `data/gebiet-de.json`), Kacheln nur im Gebiet, Startansicht ganz Deutschland, Ortssuche nur im Gebiet (Hinweis bei Moskau/London), kein Sprung zum Standort im Ausland, neue Slipanlage nur im Gebiet. Details: `docs/KARTENGEBIET.md` |
 | 7.28.0 | „Heute vor Ort“: Fußzeile „n Meldungen im Revier · Alle Meldungen ›“ zur Übersicht; „Unpassend melden“ bei Meldungen mit Notiz (in „Heute vor Ort“ und in „Aktuelle Meldungen“): Fenster mit Grund, Hinweis über das Formular „fehler-melden“ (Art `meldung`, mit Meldung-ID), Meldung auf dem Gerät sofort ausgeblendet (`watermap.meldungen.ausgeblendet`); Verwaltung `/admin/fotos.html` → Hinweise → „Meldung entfernen“ löscht sie für alle (`api.entfernen`) |
@@ -262,7 +263,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.29.1): alle Tests grün.**
+**Letzter Lauf (7.30.0): alle Tests grün.**
 
 ## 6. Offene Aufgaben
 

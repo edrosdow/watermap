@@ -4,7 +4,7 @@ const host = typeof location !== 'undefined' ? location.hostname : '';
 export const ENTWICKLUNG = /^(localhost|127\.0\.0\.1)$|^deploy-preview-/.test(host);
 
 export const CONFIG = {
-  VERSION: '7.29.1',
+  VERSION: '7.30.0',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -22,14 +22,16 @@ export const CONFIG = {
 
   // Startansicht: 'germany' = ganz Deutschland mit Nord- und Ostseeküste, 'data' = auf vorhandene Standorte zoomen.
   START_MODE: 'germany',
-  // Kartengebiet: Deutschland mit Küstenmeer (12 sm) in Nord- und Ostsee. Außerhalb: keine Kacheln, neutrale Fläche,
-  // Verschieben und Herauszoomen bleiben im Rechteck `bounds` (+ `rand` Grad Spielraum). Grenze: data/gebiet-de.json.
+  // Kartengebiet: Deutschland mit Nord- und Ostsee hervorgehoben, Europa leicht grau. Verschieben und Herauszoomen bis Europa;
+  // Kartenkacheln mit Straßen gibt es nur für Deutschland und knapp darüber hinaus. Suche, Standort und neue Slipanlagen
+  // nur im deutschen Gebiet (inkl. Küstenmeer). Grenze: data/gebiet-de.json.
   GEBIET: {
     url: './data/gebiet-de.json',
-    bounds: [[47.2613, 5.8586], [55.1047, 15.0471]],
-    rand: 0.35,
-    maske: '#DCE5EA',
-    nachbarn: 0.55,     // Deckkraft der Abblendung über den Nachbarländern (1 = ganz abgedeckt, keine fremden Kacheln)
+    bounds: [[47.2613, 5.8586], [55.1047, 15.0471]],   // Deutschland (Startansicht, Ortssuche)
+    europa: [[34.5, -12], [71.5, 42]],                  // so weit lässt sich die Karte verschieben und herauszoomen
+    maske: '#D3D6D9',
+    nachbarn: 0.5,      // Deckkraft des grauen Schleiers außerhalb Deutschlands (1 = ganz abgedeckt)
+    strassenRand: 1.5,  // ab Zoom 9 Kacheln nur bis so viele Grad um Deutschland (keine fremden Straßenkarten)
     hinweis: 'WaterMap ist derzeit auf Deutschland sowie die deutschen Nord- und Ostseegebiete begrenzt.',
   },
   GERMANY_VIEW: { center: [51.1, 10.4], zoom: 6 },

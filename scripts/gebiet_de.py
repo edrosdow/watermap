@@ -46,8 +46,9 @@ del maritim
 
 land = json.load(open(ROH / 'countries-land-10m.geo.json'))
 fremd = []
+de_land = None
 for f in land['features']:
-    if f['properties'].get('A3') == 'DEU': continue
+    if f['properties'].get('A3') == 'DEU': de_land = make_valid(shape(f['geometry'])); continue
     g = shape(f['geometry'])
     if not g.intersects(REGION): continue
     g = im_ausschnitt(g)
@@ -90,12 +91,22 @@ for z in range(5, 11):
     kacheln[z] = ' '.join(f'{x}/{y}' for x in range(x0, x1 + 1) for y in range(y0, y1 + 1) if pe.intersects(kachel_box(x, y, z)))
 
 dw, ds, dE, dn = de.bounds
+# Anzeige: hervorgehoben wird nur deutsches Land (mit Inseln, Bodensee, Saum) – Meer und Nachbarländer liegen gleichmäßig unter dem Schleier
+anzeige_geo = unary_union([de_land, bodensee]).buffer(SAUM, join_style=2, resolution=2).simplify(GENAU, preserve_topology=True)
+anzeige = []
+for p in teile(anzeige_geo):
+    if not isinstance(p, Polygon) or p.area < 2e-5: continue
+    anzeige.append([[r4(y), r4(x)] for x, y in p.exterior.coords])
+    for i in p.interiors:
+        if Polygon(i).area > KLEIN: anzeige.append([[r4(y), r4(x)] for x, y in i.coords])
+
 ZIEL.write_text(json.dumps({
     'quelle': 'Grenzen © OpenStreetMap-Mitwirkende (ODbL) über geo-maps v0.6.0 (countries-maritime-10m, countries-land-10m); '
               'Bodensee: Natural Earth (gemeinfrei); erzeugt mit scripts/gebiet_de.py',
     'deutschland': [[r4(ds), r4(dw)], [r4(dn), r4(dE)]],
-    'ringe': ringe,
+    'ringe': ringe,          # erlaubtes Gebiet (Suche, Standort, neue Slipanlage)
+    'anzeige': anzeige,      # hervorgehobene Fläche auf der Karte (deutsches Land)
     'kacheln': kacheln,
 }, separators=(',', ':'), ensure_ascii=False))
-print(f'{ZIEL}: {len(ringe)} Ringe, {sum(map(len, ringe))} Punkte, {ZIEL.stat().st_size // 1024} KB; Deutschland {de.bounds}')
+print(f'{ZIEL}: {len(anzeige)} Anzeige-Ringe ({sum(map(len, anzeige))} Punkte), {len(ringe)} Ringe, {sum(map(len, ringe))} Punkte, {ZIEL.stat().st_size // 1024} KB; Deutschland {de.bounds}')
 for z, v in kacheln.items(): print(f'  z{z}: {len(v.split())} Kacheln')

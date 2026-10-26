@@ -17,7 +17,8 @@ export function gebietLaden(fetchFn = fetch) {
       return { s, n, w, e };
     });
     const kacheln = new Map(Object.entries(j.kacheln || {}).map(([z, v]) => [Number(z), new Set(String(v).split(' ').filter(Boolean))]));
-    daten = { bounds: j.deutschland || CONFIG.GEBIET.bounds, ringe, boxen, kacheln };
+    const anzeige = (j.anzeige || []).filter(r => Array.isArray(r) && r.length > 3);
+    daten = { bounds: j.deutschland || CONFIG.GEBIET.bounds, ringe, boxen, kacheln, anzeige: anzeige.length ? anzeige : ringe };
     return daten;
   }).catch((e) => { laden = null; throw e; });
   return laden;
@@ -55,10 +56,10 @@ const kachelLat = (y, z) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / 2 ** z)))
 
 /** Muss die Kartenkachel geladen werden? Ab Zoom 11 zählt die Vorfahrenkachel auf Zoom 10. Vor dem Laden: Rechteck. */
 export function kachelNoetig(x, y, z) {
-  // Nachbarländer nur abgeblendet: Kacheln im weiten Umkreis laden (bis z 7 alle – wenige, für die Übersicht auf breiten Bildschirmen)
+  // Europa leicht grau sichtbar: Übersichtskacheln (bis z 8, ohne Ortsstraßen) überall, ab z 9 nur bis CONFIG.GEBIET.strassenRand Grad um Deutschland
   if ((CONFIG.GEBIET.nachbarn ?? 1) < 1) {
-    if (z <= 7) return true;
-    const [[s, w], [n, e]] = CONFIG.GEBIET.bounds, k = 2 ** z, r = 1.5;
+    if (z <= 8) return true;
+    const [[s, w], [n, e]] = CONFIG.GEBIET.bounds, k = 2 ** z, r = CONFIG.GEBIET.strassenRand ?? 1.5;
     const lw = x / k * 360 - 180, le = (x + 1) / k * 360 - 180;
     return le >= w - r * 1.6 && lw <= e + r * 1.6 && kachelLat(y + 1, z) <= n + r && kachelLat(y, z) >= s - r;
   }

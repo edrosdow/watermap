@@ -1,9 +1,12 @@
-# Kartengebiet Deutschland (ab 7.29.0)
+# Kartengebiet Deutschland (ab 7.29.0, Europa-Übersicht ab 7.30.0)
 
-WaterMap zeigt nur Deutschland mit Nord- und Ostsee. Man kann nicht über die Weltkarte navigieren, nicht in fremde
-Straßenkarten hineinzoomen und nicht per Suche oder Standort ins Ausland springen.
+WaterMap hebt Deutschland hervor; Europa ist zur Orientierung leicht grau zu sehen. Man kann bis zur Europa-Übersicht
+herauszoomen und die Karte bis zum Rand Europas verschieben, aber nicht über die Weltkarte navigieren, nicht in fremde
+Straßenkarten hineinzoomen (dort gibt es ab Zoom 9 keine Kacheln) und nicht per Suche oder Standort ins Ausland springen.
+Hervorgehoben (ohne Schleier) ist nur deutsches Land samt Inseln und Bodensee – Nord- und Ostsee liegen wie die
+Nachbarländer unter dem leichten Schleier, damit sie nicht als Fläche „herausleuchten“.
 
-## Was erlaubt ist
+## Was für Suche, Standort und neue Slipanlagen erlaubt ist
 - Deutschland mit Küstenmeer (12 sm) – Grenze aus OpenStreetMap, mit Saum von etwa 0,5 km (Grenzflüsse wie Rhein und Oder ganz sichtbar)
 - der ganze Bodensee
 - die offene Nord- und Ostsee im Umkreis von etwa 65–110 km um das deutsche Gebiet (z. B. Helgoländer Bucht, Kieler und Mecklenburger Bucht, Pommersche Bucht)
@@ -17,10 +20,10 @@ Fremde Inselchen unter etwa 2 km² und fremde Binnenseen am Rand werden aus Date
 | Baustein | Datei | Wirkung |
 |---|---|---|
 | Grenzdaten | `public/data/gebiet-de.json` (≈ 220 KB, gzip ≈ 80 KB) | Ringe des erlaubten Gebiets und die Liste der nötigen Kartenkacheln (z 5–10). Erzeugt mit `scripts/gebiet_de.py`. |
-| Rahmen | `CONFIG.GEBIET` in `js/config.js`, `createMap` in `js/map.js` | Leaflet `maxBounds` (Deutschland-Rechteck + 0,35° bzw. 0,56° Rand) mit `maxBoundsViscosity` 0,9: Verschieben (Maus und Finger) stoppt sanft am Rand. `maxBounds` begrenzt auch `setView`, `flyTo`, `fitBounds` und damit `reveal()`, Cluster-Klicks, Deep-Links, Favoriten, Pegel und „In der Nähe“. |
-| Kleinster Zoom | `map.js` (`minZoomSetzen`) | `minZoom` = Zoom, bei dem ganz Deutschland gerade ins Fenster passt (je Fenstergröße neu, Viertelstufen `zoomSnap 0.25`). Weiter heraus geht es weder per Knopf noch per Zwei-Finger-Geste. |
-| Maske | `map.js` | Ein Leaflet-Polygon „Welt minus erlaubtes Gebiet“ auf eigener Ebene (`wm-maske`, über den Kacheln, unter den Markern), gezeichnet mit dem Canvas-Renderer – flüssig auch auf dem Handy. Farbe `#DCE5EA` mit Deckkraft `CONFIG.GEBIET.nachbarn`, deutsche Grenze als dunkle Linie. |
-| Kacheln | `map.js` (`Kacheln`), `js/gebiet.js` (`kachelNoetig`) | Mit abgeblendeten Nachbarn: bis z 7 alle Kacheln (wenige, Übersicht), ab z 8 nur bis ≈ 1,5° um Deutschland. Mit `nachbarn: 1`: nur Kacheln im Gebiet (Liste in `gebiet-de.json`). |
+| Rahmen | `CONFIG.GEBIET` in `js/config.js`, `createMap` in `js/map.js` | Leaflet `maxBounds` = Europa (`CONFIG.GEBIET.europa`) mit `maxBoundsViscosity` 0,9: Verschieben (Maus und Finger) stoppt sanft am Rand. `maxBounds` begrenzt auch `setView`, `flyTo`, `fitBounds` und damit `reveal()`, Cluster-Klicks, Deep-Links, Favoriten, Pegel und „In der Nähe“. |
+| Kleinster Zoom | `map.js` (`minZoomSetzen`) | `minZoom` = Zoom, bei dem ganz Europa ins Fenster passt, auf sehr breiten Bildschirmen höchstens ≈ 120 Längengrade (je Fenstergröße neu, Viertelstufen `zoomSnap 0.25`). Weiter heraus geht es weder per Knopf noch per Zwei-Finger-Geste. |
+| Maske | `map.js` | Ein Leaflet-Polygon „Welt minus erlaubtes Gebiet“ auf eigener Ebene (`wm-maske`, über den Kacheln, unter den Markern), gezeichnet mit dem Canvas-Renderer – flüssig auch auf dem Handy. Grauer Schleier `#D3D6D9` mit Deckkraft `CONFIG.GEBIET.nachbarn` (0,5) über allem außer deutschem Land (`anzeige` in `gebiet-de.json`), deutsche Grenze und Küste als dunkle Linie. |
+| Kacheln | `map.js` (`Kacheln`), `js/gebiet.js` (`kachelNoetig`) | Bis z 8 (Übersicht ohne Ortsstraßen) überall, ab z 9 nur bis ≈ 1,5° um Deutschland (`CONFIG.GEBIET.strassenRand`). Mit `nachbarn: 1`: nur Kacheln im Gebiet (Liste in `gebiet-de.json`). |
 | Punktprüfung | `js/gebiet.js` (`imGebiet`) | Gerade/ungerade-Regel über alle Ringe (Inseln und Aussparungen stimmen), mit Rechteck-Vorprüfung. |
 | Ortssuche | `js/search.js`, `runGeocode`/`goToGeo` in `js/main.js` | Nominatim nur im Rechteck (`viewbox` + `bounded=1`, findet auch Seegebiete ohne Länderkennung). Jeder Treffer muss zusätzlich `imGebiet` erfüllen; große Treffer-Rechtecke werden aufs Gebiet beschnitten. Sonst Hinweis: „WaterMap ist derzeit auf Deutschland sowie die deutschen Nord- und Ostseegebiete begrenzt.“ |
 | Eigener Standort | `locate` in `js/main.js` | Standortfreigabe funktioniert weiter; liegt der Standort außerhalb, springt die Karte nicht dorthin, es kommt ein Hinweis. |
