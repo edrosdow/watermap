@@ -5,6 +5,7 @@ import { extraMarkerHtml, extraTitle, KINDS, GROUPS } from './extras.js';
 import { pinSvg } from './icons.js';
 import { favorites } from './favorites.js';
 import { displayName, TYPES } from './model.js';
+import { gebietLaden, kachelNoetig, imGebiet } from './gebiet.js';
 
 // ------------------------------------------------------------------ Bibliotheken laden
 function loadCss(urls) {
@@ -49,12 +50,39 @@ export async function loadMapLibraries() {
 }
 
 // ------------------------------------------------------------------ Karte
-export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster }) {
+export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, onAusserhalb, useCluster }) {
   const L = window.L;
-  const map = L.map(el, { zoomControl: false, worldCopyJump: false, tap: true }).setView(CONFIG.FALLBACK_VIEW.center, CONFIG.FALLBACK_VIEW.zoom);
+  // Kartengebiet (CONFIG.GEBIET): Verschieben nur im Rechteck um Deutschland, Herauszoomen nur bis ganz Deutschland.
+  // maxBounds begrenzt auch setView/flyTo/fitBounds (Leaflet verschiebt die Mitte ins Rechteck).
+  const G = CONFIG.GEBIET, [[gs, gw], [gn, ge]] = G.bounds;
+  const rahmen = L.latLngBounds([[gs - G.rand, gw - G.rand * 1.6], [gn + G.rand, ge + G.rand * 1.6]]);
+  const map = L.map(el, { zoomControl: false, worldCopyJump: false, tap: true, maxBounds: rahmen, maxBoundsViscosity: 0.9, minZoom: 5, bounceAtZoomLimits: false,
+    zoomSnap: 0.25, zoomDelta: 1 });   // Viertelstufen: ganz Deutschland füllt das Fenster möglichst gut
+  // gleich mit ganz Deutschland beginnen (keine Kacheln eines Zwischenausschnitts)
+  if (map.getSize().x > 50) map.fitBounds(L.latLngBounds(G.bounds), { padding: [6, 6], animate: false });
+  else map.setView(CONFIG.FALLBACK_VIEW.center, CONFIG.FALLBACK_VIEW.zoom);
   L.control.zoom({ position: 'topright', zoomInTitle: 'Vergrößern', zoomOutTitle: 'Verkleinern' }).addTo(map);
-  L.tileLayer(CONFIG.TILE_URL, { maxZoom: CONFIG.TILE_MAX_ZOOM, attribution: CONFIG.TILE_ATTRIBUTION }).addTo(map);
+  // Kacheln nur für das Gebiet laden (außerhalb liegt ohnehin die Maske)
+  const Kacheln = L.TileLayer.extend({
+    _isValidTile(c) { return L.TileLayer.prototype._isValidTile.call(this, c) && kachelNoetig(c.x, c.y, c.z); },
+  });
+  new Kacheln(CONFIG.TILE_URL, { maxZoom: CONFIG.TILE_MAX_ZOOM, attribution: CONFIG.TILE_ATTRIBUTION }).addTo(map);
   map.attributionControl.setPrefix(false);
+  // Kleinster Zoom: ganz Deutschland passt gerade ins Kartenfenster (je nach Fenstergröße neu)
+  const minZoomSetzen = () => {
+    const s = map.getSize();
+    if (s.x < 50 || s.y < 50) return;
+    map.setMinZoom(Math.max(4, Math.min(8, map.getBoundsZoom(L.latLngBounds(G.bounds), false))));   // getBoundsZoom rundet auf zoomSnap ab
+  };
+  map.on('resize', minZoomSetzen); minZoomSetzen();
+  // Maske: außerhalb des Gebiets eine neutrale Fläche (Canvas, eigene Ebene über den Kacheln, unter Markern)
+  gebietLaden().then((g) => {
+    const pane = map.createPane('wm-maske');
+    pane.style.zIndex = 250; pane.style.pointerEvents = 'none';
+    const welt = [[25, -45], [25, 65], [75, 65], [75, -45]];
+    L.polygon([welt, ...g.ringe], { pane: 'wm-maske', renderer: L.canvas({ pane: 'wm-maske', padding: 0.5 }), interactive: false,
+      color: '#0B3045', opacity: 0.35, weight: 1.2, fillColor: G.maske, fillOpacity: 1, smoothFactor: 1 }).addTo(map);
+  }, () => { /* ohne Grenze bleibt das Rechteck */ });
 
   let meld = new Map();   // Standort-ID → { n, typ } aktiver Lagemeldungen („Heute vor Ort“)
   const layer = useCluster
@@ -220,6 +248,8 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
       map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 12, ...opts });
     },
     setView(view) { map.setView(view.center, view.zoom); },
+    /** Ganz Deutschland mit Nord- und Ostseeküste zeigen (Startansicht). */
+    zeigeGebiet() { map.fitBounds(L.latLngBounds(CONFIG.GEBIET.bounds), { padding: [6, 6] }); },
     getBounds() { const b = map.getBounds(); return { south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast() }; },
     getCenter() { const c = map.getCenter(); return { lat: c.lat, lon: c.lng }; },
     getZoom() { return map.getZoom(); },
@@ -242,7 +272,10 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
         };
         if (initial) setMark([initial.lat, initial.lon]);
         let current = initial ? { lat: initial.lat, lon: initial.lon } : null;
-        pickHandler = (ll) => { current = { lat: ll.lat, lon: ll.lng }; setMark(ll); api.onPick && api.onPick(current); };
+        pickHandler = (ll) => {
+          if (!imGebiet(ll.lat, ll.lng)) { onAusserhalb && onAusserhalb(); return; }   // nur im Kartengebiet wählbar
+          current = { lat: ll.lat, lon: ll.lng }; setMark(ll); api.onPick && api.onPick(current);
+        };
         const api = this.__pickApi = {
           confirm: () => { cleanup(); resolve(current); },
           cancel: () => { cleanup(); resolve(null); },

@@ -23,6 +23,7 @@ def route_libs(ctx):
     def data(route):
         rel = route.request.url.split('/data/', 1)[1].split('?')[0]
         f = FIXTURE / rel
+        if not f.is_file(): f = pathlib.Path(__file__).resolve().parent.parent / 'public/data' / rel   # z. B. gebiet-de.json (Kartengebiet)
         return route.fulfill(status=200, content_type='application/json', body=f.read_bytes()) if f.is_file() else route.fulfill(status=404, body='')
     ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))   # „Heute vor Ort“ (eigener Test: ui_meldungen.py)
     ctx.route('**/data/**', data)

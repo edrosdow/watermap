@@ -64,6 +64,13 @@
       return this.setView(c, z);
     }
     addLayer(m) { const g = new Group(); g.map = this; this._groups.add(g); g._add(m); }
+    setMinZoom(z) { this.minZoom = z; return this; }
+    getBoundsZoom(b) {
+      const pts = b.pts, s = this.getSize(); let z = 18;
+      while (z > 0) { const a = proj(Math.max(...pts.map(p => p.lat)), Math.min(...pts.map(p => p.lng)), z), d = proj(Math.min(...pts.map(p => p.lat)), Math.max(...pts.map(p => p.lng)), z); if (Math.abs(d.x - a.x) <= s.x && Math.abs(d.y - a.y) <= s.y) break; z--; }
+      return z;
+    }
+    createPane() { return document.createElement('div'); }
     invalidateSize() { this._draw(); }
     _draw() {
       if (!this.layerEl) return;
@@ -88,6 +95,12 @@
     map: (el) => new MapObj(el),
     control: { zoom: () => ({ addTo() { } }) },
     tileLayer: () => ({ addTo() { } }),
+    TileLayer: Object.assign(function () { }, {
+      prototype: { _isValidTile: () => true },
+      extend(props) { const K = function () { }; K.prototype = Object.assign({ addTo() { return this; } }, props); return K; },
+    }),
+    polygon: () => ({ addTo() { return this; } }),
+    canvas: () => ({}),
     layerGroup: (items) => { const g = new Group(); (items || []).forEach(() => { }); return g; },
     markerClusterGroup: () => new Group(),
     divIcon: (o) => o,

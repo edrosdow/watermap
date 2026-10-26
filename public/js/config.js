@@ -4,7 +4,7 @@ const host = typeof location !== 'undefined' ? location.hostname : '';
 export const ENTWICKLUNG = /^(localhost|127\.0\.0\.1)$|^deploy-preview-/.test(host);
 
 export const CONFIG = {
-  VERSION: '7.28.0',
+  VERSION: '7.29.0',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -20,8 +20,17 @@ export const CONFIG = {
   // Ortssuche (Geocoder). Wird nur auf Nutzeraktion hin abgefragt, nie bei Kartenbewegung.
   GEOCODER_URL: 'https://nominatim.openstreetmap.org/search',
 
-  // Startansicht: 'data' = auf vorhandene Standorte zoomen, 'germany' = ganz Deutschland.
-  START_MODE: 'data',
+  // Startansicht: 'germany' = ganz Deutschland mit Nord- und Ostseeküste, 'data' = auf vorhandene Standorte zoomen.
+  START_MODE: 'germany',
+  // Kartengebiet: Deutschland mit Küstenmeer (12 sm) in Nord- und Ostsee. Außerhalb: keine Kacheln, neutrale Fläche,
+  // Verschieben und Herauszoomen bleiben im Rechteck `bounds` (+ `rand` Grad Spielraum). Grenze: data/gebiet-de.json.
+  GEBIET: {
+    url: './data/gebiet-de.json',
+    bounds: [[47.2613, 5.8586], [55.1047, 15.0471]],
+    rand: 0.35,
+    maske: '#DCE5EA',
+    hinweis: 'WaterMap ist derzeit auf Deutschland sowie die deutschen Nord- und Ostseegebiete begrenzt.',
+  },
   GERMANY_VIEW: { center: [51.1, 10.4], zoom: 6 },
   FALLBACK_VIEW: { center: [51.45, 7.55], zoom: 8 },
 

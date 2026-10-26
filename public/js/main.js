@@ -23,6 +23,7 @@ import { pegelDetail, etikett as pegelEtikett, fmt as pegelFmt, trendText, trend
 import { mehrSeite, merkliste } from './mehr.js';
 import { meldungenSeite } from './meldungen-uebersicht.js';
 import { unpassendMelden } from './meldung-unpassend.js';
+import { imGebiet, aufGebietBeschneiden, gebietLaden } from './gebiet.js';
 import { pegelDashboard, pegelSeite, slipsAmPegel } from './pegel-dashboard.js';
 import { weatherSection } from './wetter.js';
 import { GROUPS, loadExtras, renderExtraDetail, nearbySection, glyph } from './extras.js';
@@ -76,8 +77,9 @@ async function init() {
   nah = naehe(naeheCtx());
   nah.binden({ kopfHandy: $('#naehe-kopf-m'), kopfDesktop: $('#naehe-kopf-d'), head: el.listHead, ul: el.list, aktiv: () => state.view === 'naehe' && !state.loadFailed && state.places.length > 0 });
 
-  const [libs, data] = await Promise.all([
+  const [libs, , data] = await Promise.all([
     loadMapLibraries().catch(() => ({ leaflet: false })),
+    gebietLaden().catch(() => null),   // Kartengebiet (Grenze für Maske, Kacheln, Suche)
     loadAll().then(d => ({ ok: true, d }), err => ({ ok: false, err })),
   ]);
 
@@ -87,6 +89,7 @@ async function init() {
       onMoveEnd: debounce(() => { if (state.tab === 'list') renderList(); updateInview(); }, 180),
       onMapClick: () => { if (state.selectedId || state.gaugeId || state.extraId || state.peekId || state.gaugePeekId) closeDetail(); },
       onMarkerClick: (id) => selectPlace(id),
+      onAusserhalb: () => toast(CONFIG.GEBIET.hinweis),
     });
     state.mapOk = true;
   } else {
@@ -167,7 +170,8 @@ function ingest({ places, meta, issues, invalid }) {
 
 function startView() {
   const m = state.map;
-  if (CONFIG.START_MODE === 'germany' || !state.places.length) { m.setView(CONFIG.START_MODE === 'germany' ? CONFIG.GERMANY_VIEW : CONFIG.FALLBACK_VIEW); return; }
+  if (CONFIG.START_MODE === 'germany') { m.zeigeGebiet(); return; }
+  if (!state.places.length) { m.setView(CONFIG.FALLBACK_VIEW); return; }
   m.fitBounds(state.places.map(p => [p.lat, p.lon]));
 }
 
@@ -1069,11 +1073,14 @@ async function locate({ fly = true } = {}) {
     const pos = await requestUserPos();
     state.user = pos;
     geoFreigabe.merken(true);
-    if (state.map) { state.map.showUser(pos.lat, pos.lon, pos.accuracy); if (fly) state.map.flyTo(pos.lat, pos.lon, 11); }
+    // Außerhalb des Kartengebiets (z. B. im Urlaub): nicht dorthin springen, nur Hinweis
+    const drin = imGebiet(pos.lat, pos.lon);
+    if (state.map) { state.map.showUser(pos.lat, pos.lon, pos.accuracy); if (fly && drin) state.map.flyTo(pos.lat, pos.lon, 11); }
+    if (!drin) toast(`Dein Standort liegt außerhalb des Kartengebiets. ${CONFIG.GEBIET.hinweis}`);
     renderList();
     if (state.peekId) showPeek(state.byId.get(state.peekId));
     else if (state.selectedId) showDetail(state.byId.get(state.selectedId));
-    announce('Karte auf deinen Standort ausgerichtet');
+    if (drin) announce('Karte auf deinen Standort ausgerichtet');
     return pos;
   } catch (e) { if (/verweigert/.test(e.message)) geoFreigabe.merken(false); toast(e.message); throw e; }
   finally { btn.classList.remove('is-busy'); }
@@ -1186,7 +1193,10 @@ function endSearch() { el.suggest.hidden = true; el.q.setAttribute('aria-expande
 
 function goToGeo(g) {
   if (!state.map) { toast('Die Karte ist nicht verfügbar.'); return; }
-  if (g.bbox && g.bbox.length === 4 && g.bbox.every(Number.isFinite)) state.map.fitBounds([[g.bbox[0], g.bbox[2]], [g.bbox[1], g.bbox[3]]], { maxZoom: 13 });
+  if (!imGebiet(g.lat, g.lon)) { toast(CONFIG.GEBIET.hinweis); return; }
+  // Große Treffer (z. B. Bundesländer, Flüsse) auf das Kartengebiet beschneiden
+  const box = g.bbox && g.bbox.length === 4 && g.bbox.every(Number.isFinite) ? aufGebietBeschneiden([[g.bbox[0], g.bbox[2]], [g.bbox[1], g.bbox[3]]]) : null;
+  if (box) state.map.fitBounds(box, { maxZoom: 13 });
   else state.map.flyTo(g.lat, g.lon, 12);
   closeDetail();
 }
@@ -1196,7 +1206,11 @@ async function runGeocode(q, { auto = false } = {}) {
   geoCtrl = new AbortController();
   renderSuggest(searchLocal(state.index, q), { message: 'Suche läuft …' });
   try {
-    const results = await geocode(q, { signal: geoCtrl.signal });
+    const alle = await geocode(q, { signal: geoCtrl.signal });
+    // nicht nur auf die Länderkennung verlassen: Position muss im Kartengebiet liegen
+    await gebietLaden().catch(() => {});
+    const results = alle.filter(r => imGebiet(r.lat, r.lon)).slice(0, 5);
+    if (alle.length && !results.length) { renderSuggest(searchLocal(state.index, q), { message: CONFIG.GEBIET.hinweis }); return; }
     if (!results.length) { renderSuggest(searchLocal(state.index, q), { message: 'Nichts gefunden. Prüfe die Schreibweise oder suche einen größeren Ort.' }); return; }
     if (auto) { endSearch(); goToGeo(results[0]); return; }
     renderSuggest(searchLocal(state.index, q), { results });
