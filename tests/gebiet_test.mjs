@@ -38,8 +38,10 @@ const kachel = (la, lo, z) => { const n = 2 ** z; const s = Math.sin(la * Math.P
 for (const z of [5, 7, 10, 13, 17]) {
   assert.equal(kachelNoetig(...kachel(52.52, 13.405, z)), true, `Berlin z${z}`);
   assert.equal(kachelNoetig(...kachel(54.18, 7.885, z)), true, `Helgoland z${z}`);
-  if (z >= 7) assert.equal(kachelNoetig(...kachel(48.857, 2.352, z)), false, `Paris z${z}`);
-  if (z >= 9) assert.equal(kachelNoetig(...kachel(52.37, 4.9, z)), false, `Amsterdam z${z}`);
+  // Nachbarländer abgeblendet sichtbar (CONFIG.GEBIET.nachbarn < 1): bis z 7 alles, darüber nur bis ≈ 1,5° um Deutschland
+  if (z >= 8) assert.equal(kachelNoetig(...kachel(48.857, 2.352, z)), false, `Paris z${z}`);
+  if (z >= 8) assert.equal(kachelNoetig(...kachel(51.507, -0.128, z)), false, `London z${z}`);
+  if (z >= 8) assert.equal(kachelNoetig(...kachel(53.2, 6.6, z)), true, `Groningen (Nachbar, abgeblendet) z${z}`);
 }
 assert.equal(kachelNoetig(...kachel(55.75, 37.62, 10)), false, 'Moskau');
 console.log('gebiet: alle Tests OK');

@@ -2,14 +2,12 @@
 Prüft: Startansicht, Herauszoomen, Ziehen nach Osten/Westen (Maus und Touch), Helgoland/Ostsee, Kachelabrufe nur im Gebiet,
 Maske, Ortssuche außerhalb (Moskau) und innerhalb (Hamburg), Standort im Ausland, Slipanlage öffnen.
 Start: python3 tests/ui_gebiet.py [screenshots-ordner]"""
-import importlib.util, io, json, pathlib, re, sys, tempfile
+import importlib.util, io, json, math, pathlib, re, sys, tempfile
 from playwright.sync_api import sync_playwright
 
 HERE = pathlib.Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location('ui_full', HERE / 'ui_full.py'); uf = importlib.util.module_from_spec(spec); spec.loader.exec_module(uf)
 SHOTS = uf.SHOTS
-G = json.loads((HERE.parent / 'public/data/gebiet-de.json').read_text())
-ERLAUBT = {int(z): set(v.split()) for z, v in G['kacheln'].items()}
 problems = []
 def check(cond, msg):
     print(('OK   ' if cond else 'FAIL ') + msg, flush=True)
@@ -75,13 +73,15 @@ def ziehen(pg, dx, dy, mobile, mal=6):
     ruhe(pg, 900)
 
 def kacheln_ausserhalb(pg):
-    """Abgerufene Kacheln, die laut Gebietsdatei nicht nötig sind (z 5–10 direkt, darüber über die z-10-Vorfahren)."""
+    """Abgerufene Kacheln ab z 8, die weiter als ≈ 1,5° (bzw. 2,4° in Ost-West) von Deutschland entfernt liegen.
+    Nachbarländer werden abgeblendet gezeigt (CONFIG.GEBIET.nachbarn), bis z 7 sind alle Kacheln erlaubt."""
+    (s, w), (n, e) = [[47.2613, 5.8586], [55.1047, 15.0471]]
     falsch = []
     for z, x, y in pg.tiles:
-        if z < 5: falsch.append((z, x, y)); continue
-        if z <= 10: ok = f'{x}/{y}' in ERLAUBT[z]
-        else: f = 2 ** (z - 10); ok = f'{x // f}/{y // f}' in ERLAUBT[10]
-        if not ok: falsch.append((z, x, y))
+        if z <= 7: continue
+        k = 2 ** z; lw, le = x / k * 360 - 180, (x + 1) / k * 360 - 180
+        lat = lambda yy: math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * yy / k))))
+        if le < w - 2.41 or lw > e + 2.41 or lat(y + 1) > n + 1.51 or lat(y) < s - 1.51: falsch.append((z, x, y))
     return falsch
 
 def run(b, w, hh):
@@ -93,7 +93,7 @@ def run(b, w, hh):
     s = zustand(pg)
     check(s['s'] <= 47.4 and s['n'] >= 55.0 and s['w'] <= 6.0 and s['e'] >= 14.9, f'{tag}: Start zeigt ganz Deutschland mit Küsten ({s})')
     check(s['e'] - s['w'] < 45 and s['z'] >= 5, f'{tag}: keine Welt-/Europakarte (Breite {s["e"] - s["w"]:.1f}°, Zoom {s["z"]})')
-    check(pg.locator('.leaflet-wm-maske-pane canvas').count() == 1, f'{tag}: Maske außerhalb Deutschlands (Canvas-Ebene)')
+    check(pg.locator('.leaflet-wm-maske-pane canvas').count() == 1, f'{tag}: Abblendung außerhalb Deutschlands (Canvas-Ebene)')
     check('OpenStreetMap' in pg.inner_text('.leaflet-control-attribution'), f'{tag}: OSM-Namensnennung sichtbar')
     pg.screenshot(path=str(SHOTS / f'gebiet_{w}_1start.png'))
     # Test 2: Herauszoomen
@@ -128,7 +128,7 @@ def run(b, w, hh):
               f'{tag}: {name} erreichbar und im Gebiet')
     pg.screenshot(path=str(SHOTS / f'gebiet_{w}_3helgoland.png')) if False else None
     falsch = kacheln_ausserhalb(pg)
-    check(not falsch and len(pg.tiles) > 0, f'{tag}: nur Kacheln im Gebiet geladen ({len(pg.tiles)} geladen, außerhalb: {falsch[:5]})')
+    check(not falsch and len(pg.tiles) > 0, f'{tag}: keine Kacheln fern von Deutschland geladen ({len(pg.tiles)} geladen, außerhalb: {falsch[:5]})')
     # Test 7: Suche außerhalb (Moskau, London) – kein Sprung, Hinweis
     pg.evaluate(f"{MAP}.setView([51.0, 10.0], 7, {{animate: false}})"); ruhe(pg, 400)
     vorher = zustand(pg)

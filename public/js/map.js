@@ -81,7 +81,7 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, onAusserha
     pane.style.zIndex = 250; pane.style.pointerEvents = 'none';
     const welt = [[25, -45], [25, 65], [75, 65], [75, -45]];
     L.polygon([welt, ...g.ringe], { pane: 'wm-maske', renderer: L.canvas({ pane: 'wm-maske', padding: 0.5 }), interactive: false,
-      color: '#0B3045', opacity: 0.35, weight: 1.2, fillColor: G.maske, fillOpacity: 1, smoothFactor: 1 }).addTo(map);
+      color: '#0B3045', opacity: 0.5, weight: 1.6, fillColor: G.maske, fillOpacity: G.nachbarn ?? 1, smoothFactor: 1 }).addTo(map);
   }, () => { /* ohne Grenze bleibt das Rechteck */ });
 
   let meld = new Map();   // Standort-ID → { n, typ } aktiver Lagemeldungen („Heute vor Ort“)

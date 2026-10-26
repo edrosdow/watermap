@@ -55,6 +55,13 @@ const kachelLat = (y, z) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / 2 ** z)))
 
 /** Muss die Kartenkachel geladen werden? Ab Zoom 11 zählt die Vorfahrenkachel auf Zoom 10. Vor dem Laden: Rechteck. */
 export function kachelNoetig(x, y, z) {
+  // Nachbarländer nur abgeblendet: Kacheln im weiten Umkreis laden (bis z 7 alle – wenige, für die Übersicht auf breiten Bildschirmen)
+  if ((CONFIG.GEBIET.nachbarn ?? 1) < 1) {
+    if (z <= 7) return true;
+    const [[s, w], [n, e]] = CONFIG.GEBIET.bounds, k = 2 ** z, r = 1.5;
+    const lw = x / k * 360 - 180, le = (x + 1) / k * 360 - 180;
+    return le >= w - r * 1.6 && lw <= e + r * 1.6 && kachelLat(y + 1, z) <= n + r && kachelLat(y, z) >= s - r;
+  }
   if (!daten || !daten.kacheln.size) {
     const [[s, w], [n, e]] = CONFIG.GEBIET.bounds, k = 2 ** z;
     const lw = x / k * 360 - 180, le = (x + 1) / k * 360 - 180;

@@ -4,7 +4,7 @@ const host = typeof location !== 'undefined' ? location.hostname : '';
 export const ENTWICKLUNG = /^(localhost|127\.0\.0\.1)$|^deploy-preview-/.test(host);
 
 export const CONFIG = {
-  VERSION: '7.29.0',
+  VERSION: '7.29.1',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -29,6 +29,7 @@ export const CONFIG = {
     bounds: [[47.2613, 5.8586], [55.1047, 15.0471]],
     rand: 0.35,
     maske: '#DCE5EA',
+    nachbarn: 0.55,     // Deckkraft der Abblendung über den Nachbarländern (1 = ganz abgedeckt, keine fremden Kacheln)
     hinweis: 'WaterMap ist derzeit auf Deutschland sowie die deutschen Nord- und Ostseegebiete begrenzt.',
   },
   GERMANY_VIEW: { center: [51.1, 10.4], zoom: 6 },
