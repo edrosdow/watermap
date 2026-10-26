@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 26.10.2026 · App-Version **7.27.1**
+Stand: 26.10.2026 · App-Version **7.28.0**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.27.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.28.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -53,6 +53,7 @@ Die App ist eine installierbare PWA, auf Deutsch, und nutzt nur kostenlose Diens
   | `map.js` | Leaflet: Marker, Cluster, Pegel, Melde-Abzeichen |
   | `nav.js` | Navigation oben/unten (Karte, Pegel, Melden, Meldungen, Mehr), Popover (Bottom Sheet / Dropdown) |
   | `meldungen-uebersicht.js` | Bereich „Aktuelle Meldungen“: Filter, Kartenausschnitt, Sortierung, Bewerten, offline letzter Stand |
+  | `meldung-unpassend.js` | Fenster „Unpassend melden“ für Lagemeldungen (Hinweis über Netlify Forms, lokal ausblenden) |
   | `mehr.js` | Bereich „Mehr“ und Merkliste (liest nur Favoriten und „Meine Pegel“, keine eigene Datenhaltung) |
   | `detail.js` | Detailansicht der Standorte |
   | `data.js`, `model.js` | Daten laden und zusammenführen |
@@ -224,6 +225,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
 | 7.24.0 | Gezeiten aus PEGELONLINE: Tidepegel-Detailseite (Tidekurve, letztes HW/NW, Tidehub), Tide in „Meine Pegel“ und Flussseite; Prüfliste `pruefung.html` |
 | 7.24.1 | Nach Prüfliste: Ems-Reihenfolge (Unterems ab Papenburg neu ab km 0 → `flussKm` +240), Namen (Groß-/Straß-, Kürzel UW/AP/BP … groß, Bhv/Whv/LT ausgeschrieben, „auf/zur“ klein, Meißen, Roßlau, Storkower Gewässer), Tide-Kennwerte auch als Text/„cm …“, Prüfliste zeigt Datenstand, gelieferte Tide-Kennwerte und Sonderzeichen in Namen; Offline-Stand nur aus derselben Version |
+| 7.28.0 | „Heute vor Ort“: Fußzeile „n Meldungen im Revier · Alle Meldungen ›“ zur Übersicht; „Unpassend melden“ bei Meldungen mit Notiz (in „Heute vor Ort“ und in „Aktuelle Meldungen“): Fenster mit Grund, Hinweis über das Formular „fehler-melden“ (Art `meldung`, mit Meldung-ID), Meldung auf dem Gerät sofort ausgeblendet (`watermap.meldungen.ausgeblendet`); Verwaltung `/admin/fotos.html` → Hinweise → „Meldung entfernen“ löscht sie für alle (`api.entfernen`) |
 | 7.27.1 | „Flüsse im Überblick“: feste Kacheln Rhein, Elbe, Weser, Donau, Main und Küste; „Alle Gewässer anzeigen“ klappt darunter eine kompakte Liste auf (Zustand, Pegelzahl, Suche, Kanäle ohne Bewertung extra) – ohne Sprung, Kacheln bleiben stehen |
 | 7.27.0 | Sportboot-Community, Schritt 1: Navigation Karte · Pegel · Melden · Meldungen · Mehr; neue Übersicht „Aktuelle Meldungen“ (`#meldungen`, ein Abruf `GET /api/meldungen/liste`, Filter nach Art, Überall/Kartenausschnitt, Neueste/Wichtigste/Nächste, „Stimmt noch“/„Nicht mehr aktuell“, offline letzter Stand); „Mehr“ (`#mehr`) mit In der Nähe, Merkliste, Hilfe und Feedback, Über, Datenschutz, Impressum; Merkliste (`#mehr/merkliste`) aus Favoriten und „Meine Pegel“ mit Pegelwerten; Knopf „In der Nähe“ auf der Karte (Handy) bzw. in der Werkzeugleiste (Desktop); Meldungen-Backend schreibt mit ETag-Prüfung (`sicherAendern`, keine verlorenen Bestätigungen bei gleichzeitigen Zugriffen) |
 | 7.26.3 | Pegel-Kasten in der Standortansicht: ganzer Kasten führt zur Pegel-Detailseite („Details ›“ statt „Pegel-Ampel ›“), Zurück führt wieder zum Standort |
@@ -257,13 +259,13 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.27.1): alle Tests grün.**
+**Letzter Lauf (7.28.0): alle Tests grün.**
 
 ## 6. Offene Aufgaben
 
 **Als Nächstes**
 1. Navigation, „Aktuelle Meldungen“, „Mehr“ und Merkliste (7.27.0) in der Vorschau prüfen.
-2. Weitere Schritte der Community-Vorgabe: „Heute vor Ort“ mit Link zur Übersicht, unpassende Meldungen melden, Slip-Detail („Wichtig für dein Boot“), Melden-Menü mit Abschnitten, Einstellungen, Foto-Kategorien.
+2. Weitere Schritte der Community-Vorgabe: Slip-Detail („Wichtig für dein Boot“), Melden-Menü mit Abschnitten, Einstellungen, Foto-Kategorien.
 3. Danach PR #4 auf „übernehmen“ zusammenführen.
 
 **Nach der Veröffentlichung live prüfen.** Diese Punkte sind nur gegen Testdaten geprüft, weil die echten Dienste in der Entwicklungsumgebung nicht erreichbar waren:

@@ -20,7 +20,7 @@ const TON = { gut: 'vo-gut', warn: 'vo-warn', stop: 'vo-stop' };
 
 /**
  * ctx = { ort(id) → { name, sub, lat, lon } | null, oeffneOrt(id), bezug() → { lat, lon } | null, grenzen() → { south, north, west, east } | null,
- *         entfernung(a, b) → m, formatDistance(m), melden(), toast(text) }
+ *         entfernung(a, b) → m, formatDistance(m), melden(), toast(text), unpassend(meldung, ortName, fertig) }
  */
 export function meldungenSeite(root, ctx) {
   let daten = null, laeuft = null;
@@ -81,7 +81,11 @@ export function meldungenSeite(root, ctx) {
         knopf('Stimmt noch', true), knopf('Nicht mehr aktuell', false),
         o ? h('a', { class: 'mu-ort-link', href: `#p=${encodeURIComponent(m.standortId)}`, onclick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); ctx.oeffneOrt(m.standortId); } },
           'Standort', h('span', { html: icon('chevron', 16), 'aria-hidden': 'true' })) : null),
-      bewertet && !daten.offline ? h('p', { class: 'mu-bewertet', text: 'Du hast diese Meldung schon bewertet.' }) : null);
+      bewertet && !daten.offline ? h('p', { class: 'mu-bewertet', text: 'Du hast diese Meldung schon bewertet.' }) : null,
+      // nur Meldungen mit Notiz können unpassend sein
+      m.notiz && ctx.unpassend && !daten.offline ? h('div', { class: 'mu-unpassend' }, h('button', { type: 'button', class: 'vo-unpassend', 'aria-label': `Notiz „${m.notiz}“ als unpassend melden`,
+        onclick: () => ctx.unpassend(m, o?.name || '', async () => { await laden(false); root.querySelector('#bs-titel')?.focus(); }) },
+        h('span', { html: icon('flag', 15), 'aria-hidden': 'true' }), h('span', { text: 'Unpassend melden' }))) : null);
   }
 
   function zeichnen() {

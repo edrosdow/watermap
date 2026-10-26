@@ -103,6 +103,17 @@ assert.ok(!JSON.stringify(await store.get('ort/node/1')).includes('parkplatz_vol
 assert.equal((await api.standort('node/2')).length, 0);
 assert.equal(await store.get('ort/node/2'), null);
 
+// Entfernen (Verwaltung): Meldung weg, Index aktualisiert; zweites Mal oder unbekannt → entfernt: false
+{ const vorher = (await api.standort('way/3')).map(m => m.id);
+  const neu = await api.melden({ standortId: 'way/3', typ: 'hindernis', notiz: 'Unsinn' }, dora);
+  const r1 = await api.entfernen(neu.meldung.id);
+  assert.deepEqual(r1, { entfernt: true, standortId: 'way/3' });
+  assert.deepEqual((await api.standort('way/3')).map(m => m.id).sort(), vorher.sort(), 'nur die entfernte Meldung ist weg');
+  assert.ok(!(await api.liste()).some(m => m.id === neu.meldung.id), 'auch nicht in der Übersicht');
+  assert.notEqual((await api.aktiv()).find(a => a.standortId === 'way/3')?.typ, 'hindernis', 'Index aktualisiert');
+  assert.deepEqual(await api.entfernen(neu.meldung.id), { entfernt: false, standortId: null });
+  await rejects(api.entfernen('xyz'), 400); }
+
 // Aufräumen: Sperr-Einträge älter als 24 h weg
 uhr += 2 * H;
 const vorher = [...store.m.keys()].filter(k => k.startsWith('sperre/')).length;

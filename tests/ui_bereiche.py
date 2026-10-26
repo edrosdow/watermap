@@ -1,7 +1,7 @@
 """UI-Test der Hauptnavigation (Karte · Pegel · Melden · Meldungen · Mehr), der Übersicht „Aktuelle Meldungen“ (#meldungen),
 des Bereichs „Mehr“ (#mehr) und der Merkliste (#mehr/merkliste) – mit nachgebildeter API und den Daten aus ui_full.py.
 Start: python3 tests/ui_bereiche.py [screenshots-ordner]"""
-import datetime as dt, importlib.util, json, pathlib, re, tempfile, time
+import datetime as dt, importlib.util, json, pathlib, re, tempfile, time, urllib.parse
 from playwright.sync_api import sync_playwright
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -43,8 +43,15 @@ def api(st):
 def page(b, w, hh, mobile):
     ctx = b.new_context(viewport={'width': w, 'height': hh}, is_mobile=mobile, has_touch=mobile, device_scale_factor=1, locale='de-DE', service_workers='block')
     uf.lib_routes(ctx)
-    st = {'down': False, 'liste': 0, 'votes': [], 'M': []}
+    st = {'down': False, 'liste': 0, 'votes': [], 'M': [], 'forms': [], 'formfail': False}
     ctx.route('**/api/meldungen**', api(st))
+    def formular(route):   # Netlify Forms (POST /)
+        r = route.request
+        if r.method != 'POST': return route.continue_()
+        if st['formfail']: return route.fulfill(status=500, body='')
+        st['forms'].append(dict(urllib.parse.parse_qsl(r.post_data or '')))
+        return route.fulfill(status=200, body='ok')
+    ctx.route(lambda u: u.rstrip('/') == uf.BASE.rstrip('/'), formular)
     ctx.route('**/api/pegel/**', lambda r: r.fulfill(status=200, content_type='application/json', body=json.dumps([STATION]) if 'stations.json' in r.request.url else '[]'))
     ctx.route('**/api/gezeiten**', lambda r: r.fulfill(status=404, content_type='application/json', body='{"keinOrt": true}'))
     ctx.add_init_script("try { localStorage.setItem('watermap.geoAsked', '1'); } catch {}")
@@ -107,6 +114,30 @@ def run(b, w, hh):
     k.locator('button:has-text("Stimmt noch")').click(); pg.wait_for_timeout(400)
     k = pg.locator('.mu-karte', has_text='Gesperrt')
     check(('aa01', True) in pg.st['votes'] and '4× bestätigt' in k.inner_text() and k.locator('button:has-text("Stimmt noch")').is_disabled(), f'{tag}: „Stimmt noch“ zählt und sperrt erneutes Bewerten')
+    # Unpassend melden: nur bei Notiz; Fehler bleibt im Fenster; danach Hinweis an Netlify Forms und Meldung ausgeblendet
+    check(pg.locator('.mu-karte', has_text='Parkplatz voll').locator('.vo-unpassend').count() == 0 and pg.locator('.mu-karte .vo-unpassend').count() == 2, f'{tag}: „Unpassend melden“ nur bei Meldungen mit Notiz')
+    pg.locator('.mu-karte', has_text='Warteschlange').locator('.vo-unpassend').click(); pg.wait_for_selector('.um-dlg[open]')
+    dlg = pg.locator('.um-dlg')
+    check('ca. 20 min' in dlg.inner_text() and 'Warteschlange' in dlg.inner_text() and dlg.locator('.um-senden').is_disabled(), f'{tag}: Fenster zeigt die Meldung, Senden erst nach Grund')
+    bx = dlg.bounding_box()
+    check(bx['x'] >= 0 and bx['x'] + bx['width'] <= w + 1 and bx['y'] + bx['height'] <= hh + 1 and (not mobile or bx['y'] + bx['height'] >= hh - 2), f'{tag}: Fenster passt ({"unten" if mobile else "Mitte"})')
+    dlg.locator('.um-grund', has_text='Beleidigend').click()
+    pg.st['formfail'] = True; dlg.locator('.um-senden').click(); pg.wait_for_selector('.um-fehler:not([hidden])')
+    check(pg.locator('.um-dlg[open]').count() == 1 and pg.locator('.mu-karte').count() == 4, f'{tag}: Senden fehlgeschlagen → Hinweis im Fenster, Meldung bleibt')
+    pg.screenshot(path=str(SHOTS / f'bereiche_{w}_4unpassend.png'))
+    pg.st['formfail'] = False
+    dlg.locator('.um-senden').click(); pg.wait_for_selector('.um-dlg', state='detached'); pg.wait_for_timeout(300)
+    f = pg.st['forms'][-1] if pg.st['forms'] else {}
+    check(f.get('form-name') == 'fehler-melden' and f.get('art') == 'meldung' and 'Meldung-ID: aa04' in f.get('details', '') and 'Grund: Beleidigend' in f.get('details', '') and f.get('standort_id') == ids[3],
+          f'{tag}: Hinweis über „fehler-melden“ mit Meldung-ID und Grund ({f})')
+    check(pg.locator('.mu-karte').count() == 3 and pg.locator('.mu-karte', has_text='Warteschlange').count() == 0 and '3 aktuelle Meldungen' in pg.inner_text('.mu-kopf'),
+          f'{tag}: Meldung für mich ausgeblendet')
+    # Heute vor Ort: Unpassend melden bei Notiz, Weg zur Übersicht
+    pg.evaluate(f"window.__watermap.setView('karte'); window.__watermap.selectPlace({ids[0]!r}, {{full: true}})"); pg.wait_for_selector('#detail .vo-alle-link'); pg.wait_for_timeout(300)
+    vo = pg.locator('#detail .vo-karte')
+    check(vo.locator('.vo-unpassend').count() == 1 and '3 Meldungen im Revier' in vo.inner_text(), f'{tag}: „Heute vor Ort“ mit „Unpassend melden“ und Anzahl im Revier')
+    vo.locator('.vo-alle-link').click(); pg.wait_for_selector('#meldungsseite:not([hidden]) .mu-karte')
+    check(pg.url.endswith('#meldungen'), f'{tag}: „Alle Meldungen“ öffnet die Übersicht')
     # Standort ansehen
     pg.locator('.mu-karte', has_text='Parkplatz voll').locator('.mu-ort-link').click(); pg.wait_for_selector('#detail:not([hidden])')
     check(f'p={ids[1].replace("/", "%2F")}' in pg.url and pg.locator(f'{nav} [data-nav=karte]').get_attribute('aria-current') == 'page', f'{tag}: „Standort“ öffnet die Slipanlage')
@@ -116,7 +147,7 @@ def run(b, w, hh):
     pg.st['down'] = True
     pg.reload(); pg.wait_for_selector('.mu-karte', timeout=10000)
     off = pg.inner_text('#meldungsseite')
-    check('Offline – letzter gespeicherter Stand' in off and pg.locator('.mu-karte').count() == 4 and pg.locator('.mu-knopf:not([disabled])').count() == 0, f'{tag}: offline letzter Stand, Bewerten gesperrt')
+    check('Offline – letzter gespeicherter Stand' in off and pg.locator('.mu-karte').count() == 3 and pg.locator('.mu-knopf:not([disabled])').count() == 0, f'{tag}: offline letzter Stand, Bewerten gesperrt')
     pg.st['down'] = False
 
     # Mehr

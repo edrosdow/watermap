@@ -257,12 +257,18 @@ function renderHints(list, err) {
     const drop = el('button', { type: 'button', textContent: 'Verwerfen' });
     done.addEventListener('click', () => act(done, { form: 'fehler-melden', aktion: 'erledigt', id: x.id }, 'Hinweis als erledigt abgeschlossen.'));
     drop.addEventListener('click', () => act(drop, { form: 'fehler-melden', aktion: 'verwerfen', id: x.id }, 'Hinweis verworfen.', 'Hinweis wirklich verwerfen?'));
+    // Unpassende Lagemeldung: „Meldung entfernen“ nimmt sie aus der App und erledigt den Hinweis
+    const weg = x.meldung_id ? el('button', { className: 'danger', type: 'button', textContent: 'Meldung entfernen' }) : null;
+    if (weg) {
+      weg.addEventListener('click', () => act(weg, { form: 'fehler-melden', aktion: 'lagemeldung_entfernen', id: x.id }, 'Lagemeldung entfernt.', 'Lagemeldung wirklich für alle entfernen?'));
+      done.textContent = 'Erledigt (Meldung bleibt)';
+    }
     box.append(el('section', { className: 'card' },
       el('h2', {}, placeLink(x.standort_id, x.standort_name || (x.standort_id === '__other' ? 'Allgemeiner Hinweis' : x.standort_id))),
       el('p', { className: 'meta', textContent: `${x.art_text} · gemeldet ${when(x.created)}` }),
       el('p', { textContent: x.details }),
       x.kontakt ? el('p', { className: 'meta' }, 'Rückfragen: ', el('a', { href: `mailto:${x.kontakt}`, textContent: x.kontakt })) : null,
-      el('div', { className: 'actions' }, done, drop)));
+      el('div', { className: 'actions' }, weg, done, drop)));
   }
 }
 

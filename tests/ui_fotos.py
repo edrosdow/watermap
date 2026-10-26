@@ -38,7 +38,9 @@ SLIPS = [{'id': 'n1', 'created': '2026-10-20T09:00:00Z', 'name': 'Doppelt', 'gew
 PREISE = [{'id': 'p1', 'created': '2026-10-20T10:00:00Z', 'tankstelle_id': 'node/7000', 'tankstelle_name': 'Tanke', 'kraftstoff': 'diesel', 'preis': 2.189, 'datum': '2026-10-19', 'kommentar': 'Schild', 'hat_beleg': True},
           {'id': 'p2', 'created': '2026-10-20T10:30:00Z', 'tankstelle_id': '__other', 'tankstelle_name': 'Irgendwo', 'kraftstoff': 'benzin', 'preis': 2.0, 'datum': '2026-10-19', 'kommentar': '', 'hat_beleg': False}]
 HINWEISE = [{'id': 'h1', 'created': '2026-10-20T11:00:00Z', 'standort_id': 'node/5', 'standort_name': 'Hafen', 'art': 'oeffnungszeiten', 'art_text': 'Falsche Öffnungszeiten',
-             'details': 'Montags <u>zu</u>', 'kontakt': 'x@y.de'}]
+             'details': 'Montags <u>zu</u>', 'kontakt': 'x@y.de'},
+            {'id': 'u1', 'created': '2026-10-20T12:00:00Z', 'standort_id': 'node/9', 'standort_name': 'Slip Nord', 'art': 'meldung', 'art_text': 'Unpassende Lagemeldung',
+             'details': 'Lagemeldung unpassend\nMeldung-ID: 00ab12cd34ef5678\nGrund: Beleidigend', 'kontakt': '', 'meldung_id': '00ab12cd34ef5678'}]
 LOG.append({'zeit': '2026-10-20T14:00:00Z', 'bereich': 'slip', 'aktion': 'freigegeben', 'standort_id': 'c/neu-20261020-abc', 'standort_name': 'Neue Rampe', 'beschreibung': 'Weser'})
 posted = []
 
@@ -82,7 +84,7 @@ with sync_playwright() as p:
     check(pg.locator('#login').is_hidden() and pg.inner_text('#n-neu') == '3' and pg.inner_text('#n-gemeldet') == '1' and pg.inner_text('#n-veroeffentlicht') == '2',
           'Reiter mit Anzahlen (3 eingereicht, 1 gemeldet, 2 veröffentlicht)')
     check('hot' in pg.get_attribute('#n-gemeldet', 'class'), 'Meldungen sind hervorgehoben')
-    check(pg.inner_text('#n-slips') == '2' and pg.inner_text('#n-preise') == '2' and pg.inner_text('#n-hinweise') == '1', 'Reiter Slipanlagen, Preise, Hinweise mit Anzahlen')
+    check(pg.inner_text('#n-slips') == '2' and pg.inner_text('#n-preise') == '2' and pg.inner_text('#n-hinweise') == '2', 'Reiter Slipanlagen, Preise, Hinweise mit Anzahlen')
 
     # Eingereicht
     cards = pg.locator('#tab-neu .card')
@@ -156,7 +158,14 @@ with sync_playwright() as p:
     posted.clear()
     # Hinweise
     pg.click('#tabs [data-tab=hinweise]')
-    hi = pg.locator('#tab-hinweise .card')
+    hi = pg.locator('#tab-hinweise .card', has_text='Hafen')
+    check(hi.locator('button.danger').count() == 0, 'normaler Hinweis ohne „Meldung entfernen“')
+    lm = pg.locator('#tab-hinweise .card', has_text='Slip Nord')
+    check('Unpassende Lagemeldung' in lm.inner_text() and lm.locator('button.danger', has_text='Meldung entfernen').count() == 1, 'Lagemeldung-Hinweis mit „Meldung entfernen“')
+    pg.once('dialog', lambda d: d.accept())
+    lm.locator('button.danger').click(); pg.locator('#msg', has_text='Lagemeldung entfernt').wait_for()
+    check(posted == [{'form': 'fehler-melden', 'aktion': 'lagemeldung_entfernen', 'id': 'u1'}], f'Lagemeldung entfernen ({posted})')
+    posted.clear()
     check('Montags <u>zu</u>' in hi.inner_text() and hi.locator('u').count() == 0 and 'Falsche Öffnungszeiten' in hi.inner_text()
           and hi.locator('a[href="mailto:x@y.de"]').count() == 1, 'Hinweis mit Art, Text und Rückfrage-Adresse')
     hi.locator('button', has_text='Erledigt').click(); pg.locator('#msg', has_text='erledigt').wait_for()

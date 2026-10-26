@@ -227,6 +227,20 @@ export function meldungenApi(deps) {
       return { standortId, meldungen: sicht.map(oeffentlich) };
     },
 
+    /** Meldung entfernen (Verwaltung, nach einem Hinweis „unpassend“). → { entfernt: bool, standortId } */
+    async entfernen(meldungId) {
+      if (!/^[a-f0-9]{8,32}$/.test(meldungId || '')) throw new Fehler(400, 'Ungültige Meldung.');
+      const jetzt = now();
+      const zu = await lesen(deps.store, `mid/${meldungId}`, null);
+      const standortId = zu?.standortId;
+      if (!gueltigeId(standortId)) return { entfernt: false, standortId: null };   // schon abgelaufen oder entfernt
+      let entfernt = false;
+      const rest = await ortAendern(deps.store, standortId, jetzt, (l) => { const r = l.filter(x => x.id !== meldungId); entfernt = r.length !== l.length; return r; });
+      await deps.store.delete(`mid/${meldungId}`);
+      await indexSetzen(deps.store, standortId, zusammenfassung(sichtbare(rest, jetzt)), jetzt);
+      return { entfernt, standortId };
+    },
+
     /** Aufräumen (stündlich): abgelaufene Meldungen und Sperr-Einträge löschen. */
     async aufraeumen() {
       const jetzt = now();

@@ -78,6 +78,8 @@
 .mu-knopf { min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: #fff; font-weight: 700; font-size: 14px; color: var(--navy); padding: 0 8px; }
 .mu-knopf:disabled { opacity: .55; }
 .mu-ort-link { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 6px; color: #06667E; font-weight: 750; font-size: 14.5px; text-decoration: none; }
+.mu-unpassend { display: flex; justify-content: flex-end; padding: 0 12px 8px; margin-top: -4px; }
+.mu-unpassend .vo-unpassend { padding: 0 2px; }
 .mu-bewertet { margin: 0; padding: 0 14px 12px; color: var(--muted); font-size: 13px; }
 .mu-leer { padding: 6px 0 14px; display: flex; flex-direction: column; align-items: flex-start; }
 .mu-leer .bs-link, .mu-leer .mu-melden { margin: 0 16px; }

@@ -22,6 +22,7 @@ import { pegelLaden, pegelStand, verlaufLaden, meinePegel } from './pegel-daten.
 import { pegelDetail, etikett as pegelEtikett, fmt as pegelFmt, trendText, trendKlasse, sternKnopf, zustand as pegelZustand, ZUSTAND as PEGEL_ZUSTAND } from './pegel-ansicht.js';
 import { mehrSeite, merkliste } from './mehr.js';
 import { meldungenSeite } from './meldungen-uebersicht.js';
+import { unpassendMelden } from './meldung-unpassend.js';
 import { pegelDashboard, pegelSeite, slipsAmPegel } from './pegel-dashboard.js';
 import { weatherSection } from './wetter.js';
 import { GROUPS, loadExtras, renderExtraDetail, nearbySection, glyph } from './extras.js';
@@ -476,6 +477,8 @@ function vorOrtTeile(p) {
     onMehr: () => lageMelden(p),
     onGeaendert: (liste) => meldLokal(p.id, liste),
     onGesendet: (liste) => { meldLokal(p.id, liste); toast('Danke! Deine Meldung ist jetzt sichtbar.'); },
+    onUnpassend: (m, fertig) => unpassendMelden({ meldung: m, ortName: displayName(p), toast, onFertig: fertig }),
+    onAlle: () => setView('meldungen'),
   });
   return { zeile: null, section };
 }
@@ -778,6 +781,7 @@ function meldungenBereich() {
     formatDistance,
     melden: () => { renderReportMenu({ fragen: true }); reportPop.open($(isMobile() ? '#bottomnav [data-nav="melden"]' : '#btn-report')); },
     toast,
+    unpassend: (m, ortName, fertig) => unpassendMelden({ meldung: m, ortName, toast, onFertig: fertig }),
   });
   meldSeite.zeigen();
   el.meldungsseite.scrollTop = 0;

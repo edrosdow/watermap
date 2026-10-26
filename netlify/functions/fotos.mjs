@@ -1,5 +1,5 @@
 // Foto-Verwaltung (Seite /admin/fotos.html): eingereichte Fotos freigeben oder ablehnen, gemeldete und veröffentlichte
-// Fotos entfernen, Verlauf aller Aktionen.
+// Fotos entfernen, als unpassend gemeldete Lagemeldungen („Heute vor Ort“) entfernen, Verlauf aller Aktionen.
 // Eingereichte und gemeldete Fotos kommen aus Netlify Forms („foto-einreichen“, „fehler-melden“ mit art=foto). Jede
 // Aktion ist genau ein Commit im GitHub-Repository: public/photos/<datei>, public/data/community/overrides.json und
 // der Verlauf admin/verlauf.json (liegt außerhalb von public/ und wird nicht veröffentlicht). Netlify baut die Seite
@@ -12,6 +12,8 @@
 //                        Berechtigung „Contents: Read and write“
 //   optional GITHUB_REPO (Standard edrosdow/watermap), FOTO_BRANCH (Standard main)
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { getStore } from '@netlify/blobs';
+import { meldungenApi } from '../lib/meldungen-kern.mjs';
 
 const FORM = 'foto-einreichen';
 const REPORT_FORM = 'fehler-melden';
@@ -28,7 +30,7 @@ const YNU = { ja: true, nein: false };
 const FUEL = { diesel: 'diesel', benzin: 'petrol' };
 const PRICE_MIN = 0.5, PRICE_MAX = 5;
 const ART = { 'existiert-nicht': 'Existiert nicht mehr', koordinaten: 'Falsche Koordinaten', 'nicht-oeffentlich': 'Nicht öffentlich',
-  preis: 'Falscher Preis', oeffnungszeiten: 'Falsche Öffnungszeiten', foto: 'Unpassendes Foto', sonstiges: 'Sonstiges' };
+  preis: 'Falscher Preis', oeffnungszeiten: 'Falsche Öffnungszeiten', foto: 'Unpassendes Foto', meldung: 'Unpassende Lagemeldung', sonstiges: 'Sonstiges' };
 const MAX_HISTORY = 500;
 
 const json = (status, body) => new Response(JSON.stringify(body), {
@@ -150,7 +152,13 @@ export function priceView(s) {
 export function hintView(s) {
   const d = s.data || {};
   return { id: s.id, created: s.created_at || null, standort_id: text(d.standort_id), standort_name: text(d.standort_name, 120),
-    art: text(d.art), art_text: ART[text(d.art)] || text(d.art), details: text(d.details, 1000), kontakt: text(d.kontakt, 120) };
+    art: text(d.art), art_text: ART[text(d.art)] || text(d.art), details: text(d.details, 1000), kontakt: text(d.kontakt, 120),
+    meldung_id: text(d.art) === 'meldung' ? meldungIdAus(d.details) : null };
+}
+
+/** ID der Lagemeldung aus dem Hinweistext („Meldung-ID: 3f2a…“). */
+export function meldungIdAus(details) {
+  return String(details || '').match(/Meldung-ID:\s*([a-f0-9]{8,32})\b/)?.[1] || null;
 }
 
 export function submissionView(s) {
@@ -269,7 +277,7 @@ async function fetchPhoto(sub, fetchFn) {
   return { bytes, type };
 }
 
-export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date() }) {
+export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date(), meldungEntfernen = null }) {
   const missing = ['FOTO_ADMIN_PASSWORT', 'NETLIFY_API_TOKEN', 'GITHUB_TOKEN'].filter(k => !env[k]);
   if (missing.length) {
     return json(503, { fehler: `Foto-Freigabe ist noch nicht eingerichtet – in diesem Deploy fehlt: ${missing.join(', ')}. ` +
@@ -398,6 +406,17 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
         return json(200, { ok: true });
       }
     }
+    // Als unpassend gemeldete Lagemeldung entfernen (ist sie schon abgelaufen, wird nur der Hinweis erledigt)
+    if (formName === REPORT_FORM && body.aktion === 'lagemeldung_entfernen') {
+      const v = hintView(sub);
+      if (!v.meldung_id) return json(400, { fehler: 'Hinweis enthält keine Meldung-ID.' });
+      if (!meldungEntfernen) return json(503, { fehler: 'Meldungen sind hier nicht erreichbar.' });
+      const r = await meldungEntfernen(v.meldung_id, now.getTime());
+      await finish(`Lagemeldung entfernt: ${v.standort_id || r.standortId || v.meldung_id}`, async (read) => [
+        await history({ bereich: 'hinweis', aktion: r.entfernt ? 'lagemeldung entfernt' : 'lagemeldung war schon abgelaufen', standort_id: v.standort_id,
+          standort_name: v.standort_name, beschreibung: `${v.art_text}: ${v.details}`.slice(0, 300) })(read)]);
+      return json(200, { ok: true, entfernt: r.entfernt });
+    }
     if (formName === REPORT_FORM && (body.aktion === 'erledigt' || body.aktion === 'verwerfen')) {
       const v = hintView(sub);
       await finish(`Hinweis ${body.aktion === 'erledigt' ? 'erledigt' : 'verworfen'}: ${v.standort_id || 'ohne Standort'}`, async (read) => [
@@ -441,4 +460,10 @@ function runtimeEnv() {
   return Object.fromEntries(KEYS.map(k => [k, nenv?.get?.(k) || process.env[k] || '']));
 }
 
-export default async (req, context) => handle(req, { env: runtimeEnv(), siteId: context?.site?.id || process.env.SITE_ID });
+// Lagemeldungen liegen im selben Speicher wie bei /api/meldungen (Vorschauen: „meldungen-vorschau“)
+const kontext = () => globalThis.Netlify?.env?.get?.('CONTEXT') || process.env.CONTEXT || '';
+const meldungEntfernen = (id, jetzt) => meldungenApi({
+  store: getStore(kontext() && kontext() !== 'production' ? 'meldungen-vorschau' : 'meldungen'), jetzt: () => jetzt,
+}).entfernen(id);
+
+export default async (req, context) => handle(req, { env: runtimeEnv(), siteId: context?.site?.id || process.env.SITE_ID, meldungEntfernen });

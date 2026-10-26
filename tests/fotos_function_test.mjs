@@ -261,4 +261,20 @@ assert.equal(slug('Slip „Großer Müggelsee“ – Nord'), 'slip-grosser-mugge
   assert.equal(w.state.messages.at(-1), 'Hinweis erledigt: node/5');
   assert.equal((await run(req('POST', '', { form: 'unbekannt', aktion: 'erledigt', id: 'h1' }), w)).status, 400); }
 
+// Unpassende Lagemeldung: unter Hinweisen mit Meldung-ID; „Meldung entfernen“ entfernt sie und erledigt den Hinweis
+{ const w = fakeWorld({ reports: [
+    { id: 'u1', data: { art: 'meldung', standort_id: 'node/5', standort_name: 'Slip', details: 'Lagemeldung unpassend\nMeldung-ID: 00ab12cd34ef5678\nArt: Gesperrt\nNotiz: „blöd“\nGrund: Beleidigend' } },
+    { id: 'u2', data: { art: 'meldung', standort_id: 'node/5', details: 'ohne ID' } }] });
+  const list = (await (await run(req('GET', '?form=fehler-melden'), w)).json()).hinweise;
+  assert.deepEqual(list.map(x => [x.id, x.art_text, x.meldung_id]), [['u1', 'Unpassende Lagemeldung', '00ab12cd34ef5678'], ['u2', 'Unpassende Lagemeldung', null]]);
+  const weg = [];
+  const entf = (id) => { weg.push(id); return Promise.resolve({ entfernt: true, standortId: 'node/5' }); };
+  assert.equal((await run(req('POST', '', { form: 'fehler-melden', aktion: 'lagemeldung_entfernen', id: 'u1' }), w, { meldungEntfernen: entf })).status, 200);
+  assert.deepEqual(weg, ['00ab12cd34ef5678']);
+  assert.ok(w.state.deleted.includes('u1'), 'Hinweis erledigt');
+  assert.equal(w.jsonAt(HIST)[0].aktion, 'lagemeldung entfernt');
+  assert.equal(w.state.messages.at(-1), 'Lagemeldung entfernt: node/5');
+  assert.equal((await run(req('POST', '', { form: 'fehler-melden', aktion: 'lagemeldung_entfernen', id: 'u2' }), w, { meldungEntfernen: entf })).status, 400, 'ohne Meldung-ID');
+  assert.equal((await run(req('POST', '', { form: 'fehler-melden', aktion: 'lagemeldung_entfernen', id: 'u2' }), w)).status, 400); }
+
 console.log('fotos.mjs: alle Tests OK');

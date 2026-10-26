@@ -904,3 +904,42 @@ p.rmenu-links a { display: inline; min-height: 0; }
     border-radius: 99px; background: #fff; color: var(--navy); font-weight: 750; font-size: 15px; text-decoration: none; box-shadow: var(--shadow); }
   .has-peek .map-naehe, .has-detail .map-naehe, .is-picking .map-naehe { display: none; }
 }
+
+/* „Unpassend melden“ und Weg zur Übersicht in „Heute vor Ort“ */
+.vo-unpassend { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 4px 0 0; border: 0; background: none;
+  color: var(--muted); font-size: 13px; font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
+.vo-unpassend:hover { color: var(--navy); }
+.vo-alle { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 8px 2px 14px; border-top: 1px solid #DCE5EA; background: #fff; min-height: 48px; }
+.vo-alle-zahl { color: var(--muted); font-size: 13.5px; }
+.vo-alle-link { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 6px; margin-left: auto; color: #06667E; font-weight: 750; font-size: 14.5px; text-decoration: none; white-space: nowrap; }
+.vo-alle-link span { display: grid; }
+
+/* Fenster „Meldung als unpassend melden?“ – am Handy von unten, am Desktop in der Mitte */
+.um-dlg { width: min(440px, calc(100% - 32px)); max-height: calc(100% - 32px); padding: 0; border: 0; border-radius: 20px; background: #fff; color: var(--ink);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .25); overflow: auto; }
+.um-dlg::backdrop { background: rgba(8, 36, 52, .5); }
+.um-form { padding: 18px 18px 20px; }
+.um-form h2 { margin: 0 40px 4px 0; font-size: 20px; color: var(--navy); line-height: 1.25; }
+.um-zu { position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; color: var(--navy); display: grid; place-items: center; }
+.um-zitat { margin: 10px 0 14px; padding: 10px 12px; border-radius: 12px; background: #F4F7F9; font-size: 14.5px; overflow-wrap: anywhere; display: flex; flex-direction: column; gap: 2px; }
+.um-zitat small { color: var(--muted); font-size: 13px; }
+.um-feld { border: 0; padding: 0; margin: 0 0 10px; }
+.um-feld legend { padding: 0; margin-bottom: 8px; font-weight: 750; color: var(--navy); font-size: 15px; }
+.um-gruende { display: flex; flex-wrap: wrap; gap: 8px; }
+.um-grund { position: relative; }
+.um-grund input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.um-grund span { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 99px; background: #fff;
+  color: var(--navy); font-weight: 700; font-size: 14px; }
+.um-grund input:checked + span { background: var(--navy); border-color: var(--navy); color: #fff; }
+.um-grund input:focus-visible + span { outline: 3px solid #1C8FB8; outline-offset: 2px; }
+.um-hinweis { margin: 4px 0 14px; color: var(--muted); font-size: 13.5px; }
+.um-fehler { margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; background: #FDECEA; color: #8A1C14; font-size: 14px; font-weight: 650; }
+.um-knoepfe { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; }
+.um-knoepfe button { min-height: 48px; border-radius: 14px; font-weight: 750; font-size: 15.5px; }
+.um-abbrechen { border: 1px solid var(--line); background: #fff; color: var(--navy); }
+.um-senden { border: 1px solid var(--navy); background: var(--navy); color: #fff; }
+.um-senden:disabled { opacity: .5; }
+@media (max-width: 767px) {
+  .um-dlg { width: 100%; max-width: none; margin: auto 0 0; border-radius: 20px 20px 0 0; max-height: 90%; }
+  .um-form { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+}

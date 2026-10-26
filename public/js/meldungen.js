@@ -9,6 +9,7 @@ const CACHE_MS = 2 * 60e3;
 const LS_AKTIV = 'watermap.meldungen.aktiv';
 const LS_GERAET = 'watermap.geraet';
 const LS_BEWERTET = 'watermap.meldungen.bewertet';
+const LS_AUSGEBLENDET = 'watermap.meldungen.ausgeblendet';
 
 /** Typen in der Reihenfolge der Kacheln; `ton`: Farbton der Kachel/Zeile. */
 export const TYPEN = {
@@ -32,6 +33,22 @@ export function geraetId() {
   }
   return geraetMem;
 }
+
+// ------------------------------------------------------------------ Als unpassend gemeldet: auf diesem Gerät ausblenden
+function ausgeblendetLesen() { try { return new Set(JSON.parse(localStorage.getItem(LS_AUSGEBLENDET) || '[]')); } catch { return new Set(); } }
+/** Meldung auf diesem Gerät ausblenden (nach „Unpassend melden“). Löst „meldung-ausgeblendet“ aus. */
+export function ausblenden(id) {
+  const set = ausgeblendetLesen(); set.add(id);
+  try { localStorage.setItem(LS_AUSGEBLENDET, JSON.stringify([...set].slice(-200))); } catch { /* nur bis zum Neuladen */ }
+  ausgeblendetMem.add(id);
+  window.dispatchEvent(new CustomEvent('meldung-ausgeblendet', { detail: { id } }));
+}
+const ausgeblendetMem = new Set();
+/** Liste ohne die auf diesem Gerät ausgeblendeten Meldungen. */
+export const ohneAusgeblendete = (liste) => {
+  const set = ausgeblendetLesen();
+  return (liste || []).filter(m => !set.has(m.id) && !ausgeblendetMem.has(m.id));
+};
 
 // ------------------------------------------------------------------ Laden
 let aktivCache = null;   // { zeit, map: Map(id → {n, typ, at}), offline }
@@ -71,9 +88,9 @@ export async function listeLaden({ fetchFn = fetch, force = false } = {}) {
   if (force || !listeCache || listeCache.offline || Date.now() - listeCache.geladen >= 60e3) await listeAbrufen(fetchFn);
   // eigene, gerade abgegebene Meldungen/Bewertungen sofort zeigen (bis der Zwischenspeicher nachzieht)
   const eigene = [...standortMem.entries()].filter(([, v]) => !v.offline && Date.now() - v.zeit < 90e3);
-  if (!eigene.length || listeCache.offline) return listeCache;
+  if (!eigene.length || listeCache.offline) return { ...listeCache, meldungen: ohneAusgeblendete(listeCache.meldungen) };
   const ersetzt = new Set(eigene.map(([id]) => id));
-  return { ...listeCache, meldungen: [...listeCache.meldungen.filter(m => !ersetzt.has(m.standortId)), ...eigene.flatMap(([, v]) => v.meldungen)]
+  return { ...listeCache, meldungen: ohneAusgeblendete([...listeCache.meldungen.filter(m => !ersetzt.has(m.standortId)), ...eigene.flatMap(([, v]) => v.meldungen)])
     .sort((a, b) => b.erstelltAm - a.erstelltAm) };
 }
 
@@ -103,10 +120,10 @@ export async function standortLaden(id, { fetchFn = fetch } = {}) {
     const j = await r.json();
     const res = { zeit: j.zeit || Date.now(), meldungen: Array.isArray(j?.meldungen) ? j.meldungen : [], offline: false };
     standortMem.set(id, res);
-    return res;
+    return { ...res, meldungen: ohneAusgeblendete(res.meldungen) };
   } catch {
     const alt = standortMem.get(id);
-    return { zeit: alt?.zeit || null, meldungen: alt?.meldungen || [], offline: true, unbekannt: !alt };
+    return { zeit: alt?.zeit || null, meldungen: ohneAusgeblendete(alt?.meldungen), offline: true, unbekannt: !alt };
   }
 }
 
@@ -208,7 +225,11 @@ function aenderungsChips(haupt) {
  * opts = { standortId, daten: Promise<{meldungen, offline, zeit, unbekannt}>, nah: bool,
  *          onMehr() (alle sechs Typen), onGesendet(meldungen), onGeaendert(meldungen), toast }
  */
-export function vorOrtKarte({ standortId, daten, nah, onMehr, onGesendet, onGeaendert, toast }) {
+/**
+ * Karte „Heute vor Ort“. onUnpassend(meldung, fertig) öffnet „Unpassend melden“ (fertig() nach dem Senden),
+ * onAlle() führt zur Übersicht „Aktuelle Meldungen“.
+ */
+export function vorOrtKarte({ standortId, daten, nah, onMehr, onGesendet, onGeaendert, onUnpassend, onAlle, toast }) {
   const live = h('p', { class: 'sr-only', 'aria-live': 'polite' });
   const inhalt = h('div', { class: 'vo-inhalt', 'aria-busy': 'true' }, h('p', { class: 'muted small vo-laden', text: 'Wird geladen …' }));
   const karte = h('section', { class: 'vo-karte', id: 'heute-vor-ort', tabindex: '-1', 'aria-label': 'Heute vor Ort' }, inhalt, live);
@@ -217,6 +238,10 @@ export function vorOrtKarte({ standortId, daten, nah, onMehr, onGesendet, onGeae
   const sag = (text) => { live.textContent = ''; setTimeout(() => { live.textContent = text; }, 30); };
 
   const kreis = (ico, cls) => h('span', { class: `vo-kreis ${cls}`, html: icon(ico, 20), 'aria-hidden': 'true' });
+  // „Unpassend melden“ nur bei Meldungen mit Notiz (nur dort kann etwas Unpassendes stehen)
+  const unpassend = (m) => (m.notiz && onUnpassend ? h('button', { type: 'button', class: 'vo-unpassend', 'aria-label': `Notiz „${m.notiz}“ als unpassend melden`,
+    onclick: () => onUnpassend(m, () => { zeichnen(); onGeaendert?.(st.meldungen); sag('Meldung ausgeblendet.'); karte.focus(); }) },
+    h('span', { html: icon('flag', 15), 'aria-hidden': 'true' }), h('span', { text: 'Unpassend melden' })) : null);
 
   function kopf({ klein = false } = {}) {
     const probleme = st.meldungen.filter(m => m.typ !== 'alles_frei');
@@ -232,7 +257,7 @@ export function vorOrtKarte({ standortId, daten, nah, onMehr, onGesendet, onGeae
     return h('div', { class: 'vo-kopf' + (klein ? ' is-klein' : '') },
       h('span', { class: 'vo-kreis is-typ', style: `--c:${t.farbe}`, html: icon(t.ico, 20), 'aria-hidden': 'true' }),
       h('div', { class: 'vo-kopf-text' }, h('strong', { class: 'vo-status', text: t.zeile }),
-        h('small', { text: sub }), m.notiz && !klein ? h('p', { class: 'vo-notiz', text: m.notiz }) : null));
+        h('small', { text: sub }), m.notiz && !klein ? h('p', { class: 'vo-notiz', text: m.notiz }) : null, klein ? null : unpassend(m)));
   }
 
   function bewerten(m, box) {
@@ -267,6 +292,7 @@ export function vorOrtKarte({ standortId, daten, nah, onMehr, onGesendet, onGeae
       const details = offen ? h('div', { class: 'vo-weiter-details' },
         m.notiz ? h('p', { class: 'vo-notiz', text: m.notiz }) : null,
         h('p', { class: 'vo-meta', text: m.bestaetigt ? `${m.bestaetigt}× bestätigt` : 'noch nicht bestätigt' }),
+        unpassend(m),
         nah ? bewerten(m, h('div', { class: 'vo-frage is-klein' })) : null) : null;
       return h('li', {}, knopf, details);
     }));
@@ -321,8 +347,16 @@ export function vorOrtKarte({ standortId, daten, nah, onMehr, onGesendet, onGeae
     return form;
   }
 
+  // Fußzeile: Weg zur Übersicht aller Meldungen (Anzahl kommt aus dem gemeinsamen Abruf nach)
+  const alleZahl = h('span', { class: 'vo-alle-zahl' });
+  const alleZeile = onAlle ? h('div', { class: 'vo-alle' }, alleZahl,
+    h('a', { class: 'vo-alle-link', href: '#meldungen', onclick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); onAlle(); } },
+      'Alle Meldungen', h('span', { html: icon('chevron', 18), 'aria-hidden': 'true' }))) : null;
+  if (onAlle) listeLaden().then((d) => { const n = d.meldungen.length; alleZahl.textContent = n ? `${n} ${n === 1 ? 'Meldung' : 'Meldungen'} im Revier` : ''; }, () => {});
+
   function zeichnen() {
     inhalt.removeAttribute('aria-busy');
+    st.meldungen = ohneAusgeblendete(st.meldungen);
     const probleme = st.meldungen.filter(m => m.typ !== 'alles_frei');
     const ton = probleme.length ? (probleme[0].typ === 'gesperrt' ? 'vo-stop' : 'vo-warn') : 'vo-ok';
     karte.className = `vo-karte ${ton}` + (st.wahl ? ' is-edit' : '');
@@ -343,6 +377,7 @@ export function vorOrtKarte({ standortId, daten, nah, onMehr, onGesendet, onGeae
       } else {
         teile.push(meldenZeile());
       }
+      if (alleZeile) teile.push(alleZeile);
     }
     inhalt.replaceChildren(...teile);
   }

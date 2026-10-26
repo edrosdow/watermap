@@ -21,4 +21,6 @@ Ohne `MELDUNG_SALZ` lassen sich Meldungen lesen, aber nicht abgeben (Antwort 503
 - Regeln: 24 h sichtbar (Bestätigen verlängert nicht), ausgeblendet wenn „Nicht mehr“ die „Stimmt noch“ um 3 übersteigt,
   „Alles frei“ blendet ältere „Parkplatz voll“/„Warteschlange“ aus, pro Gerät/IP und Standort 1 Meldung pro Stunde,
   pro Meldung 1 Bewertung. IP-Adressen werden nur gesalzen gehasht gespeichert und nach 24 h gelöscht.
+- Unpassende Notizen: „Unpassend melden“ schickt einen Hinweis über das Formular „fehler-melden“ (Art `meldung`, mit Meldung-ID)
+  und blendet die Meldung auf dem Gerät aus. Entfernen für alle: `/admin/fotos.html` → Hinweise → „Meldung entfernen“ (siehe `docs/MODERATION.md`).
 - Später möglich: Fotos zu Meldungen (Feld `fotos` ist im Datenmodell vorgesehen).
