@@ -1,6 +1,6 @@
 """Ausführlicher UI-Test (Playwright + Leaflet-Ersatz) mit SYNTHETISCHEN Testdaten in einer temporären Kopie.
 Es wird nichts in public/ verändert.   Start: python3 tests/ui_full.py [screenshots-ordner]"""
-import functools, http.server, io, json, pathlib, random, shutil, socketserver, sys, tempfile, threading, datetime as dt
+import functools, http.server, io, json, pathlib, random, re, shutil, socketserver, sys, tempfile, threading, datetime as dt
 from playwright.sync_api import sync_playwright
 from PIL import Image
 
@@ -93,6 +93,7 @@ def new_page(b, mobile=False, geo=True, block_libs=False, fresh=False, **kw):
     ctx = b.new_context(viewport=vp, device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile, locale='de-DE',
                         geolocation={'latitude': 51.5, 'longitude': 7.5} if geo else None, permissions=['geolocation'] if geo else [], **kw)
     lib_routes(ctx, block_libs)
+    ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))   # „Heute vor Ort“ (eigener Test: ui_meldungen.py)
     if not fresh: ctx.add_init_script("try { if (localStorage.getItem('watermap.cats') === null) { localStorage.setItem('watermap.cats', 'slip,marina,fuel'); localStorage.setItem('watermap.listOpen', '1'); } } catch {}")   # alte Ansicht: alle Kategorien, Liste offen
     pg = ctx.new_page(); errs = []
     pg.on('pageerror', lambda e: errs.append('PAGEERROR ' + str(e)))
@@ -100,8 +101,24 @@ def new_page(b, mobile=False, geo=True, block_libs=False, fresh=False, **kw):
     pg.errs = errs
     return ctx, pg
 
+
+def layer(pg, key, click=False):
+    """Schalter im Filter-Fenster (Kartenebenen, Unterfilter): (vorhanden, an?, Zähler); optional umschalten. Fenster wird wieder geschlossen."""
+    if not pg.locator('#filter-panel[open]').count():
+        pg.click('#btn-filter'); pg.wait_for_selector('#filter-panel[open]')
+    sw = pg.locator(f'#filter-panel [data-key="{key}"]')
+    res = (sw.count(), sw.get_attribute('aria-checked') if sw.count() else None, sw.locator('.fswitch-n').inner_text() if sw.locator('.fswitch-n').count() else None)
+    if click: sw.click(); pg.wait_for_timeout(50)
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(80)
+    return res
+
+def report(pg, label):
+    """„Melden“ öffnen (Desktop: Knopf oben, Handy: Mitte der Navigation) und eine Meldung wählen."""
+    pg.click('#bottomnav [data-nav=melden]' if pg.viewport_size['width'] < 768 else '#btn-report'); pg.wait_for_selector('#report-menu[open]')
+    pg.locator('#report-menu .menu-item', has_text=label).click()
+
 def open_app(pg, mobile=False):
-    pg.goto(BASE); pg.wait_for_selector('.place, .empty', timeout=10000)
+    pg.goto(BASE + '#naehe'); pg.wait_for_selector('.place, .empty', timeout=10000)
     if mobile: pg.wait_for_timeout(100)
 
 def jpeg_with_gps(size=(900, 600)):
@@ -118,34 +135,52 @@ def run():
         try:
             with sync_playwright() as p:
                 b = p.chromium.launch()
-                defaults(b); desktop(b); mobile(b); failures(b, site)
+                defaults(b); desktop(b); mobile(b); photo_form(b, False); photo_form(b, True); failures(b, site)
                 b.close()
         finally:
             srv.shutdown()
 
 def defaults(b):
-    print('--- Erster Start: Liste eingeklappt, keine Kategorie gewählt')
+    print('--- Erster Start: Liste eingeklappt, Slipanlagen gewählt')
     for mob in (False, True):
         name = 'Handy' if mob else 'Desktop'
         ctx, pg = new_page(b, mobile=mob, fresh=True)
-        pg.goto(BASE); pg.wait_for_selector('.chip-slip', timeout=10000); pg.wait_for_timeout(300)
+        pg.goto(BASE); pg.wait_for_selector('.cat-slip', timeout=10000); pg.wait_for_timeout(300)
         check(not pg.locator('#sidebar').is_visible(), f'{name}: Standortliste beim ersten Start nicht sichtbar')
-        check(pg.locator('.leaflet-marker-icon').count() == 0, f'{name}: keine Standorte auf der Karte')
-        check('Tippe oben' in pg.inner_text('#filterbar') and pg.get_attribute('.chip-slip', 'aria-pressed') == 'false', f'{name}: Hinweis, Kategorien aus')
-        pg.click('.chip-slip'); pg.wait_for_timeout(300)
-        check(pg.locator('.leaflet-marker-icon').count() > 0 and pg.get_attribute('.chip-slip', 'aria-pressed') == 'true', f'{name}: Slipanlagen per Chip eingeblendet')
-        check(pg.locator('.chips-sub').count() == 1, f'{name}: bei einer Kategorie gibt es Unterfilter')
-        pg.reload(); pg.wait_for_selector('.chip-slip'); pg.wait_for_timeout(300)
-        check(pg.get_attribute('.chip-slip', 'aria-pressed') == 'true' and pg.get_attribute('.chip-marina', 'aria-pressed') == 'false', f'{name}: Auswahl wird gemerkt')
-        pg.click('#btn-menu'); pg.click('#menu .menu-item:has-text("Standortliste")'); pg.wait_for_timeout(400)
-        check(pg.locator('#sidebar').is_visible() and pg.locator('.place').count() > 0, f'{name}: Liste über das Menü')
-        pg.click('#list-close'); pg.wait_for_timeout(300)
+        check(pg.get_attribute('.cat-slip', 'aria-pressed') == 'true' and pg.get_attribute('.cat-marina', 'aria-pressed') == 'false', f'{name}: Start mit Slipanlagen (mindestens eine Kategorie aktiv)')
+        check(pg.locator('.leaflet-marker-icon').count() > 0, f'{name}: Slipanlagen auf der Karte')
+        check(pg.locator('#menu, #btn-menu, #filterbar').count() == 0, f'{name}: kein ☰-Menü und keine Chip-Reihe mehr')
+        pg.click('.cat-marina'); pg.wait_for_timeout(200); pg.click('.cat-marina'); pg.wait_for_timeout(200)
+        check(layer(pg, 'sub-free')[0] == 1, f'{name}: bei einer Kategorie gibt es Unterfilter im Filter-Fenster')
+        pg.reload(); pg.wait_for_selector('.cat-slip'); pg.wait_for_timeout(300)
+        check(pg.get_attribute('.cat-slip', 'aria-pressed') == 'true' and pg.get_attribute('.cat-marina', 'aria-pressed') == 'false', f'{name}: Auswahl wird gemerkt')
+        nav = '#bottomnav' if mob else '#topnav'
+        check(pg.locator(nav).is_visible() and pg.locator('#bottomnav' if not mob else '#topnav').is_hidden(), f'{name}: Navigation {"unten" if mob else "oben"}')
+        check(pg.locator(f'{nav} [data-nav=karte]').get_attribute('aria-current') == 'page', f'{name}: „Karte“ aktiv')
+        check(([t.strip() for t in pg.locator(f'{nav} [data-nav]').all_inner_texts()] if not mob else [re.sub(r', .*$', '', a) for a in pg.locator(f'{nav} [data-nav]').evaluate_all("els => els.map(e => e.getAttribute('aria-label'))")]) == (['Karte', 'Pegel', 'Melden', 'Meldungen', 'Mehr'] if mob else ['Karte', 'Pegel', 'Meldungen', 'Mehr']),
+              f'{name}: Navigation Karte · Pegel · (Melden) · Meldungen · Mehr')
+        # „In der Nähe“: Schnellzugriff auf der Karte bzw. in der Werkzeugleiste
+        pg.click('#btn-naehe-m' if mob else '#btn-naehe-d'); pg.wait_for_timeout(400)
+        check(pg.locator('#sidebar').is_visible() and pg.locator('.place').count() > 0 and pg.url.endswith('#naehe'), f'{name}: „In der Nähe“ über den Schnellzugriff (#naehe)')
+        check(pg.locator(f'{nav} [data-nav=mehr]').get_attribute('aria-current') == 'page', f'{name}: dabei ist „Mehr“ markiert')
+        if not mob:
+            mw = pg.locator('.map-wrap').bounding_box(); sb = pg.locator('#sidebar').bounding_box()
+            check(sb['x'] < 1 and sb['width'] < 420 and mw['x'] >= sb['width'] - 1, f'{name}: Liste als linke Seitenleiste neben der Karte')
+        else:
+            sb = pg.locator('#sidebar').bounding_box(); bn = pg.locator('#bottomnav').bounding_box()
+            lp = float(pg.evaluate("getComputedStyle(document.querySelector('#list')).paddingBottom").replace('px', ''))
+            check(sb['y'] + sb['height'] >= bn['y'] + bn['height'] and lp >= pg.viewport_size['height'] - bn['y'] and abs(bn['y'] + bn['height'] - (pg.viewport_size['height'] - 28)) <= 1, f'{name}: Liste reicht bis unten, die schwebende Navigation darüber, unten Platz für sie ({lp:.0f} px)')
+        pg.click(f'{nav} [data-nav=karte]'); pg.wait_for_timeout(300)
         check(not pg.locator('#sidebar').is_visible(), f'{name}: Liste wieder geschlossen')
-        pg.click('#btn-menu'); pg.click('#menu .menu-item:has-text("Favoriten")'); pg.wait_for_timeout(400)
-        check(pg.locator('#sidebar').is_visible() and pg.get_attribute('#tabs [data-tab=fav]', 'aria-selected') == 'true', f'{name}: Favoriten öffnen die Liste')
-        pg.click('#list-close'); pg.wait_for_timeout(200)
-        pg.evaluate("window.__watermap.selectPlace('node/7000')"); pg.wait_for_selector('#detail:not([hidden])')
-        check(pg.get_attribute('.chip-fuel', 'aria-pressed') == 'true', f'{name}: Standort einer ausgeblendeten Kategorie öffnet sich, Kategorie wird eingeblendet')
+        pg.click(f'{nav} [data-nav=mehr]'); pg.wait_for_selector('#mehrseite:not([hidden]) .bs-zeile')
+        pg.click('#mehrseite .bs-zeile:has-text("In der Nähe")'); pg.wait_for_timeout(400)
+        check(pg.locator('#sidebar').is_visible() and pg.url.endswith('#naehe'), f'{name}: Mehr → In der Nähe')
+        pg.go_back(); pg.wait_for_timeout(300)
+        check(pg.url.endswith('#mehr') and pg.locator('#mehrseite').is_visible(), f'{name}: Zurück-Taste führt wieder zu „Mehr“')
+        pg.go_back(); pg.wait_for_timeout(300)
+        check(not pg.locator('#sidebar').is_visible() and pg.locator(f'{nav} [data-nav=karte]').get_attribute('aria-current') == 'page', f'{name}: Zurück-Taste führt zur Karte')
+        pg.evaluate("window.__watermap.selectPlace('node/7000', { full: true })"); pg.wait_for_selector('#detail:not([hidden])')
+        check(pg.get_attribute('.cat-fuel', 'aria-pressed') == 'true', f'{name}: Standort einer ausgeblendeten Kategorie öffnet sich, Kategorie wird eingeblendet')
         pg.screenshot(path=str(SHOTS / f'full_{"mobile" if mob else "desktop"}_erststart.png'))
         check(not pg.errs, f'{name}: keine JS-Fehler {pg.errs[:3]}')
         ctx.close()
@@ -159,25 +194,47 @@ def desktop(b):
     check(not st("window.__watermap.state.byId.has('c/test-2')"), 'Community "pending" wird nicht angezeigt')
     check(st('window.__xss') is None, 'XSS-Name wird nicht ausgeführt')
     check('TEST Slip' in pg.inner_text('#list') or True, 'Liste gerendert')
-    pg.click('.chip-marina'); pg.click('.chip-fuel')          # nur Slipanlagen
+    pg.click('.cat-marina'); pg.click('.cat-fuel')          # nur Slipanlagen
     txt = pg.inner_text('#list-head')
     check('Die 120 nächsten werden gezeigt' in txt or pg.locator('.place').count() <= 120, 'Listenlimit greift (' + str(pg.locator('.place').count()) + ' Zeilen)')
     # Filter
-    def count_sub(label):
-        return int(pg.locator(f'.chip-sub:has-text("{label}") .chip-n').inner_text())
     free_expected = st("window.__watermap.state.places.filter(p=>p.type==='slip'&&p.fee===false).length")
-    check(count_sub('Kostenlos') == free_expected and free_expected > 0, f'Filter-Zähler "Kostenlos" korrekt ({free_expected})')
-    pg.click('.chip-sub:has-text("Kostenlos")')
+    check(layer(pg, 'sub-free')[2] == str(free_expected) and free_expected > 0, f'Filter-Zähler "Kostenlos" korrekt ({free_expected})')
+    layer(pg, 'sub-free', click=True)
     ok = st("window.__watermap.state.filtered.every(p=>p.fee===false)") and st("window.__watermap.state.filtered.length") == free_expected
     check(ok, 'Filter "Kostenlos": nur bestätigt kostenlose Anlagen (unbekannt ≠ kostenlos)')
-    pg.click('.chip-sub:has-text("Öffentlich")')
+    layer(pg, 'sub-public', click=True)
     check(st("window.__watermap.state.filtered.every(p=>p.fee===false&&p.access==='public')"), 'Filter kombinierbar (UND)')
-    pg.click('.chip-marina')
+    check(pg.inner_text('#filter-n') == '2', 'Abzeichen am Filter-Knopf zeigt 2')
+    tags = pg.locator('#filter-tags .ftag')
+    check(tags.count() == 2 and tags.first.get_attribute('aria-label') == 'Filter Kostenlos entfernen', 'Aktive Filter als Etiketten zum Entfernen')
+    inview = pg.inner_text('#inview')
+    check(re.match(r'^\d+ Slipanlagen im Kartenausschnitt$', inview) is not None, f'Anzahl im Kartenausschnitt ({inview})')
+    tags.first.click(); pg.wait_for_timeout(100)
+    check(st('window.__watermap.state.subs.size') == 1 and pg.inner_text('#filter-n') == '1', 'Etikett entfernt den Filter')
+    pg.click('#btn-filter'); pg.wait_for_selector('#filter-panel[open]')
+    fb = pg.locator('#filter-panel').bounding_box(); bb = pg.locator('#btn-filter').bounding_box()
+    check(abs(fb['y'] - (bb['y'] + bb['height'] + 8)) < 3, 'Filter-Fenster als Dropdown unter dem Knopf')
+    pg.locator('#filter-panel .btn-outline', has_text='Zurücksetzen').click(); pg.wait_for_timeout(100)
+    check(st('window.__watermap.state.subs.size') == 0 and pg.locator('#filter-panel[open]').count() == 1, '„Zurücksetzen“ leert die Unterfilter, Fenster bleibt offen')
+    pg.mouse.click(1150, 700); pg.wait_for_timeout(100)   # Karte rechts neben dem Fenster
+    check(pg.locator('#filter-panel[open]').count() == 0, 'Klick außerhalb schließt das Filter-Fenster')
+    layer(pg, 'sub-free', click=True)
+    pg.click('.cat-marina')
     check(st('window.__watermap.state.subs.size') == 0, 'Kategoriewechsel setzt Unterfilter zurück')
     # Override
     pg.evaluate("window.__watermap.selectPlace('node/2')"); pg.wait_for_selector('#detail:not([hidden])')
     d = pg.inner_text('#detail')
-    check('Kostenpflichtig – 10 € pro Slipvorgang' in d and 'Trailerparkplatz' in d, 'Freigegebene Korrektur überlagert OSM-Wert')
+    check('Kostenpflichtig – 10 € pro Slipvorgang' in d and 'trailer parken' in d.lower(), 'Freigegebene Korrektur überlagert OSM-Wert')
+    # Slipanlage: „Wichtig für dein Boot“ statt „Eigenschaften“, Ampel mit Text, Ergänzen-Link
+    wb = pg.locator('#detail .wb')
+    check(wb.count() == 1 and pg.locator('#detail .facts-block').count() == 0 and 'Eigenschaften' not in d, 'Slipanlage: „Wichtig für dein Boot“, keine „Eigenschaften“')
+    check(wb.locator('.wb-p').count() == 6 and wb.locator('.wb-p.is-warn', has_text='Kostenpflichtig').count() == 1, 'Sechs Angaben, Gebühr orange')
+    check(pg.evaluate("(() => { const b = [...document.querySelectorAll('#detail .detail-body > *')]; const i = (s) => b.findIndex(e => e.matches(s)); return i('.wb') > i('.dbtns') && (i('.vo-karte') < 0 || i('.vo-karte') < i('.wb')); })()"), 'Reihenfolge: Knöpfe → Heute vor Ort → Wichtig für dein Boot')
+    wb.locator('.wb-link').click(); pg.wait_for_timeout(300)
+    check(pg.locator('.ae-dlg[open]').count() == 1 and 'Angaben ergänzen' in pg.inner_text('.ae-dlg'), '„Ergänzen“ öffnet „Angaben ergänzen“')
+    check(pg.locator('#detail .detail-links button', has_text='Fehler melden').count() == 1, '„Fehler melden“ bleibt unten für echte Fehler')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     check('+ Community' in d, 'Herkunft Community-Anteil sichtbar')
     # Community-Ort
     pg.evaluate("window.__watermap.selectPlace('c/test-1')")
@@ -245,7 +302,7 @@ def desktop(b):
     for name, r in res.items():
         check(not r['missingInStatic'] and not r['unusedStatic'], f'Netlify-Formular "{name}" deckt alle Felder ab {r if (r["missingInStatic"] or r["unusedStatic"]) else ""}')
     # Slip-Formular: Karte wählen
-    pg.click('#btn-menu'); pg.click('#menu .menu-item:has-text("Neue Slipanlage")'); pg.wait_for_selector('#dlg[open]')
+    report(pg, 'Neue Slipanlage'); pg.wait_for_selector('#dlg[open]')
     pg.fill('input[name=name]', 'TEST Neue Rampe'); pg.fill('input[name=gewaesser]', 'TEST-See')
     pg.click('#dlg button:has-text("Standort übernehmen"), #dlg button:has-text("Senden")') if False else None
     pg.click('#dlg-body button:has-text("Zur Prüfung senden")'); pg.wait_for_timeout(100)
@@ -271,7 +328,7 @@ def desktop(b):
     # Dublettenprüfung: neue Rampe direkt neben node/1
     pg.evaluate("localStorage.clear()")
     p1 = pg.evaluate("(()=>{const p=window.__watermap.state.byId.get('node/1');return [p.lat,p.lon]})()")
-    pg.click('#btn-menu'); pg.click('#menu .menu-item:has-text("Neue Slipanlage")'); pg.wait_for_selector('#dlg[open]')
+    report(pg, 'Neue Slipanlage'); pg.wait_for_selector('#dlg[open]')
     pg.fill('input[name=name]', 'TEST Doppelt'); pg.fill('input[name=gewaesser]', 'x')
     pg.evaluate("""([la,lo]) => { const f=document.querySelector('input[name=lat]'); const g=document.querySelector('input[name=lon]'); f.value=la; g.value=lo; }""", [p1[0] + 0.0004, p1[1]])
     # nearby-Prüfung läuft beim Setzen über die Oberfläche → über "Meine Position" nicht möglich; daher über Kartenklick simulieren
@@ -304,48 +361,25 @@ def desktop(b):
         check(b'\xff\xd8\xff' in raw, 'Foto wurde als JPEG neu kodiert gesendet')
         check(b'dublette_bestaetigt' in raw, 'Dubletten-Bestätigung wird mitgesendet')
     pg.click('#dlg-body button:has-text("Schließen")')
-    # Falsche Dateien
+    # Foto aus dem Menü: Standort auf der Karte antippen (ausführlich: photo_form)
     pg.evaluate("localStorage.clear()")
-    pg.click('#btn-menu'); pg.click('#menu .menu-item:has-text("Foto einreichen")'); pg.wait_for_selector('#pickbar:not([hidden])')
+    report(pg, 'Foto einreichen'); pg.wait_for_selector('#pickbar:not([hidden])')
     check('Tippe auf der Karte' in pg.inner_text('#pickbar') and pg.locator('#dlg[open]').count() == 0, 'Foto aus Menü: Standort auf der Karte wählen, keine Liste')
     pg.evaluate("window.__watermap.selectPlace('node/1')"); pg.wait_for_selector('#dlg[open]')
-    check(pg.locator('#dlg input[name=standort_id]').get_attribute('value') == 'node/1' and pg.locator('#pickbar').is_hidden()
-          and pg.locator('#dlg select[name=standort_id]').count() == 0, 'Foto aus Menü: angetippter Standort steht im Formular')
-    pg.fill('textarea[name=beschreibung]', 'Test')
-    pg.check('input[name=foto_rechte]')
-    pg.set_input_files('input[name=foto]', {'name': 'virus.jpg', 'mimeType': 'image/jpeg', 'buffer': b'MZ\x90\x00 not an image at all' * 10})
-    pg.click('#dlg-body button:has-text("Foto zur Prüfung senden")'); pg.wait_for_timeout(500)
-    check('Nur JPEG' in pg.inner_text('#dlg .form-status'), 'Datei mit falschem Inhalt (nur umbenannt) wird abgelehnt')
-    pg.set_input_files('input[name=foto]', {'name': 'big.jpg', 'mimeType': 'image/jpeg', 'buffer': b'\xff\xd8\xff' + b'0' * (6 * 1024 * 1024)})
-    pg.click('#dlg-body button:has-text("Foto zur Prüfung senden")'); pg.wait_for_timeout(500)
-    check('5 MB' in pg.inner_text('#dlg .form-status'), 'Zu großes Foto wird abgelehnt')
-    check(len(posts) == 2, 'Abgelehnte Fotos erzeugen keine Anfrage')
-    pg.click('#dlg-close')
+    check(pg.locator('#dlg input[name=standort_id]').get_attribute('value') == 'node/1' and pg.locator('#pickbar').is_hidden(), 'Foto aus Menü: angetippter Standort steht im Formular')
+    pg.click('#dlg .pf-x')
     # Aus der Detailansicht: Standort steht fest (auch bei Standorten jenseits der ersten 600 der Liste)
     last = pg.evaluate("window.__watermap.state.places.map(p => p.id).sort().pop()")
-    pg.evaluate(f"window.__watermap.selectPlace({json.dumps(last)})"); pg.wait_for_selector('#detail button[title="Foto hinzufügen"]')
-    pg.click('#detail button[title="Foto hinzufügen"]'); pg.wait_for_selector('#dlg[open]')
-    check(pg.locator('#dlg select[name=standort_id]').count() == 0 and pg.locator('#dlg .fixed-place').count() == 1, 'Foto aus Detail: keine Standortauswahl')
+    pg.evaluate(f"window.__watermap.selectPlace({json.dumps(last)})"); pg.wait_for_selector('#detail .ph-add, #detail .ph-leer-btn')
+    pg.click('#detail .ph-add, #detail .ph-leer-btn'); pg.wait_for_selector('#dlg[open]')
     check(pg.locator('#dlg input[name=standort_id]').get_attribute('value') == last, f'Foto aus Detail: Standort-ID fest ({last})')
-    pg.click('#dlg-close')
-    # Preis-Formular
-    pg.click('#btn-menu'); pg.click('#menu .menu-item:has-text("Kraftstoffpreis")'); pg.wait_for_selector('#pickbar:not([hidden])')
-    pg.evaluate("window.__watermap.selectPlace('node/1')"); pg.wait_for_timeout(200)
-    check(pg.locator('#dlg[open]').count() == 0 and pg.locator('#pickbar').is_visible(), 'Preis aus Menü: Slipanlage wird nicht angenommen')
-    pg.evaluate("window.__watermap.selectPlace('node/7001')"); pg.wait_for_selector('#dlg[open]')
-    check(pg.locator('#dlg input[name=tankstelle_id]').get_attribute('value') == 'node/7001', 'Preis aus Menü: angetippte Tankstelle steht fest')
-    pg.fill('#dlg input[name=preis]', '25')
-    pg.click('#dlg-body button:has-text("Preis zur Prüfung senden")'); pg.wait_for_timeout(100)
-    check('zwischen' in pg.inner_text('#dlg .form-status'), 'Unplausibler Preis (25 €/l) wird abgelehnt')
-    pg.fill('#dlg input[name=preis]', '2,189')
-    pg.evaluate("localStorage.clear()")
-    n0 = len(posts)
-    pg.click('#dlg-body button:has-text("Preis zur Prüfung senden")'); pg.wait_for_timeout(300)
-    check(len(posts) == n0 + 1 and b'preis=2.189' in posts[-1]['body'], 'Preis mit Komma wird als 2.189 gesendet')
-    pg.click('#dlg-body button:has-text("Schließen")')
+    pg.click('#dlg .pf-x')
+    # Preis melden ist entfernt: Tankstelle zeigt Preise, aber keinen Knopf
+    pg.evaluate("window.__watermap.selectPlace('node/7001', { full: true })"); pg.wait_for_selector('#detail:not([hidden]) .prices')
+    check(pg.locator('#detail button:has-text("Preis melden")').count() == 0, 'Tankstelle: Preise ohne „Preis melden“')
     # Honeypot
     pg.evaluate("localStorage.clear()")
-    pg.click('#btn-menu'); pg.click('#menu .menu-item:has-text("Fehler")'); pg.wait_for_selector('#pickbar:not([hidden])')
+    report(pg, 'Fehler'); pg.wait_for_selector('#pickbar:not([hidden])')
     pg.click('#pickbar button:has-text("Ohne Standort")'); pg.wait_for_selector('#dlg[open]')
     check('Allgemeiner Hinweis' in pg.inner_text('#dlg') and pg.locator('#dlg input[name=standort_id]').get_attribute('value') == '__other', 'Fehler ohne Standort möglich')
     pg.select_option('select[name=art]', 'preis'); pg.fill('textarea[name=details]', 'x')
@@ -356,7 +390,7 @@ def desktop(b):
     # Serverfehler → Eingaben bleiben
     ctx.unroute(BASE); ctx.route(BASE, lambda r: r.fulfill(status=500, body='x') if r.request.method == 'POST' else r.continue_())
     pg.evaluate("localStorage.clear()")
-    pg.click('#btn-menu'); pg.click('#menu .menu-item:has-text("Fehler")'); pg.wait_for_selector('#pickbar:not([hidden])')
+    report(pg, 'Fehler'); pg.wait_for_selector('#pickbar:not([hidden])')
     pg.click('#pickbar button:has-text("Ohne Standort")'); pg.wait_for_selector('#dlg[open]')
     pg.select_option('select[name=art]', 'preis'); pg.fill('textarea[name=details]', 'Mein Text')
     pg.click('#dlg-body button:has-text("Korrektur senden")'); pg.wait_for_timeout(300)
@@ -365,27 +399,161 @@ def desktop(b):
     check(not pg.errs, f'Keine JS-Fehler {pg.errs[:3]}')
     ctx.close()
 
+def photo_form(b, mobile):
+    tag = 'Handy 375' if mobile else 'Desktop'
+    print(f'--- Foto hinzufügen ({tag})')
+    ctx, pg = new_page_vp(b, 375, 667) if mobile else new_page(b)
+    posts = []
+    def on_post(route):
+        req = route.request
+        if req.method == 'POST': posts.append({'ct': req.headers.get('content-type', ''), 'body': req.post_data_buffer or b''}); return route.fulfill(status=200, body='ok')
+        return route.continue_()
+    ctx.route(BASE, on_post)
+    open_app(pg, mobile)
+    pg.evaluate("window.__watermap.selectPlace('node/1', { full: true })"); pg.wait_for_selector('#detail .ph-add, #detail .ph-leer-btn')
+    check(pg.is_visible('#detail .ph-leer') and 'Noch keine Fotos' in pg.inner_text('#detail .ph-leer') and pg.locator('#detail .detail-links button', has_text='Foto hinzufügen').count() == 0,
+          f'{tag}: ohne Fotos Karte „Noch keine Fotos“ mit Knopf')
+    pg.click('#detail .ph-add, #detail .ph-leer-btn'); pg.wait_for_selector('#dlg[open]')
+    shot = lambda n: pg.screenshot(path=str(SHOTS / f'foto_{"m" if mobile else "d"}_{n}.png'))
+    # leer
+    txt = pg.inner_text('#dlg')
+    check('Foto hinzufügen' in txt and 'Fotos helfen' not in txt and 'Zeig anderen, wie es hier aussieht' in txt, f'{tag}: Titel, kein Einleitungstext, leere Foto-Fläche')
+    check(pg.locator('#dlg .pf-place strong').inner_text() == 'TEST Slip 1' and 'TEST-See' in pg.inner_text('#dlg .pf-place small')
+          and re.search(r'\d+\.\d{3}, \d+\.\d{3}$', pg.inner_text('#dlg .pf-place small')), f'{tag}: Standort-Karte mit Name, Gewässer, Koordinaten (3 Stellen)')
+    check(pg.evaluate("document.activeElement.id") == 'dlg-title', f'{tag}: Fokus beim Öffnen auf dem Titel, nicht auf dem Schließen-Knopf')
+    check(pg.locator('#dlg .pf-x[aria-label="Schließen"]').is_visible() and not pg.locator('#dlg-close').is_visible(), f'{tag}: ein runder Schließen-Knopf')
+    check(pg.locator('#dlg input[type=file]').evaluate_all("l => l.every(e => e.getBoundingClientRect().width <= 1)"), f'{tag}: kein sichtbares Datei-Feld')
+    check(pg.locator('#dlg input[capture=environment]').count() == 1, f'{tag}: Kamera-Knopf öffnet die Kamera (capture)')
+    send = pg.locator('#dlg .pf-send')
+    check(send.get_attribute('aria-disabled') == 'true' and pg.evaluate("getComputedStyle(document.querySelector('.pf-send')).backgroundColor") == 'rgb(225, 232, 231)', f'{tag}: Knopf grau, solange nichts gewählt')
+    small = pg.evaluate("""[...document.querySelectorAll('#dlg button, #dlg input:not([type=hidden]):not([type=file]), #dlg label.pf-check')].filter(e => e.offsetParent !== null && !e.closest('.hp'))
+        .map(e => { const r = e.getBoundingClientRect(); return [e.className || e.type, Math.round(r.width), Math.round(r.height)]; })
+        .filter(x => x[0] !== 'checkbox' && (x[2] < 44 || x[1] < 44))""")
+    check(not small, f'{tag}: Touch-Ziele ≥ 44 px {small[:4]}')
+    check(pg.evaluate("document.documentElement.scrollWidth <= window.innerWidth"), f'{tag}: kein horizontales Scrollen')
+    shot('1_leer')
+    # falsches Format, zu groß
+    pg.set_input_files('#dlg input[data-quelle=galerie]', {'name': 'virus.jpg', 'mimeType': 'image/jpeg', 'buffer': b'MZ\x90\x00 not an image at all' * 10})
+    pg.wait_for_selector('#dlg .pf-error:not([hidden])')
+    check('Nur JPEG' in pg.inner_text('#dlg .pf-error') and pg.locator('#dlg .pf-preview').count() == 0, f'{tag}: falsches Format → rote Meldung unter dem Foto')
+    shot('2_format')
+    pg.set_input_files('#dlg input[data-quelle=galerie]', {'name': 'big.jpg', 'mimeType': 'image/jpeg', 'buffer': b'\xff\xd8\xff' + b'0' * (6 * 1024 * 1024)})
+    pg.wait_for_function("document.querySelector('#dlg .pf-error').textContent.includes('5 MB')")
+    check(True, f'{tag}: zu große Datei → Meldung „größer als 5 MB“')
+    # gültiges Foto mit GPS
+    gps = jpeg_with_gps()
+    pg.set_input_files('#dlg input[data-quelle=kamera]', {'name': 'IMG_2381.jpg', 'mimeType': 'image/jpeg', 'buffer': gps})
+    pg.wait_for_selector('#dlg .pf-preview img')
+    ok = pg.inner_text('#dlg .pf-ok')
+    check(pg.locator('#dlg .pf-error').is_hidden() and ok.startswith('IMG_2381.jpg · ') and ok.endswith('GPS-Daten entfernt'), f'{tag}: Vorschau und grüne Zeile ({ok})')
+    h = pg.locator('#dlg .pf-preview').bounding_box()['height']
+    check(200 <= h <= 230, f'{tag}: Vorschau ca. 216 px hoch ({h:.0f})')
+    check(send.get_attribute('aria-disabled') == 'true', f'{tag}: ohne Häkchen noch grau')
+    kats = [t.strip() for t in pg.locator('#dlg .pf-kat').all_inner_texts()]
+    check(kats == ['Rampe', 'Steg', 'Zufahrt', 'Parkplatz', 'Umgebung', 'Sonstiges'], f'{tag}: sechs Kategorien ({kats})')
+    pg.check('#pf-rights')
+    check(send.get_attribute('aria-disabled') == 'true', f'{tag}: ohne Kategorie noch grau')
+    pg.click('#dlg .pf-send', force=True)   # aria-disabled: bleibt klickbar und sagt, was fehlt
+    check('was das Foto zeigt' in pg.inner_text('#dlg .pf-status'), f'{tag}: Hinweis „Bitte wähle, was das Foto zeigt“')
+    pg.click('#dlg .pf-kat[data-kat=rampe]'); pg.click('#dlg .pf-kat[data-kat=parkplatz]')
+    check(pg.locator('#dlg .pf-kat[aria-pressed=true]').count() == 1 and pg.locator('#dlg input[name=kategorie]').input_value() == 'parkplatz'
+          and pg.evaluate("getComputedStyle(document.querySelector('.pf-kat[aria-pressed=true]')).backgroundColor") == 'rgb(14, 36, 51)', f'{tag}: genau eine Kategorie, aria-pressed, Navy')
+    check(send.get_attribute('aria-disabled') == 'false' and pg.evaluate("getComputedStyle(document.querySelector('.pf-send')).backgroundColor") == 'rgb(11, 94, 107)', f'{tag}: Knopf Petrol, wenn bereit')
+    check(pg.locator('#pf-note').get_attribute('maxlength') == '140', f'{tag}: Notiz max. 140 Zeichen')
+    pg.fill('#pf-note', 'bei Niedrigwasser, Mai 2026')
+    foot = pg.locator('#dlg .pf-foot').bounding_box()
+    check(foot['y'] + foot['height'] <= pg.viewport_size['height'] + 1, f'{tag}: Fußzeile mit Knopf sichtbar')
+    pg.locator('#dlg .pf-scroll').evaluate("e => e.scrollTop = e.scrollHeight")
+    foot2 = pg.locator('#dlg .pf-foot').bounding_box()
+    check(abs(foot2['y'] - foot['y']) < 1, f'{tag}: Fußzeile bleibt beim Scrollen stehen')
+    pg.locator('#dlg .pf-scroll').evaluate("e => e.scrollTop = 0")
+    shot('3_foto')
+    # entfernen und erneut wählen
+    pg.click('#dlg .pf-remove')
+    check(pg.locator('#dlg .pf-preview').count() == 0 and pg.locator('#dlg .pf-ok').is_hidden() and send.get_attribute('aria-disabled') == 'true', f'{tag}: Foto entfernt → leere Fläche, Knopf grau')
+    shot('4_entfernt')
+    pg.set_input_files('#dlg input[data-quelle=galerie]', {'name': 'IMG_2381.jpg', 'mimeType': 'image/jpeg', 'buffer': gps})
+    pg.wait_for_selector('#dlg .pf-preview img')
+    # Standort ändern: Eingaben bleiben erhalten
+    pg.click('#dlg .pf-link'); pg.wait_for_selector('#pickbar:not([hidden])')
+    pg.evaluate("window.__watermap.selectPlace('node/2')"); pg.wait_for_selector('#dlg[open] .pf-preview img')
+    check(pg.locator('#dlg input[name=standort_id]').get_attribute('value') == 'node/2' and pg.locator('#pf-note').input_value() == 'bei Niedrigwasser, Mai 2026'
+          and pg.locator('#pf-rights').is_checked() and pg.locator('#dlg .pf-kat[aria-pressed=true][data-kat=parkplatz]').count() == 1, f'{tag}: „Ändern“ behält Foto, Kategorie, Notiz, Häkchen')
+    # senden
+    pg.evaluate("localStorage.clear()")
+    pg.evaluate("window.__texte = []; new MutationObserver(() => window.__texte.push(document.querySelector('.pf-send')?.textContent)).observe(document.querySelector('.pf-send'), { childList: true, characterData: true, subtree: true })")
+    pg.click('#dlg .pf-send')
+    pg.wait_for_selector('#dlg .pf-done', timeout=5000)
+    check(len(posts) == 1, f'{tag}: eine Einsendung ({len(posts)})')
+    if posts:
+        raw = posts[0]['body']
+        fields = {k: v for k, v in re.findall(rb'name="([^"]+)"\r\n\r\n([^\r]*)\r\n', raw)}
+        check('multipart/form-data' in posts[0]['ct'] and fields.get(b'form-name') == b'foto-einreichen', f'{tag}: multipart an Netlify Forms (foto-einreichen)')
+        check(fields.get(b'standort_id') == b'node/2' and fields.get(b'standort_name') == b'TEST Slip 2', f'{tag}: Standort gesendet')
+        check(fields.get(b'kategorie') == b'parkplatz' and fields.get(b'beschreibung') == b'bei Niedrigwasser, Mai 2026' and fields.get(b'foto_rechte') == b'on', f'{tag}: Kategorie, Notiz, Einverständnis gesendet')
+        check(b'name="foto"; filename="foto.jpg"' in raw and b'\xff\xd8\xff' in raw, f'{tag}: Foto als JPEG gesendet')
+        check(b'Exif' not in raw and b'GPS' not in raw and b'TESTCAM' not in raw, f'{tag}: keine EXIF-/GPS-Daten im gesendeten Foto')
+        check(raw.count(b'filename=') == 1, f'{tag}: nur das aufbereitete Foto, keine Originaldatei')
+    check('Wird hochgeladen …' in pg.evaluate("window.__texte"), f'{tag}: Ladezustand im Knopf')
+    check('Danke!' in pg.inner_text('#dlg') and 'innerhalb von 24 Stunden' in pg.inner_text('#dlg'), f'{tag}: Erfolgsansicht')
+    shot('5_danke')
+    pg.click('#dlg button:has-text("Fertig")')
+    check(pg.locator('#dlg[open]').count() == 0, f'{tag}: „Fertig“ schließt')
+    check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
+    ctx.close()
+
+def new_page_vp(b, w, hgt):
+    ctx = b.new_context(viewport={'width': w, 'height': hgt}, device_scale_factor=2, is_mobile=True, has_touch=True, locale='de-DE')
+    lib_routes(ctx, False)
+    ctx.add_init_script("try { if (localStorage.getItem('watermap.cats') === null) { localStorage.setItem('watermap.cats', 'slip,marina,fuel'); localStorage.setItem('watermap.listOpen', '1'); } } catch {}")
+    pg = ctx.new_page(); errs = []
+    pg.on('pageerror', lambda e: errs.append('PAGEERROR ' + str(e)))
+    pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' and '501' not in m.text and 'Failed to load resource' not in m.text else None)
+    pg.errs = errs
+    return ctx, pg
+
 def mobile(b):
     print('--- Smartphone')
     ctx, pg = new_page(b, mobile=True); open_app(pg, True)
+    pg.click('#bottomnav [data-nav=karte]'); pg.wait_for_timeout(300)   # Werkzeugleiste gehört zur Karte („In der Nähe“ hat eigene Chips)
     check(pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), 'Kein horizontales Scrollen')
     pg.screenshot(path=str(SHOTS / 'full_mobile_start.png'))
-    small = pg.evaluate("""[...document.querySelectorAll('button,a.btn,.chip,input,select')].filter(e=>e.offsetParent!==null).map(e=>{const r=e.getBoundingClientRect();return [e.className||e.tagName, Math.round(r.width), Math.round(r.height)]}).filter(x=>x[2]<40 && x[1]<40)""")
+    small = pg.evaluate("""[...document.querySelectorAll('button,a.btn,.cat,.bn-item,input,select')].filter(e=>e.offsetParent!==null).map(e=>{const r=e.getBoundingClientRect();return [e.className||e.tagName, Math.round(r.width), Math.round(r.height)]}).filter(x=>x[2]<40 && x[1]<40)""")
     check(not small, f'Touch-Flächen ≥ 40 px {small[:4]}')
-    pg.click('#sheet-handle'); pg.wait_for_timeout(350)
-    check('is-open' in pg.get_attribute('#sidebar', 'class'), 'Bottom Sheet öffnet sich')
+    hb = pg.locator('.app-header').bounding_box(); sb = pg.locator('#q').bounding_box()
+    check(pg.locator('.brand-text').is_hidden() and sb['width'] > 390 * 0.7, 'Kopf: Logo-Symbol und breites Suchfeld, kein Schriftzug')
+    cats = pg.locator('#cats .cat')
+    check(cats.count() == 3 and [cats.nth(i).inner_text().strip() for i in range(3)] == ['Slip', 'Häfen', 'Tanken'], 'Kategorie-Chips: Slip · Häfen · Tanken')
+    pg.click('.cat-slip'); pg.click('.cat-marina'); pg.wait_for_timeout(200)   # nur Tankstellen
+    check(pg.evaluate("getComputedStyle(document.querySelector('.cat-fuel')).backgroundColor") == 'rgb(255, 255, 255)', 'Aktive Kategorie weiß gefüllt')
+    bn = pg.locator('#bottomnav').bounding_box()
+    check(abs(bn['y'] + bn['height'] - (844 - 28)) <= 1 and pg.locator('#bottomnav .bn-item').count() == 5, 'Navigation unten: schwebende Leiste mit fünf Zielen')
+    plus = pg.locator('#bottomnav .bn-plus').bounding_box()
+    check(plus['y'] >= bn['y'] and plus['y'] + plus['height'] <= bn['y'] + bn['height'], '„Melden“ sitzt innerhalb der Leiste')
+    pg.click('#btn-naehe-m'); pg.wait_for_timeout(300)
     pg.screenshot(path=str(SHOTS / 'full_mobile_list.png'))
-    pg.click('.chip-slip'); pg.click('.chip-marina'); pg.wait_for_timeout(200)   # nur Tankstellen
-    pg.click('.place >> nth=0'); pg.wait_for_selector('#detail:not([hidden])'); pg.wait_for_timeout(300)
-    box = pg.locator('#detail').bounding_box()
-    check(box['y'] + box['height'] >= 843 and box['height'] <= 844 * 0.65, f'Details als Bottom Sheet am unteren Rand (Höhe {box["height"]:.0f})')
+    pg.click('.place >> nth=0'); pg.wait_for_selector('#peek:not([hidden])'); pg.wait_for_timeout(300)
+    pk = pg.locator('#peek').bounding_box(); fab = pg.locator('#btn-locate').bounding_box()
+    check(pk['y'] + pk['height'] <= bn['y'] + 1 and pg.locator('#peek .dbtn-primary', has_text='Route').count() == 1 and pg.locator('#peek button', has_text='Details').count() == 1,
+          'Vorschau-Karte über der Navigation mit Route und Details')
+    check(fab['y'] + fab['height'] <= pk['y'] and pg.locator('#btn-locate').is_visible(), '„Meine Position“ über der Vorschau, nicht verdeckt')
+    pg.screenshot(path=str(SHOTS / 'full_mobile_peek.png'))
+    pg.click('#peek button:has-text("Details")'); pg.wait_for_selector('#detail:not([hidden])'); pg.wait_for_timeout(300)
+    check(pg.locator('#peek').is_hidden(), 'Details ersetzen die Vorschau')
     pg.screenshot(path=str(SHOTS / 'full_mobile_detail.png'))
-    pg.click('#detail .icon-btn >> nth=0') if False else pg.keyboard.press('Escape')
-    pg.evaluate("window.__watermap.selectPlace('node/7000')"); pg.wait_for_timeout(300)
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+    check(pg.locator('#detail').is_hidden() and pg.locator('#peek').is_hidden(), 'Escape schließt')
+    pg.click('#bottomnav [data-nav=melden]'); pg.wait_for_selector('#report-menu[open]')
+    rb = pg.locator('#report-menu').bounding_box()
+    check(rb['y'] + rb['height'] >= 843 and rb['width'] >= 389, 'Melden als Bottom-Sheet')
+    pg.screenshot(path=str(SHOTS / 'full_mobile_melden.png'))
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
+    check(pg.evaluate("document.activeElement.closest('[data-nav]')?.dataset.nav") == 'melden', 'Fokus zurück auf „Melden“')
+    pg.evaluate("window.__watermap.selectPlace('node/7000', { full: true })"); pg.wait_for_timeout(300)
     pg.screenshot(path=str(SHOTS / 'full_mobile_fuel.png'))
-    pg.click('#detail button:has-text("Preis melden")'); pg.wait_for_selector('#dlg[open]')
-    check(pg.locator('#dlg select[name=tankstelle_id]').count() == 0 and pg.locator('#dlg input[name=tankstelle_id]').get_attribute('value') == 'node/7000',
-          'Preis-Formular aus Detail: Tankstelle steht fest')
+    pg.click('#detail .detail-links button:has-text("Fehler melden")'); pg.wait_for_selector('#dlg[open]')
+    check(pg.locator('#dlg select[name=standort_id]').count() == 0 and pg.locator('#dlg input[name=standort_id]').get_attribute('value') == 'node/7000',
+          'Fehler-Formular aus Detail: Standort steht fest')
     pg.screenshot(path=str(SHOTS / 'full_mobile_form.png'))
     check(pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), 'Formular ohne horizontales Scrollen')
     check(not pg.errs, f'Keine JS-Fehler {pg.errs[:3]}')
@@ -396,7 +564,7 @@ def failures(b, site):
     ctx, pg = new_page(b, block_libs=True); open_app(pg)
     check('Karte konnte nicht geladen werden' in pg.inner_text('#map'), 'Kartenmodul fehlt: klare Meldung statt leerem Bildschirm')
     check(pg.locator('.place').count() > 0, 'Kartenmodul fehlt: Liste funktioniert weiter')
-    pg.click('#btn-menu'); pg.click('#menu .menu-item:has-text("Neue Slipanlage")'); pg.wait_for_selector('#dlg[open]')
+    report(pg, 'Neue Slipanlage'); pg.wait_for_selector('#dlg[open]')
     check(pg.locator('#dlg input[name=name]').count() == 1, 'Kartenmodul fehlt: Formulare funktionieren weiter')
     ctx.close()
 

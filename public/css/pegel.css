@@ -1,0 +1,473 @@
+/* Bereich „Pegel“: Dashboard, Pegel-Karten, Detailseite (js/pegel-dashboard.js, js/pegel-ansicht.js).
+   Zustandsfarben: niedrig #FAB219, normal #6CBF84, hoch #EC835A, über HSW #D03B3B, ohne Kennwerte #DCE5EA. */
+
+/* Bereich ein-/ausblenden */
+.pegelseite { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; background: #F3F6F8; }
+.pegelseite:focus { outline: none; }
+body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, body.view-meldungen .shell, body.view-mehr .toolbar, body.view-mehr .shell { display: none; }
+
+.pg-seite { max-width: 1280px; margin: 0 auto; padding: 24px 24px 40px; }
+.pg-kopf { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.pg-kopf-zeile { display: flex; align-items: center; gap: 14px; }
+.pg-titel { margin: 0; font-size: 34px; color: var(--navy); letter-spacing: -.02em; }
+.pg-stand { margin: 2px 0 0; color: var(--muted); font-size: 14.5px; }
+.pg-neu { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: #fff; color: var(--navy); display: grid; place-items: center; }
+.pg-neu:hover { background: #F4F8FA; }
+.pg-neu.is-busy svg { animation: pg-dreh 1s linear infinite; }
+@keyframes pg-dreh { to { transform: rotate(360deg); } }
+.pg-suche-box { position: relative; flex: 0 1 460px; }
+.pg-suche-ico { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); display: grid; pointer-events: none; }
+.pg-suche { width: 100%; min-height: 50px; border: 1px solid var(--line); border-radius: 14px; padding: 0 16px 0 46px; font-size: 16px; background: #fff; color: var(--ink); }
+.pg-suche:focus { border-color: var(--slip); outline: 2px solid rgba(8, 127, 156, .25); }
+
+.pg-raster { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 22px 28px; align-items: start; }
+.pg-voll { grid-column: 1 / -1; }
+.pg-links, .pg-rechts { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.pg-h2 { margin: 0; font-size: 21px; color: var(--navy); }
+.pg-h2-zeile { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.pg-link { min-height: 44px; padding: 0 2px; border: 0; background: none; color: #06667E; font-weight: 750; font-size: 15px; }
+.pg-link:hover { text-decoration: underline; }
+.pg-klein { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+.pg-hinweis { margin: 0 0 10px; color: var(--muted); font-size: 14.5px; }
+.pg-fehler { padding: 20px; background: #fff; border-radius: 18px; color: #8E2318; font-weight: 650; }
+.pg-laden { padding: 20px 0; }
+.pg-fuss { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.pg-nur-handy { display: none; }
+
+/* Lage heute */
+.pg-zaehler-reihe { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.pg-zaehler { --z: #6CBF84; display: flex; align-items: center; gap: 14px; min-height: 84px; padding: 14px 18px; border: 0; border-left: 5px solid var(--z); border-radius: 18px;
+  background: #fff; text-align: left; box-shadow: 0 1px 3px rgba(11, 48, 69, .06); color: var(--navy); }
+.pg-zaehler:hover { box-shadow: 0 2px 10px rgba(11, 48, 69, .12); }
+.pg-zaehler.is-aktiv { outline: 2px solid var(--navy); }
+.pg-zaehler strong { font-size: 34px; font-variant-numeric: tabular-nums; line-height: 1; }
+.pg-zaehler-text { display: flex; flex-direction: column; }
+.pg-zaehler-text b { font-size: 16px; }
+.pg-zaehler-text small { color: var(--muted); font-size: 13.5px; }
+.pg-zaehler.is-hsw { --z: #D03B3B; } .pg-zaehler.is-hsw b { color: #A32020; }
+.pg-zaehler.is-high { --z: #EC835A; } .pg-zaehler.is-high b { color: #9A3B12; }
+.pg-zaehler.is-low { --z: #FAB219; } .pg-zaehler.is-low b { color: #7A5200; }
+.pg-zaehler.is-normal b { color: #17603A; }
+
+/* Zustands-Etiketten (Kontrast ≥ 4.5:1) */
+.pz-tag { display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 99px; font-size: 13px; font-weight: 750; white-space: nowrap; }
+.pz-normal.pz-tag { background: #E3F4E8; color: #14532D; }
+.pz-low.pz-tag { background: #FFF1C7; color: #7A5200; }
+.pz-high.pz-tag { background: #FCE3D8; color: #8A3412; }
+.pz-hsw.pz-tag { background: #D03B3B; color: #fff; }
+.pz-none.pz-tag, .pz-old.pz-tag { background: #EAEFF2; color: #3D5160; }
+.pz-tide.pz-tag { background: #9CCEE3; color: var(--navy); }
+
+/* Meine Pegel */
+.pg-karten { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.pm-karte { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 16px 18px 14px; background: #fff; border-radius: 18px; border: 1.5px solid transparent;
+  box-shadow: 0 1px 3px rgba(11, 48, 69, .06); }
+.pm-karte.is-hsw { border-color: #D03B3B; }
+.pm-flaeche { position: absolute; inset: 0; border: 0; background: transparent; border-radius: 18px; z-index: 0; cursor: pointer; }
+.pm-flaeche:focus-visible { outline: 3px solid #1C8FB8; outline-offset: 2px; }
+.pm-karte > :not(.pm-flaeche) { position: relative; z-index: 1; pointer-events: none; }
+.pm-karte .pm-bearb, .pm-karte .pm-bearb * { pointer-events: auto; }
+.pm-karte:hover { box-shadow: 0 3px 14px rgba(11, 48, 69, .12); }
+.pm-kopf { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.pm-name { margin: 0; font-size: 18px; color: var(--navy); }
+.pm-wasser { margin: 0; font-size: 13.5px; color: var(--muted); }
+.pm-mitte { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.pm-wert { margin: 0; color: var(--navy); }
+.pm-wert strong { font-size: 40px; font-weight: 800; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+.pm-wert span { font-size: 18px; font-weight: 700; }
+.pm-trend { margin: -4px 0 0; font-size: 14px; font-weight: 700; }
+.pt-down { color: #A33A12; } .pt-up { color: #1F5FAD; } .pt-flat { color: #3D5160; }
+.pm-spark-box { flex: 0 1 150px; min-width: 90px; }
+.pm-spark { display: block; width: 100%; height: auto; }
+.pm-spark-line { fill: none; stroke: #087F9C; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.pm-spark-dot { fill: #087F9C; }
+.pz-low .pm-spark-line { stroke: #B47900; } .pz-low .pm-spark-dot { fill: #B47900; }
+.pz-hsw .pm-spark-line, .pz-high .pm-spark-line { stroke: #C83A3A; } .pz-hsw .pm-spark-dot, .pz-high .pm-spark-dot { fill: #C83A3A; }
+.pm-bearb { display: flex; gap: 8px; border-top: 1px solid #EEF3F5; padding-top: 10px; }
+.pm-bbtn { min-height: 44px; min-width: 44px; border-radius: 12px; border: 1px solid var(--line); background: #fff; color: var(--navy); display: inline-grid; place-items: center; padding: 0 12px; font-weight: 700; }
+.pm-bbtn svg { transform: rotate(90deg); }
+.pm-bbtn.is-runter svg { transform: rotate(-90deg); }
+.pm-bbtn.is-weg { margin-left: auto; color: #A32020; }
+.pm-bbtn:disabled { opacity: .4; }
+.pg-hinzu { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 60px; border: 2px dashed #C6D3D1; border-radius: 18px; background: transparent; color: var(--navy); font-weight: 750; font-size: 16px; }
+.pg-hinzu:hover { background: #fff; }
+.pm-stern { width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .12); color: #fff; display: grid; place-items: center; flex: none; }
+.pm-stern.is-on { color: #F5B521; }
+.pm-stern.is-klein { background: var(--bg); color: var(--navy); }
+.pm-stern.is-klein.is-on { color: #D99A0B; }
+
+/* Skala MNW – MW – MHW – HSW */
+.ps { position: relative; padding-bottom: 18px; }
+.ps-track { position: relative; height: 10px; border-radius: 5px; background: #EEF3F5; overflow: visible; }
+.ps-seg { position: absolute; top: 0; bottom: 0; }
+.ps-seg:first-child { border-radius: 5px 0 0 5px; }
+.ps-seg:last-of-type { border-radius: 0 5px 5px 0; }
+.ps-seg.is-low { background: #FAB219; } .ps-seg.is-normal { background: #CDE9D5; } .ps-seg.is-high { background: #EC835A; } .ps-seg.is-hsw { background: #D03B3B; }
+.ps-mark { position: absolute; top: -6px; width: 4px; height: 22px; margin-left: -2px; border-radius: 2px; background: var(--navy); box-shadow: 0 0 0 2px #fff; }
+.ps-labels { position: relative; height: 16px; margin-top: 6px; font-size: 12px; color: var(--muted); }
+.ps-labels > span { position: absolute; transform: translateX(-50%); white-space: nowrap; display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+.ps.is-gross { padding-top: 26px; padding-bottom: 6px; }
+.ps.is-gross .ps-track { height: 14px; border-radius: 7px; }
+.ps.is-gross .ps-mark { top: -6px; height: 26px; }
+.ps-wert { position: absolute; top: 0; transform: translateX(-50%); font-weight: 800; color: var(--navy); font-size: 15px; }
+.ps.is-gross .ps-labels { font-size: 13px; height: 34px; }
+.ps.is-gross .ps-labels b { color: var(--navy); font-size: 15px; }
+
+/* Alle Pegel */
+.pg-alle-karte { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(11, 48, 69, .06); }
+.pg-alle-suche { padding: 14px 18px 4px; }
+.pg-alle-suche .pg-suche-box { flex: none; }
+.pg-alle-inhalt { padding: 6px 0 10px; }
+.pg-filter { margin: 8px 18px 0; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+.pg-sortleiste { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 18px; }
+.pg-sort { min-height: 40px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--line); background: #fff; color: var(--navy); font-weight: 650; font-size: 14px; }
+.pg-sort.is-aktiv { background: var(--navy); border-color: var(--navy); color: #fff; }
+.pg-sort:disabled { opacity: .45; }
+.pg-tabelle { width: 100%; border-collapse: collapse; font-size: 15px; }
+.pg-tabelle th, .pg-tabelle td { padding: 10px 18px; text-align: left; border-top: 1px solid #EEF3F5; }
+.pg-tabelle thead th { border-top: 0; font-size: 13.5px; color: var(--muted); font-weight: 700; }
+.pg-tabelle .is-zahl { text-align: right; font-variant-numeric: tabular-nums; }
+.pg-td-wert { font-weight: 750; color: var(--navy); }
+.pg-zeile-btn { min-height: 44px; border: 0; background: none; padding: 0; font-weight: 800; color: var(--navy); font-size: 15.5px; text-align: left; }
+.pg-zeile-btn:hover { text-decoration: underline; }
+.pg-tabelle tbody tr:hover { background: #F7FAFB; }
+.pg-mehr { margin: 10px 18px 0; }
+
+/* Flüsse im Überblick */
+.pg-karte { background: #fff; border-radius: 18px; padding: 16px 18px; box-shadow: 0 1px 3px rgba(11, 48, 69, .06); }
+
+/* Werkzeuge */
+.pg-wz-reihe { display: flex; flex-direction: column; gap: 12px; }
+.pg-wz { display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 14px 18px; border-radius: 18px; text-decoration: none; background: #fff; color: var(--navy);
+  box-shadow: 0 1px 3px rgba(11, 48, 69, .06); }
+.pg-wz.is-ampel { background: var(--navy); color: #fff; }
+.pg-wz-text { flex: 1; display: flex; flex-direction: column; }
+.pg-wz-text strong { font-size: 17px; }
+.pg-wz-text small { font-size: 14px; opacity: .85; }
+.pg-wz-pfeil { display: grid; }
+.pg-ampel-ico { width: 44px; height: 52px; border-radius: 12px; background: #163F57; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; flex: none; }
+.pg-ampel-ico i { width: 10px; height: 10px; border-radius: 50%; }
+.pg-ampel-ico i:nth-child(1) { background: #E5484D; } .pg-ampel-ico i:nth-child(2) { background: #F5B521; } .pg-ampel-ico i:nth-child(3) { background: #6CBF84; }
+.pg-alarm-ico { width: 44px; height: 44px; border-radius: 12px; background: #E3F2F7; color: var(--slip); display: grid; place-items: center; flex: none; }
+
+/* ---------------------------------------------------------------- Detailseite */
+.pd { background: #F3F6F8; }
+.pg-detailseite { max-width: 760px; padding: 0 0 40px; }
+.pd-kopf { background: var(--navy); color: #fff; padding: 6px 20px 38px; }
+.pd-leiste { display: flex; align-items: center; gap: 4px; }
+.pd-icon { width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: #fff; display: grid; place-items: center; }
+.pd-icon:hover { background: rgba(255, 255, 255, .1); }
+.pd-kopf :focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+/* Gewässer · km in der Kopfleiste zwischen Zurück und Teilen; zu lang → „…“ */
+.pd-kicker { flex: 1; min-width: 0; margin: 0; padding-left: 4px; font-size: 13px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--sky);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd-name { margin: 2px 0 6px; font-size: 30px; letter-spacing: -.02em; }
+.pd-name:focus { outline: none; }
+.pd-wertzeile { display: flex; align-items: center; gap: 16px; }
+.pd-wert { margin: 0; line-height: .9; }
+.pd-wert strong { font-size: 64px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.pd-wert span { font-size: 22px; font-weight: 750; margin-left: 4px; }
+.pd-wertinfo { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.pd-aend { font-size: 15px; font-weight: 750; }
+.pd-kopf .pt-down { color: #FFB59A; } .pd-kopf .pt-up { color: #A9D4FF; } .pd-kopf .pt-flat { color: #D5E2E8; }
+.pd-zeit { margin: 0; color: #C5D8E1; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.pd-zeit.is-alt { color: #1A1300; background: #FAB219; padding: 4px 8px; border-radius: 10px; font-weight: 750; display: inline-flex; }
+.pd-body { margin-top: -22px; padding: 0 16px 8px; display: flex; flex-direction: column; gap: 16px; position: relative; }
+.pd-karte { background: #fff; border-radius: 18px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(11, 48, 69, .08); }
+.pd-karte h2 { margin: 0 0 12px; font-size: 19px; color: var(--navy); }
+.pd-karte-kopf { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+.pd-karte-kopf h2 { margin: 0; }
+.pd-klartext { margin: 8px 0 0; font-size: 15.5px; color: var(--ink); }
+.pd-umschalter { display: inline-flex; padding: 4px; gap: 2px; background: var(--bg); border-radius: 12px; }
+.pd-umschalter button { min-height: 40px; padding: 0 16px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-weight: 700; font-size: 15px; }
+.pd-umschalter button[aria-pressed="true"] { background: #fff; color: var(--navy); box-shadow: 0 1px 3px rgba(11, 48, 69, .15); }
+.pd-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.pd-stat { background: var(--bg); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; }
+.pd-stat span { font-size: 13px; color: var(--muted); }
+.pd-stat strong { font-size: 20px; color: var(--navy); font-variant-numeric: tabular-nums; }
+.pd-stat strong.is-minus { color: #A33A12; } .pd-stat strong.is-plus { color: #1F5FAD; }
+.pd-kacheln { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pd-kacheln > :only-child { grid-column: 1 / -1; }
+.pd-kachel { display: flex; flex-direction: column; gap: 4px; min-height: 84px; padding: 16px 18px; border-radius: 18px; border: 0; background: #fff; color: var(--navy); text-decoration: none; text-align: left;
+  box-shadow: 0 1px 3px rgba(11, 48, 69, .08); }
+.pd-kachel strong { font-size: 17px; }
+.pd-kachel span { font-size: 14px; color: var(--muted); }
+.pd-kachel.is-dunkel { background: var(--navy); color: #fff; }
+.pd-kachel.is-dunkel span { color: #C5D8E1; }
+.pd-slips { list-style: none; margin: 0; padding: 0; }
+.pd-slips li + li { border-top: 1px solid #EEF3F5; }
+.pd-slips button { display: flex; justify-content: space-between; gap: 10px; width: 100%; min-height: 52px; border: 0; background: none; text-align: left; font-size: 16px; }
+.pd-slip-name { font-weight: 750; color: var(--navy); }
+.pd-slip-km { color: var(--muted); font-variant-numeric: tabular-nums; }
+.pd-hinweis { margin: 4px 4px 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+.pd .gc-svg { width: 100%; height: auto; }
+
+/* Detail im Panel über der Karte */
+.detail.is-pegel { background: #F3F6F8; }
+.pd.is-eingebettet .pd-kopf { padding: 4px 16px 34px; }
+.pd.is-eingebettet .pd-name { font-size: 26px; }
+.pd.is-eingebettet .pd-wert strong { font-size: 54px; }
+.pd.is-eingebettet .pd-body { padding: 0 12px 16px; }
+
+/* Pegel-Vorschau (Handy) */
+.gpeek-ico { background: #1F6FB2; color: #fff; }
+.gpeek-wert { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; color: var(--navy); }
+.gpeek-wert strong { font-size: 28px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.gpeek-wert > span:nth-child(2) { font-weight: 700; margin-left: -4px; }
+.gpeek-trend { font-size: 14px; font-weight: 700; }
+
+/* ---------------------------------------------------------------- Schmal */
+@media (max-width: 1023px) {
+  .pg-raster { grid-template-columns: minmax(0, 1fr); }
+  .pg-zaehler-reihe { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 767px) {
+  .pg-seite { padding: 0 0 28px; }
+  .pg-kopf { background: var(--navy); color: #fff; padding: 14px 16px 16px; margin: 0; flex-direction: column; align-items: stretch; gap: 12px; }
+  .pg-kopf-zeile { justify-content: space-between; }
+  .pg-titel { color: #fff; font-size: 28px; }
+  .pg-stand { color: #C5D8E1; font-size: 13.5px; }
+  .pg-neu { background: #163F57; border: 0; color: #fff; }
+  .pg-alle-suche { padding: 12px 12px 4px; }
+  .pegelseite:not(.alle-offen) .pg-alle-suche { padding-bottom: 12px; }
+  .pg-raster { padding: 16px 16px 0; gap: 22px; }
+  /* Handy: erst „Meine Pegel“, dann „Flüsse im Überblick“ */
+  .pg-links { display: contents; }
+  .pg-o-lage { order: 1; } .pg-o-meine { order: 2; } .pg-o-fluesse { order: 3; } .pg-o-alle { order: 4; } .pg-o-rechts { order: 5; }
+  .pg-nur-handy { display: block; }
+  .pg-h2-zeile .pg-nur-handy { display: inline-flex; align-items: center; }
+  .pg-h2 { font-size: 20px; }
+  .pg-lage .pg-h2 { margin-bottom: 10px; }
+  .pg-zaehler-reihe { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .pg-zaehler { flex-direction: column; align-items: flex-start; gap: 4px; min-height: 0; padding: 12px; border-left: 0; border-top: 5px solid var(--z); }
+  .pg-zaehler strong { font-size: 28px; }
+  .pg-zaehler-text b { font-size: 13.5px; }
+  .pg-zaehler-text small, .pg-zaehler.is-normal { display: none; }
+  .pg-karten { grid-template-columns: 1fr; }
+  .pm-wert strong { font-size: 44px; }
+  /* Alle Pegel als Liste, erst nach „Alle anzeigen“ (oder bei Filter/Suche) */
+  .pegelseite:not(.alle-offen) .pg-alle-inhalt { display: none; }
+  .pg-tabelle thead { display: none; }
+  .pg-tabelle tr { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "name wert" "wasser zustand" "trend km"; gap: 0 10px; padding: 8px 16px; border-top: 1px solid #EEF3F5; }
+  .pg-tabelle th, .pg-tabelle td { padding: 0; border: 0; }
+  .pg-tabelle tr > :nth-child(1) { grid-area: name; } .pg-td-wasser { grid-area: wasser; font-size: 13.5px; color: var(--muted); }
+  .pg-td-wert { grid-area: wert; align-self: center; } .pg-td-zustand { grid-area: zustand; justify-self: end; }
+  .pg-td-trend { grid-area: trend; font-size: 13.5px; } .pg-td-km { grid-area: km; font-size: 13.5px; color: var(--muted); }
+  .pg-wz-reihe { display: grid; grid-template-columns: 1fr 1fr; }
+  .pg-wz { flex-direction: column; align-items: flex-start; min-height: 120px; }
+  .pg-wz.is-ampel { background: #fff; color: var(--navy); }
+  .pg-wz-pfeil { display: none; }
+  .pg-fuss { padding: 0 2px; }
+  .pd-kopf { padding: 4px 16px 34px; }
+  .pd-leiste .pd-icon { width: 40px; height: 40px; }
+  .pd-kicker { font-size: 12.5px; letter-spacing: .04em; }
+  .pd-name { font-size: 26px; margin: 2px 0 4px; }
+  .pd-wertzeile { gap: 14px; }
+  .pd-wert strong { font-size: 54px; }
+  .pd-wert span { font-size: 20px; }
+  .pd-aend { font-size: 14px; }
+  .pd-zeit { font-size: 13.5px; }
+  .pd-body { padding: 0 12px 8px; }
+  .detail.is-pegel { max-height: 92%; }
+  .detail.is-pegel .detail-scroll { max-height: 92dvh; }
+}
+
+/* Wetter im Pegel-Panel */
+.pd-wetter.block { margin: 0; border: 0; }
+.pd-wetter > h3 { margin: 0 0 12px; font-size: 19px; color: var(--navy); }
+
+/* Fenster „Pegel hinzufügen“ */
+.pa-pop.is-drop { width: min(440px, calc(100vw - 24px)); }
+.pa-oben { flex: none; padding: 14px 18px 10px; border-bottom: 1px solid var(--line); }
+.pa-oben h2 { margin: 0 0 10px; }
+.pa-oben .pg-suche-box { flex: none; }
+.pa-kopf { margin: 0 0 6px; color: var(--muted); font-size: 14px; font-weight: 650; }
+.pa-liste { list-style: none; margin: 0; padding: 0; }
+.pa-zeile { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.pa-zeile:last-child { border-bottom: 0; }
+.pa-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.pa-text strong { color: var(--navy); font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pa-text small { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pa-wert { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; font-size: 14px; color: var(--navy); }
+.pa-wert .pz-tag { min-height: 22px; font-size: 12px; padding: 0 8px; }
+.pa-knopf { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--slip); background: #fff; color: var(--slip); display: grid; place-items: center; }
+.pa-knopf:hover { background: #EAF5F9; }
+.pa-knopf.is-an { background: var(--slip); color: #fff; }
+.pa-mehr { padding: 12px 0 4px; color: var(--muted); font-size: 14px; }
+
+/* ---------------------------------------------------------------- Fluss-Kacheln (Dashboard) */
+.fk-raster { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 12px; }
+.fk { --fk: #9AAAB5; position: relative; display: flex; flex-direction: column; gap: 4px; min-height: 44px; padding: 18px 18px 16px; background: #fff; border-radius: 18px;
+  border-top: 5px solid var(--fk); box-shadow: 0 1px 3px rgba(11, 48, 69, .06); color: var(--ink); text-decoration: none; }
+.fk:hover { box-shadow: 0 3px 12px rgba(11, 48, 69, .12); }
+.fk-kopf { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; min-width: 0; }
+.fk-name { color: var(--navy); font-size: 19px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-etikett { flex: none; text-transform: none; }
+.fk-klein { font-size: 14px; color: var(--muted); }
+.fk-gross { font-size: 17px; font-weight: 800; color: var(--navy); line-height: 1.25; overflow-wrap: anywhere; }
+.fk-punkte { display: flex; gap: 4px; margin: 8px 0 4px; flex-wrap: wrap; }
+.fk-punkte i { width: 8px; height: 8px; border-radius: 50%; display: block; }
+.fk-zus { font-size: 14px; color: var(--muted); margin-top: auto; padding-top: 4px; }
+.pf-trend { font-weight: 800; }
+.pf-trend.t1 { color: #9A3B12; } .pf-trend.t-1 { color: #7A3B0A; } .pf-trend.t0 { color: var(--muted); }
+.pg-fl-alle { display: block; margin: 10px auto 0; }
+.fk-ohne { margin-top: 18px; }
+.fk-ohne h3 { margin: 0 0 8px; font-size: 16px; color: var(--navy); }
+.fk-ohne ul { list-style: none; margin: 0; padding: 0; background: #fff; border-radius: 18px; overflow: hidden; }
+.fk-ohne-zeile { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 16px; border-top: 1px solid #EEF3F5; color: var(--ink); text-decoration: none; }
+.fk-ohne li:first-child .fk-ohne-zeile { border-top: 0; }
+.fk-ohne-zeile:hover { background: #F7FAFB; }
+.fk-ohne-name { flex: 1; font-weight: 700; color: var(--navy); }
+.fk-ohne-n { color: var(--muted); font-size: 14px; }
+.fk-ohne-zeile > span:last-child { display: grid; color: var(--muted); }
+/* „Alle Gewässer“: kompakte Liste unter den Kacheln (statt weiterer Kacheln) */
+.fk-weitere { margin-top: 8px; }
+.fk-suche-box { margin-bottom: 4px; }
+.fk-suche { width: 100%; max-width: 420px; min-height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font: inherit; font-size: 16px; color: var(--ink); }
+.fk-weitere .fk-ohne { margin-top: 14px; }
+.fk-wz { gap: 10px; }
+.fk-wz-punkt { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.fk-wz .pz-tag { flex: none; }
+.fk-wz .fk-ohne-name { min-width: 0; overflow-wrap: anywhere; }
+.fk-leer { margin: 12px 4px 0; color: var(--muted); font-size: 14.5px; }
+.fk-ohne li[hidden], .fk-ohne[hidden] { display: none; }
+
+/* ---------------------------------------------------------------- Flussseite */
+.pf-seite { max-width: 1280px; }
+.pf-kopf { background: var(--navy); color: #fff; border-radius: 20px; padding: 14px 20px 18px; margin-bottom: 18px; }
+.pf-zurueck { width: 44px; height: 44px; margin-left: -10px; border: 0; border-radius: 12px; background: none; color: #fff; display: grid; place-items: center; flex: none; }
+.pf-zurueck:hover { background: rgba(255, 255, 255, .1); }
+.pf-zurueck svg { display: block; }
+.pf-titel-zeile { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pf-titel { margin: 0; font-size: 24px; color: #fff; letter-spacing: -.01em; outline: none; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-kopf .pf-etikett { font-size: 14px; }
+.pf-zus { margin: 4px 0 0 34px; font-size: 15px; color: #E3EEF3; }
+.pf-raster { display: grid; grid-template-columns: minmax(0, 1fr) 420px; grid-template-areas: "profil liste" "slips liste" "hinweis liste"; grid-template-rows: auto auto 1fr; gap: 18px 24px; align-items: start; }
+.pf-raster.ohne-profil { grid-template-columns: minmax(0, 1fr); grid-template-areas: "liste" "slips" "hinweis"; max-width: 760px; }
+.pf-profilkarte { grid-area: profil; } .pf-listenkarte { grid-area: liste; } .pf-slips { grid-area: slips; } .pf-hinweis { grid-area: hinweis; }
+.pf-karte { background: #fff; border-radius: 20px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(11, 48, 69, .06); min-width: 0; }
+.pf-h2 { margin: 0; font-size: 19px; color: var(--navy); }
+.pf-h2-zeile { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.pf-klein { font-size: 14px; color: var(--muted); }
+.pf-profil { position: relative; margin-top: 10px; min-height: 170px; }
+.pf-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.pf-ax { font-size: 12px; fill: var(--muted); paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+.pf-ax.is-mhw { fill: #9A3B12; } .pf-ax.is-mnw { fill: #7A5200; font-weight: 700; } .pf-ax.is-normal { fill: #1F6B3A; } .pf-ax.is-niedrig { fill: #7A5200; }
+.pf-hervor-text { font-size: 13px; font-weight: 800; fill: #fff; }
+.pf-ziel { cursor: pointer; outline: none; }
+.pf-ziel:focus-visible { stroke: var(--slip); stroke-width: 3; }
+.pf-blase { position: absolute; z-index: 5; width: 168px; padding: 8px 10px; background: var(--navy); color: #fff; border-radius: 12px; box-shadow: var(--shadow); font-size: 13.5px; display: flex; flex-direction: column; gap: 2px; }
+.pf-blase[hidden] { display: none; }
+.pf-blase:not(.mit-knopf) { pointer-events: none; }
+.pf-blase strong { font-size: 14.5px; }
+.pf-blase-btn { margin-top: 6px; min-height: 40px; border: 0; border-radius: 10px; background: #fff; color: var(--navy); font-weight: 800; }
+.pf-enden { display: flex; justify-content: space-between; gap: 12px; margin: 6px 0 0; font-size: 14px; color: var(--muted); }
+.pf-enden span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-enden span:last-child { text-align: right; }
+.pf-legende { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; padding-top: 12px; border-top: 1px solid #EEF3F5; font-size: 14px; color: var(--ink); }
+.pf-legende span { display: inline-flex; align-items: center; gap: 6px; }
+.pf-legende i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.pf-liste { list-style: none; margin: 6px 0 0; padding: 0; }
+.pf-zeile { display: grid; grid-template-columns: minmax(0, 1fr) auto 22px auto; align-items: center; gap: 10px; width: 100%; min-height: 60px; padding: 10px 20px; margin: 0 -20px; width: calc(100% + 40px);
+  border: 0; border-top: 1px solid #EEF3F5; background: none; text-align: left; color: var(--ink); }
+.pf-liste li:first-child .pf-zeile { border-top: 0; }
+.pf-zeile:hover { background: #F7FAFB; }
+.pf-zeile.is-hervor { background: #FFFBEB; }
+.pf-zeile.is-hervor.is-hoch, .pf-zeile.is-hervor.is-teils-hoch { background: #FFF3EC; }
+.pf-zeile.is-hervor.is-hsw { background: #FDECEC; }
+.pf-z-text { display: flex; flex-direction: column; min-width: 0; }
+.pf-z-text strong { color: var(--navy); font-size: 16px; overflow-wrap: anywhere; }
+.pf-z-text small { color: var(--muted); font-size: 14px; }
+.pf-z-wert { font-weight: 800; color: var(--navy); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pf-z-trend { text-align: center; }
+.pf-mehr { display: block; margin: 6px auto 0; }
+.pf-slips { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 44px; border: 0; text-align: left; color: var(--ink); }
+.pf-slips:hover { box-shadow: 0 3px 12px rgba(11, 48, 69, .12); }
+.pf-slips-ico { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; flex: none; color: #fff; }
+.pf-slips-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.pf-slips-text strong { color: var(--navy); font-size: 17px; }
+.pf-slips-text small { color: var(--muted); font-size: 14px; }
+.pf-slips-pfeil { display: grid; color: var(--slip); }
+.pf-hinweis { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.45; }
+
+@media (max-width: 1023px) {
+  .fk-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pf-raster { grid-template-columns: minmax(0, 1fr); grid-template-areas: "profil" "liste" "slips" "hinweis"; grid-template-rows: none; }
+}
+@media (max-width: 767px) {
+  .fk-raster { gap: 12px; }
+  .fk { padding: 14px 14px 12px; border-radius: 16px; }
+  .fk-kopf { flex-wrap: wrap; gap: 4px 6px; }
+  .fk-name { font-size: 17px; }
+  .fk .pf-etikett { font-size: 12px; min-height: 22px; padding: 0 8px; }
+  .fk-gross { font-size: 15.5px; }
+  .fk-klein, .fk-zus { font-size: 13px; }
+  .pf-seite { padding-top: 0; }
+  .pf-kopf { border-radius: 0; margin: 0; padding: 8px 12px 40px 16px; }
+  .pf-titel { font-size: 24px; }
+  .pf-zus { font-size: 14.5px; margin-left: 34px; }
+  .pf-raster { padding: 0 12px; margin-top: -28px; gap: 14px; }
+  .pf-karte { padding: 16px; border-radius: 18px; }
+  .pf-zeile { padding: 10px 16px; margin: 0 -16px; width: calc(100% + 32px); grid-template-columns: minmax(0, 1fr) auto 18px auto; gap: 8px; }
+  .pf-hinweis { padding: 0 4px; }
+}
+
+/* Flussseite: hervorgehobener Pegel, Tide-Zeile */
+.pf-hervor { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; margin-top: 12px; padding: 8px 12px 8px 14px; border: 0; border-radius: 14px; background: #FFF6E3; text-align: left; color: var(--navy); }
+.pf-hervor.is-hoch, .pf-hervor.is-teils-hoch { background: #FFF0E6; }
+.pf-hervor.is-hsw { background: #FDECEC; }
+.pf-hervor-punkt { width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--navy); flex: none; }
+.pf-hervor-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.pf-hervor-text small { font-size: 13.5px; color: #7A5200; }
+.pf-hervor.is-hoch .pf-hervor-text small, .pf-hervor.is-teils-hoch .pf-hervor-text small { color: #9A3B12; }
+.pf-hervor.is-hsw .pf-hervor-text small { color: #A32020; }
+.pf-hervor-text strong { font-size: 16.5px; }
+.pf-hervor-text em { font-style: normal; font-weight: 700; color: #9A4A00; }
+.pf-hervor-pfeil { display: grid; flex: none; color: #9A4A00; }
+.pf-tidezeile { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; margin-top: 12px; padding: 10px 0 0; border: 0; border-top: 1px solid #EEF3F5; background: none; text-align: left; color: var(--ink); font-size: 15px; }
+.pf-tidezeile-ico { display: grid; flex: none; color: var(--muted); }
+.pf-tidezeile-text { flex: 1; min-width: 0; }
+.pf-tidezeile-text strong { color: var(--navy); }
+.pf-tidezeile-pfeil { display: grid; flex: none; color: var(--slip); }
+.pf-tipp { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+
+@media (max-width: 767px) {
+  body.view-fluss .app-header { display: none; }
+  body.view-fluss .pf-kopf { padding-top: calc(10px + env(safe-area-inset-top)); }
+}
+
+/* ---------------------------------------------------------------- Tidepegel */
+.pt-klein { font-size: 14px; color: var(--muted); font-weight: 500; }
+.pt-kurve { position: relative; margin-top: 10px; min-height: 190px; }
+.pt-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.pt-ax { font-size: 12px; fill: var(--muted); paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+.pt-zeit { font-size: 12.5px; font-weight: 800; fill: var(--navy); paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+.pt-jetzt { font-size: 11.5px; font-weight: 800; fill: #fff; }
+.pt-achse { display: flex; justify-content: space-between; margin: 6px 0 0; font-size: 14px; color: var(--muted); }
+.pt-legende { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0 0; padding-top: 12px; border-top: 1px solid #EEF3F5; font-size: 14px; color: var(--ink); }
+.pt-legende span { display: inline-flex; align-items: center; gap: 8px; }
+.pt-legende i { display: inline-block; width: 22px; height: 0; border-top: 3px solid #087F9C; }
+.pt-legende i.is-mittel { border-top: 1.5px dashed #8A9BA6; }
+.pt-einordnung { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.pt-einordnung > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pt-einordnung strong { font-size: 19px; color: var(--navy); }
+.pt-einordnung small { font-size: 14px; color: var(--ink); }
+.pd-kopf.is-tide .pt-tendenz { color: #fff; font-weight: 800; }
+.pt-legende i.is-vorhersage { border-top: 2.5px dashed #087F9C; }
+.pt-klein.is-alt { color: #8A5A00; }
+/* Gezeiten (BSH-Vorhersage) */
+.pt-gezeiten .pd-karte-kopf { flex-wrap: wrap; gap: 4px 12px; }
+.pt-gz-reihe { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.pt-gz-kachel { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 12px 14px; border-radius: 14px; background: #EAF5F8; }
+.pt-gz-kachel.is-nw { background: #F1F4F6; }
+.pt-gz-zeit { font-size: 28px; line-height: 1.15; color: var(--navy); font-weight: 800; font-variant-numeric: tabular-nums; }
+.pt-gz-in { font-size: 15px; font-weight: 700; color: #087F9C; }
+.pt-gz-kachel small { font-size: 14px; color: var(--ink); }
+.pt-gz-pillen { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 12px 0 0; padding: 0; }
+.pt-gz-pillen li { padding: 6px 12px; border-radius: 999px; background: #F1F4F6; font-size: 14px; font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; }
+.pt-gz-text { margin: 12px 0 0; font-size: 14px; color: var(--ink); }
+.pt-gz-quelle { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+.pt-gz-quelle a { color: inherit; }
+@media (max-width: 400px) { .pt-gz-zeit { font-size: 24px; } .pt-gz-kachel { padding: 10px 12px; } }
+.pm-tide { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
+.pm-karte.pz-tide { --z: #9CCEE3; }

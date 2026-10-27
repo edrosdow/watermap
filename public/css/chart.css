@@ -1,5 +1,5 @@
 /* Eigene SVG-Diagramme (Pegel, Wetter): Karte und Pegel-Ampel. Farben über Variablen der jeweiligen Seite. */
-.gc-wrap { position: relative; padding-top: 30px; }   /* Platz für den Tooltip, damit er nichts verdeckt */
+.gc-wrap { position: relative; padding-top: 30px; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }   /* langes Drücken: kein Auswahlmenü */   /* Platz für den Tooltip, damit er nichts verdeckt */
 .gc-svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
 .gc-grid { stroke: #E6EDF1; stroke-width: 1; vector-effect: non-scaling-stroke; }
 .gc-axis, .gc-reflabel { font-size: 10.5px; fill: var(--muted); font-variant-numeric: tabular-nums; }

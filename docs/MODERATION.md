@@ -22,12 +22,13 @@ Meldungen gehen über **Netlify Forms** ein. Sie sind **nie automatisch sichtbar
 6. **Abgelehnte Meldungen** in Netlify löschen (Datenschutz: nicht länger speichern als nötig; Frist in der Datenschutzerklärung festlegen).
 
 ## Verwaltung (per Klick)
-Seite **`/admin/fotos.html`** (z. B. `https://watermaps.netlify.app/admin/fotos.html`), Passwort eingeben. Sieben Reiter:
-- **Fotos:** Foto ansehen, **Freigeben** oder **Ablehnen**. Freigeben legt das Bild in `public/photos/` ab und trägt es in `community/overrides.json` ein (Urheber „WaterMap-Community“, Beschreibung als Alternativtext); nach etwa einer Minute ist es in der App. Ohne bestätigte Rechte lässt sich nicht freigeben. Fehlt der Standort („Anderer Standort“), wird der Link aus der App eingefügt.
+Seite **`/admin/fotos.html`** (z. B. `https://watermaps.netlify.app/admin/fotos.html`), Passwort eingeben. Acht Reiter:
+- **Fotos:** Foto ansehen, **Freigeben** oder **Ablehnen**. Freigeben legt das Bild in `public/photos/` ab und trägt es in `community/overrides.json` ein (Urheber „WaterMap-Community“, Beschreibung als Alternativtext, gewählte Kategorie); nach etwa einer Minute ist es in der App. Ohne bestätigte Rechte und ohne Kategorie lässt sich nicht freigeben (die Kategorie aus der Einreichung ist vorausgewählt und lässt sich ändern). Unter „Veröffentlicht“ lässt sich die Kategorie auch nachträglich setzen („Kategorie speichern“). Fehlt der Standort („Anderer Standort“), wird der Link aus der App eingefügt.
 - **Gemeldet:** Fotos, die Nutzer über „Foto melden“ gemeldet haben (Formular „Fehler melden“, Art „Unpassendes Foto“), mit Grund. **Foto entfernen** nimmt es aus der App und erledigt die Meldung; **Meldung verwerfen** lässt das Foto stehen.
 - **Slipanlagen:** neu gemeldete Slipanlagen mit Angaben, Kartenlink und Hinweis auf eine bekannte Slipanlage in der Nähe (unter 300 m = mögliche Dublette). **Freigeben** trägt sie in `community/places.json` ein (ID `c/…`), ein mitgeschicktes Foto nur bei bestätigten Rechten.
 - **Preise:** gemeldete Kraftstoffpreise mit Plausibilitätsprüfung (0,50–5,00 €/l, Datum, bekannte Tankstelle) und Beleg. **Freigeben** hängt den Preis an `community/prices.json` an.
-- **Hinweise:** Fehler und Hinweise zu Standorten (ohne Foto-Meldungen). Die Korrektur selbst machst du von Hand (am besten in OSM), dann **Erledigt** oder **Verwerfen**.
+- **Ergänzungen:** Angaben zu Slipanlagen aus „Weißt du mehr? Ergänzen“ in der App (Formular „slip-ergaenzen“): Zugang, Gebühr (mit Betrag), Rampe (Belag, Neigung), Trailer parken, Motorboote, Bootsgröße, dazu eine freie Bemerkung. Die Tabelle zeigt „bisher → neu“ (bisher = veröffentlichte Daten). **Übernehmen** trägt die Angaben in `community/overrides.json` ein (bestehender Eintrag des Standorts wird erweitert, Fotos bleiben); **Ablehnen** schließt sie ab. Die Bemerkung wird nicht automatisch übernommen.
+- **Hinweise:** Fehler und Hinweise zu Standorten (ohne Foto-Meldungen). Die Korrektur selbst machst du von Hand (am besten in OSM), dann **Erledigt** oder **Verwerfen**. Als unpassend gemeldete Lagemeldungen („Heute vor Ort“, Art „Unpassende Lagemeldung“) haben zusätzlich **Meldung entfernen**: Das löscht die Meldung sofort für alle (im selben Speicher wie die App, Vorschau getrennt von live) und erledigt den Hinweis. Ist sie schon abgelaufen, wird nur der Hinweis erledigt.
 - **Veröffentlicht:** alle Fotos in der App, jeweils mit **Entfernen**.
 - **Verlauf:** alle Aktionen aller Bereiche (freigegeben, abgelehnt, entfernt, erledigt, verworfen) mit Zeit, Standort, Beschreibung und Grund, die neuesten 500. Gespeichert in `admin/verlauf.json` im Repository – außerhalb von `public/`, also nicht über die Website abrufbar.
 
@@ -39,7 +40,7 @@ Jede Aktion ist **ein** Commit (Daten und Verlauf zusammen). Commits, die nur de
 | `FOTO_ADMIN_PASSWORT` | ein langes, frei gewähltes Passwort |
 | `NETLIFY_API_TOKEN` | Netlify → *User settings* → *Applications* → *Personal access tokens* → *New access token* |
 | `GITHUB_TOKEN` | GitHub → *Settings* → *Developer settings* → *Fine-grained tokens*: nur Repository `watermap`, Berechtigung *Contents: Read and write* |
-| `FOTO_BRANCH` (optional) | Zweig, in den freigegebene Fotos geschrieben werden; Standard `main` |
+| `FOTO_BRANCH` (optional) | Zweig, in den Freigaben auf der Live-Seite geschrieben werden; Standard `main`. Auf einer Vorschau (z. B. deploy-preview-4) schreibt die Verwaltung immer in den Zweig dieser Vorschau. |
 
 ## Besondere Fälle
 - **Doppelte Slipanlage:** Existiert sie schon in OSM, trage die neuen Angaben als Override zur OSM-ID ein statt einen neuen Standort anzulegen. Besser noch: in OpenStreetMap selbst ergänzen – dann profitieren alle.

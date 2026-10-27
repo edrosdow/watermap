@@ -23,8 +23,11 @@ def route_libs(ctx):
     def data(route):
         rel = route.request.url.split('/data/', 1)[1].split('?')[0]
         f = FIXTURE / rel
+        if not f.is_file(): f = pathlib.Path(__file__).resolve().parent.parent / 'public/data' / rel   # z. B. gebiet-de.json (Kartengebiet)
         return route.fulfill(status=200, content_type='application/json', body=f.read_bytes()) if f.is_file() else route.fulfill(status=404, body='')
+    ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))   # „Heute vor Ort“ (eigener Test: ui_meldungen.py)
     ctx.route('**/data/**', data)
+    ctx.route('**/api/pegel/**', lambda r: r.fulfill(status=200, content_type='application/json', body='[]'))   # Pegel werden nach dem Start im Leerlauf vorbereitet
     # Details laden auch das Wetter (eigener Test: ui_wetter.py) – hier nur leere Antworten
     ctx.route('**/.netlify/functions/umgebung*', lambda r: r.fulfill(status=200, content_type='application/json', body='{"elements": []}'))   # „In der Nähe“ live
     ctx.route('https://overpass-api.de/**', lambda r: r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body='{"elements": []}'))
@@ -50,43 +53,56 @@ with sync_playwright() as p:
         errors = []
         pg.on('pageerror', lambda e: errors.append(str(e)))
         pg.on('console', lambda m: errors.append(m.text) if m.type == 'error' else None)
-        pg.goto(BASE); pg.wait_for_selector('.place', timeout=8000)
+        pg.goto(BASE + '#naehe'); pg.wait_for_selector('.place', timeout=8000)
         print(f'--- {name}')
         check(pg.locator('.place').count() == 8, f'{name}: 8 Slipanlagen in der Liste')
         check(pg.locator('.leaflet-marker-icon').count() >= 1, f'{name}: Marker im Kartenfenster ({pg.locator(".leaflet-marker-icon").count()})')
         pg.screenshot(path=str(SHOTS / f'{name}_start.png'))
-        # Kategorie ohne Daten
-        if mobile: pg.click('#sheet-handle'); pg.wait_for_timeout(350)
-        pg.click('.chip-slip'); pg.click('.chip-fuel'); pg.wait_for_timeout(150)      # nur Marinas
+        # Kategorie ohne Daten (Handy: Kategorien im Kopf von „In der Nähe“)
+        cat = (lambda t: f'.nh-cat[data-cat={t}]') if mobile else (lambda t: f'.cat-{t}')
+        pg.click(cat('slip')); pg.click(cat('fuel')); pg.wait_for_timeout(150)      # nur Häfen
         check('Noch keine Marinas' in pg.inner_text('#list'), f'{name}: Leerzustand Marinas ehrlich')
-        pg.click('.chip-marina'); pg.click('.chip-slip'); pg.wait_for_timeout(150)    # nur Slipanlagen
+        pg.click(cat('slip')); pg.click(cat('marina')); pg.wait_for_timeout(150)    # nur Slipanlagen (mindestens eine bleibt aktiv)
+        check(pg.locator(cat('slip')).get_attribute('aria-pressed') == 'true' and pg.locator(cat('marina')).get_attribute('aria-pressed') == 'false', f'{name}: Kategorie-Umschalter mit aria-pressed')
         # Unterfilter ohne Daten ist deaktiviert und blendet nichts aus
-        chip = pg.locator('.chip-sub:has-text("Kostenlos")')
+        fbtn = '.nh-filter' if mobile else '#btn-filter'
+        pg.click(fbtn); pg.wait_for_selector('#filter-panel[open]')
+        chip = pg.locator('#filter-panel [data-key=sub-free]')
         check(chip.get_attribute('aria-disabled') == 'true', f'{name}: Filter "Kostenlos" ohne Daten ist als deaktiviert markiert')
         chip.click(force=True); pg.wait_for_timeout(150)
-        check(pg.locator('.place').count() == 8, f'{name}: Filter "Kostenlos" ohne Daten blendet nichts aus')
         check('bestätigten Angaben' in pg.inner_text('#toast'), f'{name}: Hinweis statt stiller Leere')
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
+        check(pg.locator('#filter-panel[open]').count() == 0 and pg.evaluate("s => document.activeElement.matches(s)", fbtn), f'{name}: Escape schließt Filter, Fokus zurück auf den Knopf')
+        check(pg.locator('.place').count() == 8, f'{name}: Filter "Kostenlos" ohne Daten blendet nichts aus')
         # Detail
-        pg.click('.place >> nth=0'); pg.wait_for_selector('#detail:not([hidden])')
+        pg.click('.place >> nth=0')
+        if mobile:   # Handy: erst die Vorschau-Karte, „Details“ öffnet das Panel
+            pg.wait_for_selector('#peek:not([hidden])')
+            check(pg.locator('#sidebar').is_hidden() and pg.locator('#bottomnav [data-nav=karte]').get_attribute('aria-current') == 'page', f'{name}: Antippen in der Liste zeigt die Karte mit Vorschau')
+            pg.click('#peek button:has-text("Details")')
+        pg.wait_for_selector('#detail:not([hidden])')
         txt = pg.inner_text('#detail')
-        check('Nicht bekannt' not in txt and pg.locator('#detail .facts-more').is_visible(), f'{name}: unbekannte Angaben eingeklappt')
-        pg.click('#detail .facts-more')
-        check('Nicht bekannt' in pg.inner_text('#detail'), f'{name}: aufgeklappt als "Nicht bekannt"')
-        check('keine Wasserroute' in (pg.get_attribute('#detail .act-primary', 'title') or ''), f'{name}: Hinweis Straßenroute ≠ Wasserroute')
+        check('Nicht bekannt' not in txt and (pg.locator('#detail .facts-more').is_visible() or pg.locator('#detail .wb').count() == 1), f'{name}: unbekannte Angaben eingeklappt bzw. „Wichtig für dein Boot“')
+        if pg.locator('#detail .wb').count():   # Slipanlage: fehlende Angaben stehen als „Unbekannt“ im Kasten
+            check(pg.locator('#detail .wb-p').count() == 6 and pg.locator('#detail .wb-link').is_visible(), f'{name}: „Wichtig für dein Boot“ mit Ergänzen-Link')
+        else:
+            pg.click('#detail .facts-more')
+            check('Nicht bekannt' in pg.inner_text('#detail'), f'{name}: aufgeklappt als "Nicht bekannt"')
+        check('keine Wasserroute' in (pg.get_attribute('#detail .dbtn-primary', 'title') or ''), f'{name}: Hinweis Straßenroute ≠ Wasserroute')
         check(pg.locator('#detail', has_text='OpenStreetMap-Route').count() == 0, f'{name}: keine OpenStreetMap-Route')
         check('OpenStreetMap · ungeprüft' in txt and 'nicht vor ort geprüft' not in txt.lower(), f'{name}: OSM-Herkunft dezent')
         pg.click('#detail .trust')
         check('nicht vor ort geprüft' in pg.inner_text('#detail').lower(), f'{name}: OSM-Hinweis beim Antippen')
-        check('#p=' in pg.url, f'{name}: Deep-Link gesetzt')
+        check('p=' in pg.url.split('#')[-1], f'{name}: Deep-Link gesetzt ({pg.url.split("#")[-1]})')
         pg.screenshot(path=str(SHOTS / f'{name}_detail.png'))
         # Favorit
         pg.click('#detail .fav'); pg.wait_for_timeout(100)
-        check(pg.locator('#detail .fav.is-on').count() == 1, f'{name}: Favorit gesetzt')
-        check(pg.locator('.chip-fav .chip-n').inner_text() == '1', f'{name}: Chip „Favoriten“ mit Anzahl')
+        check(pg.locator('#detail .fav[aria-pressed=true]').count() == 1 and 'Gemerkt' in pg.inner_text('#detail .fav'), f'{name}: Favorit gesetzt („Merken“)')
+        nav = '#bottomnav' if mobile else '#topnav'
         pg.evaluate('window.__watermap.applyFilters()')   # Stub zeichnet setIcon in Gruppen nicht neu
         check(pg.locator('.wm-pin.is-fav .wm-fav').count() >= 1, f'{name}: Favorit-Pin mit Stern')
         # Formular Fehler melden
-        pg.click('#detail button[title="Fehler melden"]'); pg.wait_for_selector('#dlg[open]')
+        pg.click('#detail .detail-links button:has-text("Fehler melden")'); pg.wait_for_selector('#dlg[open]')
         pg.screenshot(path=str(SHOTS / f'{name}_form.png'))
         pg.click('#dlg .btn-primary'); pg.wait_for_timeout(100)
         check('Pflichtfelder' in pg.inner_text('#dlg') or 'Standort' in pg.inner_text('#dlg'), f'{name}: Validierung meldet fehlende Angaben')
@@ -96,11 +112,26 @@ with sync_playwright() as p:
         check('Sliprampe Moers' in pg.inner_text('#suggest'), f'{name}: lokale Suche findet Standort')
         pg.fill('#q', 'Möhnesee'); pg.keyboard.press('Enter'); pg.wait_for_timeout(600)
         check(pg.evaluate('window.__watermap.state.map.getZoom()') >= 10, f'{name}: Ortssuche zoomt')
-        # Menü
-        pg.click('#btn-menu'); pg.wait_for_selector('#menu[open]')
-        check('Neue Slipanlage melden' in pg.inner_text('#menu'), f'{name}: Menü')
+        # Melden
+        pg.click('#bottomnav [data-nav=melden]' if mobile else '#btn-report'); pg.wait_for_selector('#report-menu[open]')
+        txt = pg.inner_text('#report-menu')
+        check(all(t in txt for t in ['GERADE VOR ORT', 'STANDORT VERBESSERN', 'Neue Slipanlage melden', 'Angaben ergänzen', 'Foto einreichen', 'Fehler oder Hinweis melden', 'Impressum', 'Version']) and 'Kraftstoffpreis' not in txt, f'{name}: Melden mit Abschnitten, ohne Kraftstoffpreis')
         pg.screenshot(path=str(SHOTS / f'{name}_menu.png'))
-        pg.click('#menu-close')
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
+        check(pg.locator('#report-menu[open]').count() == 0, f'{name}: Escape schließt „Melden“')
+        # Navigation und Zurück-Taste
+        pg.click(f'{nav} [data-nav=mehr]'); pg.wait_for_selector('#mehrseite:not([hidden]) .bs-zeile')
+        check(pg.url.endswith('#mehr') and '1 Ort' in pg.inner_text('#mehrseite'), f'{name}: „Mehr“ zeigt die Merkliste mit 1 Ort')
+        pg.click('#mehrseite .bs-zeile:has-text("Merkliste")'); pg.wait_for_selector('#mehrseite h2:has-text("Gespeicherte Orte (1)")')
+        check(pg.url.endswith('#mehr/merkliste') and pg.locator('#mehrseite .bs-gruppe .bs-zeile').count() >= 1, f'{name}: Merkliste mit dem Favoriten (#mehr/merkliste)')
+        pg.click(f'{nav} [data-nav=karte]'); pg.wait_for_timeout(150)
+        check(pg.locator('#mehrseite').is_hidden(), f'{name}: Karte schließt „Mehr“')
+        pg.go_back(); pg.wait_for_timeout(300)
+        check(pg.url.endswith('#mehr/merkliste') and pg.locator('#mehrseite h2:has-text("Gespeicherte Orte")').is_visible(), f'{name}: Zurück-Taste öffnet wieder die Merkliste')
+        pg.reload(); pg.wait_for_selector('#mehrseite h2:has-text("Gespeicherte Orte (1)")', timeout=8000)
+        check(pg.locator(f'{nav} [data-nav=mehr]').get_attribute('aria-current') == 'page', f'{name}: Neuladen behält den Bereich')
+        pg.goto(BASE + '#favoriten'); pg.wait_for_selector('.place', timeout=8000)
+        check(pg.locator('#list-title').inner_text() == 'Favoriten' and pg.locator('.place').count() == 1, f'{name}: alter Link #favoriten zeigt weiter die Favoritenliste')
         check(not errors, f'{name}: keine JS-Fehler {errors[:3]}')
         ctx.close()
     b.close()

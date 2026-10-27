@@ -17,6 +17,7 @@
     constructor(latlng, opts) { this.ll = ll(latlng); this.opts = opts || {}; this.icon = this.opts.icon; this.h = {}; this.node = null; this.map = null; }
     on(ev, fn) { this.h[ev] = fn; return this; }
     setIcon(i) { this.icon = i; if (this.map) this.map._draw(); }
+    setZIndexOffset(z) { this.zOffset = z; return this; }
     addTo(layer) { (layer._add ? layer._add(this) : layer.addLayer(this)); return this; }
     remove() { if (this.group) this.group._remove(this); }
   }
@@ -38,7 +39,7 @@
       this.layerEl = document.createElement('div'); this.layerEl.style.cssText = 'position:absolute;inset:0;overflow:hidden';
       el.append(this.layerEl);
       el.addEventListener('click', (e) => { if (e.target.closest('.leaflet-marker-icon')) return; const r = el.getBoundingClientRect(); const p = this._unproject(e.clientX - r.left, e.clientY - r.top); this._fire('click', { latlng: p }); });
-      this.attributionControl = { setPrefix() {} };
+      this.attributionControl = { setPrefix() {}, addAttribution() {}, removeAttribution() {} };
     }
     _fire(ev, d) { (this.h[ev] || []).forEach(f => f(d)); }
     on(ev, fn) { (this.h[ev] ||= []).push(fn); return this; }
@@ -63,6 +64,13 @@
       return this.setView(c, z);
     }
     addLayer(m) { const g = new Group(); g.map = this; this._groups.add(g); g._add(m); }
+    setMinZoom(z) { this.minZoom = z; return this; }
+    getBoundsZoom(b) {
+      const pts = b.pts, s = this.getSize(); let z = 18;
+      while (z > 0) { const a = proj(Math.max(...pts.map(p => p.lat)), Math.min(...pts.map(p => p.lng)), z), d = proj(Math.min(...pts.map(p => p.lat)), Math.max(...pts.map(p => p.lng)), z); if (Math.abs(d.x - a.x) <= s.x && Math.abs(d.y - a.y) <= s.y) break; z--; }
+      return z;
+    }
+    createPane() { return document.createElement('div'); }
     invalidateSize() { this._draw(); }
     _draw() {
       if (!this.layerEl) return;
@@ -87,6 +95,12 @@
     map: (el) => new MapObj(el),
     control: { zoom: () => ({ addTo() { } }) },
     tileLayer: () => ({ addTo() { } }),
+    TileLayer: Object.assign(function () { }, {
+      prototype: { _isValidTile: () => true },
+      extend(props) { const K = function () { }; K.prototype = Object.assign({ addTo() { return this; } }, props); return K; },
+    }),
+    polygon: () => ({ addTo() { return this; } }),
+    canvas: () => ({}),
     layerGroup: (items) => { const g = new Group(); (items || []).forEach(() => { }); return g; },
     markerClusterGroup: () => new Group(),
     divIcon: (o) => o,

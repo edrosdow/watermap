@@ -1,4 +1,4 @@
-"""Startet die Node-Tests (Pegel-Ampel, E-Mail-Alarm, „In der Nähe“), wenn Node vorhanden ist."""
+"""Startet die Node-Tests (Pegel-Ampel, E-Mail-Alarm, „In der Nähe“, Pegel-Trend, Flüsse), wenn Node vorhanden ist."""
 import pathlib
 import shutil
 import subprocess
@@ -21,6 +21,26 @@ class PegelAmpelLogikTests(unittest.TestCase):
 
     def test_umgebung(self):
         res = subprocess.run(["node", str(ROOT / "tests" / "umgebung_test.mjs")], capture_output=True, text=True, timeout=60)
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+
+    def test_pegel_trend(self):
+        res = subprocess.run(["node", str(ROOT / "tests" / "pegel_trend_test.mjs")], capture_output=True, text=True, timeout=60)
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+
+    def test_pegel_fluss(self):
+        res = subprocess.run(["node", str(ROOT / "tests" / "pegel_fluss_test.mjs")], capture_output=True, text=True, timeout=60)
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+
+    def test_gezeiten_bsh(self):
+        res = subprocess.run(["node", str(ROOT / "tests" / "gezeiten_bsh_test.mjs")], capture_output=True, text=True, timeout=60)
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+
+    def test_gezeiten(self):
+        res = subprocess.run(["node", str(ROOT / "tests" / "gezeiten_test.mjs")], capture_output=True, text=True, timeout=60)
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+
+    def test_meldungen(self):
+        res = subprocess.run(["node", str(ROOT / "tests" / "meldungen_test.mjs")], capture_output=True, text=True, timeout=60)
         self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
 
 

@@ -5,7 +5,7 @@
 import { CONFIG } from './config.js';
 import { h } from './dom.js';
 import { icon } from './icons.js';
-import { s, sText, niceStep, fmtNum } from './chart.js';
+import { s, sText, niceStep, fmtNum, abfahren } from './chart.js';
 
 // ------------------------------------------------------------------ Umrechnungen
 const BFT_KMH = [1, 6, 12, 20, 29, 39, 50, 62, 75, 89, 103, 118];
@@ -150,6 +150,66 @@ export function weatherSection(lat, lon) {
   return section;
 }
 
+/** Kurzwerte für die Wetter-Zeile, z. B. „3 Bft aus SW · Böen 34 km/h · 12 °C · keine Warnung“. */
+export function kurzwerte({ current, alerts }) {
+  const t = [];
+  if (current && current.wind !== null) {
+    t.push(`${beaufort(current.wind)} Bft${current.dir !== null ? ` aus ${compass(current.dir)}` : ''}`);
+    if (current.gust !== null && current.gust > current.wind) t.push(`Böen ${fmtNum(current.gust)} km/h`);
+    if (current.temp !== null) t.push(`${fmtNum(current.temp)} °C`);
+  }
+  if (alerts && !alerts.list.length) t.push('keine Warnung');
+  return t.join(' · ') || 'Wind, Vorhersage und Warnungen';
+}
+
+/**
+ * Zeile „Wetter und Wind“ (Slipanlagen): Kurzwerte, ein Tipp öffnet das Fenster mit allem. Liegt eine amtliche Warnung vor,
+ * zeigt die Zeile sie (Farbe + Symbol + Text) – `warnung` löst dann mit true auf, damit die Zeile nach oben rücken kann.
+ */
+export function wetterZeile(lat, lon, { name = '' } = {}) {
+  const ico = h('span', { class: 'wxz-ico', html: icon('gauge', 22), 'aria-hidden': 'true' });
+  const titel = h('strong', { text: 'Wetter und Wind' });
+  const sub = h('small', { text: 'Wird geladen …' });
+  const zeile = h('button', { type: 'button', class: 'wxz', 'aria-haspopup': 'dialog', onclick: () => wetterFenster({ lat, lon, name, opener: zeile }) },
+    ico, h('span', { class: 'wxz-text' }, titel, sub), h('span', { class: 'wxz-pfeil', html: icon('chevron', 18), 'aria-hidden': 'true' }));
+  const warnung = loadWeather(lat, lon).then((d) => {
+    const a = d.alerts?.list[0];
+    const wind = d.current && d.current.wind !== null ? `${beaufort(d.current.wind)} Bft${d.current.dir !== null ? ` ${compass(d.current.dir)}` : ''}` : null;
+    if (a) {
+      const sev = SEVERITY[a.severity];
+      zeile.classList.add('wxz-warn', `wxz-${a.severity}`); zeile.style.setProperty('--sev', sev.color);
+      ico.innerHTML = icon('alert', 22);
+      titel.textContent = `Amtliche Warnung: ${titleCase(a.event)}${d.alerts.list.length > 1 ? ` (+${d.alerts.list.length - 1})` : ''}`;
+      const wann = a.onset && a.onset > Date.now() ? `ab ${dayTimeFmt(a.onset)}` : a.expires ? `bis ${dayTimeFmt(a.expires)}` : 'gilt jetzt';
+      sub.textContent = [wann, wind ? `jetzt ${wind}` : null].filter(Boolean).join(' · ');
+      return true;
+    }
+    if (d.current?.icon) ico.innerHTML = wxIcon(d.current.icon, 24).svg;
+    sub.textContent = kurzwerte(d);
+    return false;
+  }, () => { sub.textContent = 'Wind, Vorhersage und Warnungen'; return false; });
+  return { zeile, warnung };
+}
+
+/** Fenster „Wetter und Wind“ (Handy: von unten, sonst mittig): Warnungen, Wind jetzt, Vorhersage. */
+export function wetterFenster({ lat, lon, name = '', opener = null }) {
+  const box = h('div', { class: 'wx', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Wetter wird geladen …' }));
+  const dlg = h('dialog', { class: 'wxd', 'aria-labelledby': 'wxd-titel' },
+    h('span', { class: 'wxd-grip', 'aria-hidden': 'true' }),
+    h('header', { class: 'wxd-kopf' },
+      h('div', {}, h('h2', { id: 'wxd-titel', tabindex: '-1', text: 'Wetter und Wind' }), name ? h('p', { class: 'wxd-unter', text: name }) : null),
+      h('button', { type: 'button', class: 'wxd-x', 'aria-label': 'Schließen', html: icon('close', 22), onclick: () => dlg.close() })),
+    h('div', { class: 'wxd-body' }, box));
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  dlg.addEventListener('close', () => { dlg.remove(); if (opener && document.contains(opener)) opener.focus({ preventScroll: true }); });
+  document.body.append(dlg);
+  dlg.showModal();
+  dlg.querySelector('#wxd-titel').focus({ preventScroll: true });
+  loadWeather(lat, lon).then((d) => { box.removeAttribute('aria-busy'); box.replaceChildren(...renderWeather(d)); },
+    () => { box.removeAttribute('aria-busy'); box.replaceChildren(h('p', { class: 'unknown', text: 'Wetterdaten sind gerade nicht erreichbar.' })); });
+  return dlg;
+}
+
 export function renderWeather({ current, hours, alerts }) {
   const out = [];
 
@@ -255,9 +315,9 @@ function windChart(hours) {
   svg.append(cross, dG, dW, hit);
   const tip = h('div', { class: 'gc-tip', hidden: true });
   const wrap = h('div', { class: 'gc-wrap' }, svg, tip);
-  const move = (ev) => {
+  const move = (clientX) => {
     const r = svg.getBoundingClientRect();
-    const t = t0 + ((ev.clientX - r.left) / r.width * W - L) / (W - L - R) * (t1 - t0);
+    const t = t0 + (Math.min(Math.max((clientX - r.left) / r.width * W, L), W - R) - L) / (W - L - R) * (t1 - t0);
     let p = hours[0];
     for (const q of hours) if (Math.abs(q.t - t) < Math.abs(p.t - t)) p = q;
     const cx = x(p.t);
@@ -270,7 +330,7 @@ function windChart(hours) {
     tip.style.left = `${Math.min(Math.max(cx / W * r.width, half), r.width - half)}px`;
   };
   const leave = () => { for (const e of [cross, dW, dG]) e.setAttribute('visibility', 'hidden'); tip.hidden = true; };
-  hit.addEventListener('pointermove', move); hit.addEventListener('pointerdown', move); hit.addEventListener('pointerleave', leave);
+  abfahren(wrap, { zeigen: move, verstecken: leave });
 
   // Tabelle (alle 3 Stunden)
   const rows = hours.filter((_, i) => i % 3 === 0);

@@ -11,6 +11,10 @@
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="stylesheet" href="./css/app.css">
   <link rel="stylesheet" href="./css/chart.css">
+  <link rel="stylesheet" href="./css/nav.css">
+  <link rel="stylesheet" href="./css/pegel.css">
+  <link rel="stylesheet" href="./css/naehe.css">
+  <link rel="stylesheet" href="./css/bereiche.css">
 </head>
 <body>
   <a class="skip" href="#map">Zur Karte springen</a>
@@ -26,9 +30,20 @@
       <button type="submit" class="search-btn" aria-label="Suchen"><span id="btn-search-ico"></span></button>
       <ul id="suggest" class="suggest" role="listbox" aria-label="Suchvorschläge" hidden></ul>
     </form>
+    <nav id="topnav" class="topnav" aria-label="Hauptnavigation"></nav>
     <span id="offline" class="offline" role="status" hidden title="Standortdaten bleiben verfügbar, Karten nur für bereits angesehene Bereiche.">Offline</span>
-    <button type="button" id="btn-menu" class="icon-btn header-btn" aria-label="Menü öffnen" aria-haspopup="dialog"></button>
+    <button type="button" id="btn-report" class="report-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="report-menu"><span id="btn-report-ico"></span><span>Melden</span></button>
   </header>
+
+  <div id="naehe-kopf-m" class="nh-kopf nh-kopf-m"></div>
+
+  <div id="toolbar" class="toolbar">
+    <div id="cats" class="cats" role="group" aria-label="Kategorien auf der Karte"></div>
+    <button type="button" id="btn-filter" class="filter-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="filter-panel"><span id="btn-filter-ico"></span><span>Filter</span><span id="filter-n" class="filter-n" hidden></span></button>
+    <div id="filter-tags" class="filter-tags" aria-label="Aktive Filter"></div>
+    <p id="inview" class="inview" aria-live="polite"></p>
+    <a id="btn-naehe-d" class="toolbar-naehe" href="#naehe"><span id="btn-naehe-d-ico"></span><span>In der Nähe</span></a>
+  </div>
 
   <main class="shell">
     <aside id="sidebar" class="sidebar" aria-label="Standortliste">
@@ -36,35 +51,50 @@
         <span class="grip" aria-hidden="true"></span>
         <span id="count" class="sheet-count">Standorte werden geladen …</span>
       </button>
-      <div id="tabs" class="tabs" role="tablist" aria-label="Ansicht">
-        <button type="button" role="tab" data-tab="list" class="is-active" aria-selected="true">Standorte</button>
-        <button type="button" role="tab" data-tab="fav" aria-selected="false">Favoriten <span id="tab-fav-n" class="tab-n"></span></button>
-        <button type="button" id="list-close" class="icon-btn list-close" aria-label="Liste schließen" title="Liste schließen"></button>
+      <div id="tabs" class="list-top">
+        <h2 id="list-title" class="list-title">Liste</h2>
+        <button type="button" id="list-close" class="icon-btn list-close" aria-label="Liste schließen" title="Zur Karte"></button>
       </div>
+      <div id="naehe-kopf-d" class="nh-kopf nh-kopf-d"></div>
       <div id="datainfo" class="datainfo"></div>
       <div id="list-head" class="list-head"></div>
       <ul id="list" class="list" aria-live="polite"></ul>
       <p class="sidebar-foot">
         <a href="./ueber.html">Über WaterMap</a> · <a href="./datenschutz.html">Datenschutz</a> · <a href="./impressum.html">Impressum</a>
+        <span class="version" id="version-list"></span>
       </p>
     </aside>
 
     <section class="map-wrap" aria-label="Karte">
       <div id="map" role="region" aria-label="Interaktive Karte"></div>
-      <div id="filterbar" class="filterbar"></div>
+      <p id="cat-hint" class="cat-hint" hidden>Wähle oben Slipanlagen, Häfen oder Tanken, um sie auf der Karte zu zeigen.</p>
       <button type="button" id="btn-locate" class="fab" aria-label="Meine Position anzeigen" title="Meine Position"></button>
+      <a id="btn-naehe-m" class="map-naehe" href="#naehe"><span id="btn-naehe-m-ico"></span><span>In der Nähe</span></a>
       <div id="banner" class="banner"></div>
       <div id="pickbar" class="pickbar" hidden></div>
+      <section id="peek" class="peek" aria-label="Standort-Vorschau" hidden></section>
       <section id="detail" class="detail" aria-label="Standortdetails" hidden></section>
       <div id="toast" class="toast" role="status" hidden></div>
     </section>
   </main>
 
+  <section id="pegelseite" class="pegelseite" aria-label="Pegel" tabindex="-1" hidden></section>
+  <section id="meldungsseite" class="pegelseite seite" aria-label="Aktuelle Meldungen" tabindex="-1" hidden></section>
+  <section id="mehrseite" class="pegelseite seite" aria-label="Mehr" tabindex="-1" hidden></section>
+
+  <nav id="bottomnav" class="bottomnav" aria-label="Hauptnavigation unten"></nav>
+
   <div id="live" class="sr-only" aria-live="polite"></div>
 
-  <dialog id="menu" class="dialog" aria-labelledby="menu-title">
-    <button type="button" id="menu-close" class="icon-btn dlg-x" aria-label="Menü schließen"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-    <div id="menu-body"></div>
+  <dialog id="report-menu" class="pop" aria-labelledby="report-title">
+    <span class="pop-grip" aria-hidden="true"></span>
+    <div class="sheet-scroll" id="report-body"></div>
+  </dialog>
+
+  <dialog id="filter-panel" class="pop pop-filter" aria-labelledby="filter-title">
+    <span class="pop-grip" aria-hidden="true"></span>
+    <div class="sheet-scroll" id="filter-body"></div>
+    <div class="pop-foot" id="filter-foot"></div>
   </dialog>
 
   <dialog id="dlg" class="dialog dialog-form">
@@ -84,6 +114,7 @@
     <input name="parkplatz"><input name="trailerparkplatz"><textarea name="beschreibung"></textarea><input type="file" name="foto"><input name="kontakt">
     <input name="foto_rechte"><input name="dublette_bestaetigt">
   </form>
+  <!-- Preis melden ist aus der App entfernt (7.33.1); Formular bleibt nur für noch offene Meldungen in der Verwaltung -->
   <form name="tankpreis-melden" method="POST" data-netlify="true" netlify-honeypot="bot-field" enctype="multipart/form-data" hidden>
     <input name="form-name" value="tankpreis-melden"><input name="bot-field">
     <input name="tankstelle_id"><input name="tankstelle_name"><input name="kraftstoff"><input name="preis"><input name="datum">
@@ -91,7 +122,11 @@
   </form>
   <form name="foto-einreichen" method="POST" data-netlify="true" netlify-honeypot="bot-field" enctype="multipart/form-data" hidden>
     <input name="form-name" value="foto-einreichen"><input name="bot-field">
-    <input name="standort_id"><input name="standort_name"><textarea name="beschreibung"></textarea><input type="file" name="foto"><input name="foto_rechte">
+    <input name="standort_id"><input name="standort_name"><input name="kategorie"><input name="beschreibung"><input type="file" name="foto"><input name="foto_rechte">
+  </form>
+  <form name="slip-ergaenzen" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
+    <input name="form-name" value="slip-ergaenzen"><input name="bot-field">
+    <input name="standort_id"><input name="standort_name"><textarea name="angaben"></textarea><textarea name="bemerkung"></textarea>
   </form>
   <form name="fehler-melden" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
     <input name="form-name" value="fehler-melden"><input name="bot-field">

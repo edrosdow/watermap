@@ -1,6 +1,7 @@
 // Lädt Standortdaten (OSM-Schicht + Community-Schicht getrennt) und führt sie zusammen.
 import { CONFIG } from './config.js';
 import { TYPE_KEYS } from './model.js';
+import { FOTO_KATEGORIEN } from './foto-kategorien.js';
 
 async function fetchJson(url, { retries = 2 } = {}) {
   let lastErr;
@@ -51,7 +52,7 @@ export function normalizePlace(raw, source) {
     description: str(raw.description),
     attrs: {
       surface: str(a.surface), incline: str(a.incline),
-      motorboat: tri(a.motorboat), parking: tri(a.parking), trailer_parking: tri(a.trailer_parking),
+      motorboat: tri(a.motorboat), parking: tri(a.parking), trailer_parking: tri(a.trailer_parking), trailer_note: str(a.trailer_note),
       suitable_boats: str(a.suitable_boats), suitable_trailers: str(a.suitable_trailers),
       berths: num(a.berths), visitor_berths: tri(a.visitor_berths), berth_fee: str(a.berth_fee),
       electricity: tri(a.electricity), water_tap: tri(a.water_tap), toilets: tri(a.toilets),
@@ -94,7 +95,7 @@ function applyOverride(place, ov) {
     if (k in place.attrs) { place.attrs[k] = Array.isArray(v) ? v : (typeof v === 'boolean' || v === null || typeof v === 'number' || typeof v === 'string' ? v : place.attrs[k]); place.community_fields.push(k); }
   }
   for (const ph of ov.photos || []) {
-    if (ph && typeof ph.url === 'string' && /^(\.\/|\/)?photos\//.test(ph.url)) place.photos.push({ url: ph.url, credit: str(ph.credit), alt: str(ph.alt) });
+    if (ph && typeof ph.url === 'string' && /^(\.\/|\/)?photos\//.test(ph.url)) place.photos.push({ url: ph.url, credit: str(ph.credit), alt: str(ph.alt), kategorie: FOTO_KATEGORIEN[ph.kategorie] ? ph.kategorie : null });
   }
   if (ov.updated) place.updated = ov.updated;
 }

@@ -2,15 +2,16 @@
 // (/api/pegel/… → Netlify leitet an PEGELONLINE weiter, siehe public/_redirects): keine CSP-Ausnahme,
 // keine IP-Adressen der Besucher bei Dritten. Text aus den Daten wird nur als Text eingefügt.
 import { CONFIG } from './config.js';
+import { schoenerName } from './pegel-namen.js';
 import { h } from './dom.js';
 import { icon } from './icons.js';
-import { s, niceStep, fmtNum } from './chart.js';
+import { s, niceStep, fmtNum, abfahren } from './chart.js';
 
 // Zustände (Status-Farben: nie allein – immer mit Wert, Pfeil bzw. Symbol und Text)
 export const GAUGE_STATES = {
   hsw:     { label: 'Über HSW – Schifffahrt eingeschränkt', short: 'über HSW', color: '#D03B3B', ico: 'alert' },
   high:    { label: 'Hochwasser (über MHW)', short: 'hoch', color: '#EC835A', ico: 'alert' },
-  normal:  { label: 'Normaler Wasserstand', short: 'normal', color: '#1F6FB2', ico: 'check' },
+  normal:  { label: 'Normaler Wasserstand', short: 'normal', color: '#6CBF84', ico: 'check' },
   low:     { label: 'Niedrigwasser (unter MNW)', short: 'niedrig', color: '#FAB219', ico: 'alert' },
   unknown: { label: 'Einordnung nicht möglich', short: 'ohne Einordnung', color: '#8A99A6', ico: 'info' },
   old:     { label: 'Messwert veraltet', short: 'veraltet', color: '#8A99A6', ico: 'clock' },
@@ -21,6 +22,7 @@ const REFS = {
 };
 
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+const zahl = (v) => (typeof v === 'string' && /^\s*-?\d+([.,]\d+)?\s*$/.test(v) ? Number(v.replace(',', '.')) : num(v));
 
 /** Wandelt einen Eintrag aus stations.json in ein schlankes Objekt um; null, wenn unbrauchbar. */
 export function normalizeStation(s, now = Date.now()) {
@@ -35,27 +37,39 @@ export function normalizeStation(s, now = Date.now()) {
   for (const c of ts.characteristicValues || []) {
     if (c && REFS[c.shortname] && num(c.value) !== null && (!c.unit || c.unit === ts.unit)) refs[c.shortname] = c.value;
   }
+  // Tide-Kennwerte (MThw, MTnw, MTmw …) werden nicht als niedrig/hoch bewertet, zeigen aber einen Tidepegel an.
+  // Werte auch als Text („651“, „651,0“), Einheit nur verwerfen, wenn sie eindeutig nicht cm ist.
+  const tideRefs = {}, tideRoh = [];
+  for (const c of ts.characteristicValues || []) {
+    const name = String(c?.shortname || '').trim();
+    if (!/^[MHN]{0,2}T[HNM][WB]?$/i.test(name.replace(/\s+/g, ''))) continue;
+    tideRoh.push(`${name}=${c.value ?? '–'}${c.unit ? ' ' + c.unit : ''}`);
+    const k = { MTHW: 'MThw', MTNW: 'MTnw', MTMW: 'MTmw' }[name.replace(/\s+/g, '').toUpperCase()];
+    const v = zahl(c.value);
+    if (k && v !== null && (!c.unit || /^cm/i.test(c.unit))) tideRefs[k] = v;
+  }
+  const tide = tideRoh.length > 0;
   const time = cm.timestamp ? Date.parse(cm.timestamp) : NaN;
   const old = !Number.isFinite(time) || now - time > CONFIG.PEGEL_STALE_HOURS * 3600e3;
   let state = 'unknown';
   if (old) state = 'old';
   else if (cm.stateNswHsw === 'high' || (refs.HSW !== undefined && value > refs.HSW)) state = 'hsw';
   else if (['low', 'normal', 'high'].includes(cm.stateMnwMhw)) state = cm.stateMnwMhw;
+  // Ohne Einordnung von PEGELONLINE selbst einordnen, wenn MNW und MHW bekannt sind
+  else if (refs.MNW !== undefined && refs.MHW !== undefined) state = value < refs.MNW ? 'low' : value > refs.MHW ? 'high' : 'normal';
   return {
     id: s.uuid, number: s.number ? String(s.number) : null,
-    name: titleCase(s.longname || s.shortname || 'Pegel'),
-    water: titleCase(s.water?.longname || s.water?.shortname || ''),
+    name: schoenerName(s.longname || s.shortname || 'Pegel'), nameRoh: s.longname || s.shortname || '',
+    water: schoenerName(s.water?.longname || s.water?.shortname || ''),
     km: num(s.km), agency: s.agency || '',
     lat, lon, value, unit: ts.unit || 'cm',
     time: Number.isFinite(time) ? time : null,
-    trend: [-1, 0, 1].includes(cm.trend) ? cm.trend : null,
-    state, refs,
+    // PEGELONLINE liefert den Trend nicht immer (auch als Text); fehlt er, kommt er später aus dem Verlauf
+    trend: cm.trend !== null && cm.trend !== undefined && cm.trend !== '' && [-1, 0, 1].includes(Number(cm.trend)) ? Number(cm.trend) : null,
+    state, refs, tide, tideRefs,
+    // Roh-Kennwerte nur, wenn keine Tide-Kennwerte erkannt wurden (für die Prüfliste)
+    ...(tide && !Object.keys(tideRefs).length ? { tideRoh } : {}),
   };
-}
-
-// PEGELONLINE liefert Namen in Großbuchstaben („KÖLN“, „RHEIN“).
-function titleCase(s) {
-  return String(s).toLowerCase().replace(/(^|[\s\-(/])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
 }
 
 async function getJson(path) {
@@ -145,7 +159,7 @@ export function renderGaugeDetail(g, { history, close, user, distance, weather }
   body.append(h('footer', { class: 'source' },
     h('p', {}, 'Quelle: ', g.number ? h('a', { href: `https://www.pegelonline.wsv.de/gast/stammdaten?pegelnr=${encodeURIComponent(g.number)}`, target: '_blank', rel: 'noopener noreferrer', text: 'PEGELONLINE' }) : 'PEGELONLINE',
       ', Wasserstraßen- und Schifffahrtsverwaltung des Bundes (WSV) · Datenlizenz Deutschland – Zero – 2.0'),
-    g.agency ? h('p', { text: `Zuständig: ${titleCase(g.agency)}` }) : null));
+    g.agency ? h('p', { text: `Zuständig: ${schoenerName(g.agency)}` }) : null));
 
   return [head, body];
 }
@@ -228,9 +242,9 @@ export function historyChart(pts, g, { threshold = null } = {}) {
   svg.append(cross, hdot, hit);
   const tip = h('div', { class: 'gc-tip', hidden: true });
   const wrap = h('div', { class: 'gc-wrap' }, svg, tip);
-  const move = (ev) => {
+  const move = (clientX) => {
     const r = svg.getBoundingClientRect();
-    const px = (ev.clientX - r.left) / r.width * W;
+    const px = Math.min(Math.max((clientX - r.left) / r.width * W, L), W - R);
     const t = t0 + (px - L) / (W - L - R) * (t1 - t0);
     let i = 0, best = Infinity;
     for (let j = 0; j < pts.length; j++) { const dd = Math.abs(pts[j].t - t); if (dd < best) { best = dd; i = j; } }
@@ -244,7 +258,7 @@ export function historyChart(pts, g, { threshold = null } = {}) {
     tip.style.left = `${Math.min(Math.max(left, half), r.width - half)}px`;
   };
   const leave = () => { cross.setAttribute('visibility', 'hidden'); hdot.setAttribute('visibility', 'hidden'); tip.hidden = true; };
-  hit.addEventListener('pointermove', move); hit.addEventListener('pointerdown', move); hit.addEventListener('pointerleave', leave);
+  abfahren(wrap, { zeigen: move, verstecken: leave });
 
   // Tabellenansicht (Tageswerte) für Screenreader und zum Nachlesen
   const days = new Map();

@@ -27,9 +27,14 @@ export function searchLocal(index, query, limit = 6) {
   return hits.slice(0, limit).map(h => h.e.p);
 }
 
-/** Ortssuche über den konfigurierten Geocoder. Wirft bei Netzwerkfehlern. */
+/**
+ * Ortssuche über den konfigurierten Geocoder. Wirft bei Netzwerkfehlern.
+ * Nur im Rechteck um das Kartengebiet (viewbox + bounded) – so finden sich auch Seegebiete ohne Länderkennung
+ * („Helgoländer Bucht“); Treffer außerhalb der genauen Grenze filtert main.js (imGebiet).
+ */
 export async function geocode(query, { signal } = {}) {
-  const url = `${CONFIG.GEOCODER_URL}?format=jsonv2&limit=5&countrycodes=de&accept-language=de&q=${encodeURIComponent(query)}`;
+  const [[s, w], [n, e]] = CONFIG.GEBIET.bounds;
+  const url = `${CONFIG.GEOCODER_URL}?format=jsonv2&limit=10&viewbox=${w},${n},${e},${s}&bounded=1&accept-language=de&q=${encodeURIComponent(query)}`;
   const res = await fetch(url, { signal, headers: { Accept: 'application/json' } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();

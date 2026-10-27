@@ -22,10 +22,10 @@ def png(rgb, w=40, h=30):
 slips = json.loads((ROOT / 'data/osm/slip.geojson').read_text(encoding='utf-8'))['features']
 MANY, ONE = slips[0]['id'], slips[1]['id']
 OVERRIDES = json.dumps([
-    {'id': MANY, 'status': 'approved', 'updated': '2026-10-20', 'photos': [
-        {'url': 'photos/t-1.png', 'credit': 'WaterMap-Community', 'alt': 'Rampe bei Niedrigwasser'},
-        {'url': 'photos/t-2.png', 'credit': 'Edwin D.', 'alt': '<b>Steg</b> von oben'},
-        {'url': 'photos/t-3.png', 'credit': 'WaterMap-Community', 'alt': ''}]},
+    {'id': MANY, 'status': 'approved', 'updated': '2026-10-20', 'fields': {'access': 'public', 'fee': False}, 'photos': [
+        {'url': 'photos/t-1.png', 'credit': 'WaterMap-Community', 'alt': 'Rampe bei Niedrigwasser', 'kategorie': 'rampe'},
+        {'url': 'photos/t-2.png', 'credit': 'Edwin D.', 'alt': '<b>Steg</b> von oben', 'kategorie': 'steg'},
+        {'url': 'photos/t-3.png', 'credit': 'WaterMap-Community', 'alt': '', 'kategorie': 'rampe'}]},
     {'id': ONE, 'status': 'approved', 'updated': '2026-10-20', 'photos': [{'url': 'photos/t-9.png', 'credit': 'X', 'alt': 'Einzelfoto'}]}])
 IMAGES = {'t-1': png((200, 30, 30)), 't-2': png((30, 160, 60)), 't-3': png((30, 60, 200)), 't-9': png((120, 120, 120))}
 
@@ -51,6 +51,8 @@ with sync_playwright() as p:
         pg.on('pageerror', lambda e: errors.append(str(e)))
         pg.on('console', lambda m: errors.append(m.text) if m.type == 'error' and 'Failed to load resource' not in m.text else None)   # Kacheln sind absichtlich blockiert
         pg.goto(f'http://127.0.0.1:{PORT}/#p={MANY}')
+        if pg.viewport_size['width'] < 768:   # Handy: Deep-Link zeigt erst die Vorschau-Karte
+            pg.locator('#peek button', has_text='Details').click()
         frame = pg.locator('#detail .ph-frame'); frame.wait_for()
         count = lambda: pg.inner_text('#detail .ph-count')
         src = lambda: pg.get_attribute('#detail .ph-frame img >> nth=-1', 'src')   # beim Wechsel liegen kurz zwei Bilder übereinander
@@ -91,8 +93,43 @@ with sync_playwright() as p:
               and pg.locator('#dlg input[name=standort_id]').get_attribute('value') == MANY and pg.input_value('#dlg select[name=art]') == 'foto',
               f'{name}: „Foto melden“ füllt die Meldung vor')
         pg.click('#dlg-close')
+        # Kategorien: Filter „Alle 3 · Rampe 2 · Steg 1“, Etikett auf dem Foto, gefiltertes Blättern und Vollbild
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(MANY)}, {{ full: true }})"); pg.locator('#detail .ph-filter').wait_for()
+        chips = [re.sub(r'\s+', ' ', t).strip() for t in pg.locator('#detail .ph-chip').all_inner_texts()]
+        check(chips == ['Alle 3', 'Rampe 2', 'Steg 1'] and pg.get_attribute('#detail .ph-chip[data-kat=alle]', 'aria-pressed') == 'true', f'{name}: Filter nach Kategorie ({chips})')
+        hh = pg.locator('#detail .ph-chip').first.bounding_box()['height']
+        check(hh >= 44, f'{name}: Filter ≥ 44 px ({hh})')
+        pg.wait_for_function("document.querySelector('#detail .ph-kat')?.textContent === 'Rampe'")
+        check(pg.is_visible('#detail .ph-kat'), f'{name}: Etikett „Rampe“ auf dem Foto')
+        pg.click('#detail .ph-chip[data-kat=steg]'); pg.locator('#detail .ph-frame img').first.wait_for()
+        check(pg.locator('#detail .ph-count').count() == 0 and pg.locator('#detail .ph-nav:visible').count() == 0 and 'Steg' in pg.inner_text('#detail .ph-kat')
+              and 't-2.png' in src(), f'{name}: Filter „Steg“ zeigt nur das Steg-Foto')
+        pg.click('#detail .ph-chip[data-kat=rampe]'); pg.locator('#detail .ph-count').wait_for()
+        check(count() == '1 / 2' and pg.get_attribute('#detail .ph-chip[data-kat=rampe]', 'aria-pressed') == 'true', f'{name}: Filter „Rampe“: 1 / 2')
+        pg.click('#detail .ph-next'); pg.wait_for_function("document.querySelector('#detail .ph-count').textContent === '2 / 2'")
+        check('t-3.png' in src() and pg.locator('#detail .ph-caption').is_hidden(), f'{name}: Blättern nur innerhalb der Kategorie')
+        pg.locator('#detail .ph-frame img').last.click(); pg.wait_for_selector('dialog.lightbox[open]')
+        check(pg.inner_text('dialog.lightbox .ph-count') == '2 / 2', f'{name}: Vollbild zeigt nur die gefilterten Fotos')
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
+        pg.screenshot(path=str(SHOTS / f'karussell_{name}_kategorie.png'))
+        # Reihenfolge bei Slipanlagen: Knöpfe · Etiketten · Fotos · Heute vor Ort · Boot · Wetter-Zeile · Rest
+        folge = pg.evaluate("""() => { const b = document.querySelector('#detail .detail-body');
+          return ['.dbtns', '.dtags', '.photos, .ph-leer', '#heute-vor-ort', '.wb', '.wxz', '.source', '.detail-links'].map(s => [...b.children].findIndex(e => e.matches(s))); }""")
+        check(all(i >= 0 for i in folge) and folge == sorted(folge), f'{name}: Reihenfolge Knöpfe · Etiketten · Fotos · Heute vor Ort · Boot · Wetter-Zeile · Rest ({folge})')
+        check(pg.locator('#detail .wx-block').count() == 0, f'{name}: Wetter bei Slipanlagen nicht mehr als Abschnitt in der Seite')
+        # „Foto hinzufügen“ direkt unter den Fotos; unten nur noch „Fehler melden“
+        check(pg.is_visible('#detail .photos .ph-add') and pg.locator('#detail .detail-links button', has_text='Foto hinzufügen').count() == 0, f'{name}: „Foto hinzufügen“ im Fotobereich')
+        # Etikett wandert beim Scrollen nicht über den festen Kopf
+        lage = None if mobile else pg.evaluate("""() => { const k = document.querySelector('#detail .ph-kat'), kopf = document.querySelector('#detail .detail-head');
+          const sc = [k.parentElement]; let e = k.parentElement; while (e && e !== document.body) { if (/(auto|scroll)/.test(getComputedStyle(e).overflowY) && e.scrollHeight > e.clientHeight) { sc.push(e); break; } e = e.parentElement; }
+          const box = sc[sc.length - 1]; const kb = kopf.getBoundingClientRect();
+          box.scrollTop += k.getBoundingClientRect().top - (kb.top + kb.height / 2);
+          const r = k.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return { unterKopf: r.top < kb.bottom && r.bottom > kb.top, trifftKopf: !!hit?.closest('.detail-head') }; }""")
+        if not mobile: check(lage['unterKopf'] and lage['trifftKopf'], f'{name}: Etikett verschwindet beim Scrollen unter dem festen Kopf ({lage})')
+        check(pg.evaluate("getComputedStyle(document.querySelector('#detail .ph-frame')).isolation") == 'isolate', f'{name}: Fotorahmen hält Etikett und Pfeile unter dem Kopf (isolation)')
         # Standort mit einem Foto: keine Pfeile, kein Zähler
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ONE)})"); pg.locator('#detail .ph-caption', has_text='Einzelfoto').wait_for()
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ONE)}, {{ full: true }})"); pg.locator('#detail .ph-caption', has_text='Einzelfoto').wait_for()
         check(pg.locator('#detail .ph-nav:visible').count() == 0 and pg.locator('#detail .ph-count').count() == 0, f'{name}: ein Foto ohne Pfeile und Zähler')
         csp = pg.evaluate('window.__csp || []')
         check(not errors and not csp, f'{name}: keine JS-/CSP-Fehler {errors[:3]} {csp[:3]}')

@@ -92,7 +92,7 @@ def check(cond, msg):
 srv = ThreadingHTTPServer(('127.0.0.1', PORT), functools.partial(Handler, directory=str(ROOT)))
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 
-PICK = """(north) => { const ps = window.__watermap.state.places;
+PICK = """([north, typ]) => { const ps = window.__watermap.state.places.filter(p => p.type === typ);
   return (north ? ps.find(p => p.lat > 51.5 && p.name) : ps.find(p => p.lat < 50.5 && p.name)).id; }"""
 
 with sync_playwright() as p:
@@ -102,6 +102,7 @@ with sync_playwright() as p:
         ctx = b.new_context(viewport=vp, device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile, locale='de-DE',
                             timezone_id='Europe/Berlin', service_workers='block',
                             geolocation={'latitude': 48.1, 'longitude': 11.6}, permissions=['geolocation'])
+        ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))   # „Heute vor Ort“ (eigener Test: ui_meldungen.py)
         ctx.route('**/api/wetter/**', api)
         ctx.route('**/.netlify/functions/umgebung*', lambda r: r.fulfill(status=200, content_type='application/json', body='{"elements": []}'))   # „In der Nähe“ live
         ctx.route('https://overpass-api.de/**', lambda r: r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body='{"elements": []}'))
@@ -119,21 +120,31 @@ with sync_playwright() as p:
         if pg.locator('#banner .btn-primary').count(): pg.click('#banner .btn-primary'); pg.wait_for_timeout(800)
         check(not calls, f'{name}: ohne Detailansicht keine Wetterabfrage')
 
-        north = pg.evaluate(PICK, True)
+        north = pg.evaluate(PICK, [True, 'slip'])
         place = pg.evaluate(f"window.__watermap.state.byId.get({json.dumps(north)})")
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)})")
-        pg.wait_for_selector('#detail .wx-wind', timeout=8000)
-        txt = pg.inner_text('#detail .wx-block')
+        pos = lambda sels: pg.evaluate("(sels) => { const b = document.querySelector('#detail .detail-body'); return sels.map(s => [...b.children].findIndex(e => e.matches(s))); }", sels)
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)}, {{ full: true }})")
+        pg.wait_for_selector('#detail .wxz-warn', timeout=8000)
+        # Slipanlage: Zeile statt Abschnitt; bei amtlicher Warnung gelb und weiter oben
+        zeile = pg.inner_text('#detail .wxz')
+        check('Amtliche Warnung: Sturmböen (+1)' in zeile and 'jetzt 3 Bft SW' in zeile and pg.locator('#detail .wx-block').count() == 0, f'{name}: Zeile zeigt die Warnung ({zeile!r}), kein Abschnitt in der Seite')
+        check(pg.locator('#detail .wxz').get_attribute('class').endswith('wxz-moderate') and pg.locator('#detail .wxz').get_attribute('aria-haspopup') == 'dialog', f'{name}: Warnstufe als Klasse, Zeile öffnet ein Fenster')
+        i = pos(['.dbtns', '.dtags', '.photos, .ph-leer', '#heute-vor-ort', '.wxz', '.wb'])
+        i = [i[0]] + i[2:] if i[1] in (-1, i[0] + 1) else i   # Etiketten gibt es nur bei Standorten mit Angaben; wenn da, direkt nach den Knöpfen
+        check(all(x >= 0 for x in i) and i == sorted(i), f'{name}: Reihenfolge Knöpfe · Etiketten · Fotos · Heute vor Ort · Wetterwarnung · Boot ({i})')
+        check(pg.locator('#detail .wxz').bounding_box()['height'] >= 44, f'{name}: Zeile ≥ 44 px hoch')
+        pg.click('#detail .wxz'); pg.wait_for_selector('dialog.wxd[open] .wx-wind', timeout=8000)
+        txt = pg.inner_text('dialog.wxd')
         check('Sturmböen'.upper() in txt and 'Markante Wetterwarnung' in txt, f'{name}: amtliche Warnung mit Stufe als Text')
-        check(pg.locator('#detail .wx-alert').count() == 2 and pg.locator('#detail .wx-alert').first.get_attribute('class').endswith('moderate'),
+        check(pg.locator('dialog.wxd .wx-alert').count() == 2 and pg.locator('dialog.wxd .wx-alert').first.get_attribute('class').endswith('moderate'),
               f'{name}: Warnungen nach Schwere sortiert')
         check('18 km/h' in txt and '3 Bft' in txt and 'aus SW' in txt and 'Böen 34 km/h' in txt, f'{name}: aktueller Wind mit Beaufort und Richtung')
         check('12 °C' in txt and 'Köln/Bonn' in txt and '12 km entfernt' in txt, f'{name}: Temperatur und Messstation')
         check('Böen bis' in txt and 'erwartet' in txt, f'{name}: Hinweis auf starke Böen in den nächsten 12 Stunden')
         # Wind aus SW (225°) weht nach NO: der nach Süden zeigende Pfeil wird um 225° gedreht
-        check('rotate(225 ' in pg.locator('#detail .wx-now-arrow g').get_attribute('transform'), f'{name}: Pfeil zeigt, wohin der Wind weht')
-        check(pg.locator('#detail .wx-dir').count() >= 15, f'{name}: Windrichtungspfeile ({pg.locator("#detail .wx-dir").count()})')
-        check(pg.locator('#detail .wx-strip li').count() == 9, f'{name}: 3-Stunden-Übersicht')
+        check('rotate(225 ' in pg.locator('dialog.wxd .wx-now-arrow g').get_attribute('transform'), f'{name}: Pfeil zeigt, wohin der Wind weht')
+        check(pg.locator('dialog.wxd .wx-dir').count() >= 15, f'{name}: Windrichtungspfeile ({pg.locator("dialog.wxd .wx-dir").count()})')
+        check(pg.locator('dialog.wxd .wx-strip li').count() == 9, f'{name}: 3-Stunden-Übersicht')
         check('Deutscher Wetterdienst' in txt, f'{name}: Quellenangabe DWD')
         q = {path.rsplit('/', 1)[1]: qq for path, qq in calls}
         check(set(q) == {'current_weather', 'weather', 'alerts'}, f'{name}: drei Abfragen über /api/wetter ({sorted(q)})')
@@ -141,43 +152,67 @@ with sync_playwright() as p:
               f'{name}: gesendet werden die Koordinaten des Standorts')
         check(all(abs(float(qq['lat'][0]) - 48.1) > 0.5 for qq in q.values()), f'{name}: eigener Standort wird nicht gesendet')
         # Fadenkreuz
-        pg.locator('#detail .wx .gc-svg').scroll_into_view_if_needed()
-        bx = pg.locator('#detail .wx .gc-svg').bounding_box()
+        pg.locator('dialog.wxd .wx .gc-svg').scroll_into_view_if_needed()
+        bx = pg.locator('dialog.wxd .wx .gc-svg').bounding_box()
         pg.mouse.move(bx['x'] + bx['width'] * 0.4, bx['y'] + bx['height'] * 0.4); pg.wait_for_timeout(150)
-        tip = pg.locator('#detail .wx .gc-tip')
+        tip = pg.locator('dialog.wxd .wx .gc-tip')
         check(tip.is_visible() and 'Wind' in tip.inner_text() and 'Böen' in tip.inner_text() and 'Bft' in tip.inner_text(), f'{name}: Tooltip ({tip.inner_text() if tip.is_visible() else "-"})')
-        tb, wb = tip.bounding_box(), pg.locator('#detail .wx .gc-wrap').bounding_box()
+        tb, wb = tip.bounding_box(), pg.locator('dialog.wxd .wx .gc-wrap').bounding_box()
         check(tb['x'] >= wb['x'] - 1 and tb['x'] + tb['width'] <= wb['x'] + wb['width'] + 1, f'{name}: Tooltip bleibt im Diagramm')
         pg.mouse.move(bx['x'] + bx['width'] * 34 / 360 + 2, bx['y'] + bx['height'] * 0.4); pg.wait_for_timeout(100)   # linker Rand der Zeichenfläche
         tb = tip.bounding_box()
         check(tb['x'] >= wb['x'] - 1, f'{name}: Tooltip am linken Rand nicht abgeschnitten')
         pg.mouse.move(bx['x'] + bx['width'] * 0.4, bx['y'] + bx['height'] * 0.4); pg.wait_for_timeout(100)
         pg.screenshot(path=str(SHOTS / f'{name}_1_wetter.png'))
-        pg.locator('#detail .wx-block').screenshot(path=str(SHOTS / f'{name}_2_abschnitt.png'))
+        # Fenster: Handy von unten, sonst mittig; Escape schließt nur das Fenster, nicht die Standortansicht
+        r = pg.locator('dialog.wxd').bounding_box(); vp = pg.viewport_size
+        if mobile: check(abs(r['y'] + r['height'] - vp['height']) <= 1 and r['width'] >= vp['width'] - 1, f'{name}: Fenster sitzt unten, volle Breite ({r})')
+        else: check(abs((r['x'] + r['width'] / 2) - vp['width'] / 2) <= 2 and r['width'] <= 581, f'{name}: Fenster mittig, höchstens 580 px ({r})')
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+        check(pg.locator('dialog.wxd').count() == 0 and pg.locator('#detail:not([hidden]) .wxz').count() == 1, f'{name}: Escape schließt nur das Fenster')
+        check(pg.evaluate("document.activeElement.classList.contains('wxz')"), f'{name}: Fokus zurück auf die Zeile')
+        pg.click('#detail .wxz'); pg.wait_for_selector('dialog.wxd[open] .wx-wind'); pg.click('dialog.wxd .wxd-x'); pg.wait_for_timeout(150)
+        check(pg.locator('dialog.wxd').count() == 0, f'{name}: „×“ schließt das Fenster')
 
         # Zwischenspeicher: gleicher Standort erneut → keine neuen Abfragen
         n = len(calls)
-        pg.keyboard.press('Escape'); pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)})"); pg.wait_for_selector('#detail .wx-wind')
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)}, {{ full: true }})"); pg.wait_for_selector('#detail .wxz-warn')
+        pg.click('#detail .wxz'); pg.wait_for_selector('dialog.wxd[open] .wx-wind'); pg.keyboard.press('Escape')
         check(len(calls) == n, f'{name}: kurzzeitiger Zwischenspeicher je Ort')
 
-        # Ohne Warnung
-        south = pg.evaluate(PICK, False)
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(south)})"); pg.wait_for_selector('#detail .wx-noalert', timeout=8000)
-        check('keine amtlichen Wetterwarnungen für Stadt Mainz' in pg.inner_text('#detail'), f'{name}: Hinweis ohne Warnung nennt den Warnbereich')
+        # Ohne Warnung: Zeile mit Kurzwerten, nach „Wichtig für dein Boot“
+        south = pg.evaluate(PICK, [False, 'slip'])
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(south)}, {{ full: true }})"); pg.wait_for_selector('#detail .wxz:not(.wxz-warn) small:not(:has-text("Wird geladen"))', timeout=8000)
+        zeile = pg.inner_text('#detail .wxz')
+        check('3 Bft aus SW · Böen 34 km/h · 12 °C · keine Warnung' in zeile, f'{name}: Kurzwerte in der Zeile ({zeile!r})')
+        i = pos(['.dbtns', '.dtags', '.photos, .ph-leer', '#heute-vor-ort', '.wb', '.wxz'])
+        i = [i[0]] + i[2:] if i[1] in (-1, i[0] + 1) else i
+        check(all(x >= 0 for x in i) and i == sorted(i), f'{name}: Reihenfolge … Heute vor Ort · Boot · Wetter ({i})')
+        pg.click('#detail .wxz'); pg.wait_for_selector('dialog.wxd[open] .wx-noalert')
+        check('keine amtlichen Wetterwarnungen für Stadt Mainz' in pg.inner_text('dialog.wxd'), f'{name}: Hinweis ohne Warnung nennt den Warnbereich')
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
+
+        # Andere Standorte (Hafen, Tankstelle): Abschnitt wie bisher in der Seite
+        marina = pg.evaluate("window.__watermap.state.places.find(p => p.type === 'marina' && p.lat > 51.5).id")
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(marina)}, {{ full: true }})"); pg.wait_for_selector('#detail .wx-block .wx-wind', timeout=8000)
+        check(pg.locator('#detail .wxz').count() == 0, f'{name}: Hafen: Wetter weiter als Abschnitt, keine Zeile')
 
         # Pegel-Detail enthält ebenfalls Wetter
         pg.evaluate("window.__watermap.setGauges(true)"); pg.wait_for_selector('.wm-gauge')
-        pg.evaluate("window.__watermap.selectGauge('a6ee8177-107b-47dd-bcfd-30960ccc6e9c', { fly: false })")
+        pg.evaluate("window.__watermap.selectGauge('a6ee8177-107b-47dd-bcfd-30960ccc6e9c', { fly: false, full: true })")
         pg.wait_for_selector('#detail .wx-wind', timeout=8000)
-        check('Pegel' in pg.inner_text('#detail .detail-head') and pg.locator('#detail .wx-block').count() == 1, f'{name}: Wetter auch im Pegel-Detail')
+        check('pegel' in pg.inner_text('#detail .pd-kopf').lower() and pg.locator('#detail .wx-block').count() == 1, f'{name}: Wetter auch im Pegel-Detail')
         pg.evaluate("window.__watermap.setGauges(false)")
 
         # Dienst gestört (neuer Ort, damit nichts aus dem Zwischenspeicher kommt)
         fail['on'] = True
-        other = pg.evaluate("window.__watermap.state.places.find(p => p.lat > 53 && p.lon > 10).id")
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(other)})"); pg.wait_for_timeout(800)
-        check('Wetterdaten sind gerade nicht erreichbar' in pg.inner_text('#detail'), f'{name}: Hinweis bei Ausfall')
-        check(pg.locator('#detail .facts').count() == 1, f'{name}: restliche Details trotzdem da')
+        other = pg.evaluate("window.__watermap.state.places.find(p => p.type === 'slip' && p.lat > 53 && p.lon > 10).id")
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(other)}, {{ full: true }})"); pg.wait_for_timeout(800)
+        check('Wind, Vorhersage und Warnungen' in pg.inner_text('#detail .wxz'), f'{name}: Zeile bleibt bei Ausfall bedienbar')
+        pg.click('#detail .wxz'); pg.wait_for_selector('dialog.wxd[open]')
+        check('Wetterdaten sind gerade nicht erreichbar' in pg.inner_text('dialog.wxd'), f'{name}: Hinweis bei Ausfall')
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
+        check(pg.locator('#detail .facts, #detail .wb').count() == 1, f'{name}: restliche Details trotzdem da')
         fail['on'] = False
 
         csp = pg.evaluate('window.__csp || []')

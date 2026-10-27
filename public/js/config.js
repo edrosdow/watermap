@@ -1,6 +1,10 @@
 // Zentrale Einstellungen. Hier – und nur hier – werden Dienste und Grenzwerte angepasst.
+// Entwicklungsmodus: lokal und in Netlify-Vorschauen (deploy-preview-…), nie auf der Live-Seite
+const host = typeof location !== 'undefined' ? location.hostname : '';
+export const ENTWICKLUNG = /^(localhost|127\.0\.0\.1)$|^deploy-preview-/.test(host);
+
 export const CONFIG = {
-  VERSION: '7.14.3',
+  VERSION: '7.37.0',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -16,8 +20,20 @@ export const CONFIG = {
   // Ortssuche (Geocoder). Wird nur auf Nutzeraktion hin abgefragt, nie bei Kartenbewegung.
   GEOCODER_URL: 'https://nominatim.openstreetmap.org/search',
 
-  // Startansicht: 'data' = auf vorhandene Standorte zoomen, 'germany' = ganz Deutschland.
-  START_MODE: 'data',
+  // Startansicht: 'germany' = ganz Deutschland mit Nord- und Ostseeküste, 'data' = auf vorhandene Standorte zoomen.
+  START_MODE: 'germany',
+  // Kartengebiet: Deutschland mit Nord- und Ostsee hervorgehoben, Europa leicht grau. Verschieben und Herauszoomen bis Europa;
+  // Kartenkacheln mit Straßen gibt es nur für Deutschland und knapp darüber hinaus. Suche, Standort und neue Slipanlagen
+  // nur im deutschen Gebiet (inkl. Küstenmeer). Grenze: data/gebiet-de.json.
+  GEBIET: {
+    url: './data/gebiet-de.json',
+    bounds: [[47.2613, 5.8586], [55.1047, 15.0471]],   // Deutschland (Startansicht, Ortssuche)
+    europa: [[34.5, -12], [71.5, 42]],                  // so weit lässt sich die Karte verschieben und herauszoomen
+    maske: '#D3D6D9',
+    nachbarn: 0.5,      // Deckkraft des grauen Schleiers außerhalb Deutschlands (1 = ganz abgedeckt)
+    strassenRand: 1.5,  // ab Zoom 9 Kacheln nur bis so viele Grad um Deutschland (keine fremden Straßenkarten)
+    hinweis: 'WaterMap ist derzeit auf Deutschland sowie die deutschen Nord- und Ostseegebiete begrenzt.',
+  },
   GERMANY_VIEW: { center: [51.1, 10.4], zoom: 6 },
   FALLBACK_VIEW: { center: [51.45, 7.55], zoom: 8 },
 
@@ -26,6 +42,14 @@ export const CONFIG = {
   PEGEL_REFRESH_MIN: 15,       // so oft misst die WSV
   PEGEL_STALE_HOURS: 6,        // ältere Messwerte gelten als veraltet
   PEGEL_HISTORY_DAYS: 7,
+  // Küstengewässer: eigene Kachel „Küste“ (Tide, ohne Niedrig/Hoch-Bewertung) statt Flussseite. Groß-/Kleinschreibung egal.
+  PEGEL_KUESTE: ['Nordsee', 'Ostsee', 'Jade', 'Jadebusen', 'Außenjade', 'Außenems', 'Außenweser', 'Außenelbe', 'Dollart', 'Wattenmeer',
+    'Strelasund', 'Peenestrom', 'Kleines Haff', 'Greifswalder Bodden', 'Kieler Förde', 'Flensburger Förde', 'Schlei', 'Trave-Mündung'],
+  // Gezeitenvorhersage des BSH (über die eigene Funktion /api/gezeiten, Lizenz CC BY 4.0). false = aus.
+  GEZEITEN_BSH_AKTIV: true,
+  GEZEITEN_BASE: '/api/gezeiten',
+  GEZEITEN_OFFLINE_STUNDEN: 24,      // so lange wird die letzte Vorhersage offline noch gezeigt
+  GEZEITEN_KUESTE_PEGEL: { id: 'aad49293-242a-43ad-a8b1-e91d7792c4b2', number: '5990020', name: 'Cuxhaven' },   // Küsten-Kachel
   PEGEL_ATTRIBUTION: 'Pegel: <a href="https://www.pegelonline.wsv.de" target="_blank" rel="noopener noreferrer">WSV/PEGELONLINE</a>',
 
   // Wetter und Wind (DWD-Daten über Bright Sky). Abruf über die eigene Domain (public/_redirects).
@@ -37,6 +61,7 @@ export const CONFIG = {
   // „In der Nähe“ (Schleusen, Toiletten, Parkplätze … aus osm/extras.geojson)
   NEARBY_EXTRAS_M: 500,
   OVERPASS_API: 'https://overpass-api.de/api/interpreter',   // „In der Nähe“ direkt aus dem Browser
+  VOR_ORT_RADIUS_M: 1000,   // „Heute vor Ort“: so nah gilt man als „vor Ort“ (nur Bedienhilfe, der Server prüft keine Position)
   UMGEBUNG_API: '/.netlify/functions/umgebung',   // „In der Nähe“ live aus OSM (Umkreis NEARBY_EXTRAS_M, fest in der Funktion)
   NEARBY_EXTRAS_MAX: 12,
 
@@ -45,6 +70,10 @@ export const CONFIG = {
 
   // Liste
   LIST_LIMIT: 120,
+
+  // Navigation unten (Handy): Markierung wandert beim Wechsel
+  NAV_ANIM_MS: 340,   // Dauer der Animation der Markierung
+  NAV_DEHNEN: true,   // true: Markierung dehnt sich erst zum neuen Platz und zieht sich dann zusammen; false: gleitet nur
 
   // Meldungen
   NEARBY_RADIUS_M: 150,        // Prüfung auf bereits vorhandene Slipanlage

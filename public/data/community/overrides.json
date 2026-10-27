@@ -6,12 +6,8 @@
       {
         "url": "photos/node-632876845-mvgwtf98.jpg",
         "credit": "WaterMap-Community",
-        "alt": "Slipanlage"
-      },
-      {
-        "url": "photos/node-632876845-mvjkywnp.jpg",
-        "credit": "WaterMap-Community",
-        "alt": "das ist ein Test"
+        "alt": "Slipanlage",
+        "kategorie": "rampe"
       }
     ],
     "updated": "2026-10-27",
@@ -50,5 +46,39 @@
       }
     ],
     "updated": "2026-10-20"
+  },
+  {
+    "id": "node/736940651",
+    "status": "approved",
+    "fields": {
+      "access": "public",
+      "fee": false
+    },
+    "attrs": {
+      "surface": "Beton",
+      "incline": "mittel",
+      "trailer_parking": true,
+      "trailer_note": "in der Nähe",
+      "motorboat": true,
+      "suitable_boats": "größer als 9 m"
+    },
+    "updated": "2026-10-27"
+  },
+  {
+    "id": "node/632873552",
+    "status": "approved",
+    "fields": {
+      "access": "public",
+      "fee": true,
+      "fee_note": "15 € pro Slipvorgang"
+    },
+    "attrs": {
+      "incline": "mittel",
+      "trailer_parking": true,
+      "trailer_note": "in der Nähe",
+      "motorboat": true,
+      "suitable_boats": "größer als 9 m"
+    },
+    "updated": "2026-10-27"
   }
 ]
