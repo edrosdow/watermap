@@ -12,7 +12,7 @@ import { openForm } from './forms.js';
 import { renderDetail, placeTags, tagRow, routeLink } from './detail.js';
 import { mountNav, popover, swipeToClose } from './nav.js';
 import { bewerte } from './ampel-logik.js';
-import { aktivLaden, standortLaden, statusZeile, vorOrtKarte, zusammenfassen } from './meldungen.js';
+import { aktivLaden, senden, standortLaden, statusZeile, vorOrtKarte, zusammenfassen, TYPEN as MELD_TYPEN } from './meldungen.js';
 import { openLageForm } from './lage-form.js';
 import { naehe, geoFreigabe } from './naehe.js';
 import { gruppieren, gruppeZu, naechsterPegel } from './pegel-fluss.js';
@@ -1126,6 +1126,7 @@ const PLACE_PICK = {
   'foto-einreichen': { text: 'Tippe auf der Karte auf die Slipanlage, Marina oder Tankstelle, zu der das Foto gehört.' },
   'fehler-melden': { text: 'Tippe auf der Karte auf den Standort, zu dem du etwas melden möchtest.', general: true },
   'tankpreis-melden': { text: 'Tippe auf der Karte auf die Bootstankstelle.', type: 'fuel' },
+  'slip-ergaenzen': { text: 'Tippe auf der Karte auf die Slipanlage, die du ergänzen möchtest.', type: 'slip' },
 };
 
 function choosePlaceFor(formName, preset = {}) {
@@ -1161,6 +1162,7 @@ function openReport(formName, preset = {}) {
   if (formName === 'slipanlage-melden' && !preset.lat && state.user) { /* Position wird nur auf Wunsch übernommen */ }
   closeMenu();
   if (formName === 'lage-melden') { const pl = state.byId.get(preset.standort_id); if (pl?.type === 'slip') lageMelden(pl); return; }
+  if (formName === 'slip-ergaenzen') { const pl = state.byId.get(preset.standort_id); if (pl?.type === 'slip') slipErgaenzen({ place: pl, toast }); return; }
   openForm(formName, ctx, preset);
 }
 
@@ -1278,9 +1280,12 @@ function standortInDerNaehe(pos) {
  */
 function renderReportMenu({ fragen = false } = {}) {
   const body = clear($('#report-body'));
-  const item = (ico, cls, label, run) => h('li', {}, h('button', { type: 'button', class: 'menu-item rm-item', onclick: () => { closeMenu(); run(); } },
-    h('span', { class: `menu-ico rm-ico ${cls}`, html: icon(ico, 22) }), h('strong', { text: label }), h('span', { class: 'rm-chev', html: icon('chevron', 18), 'aria-hidden': 'true' })));
   const offline = navigator.onLine === false;
+  const item = (ico, cls, label, run, { online = false } = {}) => h('li', {}, h('button', { type: 'button', class: 'menu-item rm-item', disabled: online && offline, onclick: () => { closeMenu(); run(); } },
+    h('span', { class: `menu-ico rm-ico ${cls}`, html: icon(ico, 22) }),
+    h('span', { class: 'rm-text' }, h('strong', { text: label }), online && offline ? h('small', { text: 'Offline – gerade nicht möglich' }) : null),
+    h('span', { class: 'rm-chev', html: icon('chevron', 18), 'aria-hidden': 'true' })));
+  const abschnitt = (text) => h('h3', { class: 'rm-abschnitt', text });
   const frage = h('div', { class: 'lage-frage', hidden: true });
   const lageBtn = h('button', { type: 'button', class: 'lage-main', disabled: offline, onclick: () => { closeMenu(); choosePlaceFor('lage-melden'); } },
     h('span', { class: 'lage-ico', html: icon('pin', 24) }),
@@ -1288,11 +1293,15 @@ function renderReportMenu({ fragen = false } = {}) {
     Date.now() < LAGE_NEU_BIS ? h('span', { class: 'lage-neu', text: 'NEU' }) : null);
   body.append(
     h('h2', { id: 'report-title', text: 'Was möchtest du melden?' }),
+    abschnitt('Gerade vor Ort'),
     h('div', { class: 'lage-karte' }, lageBtn, frage),
+    abschnitt('Standort verbessern'),
     h('ul', { class: 'menu-list rmenu' },
-      item('plus', 'rm-slip', 'Neue Slipanlage melden', () => openReport('slipanlage-melden')),
-      item('pump', 'rm-fuel', 'Kraftstoffpreis melden', () => choosePlaceFor('tankpreis-melden')),
       item('camera', 'rm-foto', 'Foto einreichen', () => choosePlaceFor('foto-einreichen')),
+      item('doc', 'rm-ergaenzen', 'Angaben ergänzen', () => choosePlaceFor('slip-ergaenzen'), { online: true }),
+      item('plus', 'rm-slip', 'Neue Slipanlage melden', () => openReport('slipanlage-melden'))),
+    abschnitt('Fehler und Hinweise'),
+    h('ul', { class: 'menu-list rmenu' },
       item('flag', 'rm-fehler', 'Fehler oder Hinweis melden', () => choosePlaceFor('fehler-melden', { art: 'sonstiges' }))),
     h('p', { class: 'rmenu-links' },
       h('a', { href: './ueber.html', text: 'Über WaterMap' }), ' · ', h('a', { href: './datenschutz.html', text: 'Datenschutz' }), ' · ', h('a', { href: './impressum.html', text: 'Impressum' })),
@@ -1304,11 +1313,35 @@ function renderReportMenu({ fragen = false } = {}) {
     const near = standortInDerNaehe(pos);
     if (!near || !reportPop.isOpen) return;
     const { p, d } = near;
+    const status = h('p', { class: 'lage-status', role: 'status', 'aria-live': 'polite', hidden: true });
+    let busy = false;
+    // Ein Tipp sendet die Meldung sofort (ohne Notiz); „mehr“ öffnet das Formular mit Notiz
+    const schnell = async (typ, btn) => {
+      if (busy) return;
+      busy = true; btn.setAttribute('aria-busy', 'true'); status.hidden = true;
+      for (const b of knoepfe.children) b.disabled = true;
+      try {
+        const j = await senden(p.id, typ, '');
+        closeMenu();
+        toast('Danke! Deine Meldung ist jetzt sichtbar.');
+        meldLokal(p.id, j.meldungen || []);
+        if (state.peekId === p.id) showPeek(p);
+        else if (state.selectedId === p.id && !el.detail.hidden) showDetail(p, { scrollTo: 'vor-ort' });
+      } catch (ex) {
+        busy = false; btn.removeAttribute('aria-busy');
+        for (const b of knoepfe.children) b.disabled = false;
+        status.textContent = ex.message; status.hidden = false;
+      }
+    };
+    const knoepfe = h('div', { class: 'lage-schnell', role: 'group', 'aria-label': 'Wie ist die Lage?' },
+      Object.entries(MELD_TYPEN).map(([typ, t]) => h('button', { type: 'button', class: `lage-typ lage-${t.ton}`, dataset: { typ }, onclick: (e) => schnell(typ, e.currentTarget) },
+        h('span', { html: icon(t.ico, 22), 'aria-hidden': 'true' }), h('span', { text: t.text }))));
     frage.replaceChildren(
-      h('p', {}, 'Bist du an der ', h('strong', { text: displayName(p) }), p.water?.name ? `, ${p.water.name}?` : '?', h('span', { class: 'lage-dist', text: ` · ${formatDistance(d)} entfernt` })),
-      h('div', { class: 'lage-knoepfe' },
-        h('button', { type: 'button', class: 'lage-ja', text: 'Ja, hier bin ich', onclick: () => { closeMenu(); lageMelden(p, { distance: d, zurueck: true }); } }),
-        h('button', { type: 'button', class: 'lage-anders', text: 'Anderer Standort', onclick: () => { closeMenu(); choosePlaceFor('lage-melden'); } })));
+      h('p', {}, 'Wie ist es gerade an der ', h('strong', { text: displayName(p) }), p.water?.name ? `, ${p.water.name}?` : '?', h('span', { class: 'lage-dist', text: ` · ${formatDistance(d)} entfernt` })),
+      knoepfe, status,
+      h('div', { class: 'lage-schnell-fuss' },
+        h('span', {}, 'Mit Notiz: ', h('button', { type: 'button', class: 'lage-link lage-mehr', text: 'mehr', onclick: () => { closeMenu(); lageMelden(p, { distance: d, zurueck: true }); } })),
+        h('button', { type: 'button', class: 'lage-link lage-anders', text: 'Anderer Standort', onclick: () => { closeMenu(); choosePlaceFor('lage-melden'); } })));
     frage.hidden = false;
   }).catch(() => { /* ohne Position: Eintrag startet die Standortauswahl */ });
 }

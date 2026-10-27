@@ -115,7 +115,7 @@ with sync_playwright() as p:
         # Melden
         pg.click('#bottomnav [data-nav=melden]' if mobile else '#btn-report'); pg.wait_for_selector('#report-menu[open]')
         txt = pg.inner_text('#report-menu')
-        check(all(t in txt for t in ['Neue Slipanlage melden', 'Kraftstoffpreis melden', 'Foto einreichen', 'Fehler oder Hinweis melden', 'Impressum', 'Version']), f'{name}: Melden mit vier Aktionen und Links')
+        check(all(t in txt for t in ['GERADE VOR ORT', 'STANDORT VERBESSERN', 'Neue Slipanlage melden', 'Angaben ergänzen', 'Foto einreichen', 'Fehler oder Hinweis melden', 'Impressum', 'Version']) and 'Kraftstoffpreis' not in txt, f'{name}: Melden mit Abschnitten, ohne Kraftstoffpreis')
         pg.screenshot(path=str(SHOTS / f'{name}_menu.png'))
         pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
         check(pg.locator('#report-menu[open]').count() == 0, f'{name}: Escape schließt „Melden“')
