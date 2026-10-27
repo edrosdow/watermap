@@ -77,9 +77,10 @@ export async function handle(req, { store, salz, ip, jetzt = () => Date.now(), s
 }
 
 const env = (k) => globalThis.Netlify?.env?.get?.(k) || process.env[k] || '';
-export const storeName = () => (env('CONTEXT') && env('CONTEXT') !== 'production' ? 'meldungen-vorschau' : 'meldungen');
+// Kontext aus der Laufzeit (context.deploy.context), sonst Umgebungsvariable CONTEXT
+export const storeName = (deployKontext) => { const k = deployKontext || env('CONTEXT'); return k && k !== 'production' ? 'meldungen-vorschau' : 'meldungen'; };
 
 export default async (req, context) => handle(req, {
-  store: getStore(storeName()), salz: env('MELDUNG_SALZ'),
+  store: getStore(storeName(context?.deploy?.context)), salz: env('MELDUNG_SALZ'),
   ip: context?.ip || req.headers.get('x-nf-client-connection-ip') || '',
 });

@@ -333,7 +333,7 @@ async function fetchPhoto(sub, fetchFn) {
   return { bytes, type };
 }
 
-export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date(), meldungEntfernen = null }) {
+export async function handle(req, { env, siteId, deploy = null, fetchFn = fetch, now = new Date(), meldungEntfernen = null }) {
   const missing = ['FOTO_ADMIN_PASSWORT', 'NETLIFY_API_TOKEN', 'GITHUB_TOKEN'].filter(k => !env[k]);
   if (missing.length) {
     return json(503, { fehler: `Foto-Freigabe ist noch nicht eingerichtet – in diesem Deploy fehlt: ${missing.join(', ')}. ` +
@@ -343,7 +343,12 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
   const { nf, gh } = api(env, fetchFn);
   const url = new URL(req.url);
   const q = url.searchParams;
-  const branch = env.FOTO_BRANCH || 'main';
+  // Zweig: live FOTO_BRANCH (Standard main); in einer Vorschau der Zweig dieser Vorschau – sonst landen Freigaben aus der Vorschau live
+  let branch = env.FOTO_BRANCH || 'main';
+  if (deploy?.context && deploy.context !== 'production' && deploy.id) {
+    try { branch = (await nf(`/deploys/${encodeURIComponent(deploy.id)}`))?.branch || branch; }
+    catch (e) { return json(502, { fehler: `Zweig dieser Vorschau nicht ermittelbar (${e.message}).` }); }
+  }
   const zeit = now.toISOString(), today = zeit.slice(0, 10);
   const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
   const history = (entry) => async (read) => jsonFile(HISTORY, addHistory(await read(HISTORY, []), { zeit, ...entry }));
@@ -536,9 +541,10 @@ function runtimeEnv() {
 }
 
 // Lagemeldungen liegen im selben Speicher wie bei /api/meldungen (Vorschauen: „meldungen-vorschau“)
-const kontext = () => globalThis.Netlify?.env?.get?.('CONTEXT') || process.env.CONTEXT || '';
-const meldungEntfernen = (id, jetzt) => meldungenApi({
-  store: getStore(kontext() && kontext() !== 'production' ? 'meldungen-vorschau' : 'meldungen'), jetzt: () => jetzt,
+const kontext = (deployKontext) => deployKontext || globalThis.Netlify?.env?.get?.('CONTEXT') || process.env.CONTEXT || '';
+const meldungEntfernen = (id, jetzt, deployKontext) => meldungenApi({
+  store: getStore(kontext(deployKontext) && kontext(deployKontext) !== 'production' ? 'meldungen-vorschau' : 'meldungen'), jetzt: () => jetzt,
 }).entfernen(id);
 
-export default async (req, context) => handle(req, { env: runtimeEnv(), siteId: context?.site?.id || process.env.SITE_ID, meldungEntfernen });
+export default async (req, context) => handle(req, { env: runtimeEnv(), siteId: context?.site?.id || process.env.SITE_ID, deploy: context?.deploy || null,
+  meldungEntfernen: (id, jetzt) => meldungEntfernen(id, jetzt, context?.deploy?.context) });

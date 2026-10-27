@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 26.10.2026 · App-Version **7.32.0**
+Stand: 26.10.2026 · App-Version **7.32.1**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.32.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.32.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -227,6 +227,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
 | 7.24.0 | Gezeiten aus PEGELONLINE: Tidepegel-Detailseite (Tidekurve, letztes HW/NW, Tidehub), Tide in „Meine Pegel“ und Flussseite; Prüfliste `pruefung.html` |
 | 7.24.1 | Nach Prüfliste: Ems-Reihenfolge (Unterems ab Papenburg neu ab km 0 → `flussKm` +240), Namen (Groß-/Straß-, Kürzel UW/AP/BP … groß, Bhv/Whv/LT ausgeschrieben, „auf/zur“ klein, Meißen, Roßlau, Storkower Gewässer), Tide-Kennwerte auch als Text/„cm …“, Prüfliste zeigt Datenstand, gelieferte Tide-Kennwerte und Sonderzeichen in Namen; Offline-Stand nur aus derselben Version |
+| 7.32.1 | Verwaltung schreibt in einer Vorschau in den Zweig dieser Vorschau (Netlify-API: Deploy → Branch), live weiter in `FOTO_BRANCH`/main – vorher landeten Freigaben aus der Vorschau live. Meldungen-Speicher wählt Vorschau/live über `context.deploy.context`. Freigaben aus `main` in den Vorschau-Zweig übernommen |
 | 7.32.0 | „Weißt du mehr? Ergänzen“ öffnet das Formular „Angaben ergänzen“ (nur fehlende Angaben, bekannte eingeklappt mit „ändern“; Knopfleisten, Belag/Neigung als Auswahl; leer = weiß nicht, nochmal antippen hebt auf; „N Angaben senden“, ohne Auswahl gesperrt) → Netlify-Formular `slip-ergaenzen` → Verwaltung Reiter „Ergänzungen“ (bisher → neu, Übernehmen schreibt `overrides.json`). Neues Merkmal `trailer_note` („am Slip“/„in der Nähe“) |
 | 7.31.0 | Slipanlagen: Kasten „Wichtig für dein Boot“ (Zugang, Gebühr, Rampe, Trailer parken, Motorboote, Bootsgröße mit Ampel und Text; fehlende Angaben „Unbekannt“ + „Weißt du mehr? Ergänzen“ → „Fehler melden“), Reihenfolge Knöpfe → Heute vor Ort → Wichtig für dein Boot → Pegel → Fotos → Wetter → Umgebung → Kontakt; „Eigenschaften“ bei Slipanlagen entfernt (Öffnungszeiten/Betreiber als Zeile im Kasten). Häfen und Tankstellen unverändert (`bootPunkte` in `model.js`) |
 | 7.30.0 | Europa-Übersicht: Herauszoomen und Verschieben bis Europa, Länder leicht grau; hervorgehoben nur deutsches Land (Nord-/Ostsee nicht mehr als helle Fläche); Straßenkacheln ab Zoom 9 nur um Deutschland; Suche/Standort weiter nur in Deutschland |

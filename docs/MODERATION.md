@@ -40,7 +40,7 @@ Jede Aktion ist **ein** Commit (Daten und Verlauf zusammen). Commits, die nur de
 | `FOTO_ADMIN_PASSWORT` | ein langes, frei gewähltes Passwort |
 | `NETLIFY_API_TOKEN` | Netlify → *User settings* → *Applications* → *Personal access tokens* → *New access token* |
 | `GITHUB_TOKEN` | GitHub → *Settings* → *Developer settings* → *Fine-grained tokens*: nur Repository `watermap`, Berechtigung *Contents: Read and write* |
-| `FOTO_BRANCH` (optional) | Zweig, in den freigegebene Fotos geschrieben werden; Standard `main` |
+| `FOTO_BRANCH` (optional) | Zweig, in den Freigaben auf der Live-Seite geschrieben werden; Standard `main`. Auf einer Vorschau (z. B. deploy-preview-4) schreibt die Verwaltung immer in den Zweig dieser Vorschau. |
 
 ## Besondere Fälle
 - **Doppelte Slipanlage:** Existiert sie schon in OSM, trage die neuen Angaben als Override zur OSM-ID ein statt einen neuen Standort anzulegen. Besser noch: in OpenStreetMap selbst ergänzen – dann profitieren alle.

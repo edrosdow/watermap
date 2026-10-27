@@ -28,6 +28,7 @@ function fakeWorld({ photo = JPEG, rights = 'ja', beschreibung = 'Rampe bei Nied
     if (url.startsWith(`${nf}/forms/f2/submissions`)) return json(state.slips);
     if (url.startsWith(`${nf}/forms/f3/submissions`)) return json(state.prices);
     if (url.startsWith(`${nf}/forms/f4/submissions`)) return json(state.ergaenzungen);
+    if (url === `${nf}/deploys/d-vorschau`) return json({ id: 'd-vorschau', branch: 'vorschau-zweig', context: 'deploy-preview' });
     if (url.startsWith(`${nf}/submissions/`) && method === 'DELETE') {
       const id = url.split('/').pop();
       state.deleted.push(id);
@@ -42,11 +43,11 @@ function fakeWorld({ photo = JPEG, rights = 'ja', beschreibung = 'Rampe bei Nied
     if (p.startsWith('/contents/') && method === 'GET') {
       const [path, query] = p.slice('/contents/'.length).split('?');
       const ref = new URLSearchParams(query).get('ref');
-      const files = ref === 'main' ? state.repo : state.commits[ref].files;
+      const files = ref === 'main' || ref === 'vorschau-zweig' ? state.repo : state.commits[ref].files;
       if (!(path in files)) return new Response('{}', { status: 404 });
       return init.headers.accept === 'application/vnd.github.raw' ? new Response(files[path]) : json({ sha: 'x' });
     }
-    if (p === '/git/ref/heads/main') return json({ object: { sha: state.head } });
+    if (p === '/git/ref/heads/main' || p === '/git/ref/heads/vorschau-zweig') return json({ object: { sha: state.head } });
     if (p.startsWith('/git/commits/') && method === 'GET') return json({ tree: { sha: 'tree-' + p.split('/').pop() } });
     if (p === '/git/blobs') { const sha = 'b' + (++state.n); state.blobs[sha] = Buffer.from(JSON.parse(init.body).content, 'base64'); return json({ sha }, 201); }
     if (p === '/git/trees') { const sha = 't' + (++state.n); state.trees[sha] = JSON.parse(init.body); return json({ sha }, 201); }
@@ -59,7 +60,8 @@ function fakeWorld({ photo = JPEG, rights = 'ja', beschreibung = 'Rampe bei Nied
       state.commits[sha] = { files, parent: b.parents[0], message: b.message };
       return json({ sha }, 201);
     }
-    if (p === '/git/refs/heads/main' && method === 'PATCH') {
+    if ((p === '/git/refs/heads/main' || p === '/git/refs/heads/vorschau-zweig') && method === 'PATCH') {
+      state.zweig = p.split('/').pop();
       const b = JSON.parse(init.body);
       if (state.raceOnce) {                                        // jemand anderes committet dazwischen
         state.raceOnce = false;
@@ -303,5 +305,16 @@ assert.equal(slug('Slip „Großer Müggelsee“ – Nord'), 'slip-grosser-mugge
   assert.equal(w.state.messages.at(-1), 'Angaben übernommen: node/5'); assert.ok(w.state.deleted.includes('e1'));
   assert.equal((await run(req('POST', '', { form: 'slip-ergaenzen', aktion: 'ablehnen', id: 'e2' }), w)).status, 200);
   assert.equal(w.state.messages.at(-1), 'Angaben abgelehnt: node/5'); }
+
+// Vorschau: Freigaben gehen in den Zweig der Vorschau (über die Netlify-API), live in FOTO_BRANCH/main
+{ const erg = () => [{ id: 'e9', data: { standort_id: 'node/5', angaben: JSON.stringify({ motorboat: 'ja' }) } }];
+  const w = fakeWorld({ ergaenzungen: erg() });
+  assert.equal((await run(req('POST', '', { form: 'slip-ergaenzen', aktion: 'uebernehmen', id: 'e9' }), w, { deploy: { context: 'deploy-preview', id: 'd-vorschau' } })).status, 200);
+  assert.equal(w.state.zweig, 'vorschau-zweig');
+  assert.ok(w.state.calls.includes('GET https://api.netlify.com/api/v1/deploys/d-vorschau'));
+  const w2 = fakeWorld({ ergaenzungen: erg() });
+  assert.equal((await run(req('POST', '', { form: 'slip-ergaenzen', aktion: 'uebernehmen', id: 'e9' }), w2, { deploy: { context: 'production', id: 'd-live' } })).status, 200);
+  assert.equal(w2.state.zweig, 'main');
+  assert.ok(!w2.state.calls.some(c => c.includes('/deploys/')), 'live keine Abfrage des Zweigs'); }
 
 console.log('fotos.mjs: alle Tests OK');
