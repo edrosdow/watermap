@@ -477,6 +477,9 @@ export function naehe(ctx) {
     },
     // von außen (Filter, Kartenbewegung, Meldungen): nur, wenn sich etwas Sichtbares geändert hat
     zeichnen: () => zeichnen({ wennNoetig: true }),
+    /** Bezugspunkt aus den Einstellungen: 'position' | 'kartenmitte'. */
+    get bezugArt() { return bezug?.art || 'kartenmitte'; },
+    bezugSetzen: (art) => bezugSetzen({ art }),
     /** Unsichtbar vorbereiten (nach dem Start im Leerlauf); Freigabe vorher klären, damit beim Öffnen nichts nachkommt. */
     async vorbereiten() { await geoFreigabe.pruefen(); zeichnen({ wennNoetig: true, vorab: true }); },
     karte,

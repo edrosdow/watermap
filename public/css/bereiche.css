@@ -99,3 +99,50 @@
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* „Mein WaterMap“: Karte in „Mehr“ und Einstellungen (#mehr/einstellungen) */
+.ei-profil { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 16px; border-radius: 20px; background: var(--navy); color: #fff; text-decoration: none; }
+.ei-profil:hover { background: #12405A; }
+.ei-av { width: 52px; height: 52px; border-radius: 50%; background: #163F57; color: var(--sky); display: grid; place-items: center; flex: none; }
+.ei-profil-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.ei-profil-text strong { font-size: 18px; }
+.ei-profil-text small { color: #C5D8E1; font-size: 14px; }
+.ei-pf { color: #C5D8E1; display: grid; flex: none; }
+.ei-seite { max-width: 1040px; }
+.ei-spalten { display: grid; gap: 0 24px; }
+@media (min-width: 1024px) { .ei-spalten { grid-template-columns: 1fr 1fr; align-items: start; } }
+.ei-zeile { padding: 12px 14px; border-top: 1px solid #EEF3F5; }
+.bs-gruppe > :first-child { border-top: 0; }
+.ei-label { display: block; font-weight: 700; color: var(--navy); font-size: 16px; }
+.ei-hilfe { display: block; margin-top: 2px; color: var(--muted); font-size: 13.5px; font-weight: 500; }
+.ei-unter { margin: 8px 0 0; }
+.ei-opt { color: var(--muted); font-weight: 500; font-size: 14px; }
+.ei-seg { display: flex; gap: 4px; margin-top: 10px; padding: 4px; border-radius: 12px; background: #EEF3F5; }
+.ei-seg button { flex: 1; min-height: 44px; padding: 4px 6px; border: 0; border-radius: 9px; background: transparent; color: var(--navy); font-weight: 650; font-size: 14.5px; line-height: 1.2; }
+.ei-seg button[aria-pressed="true"] { background: #fff; box-shadow: 0 1px 3px rgba(11, 48, 69, .15); font-weight: 800; }
+.ei-masse { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+.ei-zahl-wrap { position: relative; display: block; margin-top: 6px; }
+.ei-zahl { width: 100%; min-height: 48px; padding: 0 34px 0 12px; border: 1.5px solid #C9D6DD; border-radius: 12px; font: inherit; font-size: 16px; color: var(--navy); background: #fff; }
+.ei-zahl[aria-invalid="true"] { border-color: #B3261E; }
+.ei-einheit { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 650; pointer-events: none; }
+.ei-fehler { margin: 6px 0 0; color: #B3261E; font-size: 13px; font-weight: 650; }
+.ei-sw { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 6px 14px; border: 0; border-top: 1px solid #EEF3F5; background: none; color: var(--navy); font: inherit; text-align: left; }
+.ei-sw-label { flex: 1; font-weight: 650; font-size: 16px; }
+.ei-dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.ei-tr { width: 44px; height: 26px; border-radius: 13px; background: #C9D6DD; position: relative; flex: none; transition: background .15s; }
+.ei-tr::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .2); transition: transform .15s; }
+.ei-sw[aria-checked="true"] .ei-tr { background: var(--slip); }
+.ei-sw[aria-checked="true"] .ei-tr::after { transform: translateX(18px); }
+.ei-reihe { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 14px; border-top: 1px solid #EEF3F5; }
+.ei-reihe-text { flex: 1; min-width: 0; }
+.ei-status { font-weight: 750; font-size: 14px; white-space: nowrap; }
+.ei-status.is-ok { color: #15803D; } .ei-status.is-stop { color: #B3261E; } .ei-status.is-offen { color: var(--muted); }
+.ei-knopf { min-height: 44px; padding: 0 14px; border: 1.5px solid #C9D6DD; border-radius: 10px; background: #fff; color: var(--navy); font-weight: 700; font-size: 14px; white-space: nowrap; flex: none; }
+.ei-knopf:disabled { opacity: .6; }
+.ei-rot .bs-ico { background: #FDECEA; color: #B3261E; }
+.ei-rot .bs-text strong { color: #B3261E; }
+.btn-gefahr { background: #B3261E; color: #fff; }
+.btn-gefahr:hover { background: #8F1E18; }
+@media (max-width: 767px) {
+  .ei-profil { margin: 16px 16px 0; }
+}

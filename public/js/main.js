@@ -12,7 +12,7 @@ import { openForm } from './forms.js';
 import { renderDetail, placeTags, tagRow, routeLink } from './detail.js';
 import { mountNav, popover, swipeToClose } from './nav.js';
 import { bewerte } from './ampel-logik.js';
-import { aktivLaden, senden, standortLaden, statusZeile, vorOrtKarte, zusammenfassen, TYPEN as MELD_TYPEN } from './meldungen.js';
+import { aktivLaden, ausgeblendetAnzahl, ausgeblendetZuruecksetzen, senden, standortLaden, statusZeile, vorOrtKarte, zusammenfassen, TYPEN as MELD_TYPEN } from './meldungen.js';
 import { openLageForm } from './lage-form.js';
 import { naehe, geoFreigabe } from './naehe.js';
 import { gruppieren, gruppeZu, naechsterPegel } from './pegel-fluss.js';
@@ -21,6 +21,7 @@ import { istTidepegel } from './gezeiten.js';
 import { pegelLaden, pegelStand, verlaufLaden, meinePegel } from './pegel-daten.js';
 import { pegelDetail, etikett as pegelEtikett, fmt as pegelFmt, trendText, trendKlasse, sternKnopf, zustand as pegelZustand, ZUSTAND as PEGEL_ZUSTAND } from './pegel-ansicht.js';
 import { mehrSeite, merkliste } from './mehr.js';
+import { einstellungenSeite, profilZeile, startArt, startArtSetzen, ansichtLesen, ansichtSchreiben, allesLoeschen } from './einstellungen.js';
 import { meldungenSeite } from './meldungen-uebersicht.js';
 import { unpassendMelden } from './meldung-unpassend.js';
 import { slipErgaenzen } from './slip-ergaenzen.js';
@@ -34,7 +35,7 @@ const state = {
   places: [], byId: new Map(), index: [], meta: null, issues: [], invalid: 0,
   cats: new Set(), subs: new Set(), tab: 'list',   // cats: sichtbare Kategorien (Start: keine – der Nutzer wählt)
   view: 'karte', peekId: null, pegelId: null, gaugePeekId: null,                     // view: karte | naehe | favoriten | pegel | meldungen | mehr (steht in der Adresse)
-  mehrSeite: null,                                                                   // „Mehr“: null (Übersicht) | 'merkliste'
+  mehrSeite: null,                                                                   // „Mehr“: null (Übersicht) | 'merkliste' | 'einstellungen'
   meld: new Map(), meldOffline: false, meldOnly: false,   // „Heute vor Ort“: Standort-ID → { n, typ }
   selectedId: null, user: null,
   map: null, mapOk: false,
@@ -87,7 +88,7 @@ async function init() {
   if (libs.leaflet) {
     state.map = createMap(el.mapEl, {
       useCluster: libs.cluster,
-      onMoveEnd: debounce(() => { if (state.tab === 'list') renderList(); updateInview(); }, 180),
+      onMoveEnd: debounce(() => { if (state.tab === 'list') renderList(); updateInview(); ansichtMerken(); }, 180),
       onMapClick: () => { if (state.selectedId || state.gaugeId || state.extraId || state.peekId || state.gaugePeekId) closeDetail(); },
       onMarkerClick: (id) => selectPlace(id),
       onAusserhalb: () => toast(CONFIG.GEBIET.hinweis),
@@ -171,6 +172,10 @@ function ingest({ places, meta, issues, invalid }) {
 
 function startView() {
   const m = state.map;
+  // Einstellung „Ausschnitt“: letzte Ansicht oder eigene Position (nur mit bestehender Freigabe, kein Browser-Dialog beim Start)
+  const art = startArt(), ansicht = art === 'letzte' ? ansichtLesen() : null;
+  if (ansicht && imGebiet(ansicht.lat, ansicht.lon)) { m.setView({ center: [ansicht.lat, ansicht.lon], zoom: ansicht.zoom }); return; }
+  if (art === 'position') geoFreigabe.pruefen().then(f => { if (f === 'granted') locate().catch(() => {}); });
   if (CONFIG.START_MODE === 'germany') { m.zeigeGebiet(); return; }
   if (!state.places.length) { m.setView(CONFIG.FALLBACK_VIEW); return; }
   m.fitBounds(state.places.map(p => [p.lat, p.lon]));
@@ -796,9 +801,12 @@ function meldungenBereich() {
 function mehrBereich() {
   const root = el.mehrseite;
   const zuMerkliste = () => { state.mehrSeite = 'merkliste'; writeHash(true); mehrBereich(); };
-  if (state.mehrSeite !== 'merkliste') {
+  const zuEinstellungen = () => { state.mehrSeite = 'einstellungen'; writeHash(true); mehrBereich(); };
+  if (state.mehrSeite === 'einstellungen') {
+    einstellungenSeite(root, einstellungenCtx());
+  } else if (state.mehrSeite !== 'merkliste') {
     const anzahlOrte = favorites.all().filter(id => !state.places.length || state.byId.has(id)).length;
-    mehrSeite(root, { anzahlOrte, anzahlPegel: meinePegel.alle().length, naehe: () => setView('naehe'), merkliste: zuMerkliste });
+    mehrSeite(root, { anzahlOrte, anzahlPegel: meinePegel.alle().length, profil: profilZeile(), naehe: () => setView('naehe'), merkliste: zuMerkliste, einstellungen: zuEinstellungen });
   } else {
     const ortZeile = (p) => ({ id: p.id, name: displayName(p), typ: p.type, sub: [TYPES[p.type]?.label, p.water?.name || p.locality].filter(Boolean).join(' · ') });
     const orte = state.places.length ? favorites.all().map(id => state.byId.get(id)).filter(Boolean).map(ortZeile) : (state.loadFailed ? [] : null);
@@ -821,6 +829,41 @@ function mehrBereich() {
   root.scrollTop = 0;
   root.querySelector('#bs-titel')?.focus({ preventScroll: true });
 }
+/** Kontext für „Mein WaterMap“ (Einstellungen). */
+function einstellungenCtx() {
+  const fmtZeit = (ms) => new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  return {
+    cats: state.cats,
+    katLabels: { slip: { label: 'Slipanlagen', farbe: 'var(--slip)' }, marina: { label: 'Häfen', farbe: 'var(--marina)' }, fuel: { label: 'Tankstellen', farbe: 'var(--fuel)' } },
+    toggleCat: (t) => toggleCat(t),
+    setStart: (art) => { startArtSetzen(art); ansichtMerken(); },
+    bezug: () => nah?.bezugArt || 'kartenmitte',
+    setBezug: (art) => nah?.bezugSetzen(art),
+    freigabe: () => geoFreigabe.pruefen(),
+    erlauben: () => locate({ fly: false }),
+    ausgeblendet: ausgeblendetAnzahl,
+    ausgeblendetZeigen: () => { ausgeblendetZuruecksetzen(); meldAktualisieren(true); },
+    stand: () => ({ orte: state.meta?.generated ? formatDate(state.meta.generated) : null, pegel: pegelStand()?.zeit ? fmtZeit(pegelStand().zeit) : null }),
+    aktualisieren: async () => {
+      if (navigator.onLine === false) throw new Error('offline');
+      const [daten] = await Promise.all([loadAll(), pegelLaden({ force: true }).catch(() => null)]);
+      ingest(daten); state.loadFailed = false;
+      applyFilters(); renderDatainfo(); meldAktualisieren();
+    },
+    zuruecksetzen: () => { allesLoeschen(); location.hash = '#mehr'; location.reload(); },
+    zurueck: () => { state.mehrSeite = null; writeHash(true); mehrBereich(); },
+    alarmHref: './pegel-ampel#am-alarm',
+    dialog: el.dlg, toast,
+  };
+}
+
+/** Kartenansicht für „Letzte Ansicht“ merken (nur wenn gewählt). */
+function ansichtMerken() {
+  if (!state.map || startArt() !== 'letzte') return;
+  const c = state.map.getCenter();
+  ansichtSchreiben({ lat: +c.lat.toFixed(5), lon: +c.lon.toFixed(5), zoom: state.map.getZoom() });
+}
+
 // Merkliste nach Änderungen (Stern an anderer Stelle, anderer Tab) aktuell halten
 document.addEventListener('meine-pegel', () => { if (state.view === 'mehr') mehrBereich(); });
 document.addEventListener('favorites-changed', () => { if (state.view === 'mehr') mehrBereich(); });
@@ -946,7 +989,7 @@ function readHash() {
     if (fl) { out.view = 'pegel'; out.fluss = fl[1]; }
     else if (pg) { out.view = 'pegel'; try { out.pegel = decodeURIComponent(pg[1]); } catch { /* ungültig */ } }
     else if (kp) { out.view = 'karte'; try { out.sel = { k: 'g', id: decodeURIComponent(kp[1]) }; } catch { /* ungültig */ } }
-    else if (part === 'mehr/merkliste') { out.view = 'mehr'; out.mehr = 'merkliste'; }
+    else if (part === 'mehr/merkliste' || part === 'mehr/einstellungen') { out.view = 'mehr'; out.mehr = part.slice(5); }
     else if (VIEWS.includes(part)) out.view = part;
     else if (part === 'liste') out.view = 'naehe';   // alte Links
     else if (part === 'melden') out.melden = true;

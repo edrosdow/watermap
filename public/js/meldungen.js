@@ -44,6 +44,13 @@ export function ausblenden(id) {
   window.dispatchEvent(new CustomEvent('meldung-ausgeblendet', { detail: { id } }));
 }
 const ausgeblendetMem = new Set();
+/** Anzahl der auf diesem Gerät ausgeblendeten Meldungen (Einstellungen). */
+export const ausgeblendetAnzahl = () => new Set([...ausgeblendetLesen(), ...ausgeblendetMem]).size;
+/** Ausgeblendete Meldungen wieder zeigen (Einstellungen). */
+export function ausgeblendetZuruecksetzen() {
+  try { localStorage.removeItem(LS_AUSGEBLENDET); } catch { /* egal */ }
+  ausgeblendetMem.clear();
+}
 /** Liste ohne die auf diesem Gerät ausgeblendeten Meldungen. */
 export const ohneAusgeblendete = (liste) => {
   const set = ausgeblendetLesen();

@@ -27,7 +27,7 @@ const kopf = (titel, unter, zurueck) => h('header', { class: 'bs-kopf' },
 const klick = (f) => (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); f(); };
 
 /**
- * Übersicht „Mehr“. ctx = { anzahlOrte, anzahlPegel, naehe(), merkliste() }
+ * Übersicht „Mehr“. ctx = { anzahlOrte, anzahlPegel, profil (Unterzeile), naehe(), merkliste(), einstellungen() }
  */
 export function mehrSeite(root, ctx) {
   bearbeiten = false;
@@ -35,6 +35,10 @@ export function mehrSeite(root, ctx) {
     ctx.anzahlPegel ? `${ctx.anzahlPegel} Pegel` : null].filter(Boolean).join(' · ') || 'Gespeicherte Orte und Pegel';
   root.replaceChildren(h('div', { class: 'bs-seite' },
     kopf('Mehr'),
+    h('a', { class: 'ei-profil', href: '#mehr/einstellungen', onclick: klick(ctx.einstellungen) },
+      h('span', { class: 'ei-av', html: icon('boat', 28), 'aria-hidden': 'true' }),
+      h('span', { class: 'ei-profil-text' }, h('strong', { text: 'Mein WaterMap' }), h('small', { text: ctx.profil })),
+      h('span', { class: 'ei-pf', html: icon('chevron', 20), 'aria-hidden': 'true' })),
     abschnitt('Unterwegs', [
       zeile({ ico: 'pin', icoKlasse: 'is-dunkel', titel: 'In der Nähe', sub: 'Slipanlagen, Häfen und Tankstellen nach Entfernung', href: '#naehe', onclick: klick(ctx.naehe) }),
       zeile({ ico: 'star', titel: 'Merkliste', sub: merk, href: '#mehr/merkliste', onclick: klick(ctx.merkliste) }),
