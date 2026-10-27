@@ -62,5 +62,22 @@
       "suitable_boats": "größer als 9 m"
     },
     "updated": "2026-10-27"
+  },
+  {
+    "id": "node/632873552",
+    "status": "approved",
+    "fields": {
+      "access": "public",
+      "fee": true,
+      "fee_note": "15 € pro Slipvorgang"
+    },
+    "attrs": {
+      "incline": "mittel",
+      "trailer_parking": true,
+      "trailer_note": "in der Nähe",
+      "motorboat": true,
+      "suitable_boats": "größer als 9 m"
+    },
+    "updated": "2026-10-27"
   }
 ]
