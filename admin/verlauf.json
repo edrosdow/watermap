@@ -1,5 +1,13 @@
 [
   {
+    "zeit": "2026-10-27T09:37:35.321Z",
+    "bereich": "ergaenzung",
+    "aktion": "übernommen",
+    "standort_id": "node/632876845",
+    "standort_name": "Slip Vössen",
+    "beschreibung": "Zugang: Öffentlich, Gebühr: Kostenlos, Belag: Pflaster, Trailer parken: In der Nähe, Motorboote: Erlaubt, Bootsgröße: bis 7 m"
+  },
+  {
     "zeit": "2026-10-26T13:21:31.007Z",
     "bereich": "hinweis",
     "aktion": "lagemeldung entfernt",

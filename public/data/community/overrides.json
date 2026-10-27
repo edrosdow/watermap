@@ -14,7 +14,18 @@
         "alt": "das ist ein Test"
       }
     ],
-    "updated": "2026-10-22"
+    "updated": "2026-10-27",
+    "fields": {
+      "access": "public",
+      "fee": false
+    },
+    "attrs": {
+      "surface": "Pflaster",
+      "trailer_parking": true,
+      "trailer_note": "in der Nähe",
+      "motorboat": true,
+      "suitable_boats": "bis 7 m"
+    }
   },
   {
     "id": "node/1937154973",
