@@ -112,6 +112,17 @@ with sync_playwright() as p:
         check(pg.inner_text('dialog.lightbox .ph-count') == '2 / 2', f'{name}: Vollbild zeigt nur die gefilterten Fotos')
         pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
         pg.screenshot(path=str(SHOTS / f'karussell_{name}_kategorie.png'))
+        # „Foto hinzufügen“ direkt unter den Fotos; unten nur noch „Fehler melden“
+        check(pg.is_visible('#detail .photos .ph-add') and pg.locator('#detail .detail-links button', has_text='Foto hinzufügen').count() == 0, f'{name}: „Foto hinzufügen“ im Fotobereich')
+        # Etikett wandert beim Scrollen nicht über den festen Kopf
+        lage = None if mobile else pg.evaluate("""() => { const k = document.querySelector('#detail .ph-kat'), kopf = document.querySelector('#detail .detail-head');
+          const sc = [k.parentElement]; let e = k.parentElement; while (e && e !== document.body) { if (/(auto|scroll)/.test(getComputedStyle(e).overflowY) && e.scrollHeight > e.clientHeight) { sc.push(e); break; } e = e.parentElement; }
+          const box = sc[sc.length - 1]; const kb = kopf.getBoundingClientRect();
+          box.scrollTop += k.getBoundingClientRect().top - (kb.top + kb.height / 2);
+          const r = k.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return { unterKopf: r.top < kb.bottom && r.bottom > kb.top, trifftKopf: !!hit?.closest('.detail-head') }; }""")
+        if not mobile: check(lage['unterKopf'] and lage['trifftKopf'], f'{name}: Etikett verschwindet beim Scrollen unter dem festen Kopf ({lage})')
+        check(pg.evaluate("getComputedStyle(document.querySelector('#detail .ph-frame')).isolation") == 'isolate', f'{name}: Fotorahmen hält Etikett und Pfeile unter dem Kopf (isolation)')
         # Standort mit einem Foto: keine Pfeile, kein Zähler
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ONE)}, {{ full: true }})"); pg.locator('#detail .ph-caption', has_text='Einzelfoto').wait_for()
         check(pg.locator('#detail .ph-nav:visible').count() == 0 and pg.locator('#detail .ph-count').count() == 0, f'{name}: ein Foto ohne Pfeile und Zähler')

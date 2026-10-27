@@ -369,8 +369,8 @@ def desktop(b):
     pg.click('#dlg .pf-x')
     # Aus der Detailansicht: Standort steht fest (auch bei Standorten jenseits der ersten 600 der Liste)
     last = pg.evaluate("window.__watermap.state.places.map(p => p.id).sort().pop()")
-    pg.evaluate(f"window.__watermap.selectPlace({json.dumps(last)})"); pg.wait_for_selector('#detail .detail-links button:has-text("Foto hinzufügen")')
-    pg.click('#detail .detail-links button:has-text("Foto hinzufügen")'); pg.wait_for_selector('#dlg[open]')
+    pg.evaluate(f"window.__watermap.selectPlace({json.dumps(last)})"); pg.wait_for_selector('#detail .ph-add, #detail .ph-leer-btn')
+    pg.click('#detail .ph-add, #detail .ph-leer-btn'); pg.wait_for_selector('#dlg[open]')
     check(pg.locator('#dlg input[name=standort_id]').get_attribute('value') == last, f'Foto aus Detail: Standort-ID fest ({last})')
     pg.click('#dlg .pf-x')
     # Preis melden ist entfernt: Tankstelle zeigt Preise, aber keinen Knopf
@@ -409,8 +409,10 @@ def photo_form(b, mobile):
         return route.continue_()
     ctx.route(BASE, on_post)
     open_app(pg, mobile)
-    pg.evaluate("window.__watermap.selectPlace('node/1', { full: true })"); pg.wait_for_selector('#detail .detail-links button:has-text("Foto hinzufügen")')
-    pg.click('#detail .detail-links button:has-text("Foto hinzufügen")'); pg.wait_for_selector('#dlg[open]')
+    pg.evaluate("window.__watermap.selectPlace('node/1', { full: true })"); pg.wait_for_selector('#detail .ph-add, #detail .ph-leer-btn')
+    check(pg.is_visible('#detail .ph-leer') and 'Noch keine Fotos' in pg.inner_text('#detail .ph-leer') and pg.locator('#detail .detail-links button', has_text='Foto hinzufügen').count() == 0,
+          f'{tag}: ohne Fotos Karte „Noch keine Fotos“ mit Knopf')
+    pg.click('#detail .ph-add, #detail .ph-leer-btn'); pg.wait_for_selector('#dlg[open]')
     shot = lambda n: pg.screenshot(path=str(SHOTS / f'foto_{"m" if mobile else "d"}_{n}.png'))
     # leer
     txt = pg.inner_text('#dlg')
@@ -450,7 +452,7 @@ def photo_form(b, mobile):
     check(kats == ['Rampe', 'Steg', 'Zufahrt', 'Parkplatz', 'Umgebung', 'Sonstiges'], f'{tag}: sechs Kategorien ({kats})')
     pg.check('#pf-rights')
     check(send.get_attribute('aria-disabled') == 'true', f'{tag}: ohne Kategorie noch grau')
-    pg.click('#dlg .pf-send')
+    pg.click('#dlg .pf-send', force=True)   # aria-disabled: bleibt klickbar und sagt, was fehlt
     check('was das Foto zeigt' in pg.inner_text('#dlg .pf-status'), f'{tag}: Hinweis „Bitte wähle, was das Foto zeigt“')
     pg.click('#dlg .pf-kat[data-kat=rampe]'); pg.click('#dlg .pf-kat[data-kat=parkplatz]')
     check(pg.locator('#dlg .pf-kat[aria-pressed=true]').count() == 1 and pg.locator('#dlg input[name=kategorie]').input_value() == 'parkplatz'

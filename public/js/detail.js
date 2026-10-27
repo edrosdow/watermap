@@ -111,8 +111,17 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
     if (vorOrt?.section) body.append(vorOrt.section);
   }
 
-  // Fotos
-  if (p.photos.length) body.append(photoCarousel(p.photos, { name: displayName(p), onReport: actions.reportPhoto }));
+  // Fotos – „Foto hinzufügen“ direkt dabei; ohne Fotos eine Einladung an derselben Stelle
+  if (p.photos.length) {
+    const fotos = photoCarousel(p.photos, { name: displayName(p), onReport: actions.reportPhoto });
+    fotos.append(h('button', { type: 'button', class: 'ph-add', onclick: actions.addPhoto }, h('span', { html: icon('camera', 18), 'aria-hidden': 'true' }), h('span', { text: 'Foto hinzufügen' })));
+    body.append(fotos);
+  } else {
+    body.append(h('section', { class: 'ph-leer', 'aria-label': 'Fotos' },
+      h('span', { class: 'ph-leer-ico', html: icon('camera', 24), 'aria-hidden': 'true' }),
+      h('span', { class: 'ph-leer-text' }, h('strong', { text: 'Noch keine Fotos' }), h('small', { text: 'Zeig anderen, wie es hier aussieht.' })),
+      h('button', { type: 'button', class: 'ph-leer-btn', 'aria-label': 'Foto hinzufügen', onclick: actions.addPhoto }, h('span', { html: icon('plus', 16), 'aria-hidden': 'true' }), h('span', { text: 'Foto' }))));
+  }
 
   if (p.description) body.append(h('p', { class: 'desc', text: p.description }));
 
@@ -164,7 +173,6 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
 
   // Ganz unten, für genau diesen Standort
   body.append(h('div', { class: 'detail-links' },
-    h('button', { type: 'button', onclick: actions.addPhoto, text: 'Foto hinzufügen' }),
     h('button', { type: 'button', onclick: actions.report, text: 'Fehler melden' })));
 
   return [head, body];

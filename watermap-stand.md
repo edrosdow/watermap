@@ -227,6 +227,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
 | 7.24.0 | Gezeiten aus PEGELONLINE: Tidepegel-Detailseite (Tidekurve, letztes HW/NW, Tidehub), Tide in „Meine Pegel“ und Flussseite; Prüfliste `pruefung.html` |
 | 7.24.1 | Nach Prüfliste: Ems-Reihenfolge (Unterems ab Papenburg neu ab km 0 → `flussKm` +240), Namen (Groß-/Straß-, Kürzel UW/AP/BP … groß, Bhv/Whv/LT ausgeschrieben, „auf/zur“ klein, Meißen, Roßlau, Storkower Gewässer), Tide-Kennwerte auch als Text/„cm …“, Prüfliste zeigt Datenstand, gelieferte Tide-Kennwerte und Sonderzeichen in Namen; Offline-Stand nur aus derselben Version |
+| 7.35.1 | „Foto hinzufügen“ als breiter Knopf direkt unter den Fotos; ohne Fotos an derselben Stelle die Karte „Noch keine Fotos – Zeig anderen, wie es hier aussieht“ mit „+ Foto“; unten nur noch „Fehler melden“. Kategorie-Etikett (und Pfeile) bleiben beim Scrollen unter dem festen Kopf (`.ph-frame { isolation: isolate }`, vorher auf dem iPhone darüber) |
 | 7.35.0 | Foto-Kategorien (`js/foto-kategorien.js`, auch vom Server genutzt): beim Einreichen Pflicht, genau eine von Rampe, Steg, Zufahrt, Parkplatz, Umgebung, Sonstiges (Kacheln, Feld `kategorie` statt `motiv`); Verwaltung: Kategorie vorausgewählt und änderbar, Freigeben nur mit Kategorie, unter „Veröffentlicht“ nachträglich setzen (`aktion: kategorie`, Verlauf „Kategorie geändert“); ältere Einreichungen: ein Motiv-Text wird übernommen. Standortansicht: Filter „Alle n · Rampe n …“ nur bei mindestens zwei Kategorien, Etikett auf dem Foto, Blättern und Vollbild nur innerhalb der Kategorie (Variante A, ohne Vorschaubilder). Foto bei Slip Vössen = Rampe |
 | 7.34.0 | „Mein WaterMap“ (`#mehr/einstellungen`, `js/einstellungen.js`): dunkle Karte oben in „Mehr“; Einstellungen nur auf dem Gerät – Bootstyp (= Pegel-Ampel `watermap.ampel.boot`), Länge und Tiefgang optional (`watermap.boot`, noch nirgends ausgewertet), Kategorien, Startausschnitt ganz Deutschland/letzte Ansicht/meine Position (`watermap.start`, `watermap.ansicht`; Position nur bei bestehender Freigabe, Ansicht außerhalb des Gebiets wird ignoriert), Bezugspunkt „In der Nähe“, Standortfreigabe mit „Erlauben“, Pegel-Alarm-Link, ausgeblendete Meldungen wieder zeigen, Offline-Daten aktualisieren, „Alles zurücksetzen“ mit Rückfrage (löscht alle `watermap.*` außer der Geräte-ID; Pegel-Alarme bleiben). Desktop zweispaltig |
 | 7.33.1 | „Preis melden“ ganz entfernt (Knopf in der Tankstellen-Ansicht, Formular, Prüfungen); gemeldete Preise werden weiter angezeigt, Verwaltung und verstecktes Netlify-Formular bleiben für offene Meldungen; Datenschutz ohne „einen Preis“ |
@@ -271,7 +272,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.35.0): alle Tests grün.**
+**Letzter Lauf (7.35.1): alle Tests grün.**
 
 ## 6. Offene Aufgaben
 
