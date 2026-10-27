@@ -35,7 +35,7 @@ export const FORMS = {
     title: 'Foto hinzufügen',
     fields: [
       { name: 'standort_ref', type: 'station', any: true },
-      { name: 'motiv', type: 'hidden' },                     // Chips, kommagetrennt, optional
+      { name: 'kategorie', type: 'hidden' },                 // Pflicht: eine Foto-Kategorie (foto-kategorien.js)
       { name: 'beschreibung', type: 'text', max: 140 },      // „Notiz (optional)“
       { name: 'foto', type: 'file', required: true },
     ],

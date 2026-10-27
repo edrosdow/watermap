@@ -5,8 +5,8 @@ import { h, clear, $, announce } from './dom.js';
 import { icon, glyphSvg } from './icons.js';
 import { displayName } from './model.js';
 import { prepareImage, sendReport } from './forms.js';
+import { FOTO_KATEGORIEN } from './foto-kategorien.js';
 
-export const MOTIVE = ['Rampe', 'Steg', 'Zufahrt', 'Parkplatz', 'Umgebung'];
 export const NOTIZ_MAX = 140;
 
 const fmtSize = (b) => b >= 1024 * 1024
@@ -102,15 +102,19 @@ export function openPhotoForm(ctx, preset = {}) {
   }
   drawEmpty();
 
-  // ---- Motiv (Chips, Mehrfachauswahl, optional)
-  const motivIn = h('input', { type: 'hidden', name: 'motiv', value: '' });
-  const chips = MOTIVE.map(m => h('button', { type: 'button', class: 'pf-chip', 'aria-pressed': 'false', text: m, onclick: (e) => {
-    const b = e.currentTarget;
-    b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
-    motivIn.value = chips.filter(c => c.getAttribute('aria-pressed') === 'true').map(c => c.textContent).join(', ');
-  } }));
-  const motiv = h('div', { class: 'pf-sec' }, h('p', { class: 'pf-label', id: 'pf-motiv', text: 'Was ist zu sehen?' }),
-    h('div', { class: 'pf-chips', role: 'group', 'aria-labelledby': 'pf-motiv' }, chips), motivIn);
+  // ---- Kategorie (Pflicht, genau eine)
+  const katIn = h('input', { type: 'hidden', name: 'kategorie', value: '' });
+  const kacheln = Object.entries(FOTO_KATEGORIEN).map(([key, k]) => h('button', { type: 'button', class: 'pf-kat', 'aria-pressed': 'false', dataset: { kat: key },
+    onclick: () => katWaehlen(key) }, h('span', { class: 'pf-kat-ico', html: icon(k.ico, 24), 'aria-hidden': 'true' }), h('span', { text: k.text })));
+  function katWaehlen(key) {
+    katIn.value = key;
+    for (const b of kacheln) b.setAttribute('aria-pressed', String(b.dataset.kat === key));
+    update();
+  }
+  const motiv = h('div', { class: 'pf-sec' },
+    h('p', { class: 'pf-label', id: 'pf-kat' }, 'Was zeigt das Foto? ', h('span', { class: 'pf-pflicht', text: '*', 'aria-hidden': 'true' }), h('span', { class: 'sr-only', text: '(Pflichtangabe)' })),
+    h('div', { class: 'pf-kats', role: 'group', 'aria-labelledby': 'pf-kat' }, kacheln),
+    h('p', { class: 'pf-hint', text: 'Eine Auswahl. Hilft anderen, schnell das passende Foto zu finden.' }), katIn);
 
   // ---- Notiz
   const note = h('input', { type: 'text', name: 'beschreibung', id: 'pf-note', maxlength: NOTIZ_MAX, autocomplete: 'off', enterkeyhint: 'done',
@@ -141,18 +145,16 @@ export function openPhotoForm(ctx, preset = {}) {
 
   // Beim Standortwechsel bleibt das Ausgefüllte erhalten (der Dialog schließt für die Kartenauswahl)
   function entwurf() {
-    return { file: state.file, name: state.name, motiv: motivIn.value, note: note.value, rights: rights.checked };
+    return { file: state.file, name: state.name, kategorie: katIn.value, note: note.value, rights: rights.checked };
   }
   const e0 = preset.entwurf;
   if (e0) {
     if (e0.file) showPhoto(e0.file, e0.name);
-    const sel = new Set(String(e0.motiv || '').split(', ').filter(Boolean));
-    chips.forEach(c => c.setAttribute('aria-pressed', sel.has(c.textContent) ? 'true' : 'false'));
-    motivIn.value = chips.filter(c => sel.has(c.textContent)).map(c => c.textContent).join(', ');
+    if (FOTO_KATEGORIEN[e0.kategorie]) katWaehlen(e0.kategorie);
     note.value = e0.note || ''; rights.checked = Boolean(e0.rights);
   }
 
-  function ready() { return Boolean(state.file && rights.checked && idIn.value); }
+  function ready() { return Boolean(state.file && katIn.value && rights.checked && idIn.value); }
   function update() {
     const ok = ready() && !state.busy;
     sendBtn.classList.toggle('is-ready', ok);
@@ -166,6 +168,7 @@ export function openPhotoForm(ctx, preset = {}) {
     // Knopf bleibt fokussierbar (aria-disabled), sagt aber, was fehlt
     if (!idIn.value) return showStatus('error', 'Bitte zuerst den Standort auf der Karte wählen.');
     if (!state.file) return showStatus('error', 'Bitte zuerst ein Foto auswählen.');
+    if (!katIn.value) { kacheln[0].focus(); return showStatus('error', 'Bitte wähle, was das Foto zeigt (z. B. Rampe).'); }
     if (!rights.checked) { rights.focus(); return showStatus('error', 'Bitte bestätige, dass das Foto von dir ist und keine Personen oder Kennzeichen zeigt.'); }
     const fd = new FormData(form);
     fd.set('form-name', 'foto-einreichen');

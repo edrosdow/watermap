@@ -14,6 +14,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { getStore } from '@netlify/blobs';
 import { meldungenApi } from '../lib/meldungen-kern.mjs';
+import { FOTO_KATEGORIEN, kategorieAus } from '../../public/js/foto-kategorien.js';
 
 const FORM = 'foto-einreichen';
 const REPORT_FORM = 'fehler-melden';
@@ -68,6 +69,17 @@ export function addPhoto(overrides, id, photo, today) {
   return list;
 }
 
+/** Kategorie eines veröffentlichten Fotos setzen (nachträglich, z. B. für ältere Fotos). */
+export function setPhotoKategorie(overrides, id, url, kategorie, today) {
+  if (!FOTO_KATEGORIEN[kategorie]) throw new Error('Unbekannte Kategorie.');
+  const list = Array.isArray(overrides) ? overrides : [];
+  const rec = list.find(o => o && o.id === id && Array.isArray(o.photos) && o.photos.some(ph => ph.url === url));
+  if (!rec) throw new Error('Foto ist nicht (mehr) veröffentlicht.');
+  rec.photos = rec.photos.map(ph => (ph.url === url ? { ...ph, kategorie } : ph));
+  rec.updated = today;
+  return list;
+}
+
 /** Foto aus overrides.json nehmen; ein Eintrag ohne Fotos und ohne sonstige Änderungen fällt ganz weg. */
 export function removePhoto(overrides, id, url) {
   const out = [];
@@ -89,7 +101,7 @@ export function removePhoto(overrides, id, url) {
 /** Alle freigegebenen Fotos aus overrides.json. */
 export function publishedPhotos(overrides) {
   return (Array.isArray(overrides) ? overrides : []).filter(o => o && o.status === 'approved')
-    .flatMap(o => (o.photos || []).map(ph => ({ standort_id: o.id, url: ph.url, alt: ph.alt || '', credit: ph.credit || '' })));
+    .flatMap(o => (o.photos || []).map(ph => ({ standort_id: o.id, url: ph.url, alt: ph.alt || '', credit: ph.credit || '', kategorie: FOTO_KATEGORIEN[ph.kategorie] ? ph.kategorie : null })));
 }
 
 const text = (v, max = 500) => String(v ?? '').trim().slice(0, max);
@@ -223,6 +235,7 @@ export function submissionView(s) {
     id: s.id, created: s.created_at || null,
     standort_id: String(d.standort_id || ''), standort_name: String(d.standort_name || ''),
     beschreibung: String(d.beschreibung || '').slice(0, 500), motiv: String(d.motiv || '').slice(0, 120), rechte: Boolean(d.foto_rechte),
+    kategorie: kategorieAus(d.kategorie) || kategorieAus(d.motiv),   // ältere Einreichungen: Motiv-Text
     hat_foto: Boolean(fileUrl(d.foto)),
   };
 }
@@ -389,6 +402,15 @@ export async function handle(req, { env, siteId, deploy = null, fetchFn = fetch,
       if (report) await nf(`/submissions/${report.id}`, { method: 'DELETE' });
       return json(200, { ok: true });
     }
+    // Kategorie eines veröffentlichten Fotos ändern (auch nachträglich für ältere Fotos)
+    if (req.method === 'POST' && body.aktion === 'kategorie') {
+      const path = cleanPath(body.url);
+      if (!ID_RE.test(String(body.standort_id || '')) || !PHOTO_PATH.test(path) || !FOTO_KATEGORIEN[body.kategorie]) return json(400, { fehler: 'Ungültige Angaben.' });
+      await commitChanges(gh, branch, `Foto-Kategorie: ${body.standort_id}`, async (read) => [
+        jsonFile(OVERRIDES, setPhotoKategorie(await read(OVERRIDES, []), body.standort_id, body.url, body.kategorie, today)),
+        await history({ bereich: 'foto', aktion: 'kategorie', standort_id: body.standort_id, foto: path, beschreibung: FOTO_KATEGORIEN[body.kategorie].text })(read)]);
+      return json(200, { ok: true });
+    }
     if (req.method === 'POST' && body.aktion === 'meldung_verwerfen') {
       const report = (await formSubmissions(nf, siteId, REPORT_FORM)).find(s => s.id === body.id);
       const m = report && photoReport(report);
@@ -514,7 +536,9 @@ export async function handle(req, { env, siteId, deploy = null, fetchFn = fetch,
       if (!ID_RE.test(id)) throw new Error('Standort-ID fehlt oder ist ungültig');
       const { bytes, type } = await fetchPhoto(sub, fetchFn);
       const name = `${id.replace('/', '-')}-${now.getTime().toString(36)}.${type.ext}`;
-      const photo = { url: `photos/${name}`, credit: 'WaterMap-Community', alt: (String(d.beschreibung || '').trim() || String(d.motiv || '').trim()).slice(0, 200) };   // ohne Notiz: Motiv, z. B. „Rampe, Steg“
+      const kategorie = kategorieAus(body.kategorie) || kategorieAus(d.kategorie) || kategorieAus(d.motiv);
+      if (!kategorie) return json(400, { fehler: 'Bitte eine Kategorie wählen.' });
+      const photo = { url: `photos/${name}`, credit: 'WaterMap-Community', alt: String(d.beschreibung || '').trim().slice(0, 200) || FOTO_KATEGORIEN[kategorie].text, kategorie };
       await finish(`Foto freigegeben: ${id}`, async (read) => [
         { path: `public/photos/${name}`, content: bytes },
         jsonFile(OVERRIDES, addPhoto(await read(OVERRIDES, []), id, photo, today)),

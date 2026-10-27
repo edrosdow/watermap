@@ -24,6 +24,7 @@ TRI_ATTRS = {"motorboat", "parking", "trailer_parking", "visitor_berths", "elect
 STR_ATTRS = {"surface", "incline", "suitable_boats", "suitable_trailers", "berth_fee", "trailer_note"}
 PATCH_FIELDS = {"name", "locality", "access", "fee", "fee_note", "opening_hours", "operator", "website", "phone", "email", "description", "lat", "lon"}
 STATUS = {"pending", "approved", "rejected"}
+FOTO_KATEGORIEN = {"rampe", "steg", "zufahrt", "parkplatz", "umgebung", "sonstiges"}   # wie public/js/foto-kategorien.js
 ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}")
 PRICE_MIN, PRICE_MAX = 0.5, 5.0
 FILE_TYPE = {"slip": "slip", "marina": "marina", "fuel": "fuel"}
@@ -212,6 +213,8 @@ def main(argv=None) -> int:
                 rep.err(where, "Foto-URL muss auf photos/ zeigen")
             if not ph.get("credit"):
                 rep.warn(where, "Foto ohne Urheber-/Rechteangabe")
+            if ph.get("kategorie") is not None and ph.get("kategorie") not in FOTO_KATEGORIEN:
+                rep.err(where, f"unbekannte Foto-Kategorie: {ph.get('kategorie')}")
 
     prices = load(d / com["prices"], rep) or []
     today = dt.date.today().isoformat()

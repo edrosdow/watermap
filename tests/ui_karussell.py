@@ -23,9 +23,9 @@ slips = json.loads((ROOT / 'data/osm/slip.geojson').read_text(encoding='utf-8'))
 MANY, ONE = slips[0]['id'], slips[1]['id']
 OVERRIDES = json.dumps([
     {'id': MANY, 'status': 'approved', 'updated': '2026-10-20', 'photos': [
-        {'url': 'photos/t-1.png', 'credit': 'WaterMap-Community', 'alt': 'Rampe bei Niedrigwasser'},
-        {'url': 'photos/t-2.png', 'credit': 'Edwin D.', 'alt': '<b>Steg</b> von oben'},
-        {'url': 'photos/t-3.png', 'credit': 'WaterMap-Community', 'alt': ''}]},
+        {'url': 'photos/t-1.png', 'credit': 'WaterMap-Community', 'alt': 'Rampe bei Niedrigwasser', 'kategorie': 'rampe'},
+        {'url': 'photos/t-2.png', 'credit': 'Edwin D.', 'alt': '<b>Steg</b> von oben', 'kategorie': 'steg'},
+        {'url': 'photos/t-3.png', 'credit': 'WaterMap-Community', 'alt': '', 'kategorie': 'rampe'}]},
     {'id': ONE, 'status': 'approved', 'updated': '2026-10-20', 'photos': [{'url': 'photos/t-9.png', 'credit': 'X', 'alt': 'Einzelfoto'}]}])
 IMAGES = {'t-1': png((200, 30, 30)), 't-2': png((30, 160, 60)), 't-3': png((30, 60, 200)), 't-9': png((120, 120, 120))}
 
@@ -93,6 +93,25 @@ with sync_playwright() as p:
               and pg.locator('#dlg input[name=standort_id]').get_attribute('value') == MANY and pg.input_value('#dlg select[name=art]') == 'foto',
               f'{name}: „Foto melden“ füllt die Meldung vor')
         pg.click('#dlg-close')
+        # Kategorien: Filter „Alle 3 · Rampe 2 · Steg 1“, Etikett auf dem Foto, gefiltertes Blättern und Vollbild
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(MANY)}, {{ full: true }})"); pg.locator('#detail .ph-filter').wait_for()
+        chips = [re.sub(r'\s+', ' ', t).strip() for t in pg.locator('#detail .ph-chip').all_inner_texts()]
+        check(chips == ['Alle 3', 'Rampe 2', 'Steg 1'] and pg.get_attribute('#detail .ph-chip[data-kat=alle]', 'aria-pressed') == 'true', f'{name}: Filter nach Kategorie ({chips})')
+        hh = pg.locator('#detail .ph-chip').first.bounding_box()['height']
+        check(hh >= 44, f'{name}: Filter ≥ 44 px ({hh})')
+        pg.wait_for_function("document.querySelector('#detail .ph-kat')?.textContent === 'Rampe'")
+        check(pg.is_visible('#detail .ph-kat'), f'{name}: Etikett „Rampe“ auf dem Foto')
+        pg.click('#detail .ph-chip[data-kat=steg]'); pg.locator('#detail .ph-frame img').first.wait_for()
+        check(pg.locator('#detail .ph-count').count() == 0 and pg.locator('#detail .ph-nav:visible').count() == 0 and 'Steg' in pg.inner_text('#detail .ph-kat')
+              and 't-2.png' in src(), f'{name}: Filter „Steg“ zeigt nur das Steg-Foto')
+        pg.click('#detail .ph-chip[data-kat=rampe]'); pg.locator('#detail .ph-count').wait_for()
+        check(count() == '1 / 2' and pg.get_attribute('#detail .ph-chip[data-kat=rampe]', 'aria-pressed') == 'true', f'{name}: Filter „Rampe“: 1 / 2')
+        pg.click('#detail .ph-next'); pg.wait_for_function("document.querySelector('#detail .ph-count').textContent === '2 / 2'")
+        check('t-3.png' in src() and pg.locator('#detail .ph-caption').is_hidden(), f'{name}: Blättern nur innerhalb der Kategorie')
+        pg.locator('#detail .ph-frame img').last.click(); pg.wait_for_selector('dialog.lightbox[open]')
+        check(pg.inner_text('dialog.lightbox .ph-count') == '2 / 2', f'{name}: Vollbild zeigt nur die gefilterten Fotos')
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
+        pg.screenshot(path=str(SHOTS / f'karussell_{name}_kategorie.png'))
         # Standort mit einem Foto: keine Pfeile, kein Zähler
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ONE)}, {{ full: true }})"); pg.locator('#detail .ph-caption', has_text='Einzelfoto').wait_for()
         check(pg.locator('#detail .ph-nav:visible').count() == 0 and pg.locator('#detail .ph-count').count() == 0, f'{name}: ein Foto ohne Pfeile und Zähler')

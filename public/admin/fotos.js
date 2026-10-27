@@ -6,6 +6,11 @@ const el = (tag, props = {}, ...kids) => {
   n.append(...kids.flat(Infinity).filter(k => k !== null && k !== undefined && k !== false));
   return n;
 };
+// wie public/js/foto-kategorien.js
+const KATEGORIEN = { rampe: 'Rampe', steg: 'Steg', zufahrt: 'Zufahrt', parkplatz: 'Parkplatz', umgebung: 'Umgebung', sonstiges: 'Sonstiges' };
+const katAuswahl = (wert, leer) => el('select', { className: 'kat', 'aria-label': 'Kategorie' },
+  el('option', { value: '', textContent: leer, disabled: true, selected: !wert }),
+  Object.entries(KATEGORIEN).map(([k, t]) => el('option', { value: k, textContent: t, selected: k === wert })));
 const ID = /^(node|way|relation|community|c)\/[A-Za-z0-9_-]{1,80}$/;
 const parseStandort = (t) => { const m = String(t).trim().match(/[#&]p=([^&\s]+)/); const id = m ? decodeURIComponent(m[1]) : String(t).trim(); return ID.test(id) ? id : null; };
 const when = (iso) => iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '';
@@ -97,17 +102,20 @@ function submissionCard(f) {
   const where = hasId ? null : el('input', { type: 'text', placeholder: 'Link zum Standort aus der App, z. B. …#p=node/632876845', className: 'where' });
   const yes = el('button', { className: 'ok', type: 'button', textContent: 'Freigeben' });
   const no = el('button', { type: 'button', textContent: 'Ablehnen' });
-  const valid = () => f.hat_foto && f.rechte && (hasId || Boolean(parseStandort(where.value)));
+  const kat = katAuswahl(f.kategorie, 'Kategorie wählen …');
+  const valid = () => f.hat_foto && f.rechte && Boolean(kat.value) && (hasId || Boolean(parseStandort(where.value)));
   yes.disabled = !valid();
   where?.addEventListener('input', () => { yes.disabled = !valid(); });
-  yes.addEventListener('click', () => act(yes, { aktion: 'freigeben', id: f.id, ...(where ? { standort: parseStandort(where.value) } : {}) },
+  kat.addEventListener('change', () => { yes.disabled = !valid(); });
+  yes.addEventListener('click', () => act(yes, { aktion: 'freigeben', id: f.id, kategorie: kat.value, ...(where ? { standort: parseStandort(where.value) } : {}) },
     'Freigegeben – in etwa einer Minute in der App sichtbar.'));
   no.addEventListener('click', () => act(no, { aktion: 'ablehnen', id: f.id }, 'Abgelehnt und gelöscht.', 'Foto wirklich ablehnen? Die Einreichung wird gelöscht.'));
   return el('section', { className: 'card' },
     f.hat_foto ? image(`?bild=${encodeURIComponent(f.id)}`, f.beschreibung || f.motiv) : el('p', { className: 'warn', textContent: 'Kein Foto in der Einreichung.' }),
     el('h2', {}, placeLink(hasId ? f.standort_id : '', f.standort_name || f.standort_id)),
     el('p', { className: 'meta', textContent: `Eingereicht ${when(f.created)}` }),
-    f.motiv ? el('p', { className: 'meta', textContent: `Motiv: ${f.motiv}` }) : null,
+    f.motiv && !f.kategorie ? el('p', { className: 'meta', textContent: `Motiv (alte Angabe): ${f.motiv}` }) : null,
+    el('label', { className: 'kat-zeile' }, 'Kategorie: ', kat),
     el('p', { textContent: f.beschreibung || '(keine Notiz)' }),
     f.rechte ? null : el('p', { className: 'warn', textContent: 'Rechte am Foto nicht bestätigt – nicht freigeben.' }),
     hasId ? null : el('p', { className: 'warn', textContent: `Kein Standort aus der Liste gewählt („${f.standort_name || 'ohne Namen'}“). Standort in der App öffnen, Link kopieren und hier einfügen:` }),
@@ -147,15 +155,21 @@ function renderPublished(list, err) {
     const rm = el('button', { type: 'button', textContent: 'Entfernen' });
     rm.addEventListener('click', () => act(rm, { aktion: 'entfernen', standort_id: f.standort_id, url: f.url },
       'Foto entfernt – in etwa einer Minute aus der App verschwunden.', 'Dieses Foto wirklich aus der App entfernen?'));
+    const kat = katAuswahl(f.kategorie, 'ohne Kategorie');
+    const save = el('button', { type: 'button', textContent: 'Kategorie speichern', disabled: true });
+    kat.addEventListener('change', () => { save.disabled = !kat.value || kat.value === f.kategorie; });
+    save.addEventListener('click', () => act(save, { aktion: 'kategorie', standort_id: f.standort_id, url: f.url, kategorie: kat.value },
+      `Kategorie „${KATEGORIEN[kat.value]}“ gespeichert – in etwa einer Minute in der App.`));
     box.append(el('div', { className: 'card pub' }, image(`?datei=${encodeURIComponent(f.url)}`, f.alt),
-      el('p', {}, placeLink(f.standort_id)), f.alt ? el('p', { textContent: f.alt }) : null, rm));
+      el('p', {}, placeLink(f.standort_id)), f.alt ? el('p', { textContent: f.alt }) : null,
+      el('label', { className: 'kat-zeile' }, 'Kategorie: ', kat), el('div', { className: 'actions' }, save, rm)));
   }
 }
 
 // ---------------------------------------------------------------- Verlauf
 const LABEL = { freigegeben: ['Freigegeben', 'a-freigegeben'], abgelehnt: ['Abgelehnt', 'a-abgelehnt'], entfernt: ['Entfernt', 'a-entfernt'],
   'meldung verworfen': ['Meldung verworfen', 'a-meldung'], erledigt: ['Erledigt', 'a-freigegeben'], verworfen: ['Verworfen', 'a-abgelehnt'],
-  'übernommen': ['Übernommen', 'a-freigegeben'], 'lagemeldung entfernt': ['Lagemeldung entfernt', 'a-entfernt'], 'lagemeldung war schon abgelaufen': ['Lagemeldung war abgelaufen', 'a-meldung'] };
+  'übernommen': ['Übernommen', 'a-freigegeben'], kategorie: ['Kategorie geändert', 'a-meldung'], 'lagemeldung entfernt': ['Lagemeldung entfernt', 'a-entfernt'], 'lagemeldung war schon abgelaufen': ['Lagemeldung war abgelaufen', 'a-meldung'] };
 const BEREICH = { foto: 'Foto', slip: 'Slipanlage', preis: 'Preis', hinweis: 'Hinweis', ergaenzung: 'Ergänzung' };
 
 function renderLog(list, err) {

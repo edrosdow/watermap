@@ -57,6 +57,7 @@ python3 -I tests/ui_bereiche.py                 # Navigation, „Aktuelle Meldun
 python3 -I tests/ui_einstellungen.py            # „Mein WaterMap“ (Einstellungen; 375/390/1024/1440 px)
 python3 -I tests/ui_gebiet.py                   # Kartengebiet Deutschland mit echtem Leaflet (Zoom, Ziehen, Suche, Standort)
 node tests/gebiet_test.mjs                      # Kartengebiet: Punkte, Suchtreffer, Kacheln
+node tests/foto_kategorien_test.mjs             # Foto-Kategorien: Zuordnung, Filter
 ```
 Die Oberflächentests laufen mit einem Leaflet-Ersatz. Siehe [docs/STATUS.md](docs/STATUS.md) für das, was damit **nicht** geprüft ist.
 

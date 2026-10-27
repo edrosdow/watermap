@@ -8,12 +8,12 @@ const OV = 'public/data/community/overrides.json', HIST = 'admin/verlauf.json';
 const NOW = new Date('2026-10-20T12:34:56Z');
 
 /** Nachgebaute Welt: Netlify-Formulare + ein Git-Zweig „main“ (Dateien als Buffer). */
-function fakeWorld({ photo = JPEG, rights = 'ja', beschreibung = 'Rampe bei Niedrigwasser', motiv = undefined, standort = 'node/632876845', overrides = [], files = {}, reports = [], slips = [], prices = [], ergaenzungen = [], raceOnce = false } = {}) {
+function fakeWorld({ photo = JPEG, rights = 'ja', beschreibung = 'Rampe bei Niedrigwasser', motiv = undefined, kategorie = 'rampe', standort = 'node/632876845', overrides = [], files = {}, reports = [], slips = [], prices = [], ergaenzungen = [], raceOnce = false } = {}) {
   const repo = { [OV]: Buffer.from(JSON.stringify(overrides)) };
   for (const [k, v] of Object.entries(files)) repo[k] = Buffer.from(v);
   const state = {
     subs: [{ id: 's1', created_at: '2026-10-20T12:00:00Z', data: {
-      standort_id: standort, standort_name: 'Slip Vössen', beschreibung, ...(motiv ? { motiv } : {}), foto_rechte: rights,
+      standort_id: standort, standort_name: 'Slip Vössen', beschreibung, ...(motiv ? { motiv } : {}), ...(kategorie ? { kategorie } : {}), foto_rechte: rights,
       foto: { filename: 'x.jpg', url: 'https://files.netlify.example/s1/x.jpg' } } }],
     reports, slips, prices, ergaenzungen, repo, commits: { c0: { files: repo } }, head: 'c0', n: 0, blobs: {}, trees: {}, messages: [], deleted: [], calls: [], raceOnce,
   };
@@ -126,16 +126,27 @@ assert.equal(photoReport({ id: 'r3', data: { art: 'sonstiges', details: 'Foto un
   assert.match(path, /^public\/photos\/node-632876845-[a-z0-9]+\.jpg$/);
   assert.deepEqual([...w.file(path)], [...JPEG]);
   const ov = w.jsonAt(OV);
-  assert.deepEqual(ov[1], { id: 'node/632876845', status: 'approved', photos: [{ url: j.foto.url, credit: 'WaterMap-Community', alt: 'Rampe bei Niedrigwasser' }], updated: '2026-10-20' });
+  assert.deepEqual(ov[1], { id: 'node/632876845', status: 'approved', photos: [{ url: j.foto.url, credit: 'WaterMap-Community', alt: 'Rampe bei Niedrigwasser', kategorie: 'rampe' }], updated: '2026-10-20' });
   assert.deepEqual(w.jsonAt(HIST), [{ zeit: NOW.toISOString(), bereich: 'foto', aktion: 'freigegeben', standort_id: 'node/632876845', standort_name: 'Slip Vössen', foto: j.foto.url, beschreibung: 'Rampe bei Niedrigwasser' }]);
   assert.deepEqual(w.state.deleted, ['s1']); }
 
-// Neues Foto-Formular: Motiv in der Liste; ohne Notiz wird das Motiv zur Bildbeschreibung
-{ const w = fakeWorld({ beschreibung: '', motiv: 'Rampe, Steg' });
+// Kategorie: ohne Notiz wird sie zur Bildbeschreibung; die Verwaltung kann sie beim Freigeben ändern
+{ const w = fakeWorld({ beschreibung: '', kategorie: 'parkplatz' });
   const f = (await (await run(req('GET'), w)).json()).fotos[0];
-  assert.equal(f.motiv, 'Rampe, Steg'); assert.equal(f.beschreibung, '');
-  const j = await (await run(req('POST', '', { aktion: 'freigeben', id: 's1' }), w)).json();
-  assert.equal(w.jsonAt(OV)[0].photos[0].alt, 'Rampe, Steg', JSON.stringify(j)); }
+  assert.equal(f.kategorie, 'parkplatz'); assert.equal(f.beschreibung, '');
+  await run(req('POST', '', { aktion: 'freigeben', id: 's1', kategorie: 'zufahrt' }), w);
+  assert.deepEqual(w.jsonAt(OV)[0].photos[0], { url: w.jsonAt(OV)[0].photos[0].url, credit: 'WaterMap-Community', alt: 'Zufahrt', kategorie: 'zufahrt' }); }
+// Ältere Einreichung mit Motiv-Text: ein Motiv wird zur Kategorie, mehrere brauchen eine Wahl in der Verwaltung
+{ const w = fakeWorld({ kategorie: null, motiv: 'Steg' });
+  assert.equal((await (await run(req('GET'), w)).json()).fotos[0].kategorie, 'steg');
+  assert.equal((await run(req('POST', '', { aktion: 'freigeben', id: 's1' }), w)).status, 200);
+  assert.equal(w.jsonAt(OV)[0].photos[0].kategorie, 'steg'); }
+{ const w = fakeWorld({ kategorie: null, motiv: 'Rampe, Steg' });
+  assert.equal((await (await run(req('GET'), w)).json()).fotos[0].kategorie, null);
+  const r = await run(req('POST', '', { aktion: 'freigeben', id: 's1' }), w);
+  assert.equal(r.status, 400); assert.match((await r.json()).fehler, /Kategorie/);
+  assert.equal((await run(req('POST', '', { aktion: 'freigeben', id: 's1', kategorie: 'unsinn' }), w)).status, 400);
+  assert.equal((await run(req('POST', '', { aktion: 'freigeben', id: 's1', kategorie: 'steg' }), w)).status, 200); }
 
 // Gleichzeitige Änderung am Zweig: neu aufbauen, nichts geht verloren
 { const w = fakeWorld({ raceOnce: true });
@@ -172,7 +183,15 @@ for (const [opts, msg] of [[{ rights: '' }, /Rechte/], [{ standort: '../../etc' 
     { id: 'node/7', status: 'approved', fields: { name: 'Neu' }, photos: [{ url: 'photos/d.jpg' }] }],
     files: { 'public/photos/a.jpg': JPEG, 'public/photos/b.jpg': JPEG, 'public/photos/c.jpg': JPEG } });   // d.jpg fehlt im Repo
   const list = (await (await run(req('GET', '?veroeffentlicht=1'), w)).json()).fotos;
-  assert.deepEqual(list.map(f => [f.standort_id, f.url]), [['node/5', 'photos/a.jpg'], ['node/5', 'photos/b.jpg'], ['node/6', 'photos/c.jpg'], ['node/7', 'photos/d.jpg']]);
+  assert.deepEqual(list.map(f => [f.standort_id, f.url, f.kategorie]), [['node/5', 'photos/a.jpg', null], ['node/5', 'photos/b.jpg', null], ['node/6', 'photos/c.jpg', null], ['node/7', 'photos/d.jpg', null]]);
+  // Kategorie nachträglich setzen
+  assert.equal((await run(req('POST', '', { aktion: 'kategorie', standort_id: 'node/5', url: 'photos/b.jpg', kategorie: 'rampe' }), w)).status, 200);
+  assert.deepEqual(w.jsonAt(OV)[0].photos[1], { url: 'photos/b.jpg', credit: 'X', alt: 'Rampe', kategorie: 'rampe' });
+  assert.equal(w.jsonAt(OV)[0].updated, '2026-10-20');
+  assert.deepEqual(w.jsonAt(HIST)[0], { zeit: NOW.toISOString(), bereich: 'foto', aktion: 'kategorie', standort_id: 'node/5', foto: 'photos/b.jpg', beschreibung: 'Rampe' });
+  assert.equal((await run(req('POST', '', { aktion: 'kategorie', standort_id: 'node/5', url: 'photos/b.jpg', kategorie: 'boot' }), w)).status, 400);
+  assert.equal((await run(req('POST', '', { aktion: 'kategorie', standort_id: 'node/5', url: 'photos/x.jpg', kategorie: 'steg' }), w)).status, 502);
+  w.state.repo[HIST] = Buffer.from('[]');   // Verlauf unten zählt nur die Entfernungen
   assert.equal((await run(req('GET', '?datei=photos/a.jpg'), w)).headers.get('content-type'), 'image/jpeg');
   assert.equal((await run(req('GET', '?datei=../../netlify.toml'), w)).status, 400);
   assert.equal((await run(req('GET', '?datei=photos/fehlt.jpg'), w)).status, 404);

@@ -383,6 +383,14 @@ body:not(.list-open) .sidebar { display: none; }
 .ph-frame { position: relative; aspect-ratio: 4 / 3; background: #E9EFF2; overflow: hidden; touch-action: pan-y; user-select: none; }
 .ph-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; -webkit-user-drag: none; will-change: transform; }
 .ph-frame:focus-visible { outline: 3px solid var(--slip); outline-offset: -3px; }
+.ph-kat { position: absolute; left: 10px; top: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px;
+  background: rgba(11, 48, 69, .82); color: #fff; font-size: 13px; font-weight: 750; pointer-events: none; }
+.ph-filter { display: flex; gap: 6px; overflow-x: auto; padding: 0 16px 10px; scrollbar-width: none; }
+.ph-filter::-webkit-scrollbar { display: none; }
+.ph-chip { flex: none; min-height: 44px; padding: 0 14px; border-radius: 99px; border: 1px solid #D5E0E6; background: #fff; color: var(--navy); font-weight: 650; font-size: 14px; }
+.ph-chip-n { margin-left: 1px; color: var(--muted); font-weight: 600; }
+.ph-chip[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
+.ph-chip[aria-pressed="true"] .ph-chip-n { color: #C5D8E1; }
 .ph-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .92); color: var(--navy);
   display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); cursor: pointer;
   transition: transform .18s ease, background-color .18s ease, opacity .18s ease; }
@@ -637,7 +645,7 @@ a.pegel-box { text-decoration: none; color: inherit; }
 .pf-title { margin: 0; font-size: 22px; line-height: 1.2; }
 .pf-x { width: 44px; height: 44px; flex: none; border: 0; border-radius: 50%; background: var(--pf-bg); color: var(--pf-navy); display: grid; place-items: center; }
 .pf-x:hover { background: #E4EBEA; }
-.pf-x:focus-visible, .pf-link:focus-visible, .pf-btn:focus-visible, .pf-chip:focus-visible, .pf-send:focus-visible, .pf-remove:focus-visible, .pf-again:focus-visible {
+.pf-x:focus-visible, .pf-link:focus-visible, .pf-btn:focus-visible, .pf-kat:focus-visible, .pf-send:focus-visible, .pf-remove:focus-visible, .pf-again:focus-visible {
   outline: 3px solid #1C8FB8; outline-offset: 2px; }
 .pf-form { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
 .pf-scroll { overflow-y: auto; overscroll-behavior: contain; padding: 10px 20px 18px; display: flex; flex-direction: column; gap: 18px; min-height: 0; flex: 1 1 auto; }
@@ -670,10 +678,15 @@ a.pegel-box { text-decoration: none; color: inherit; }
 .pf-error { margin: 0; color: #B3261E; font-size: 14px; font-weight: 600; }
 .pf-label { margin: 0; font-weight: 700; font-size: 15px; }
 .pf-opt { font-weight: 400; color: var(--pf-muted); }
-.pf-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.pf-chip { min-height: 44px; padding: 0 16px; border-radius: 99px; border: 1px solid var(--pf-line); background: #fff; color: var(--pf-navy); font-size: 15px; font-weight: 600; }
-.pf-chip:hover { background: var(--pf-bg); }
-.pf-chip[aria-pressed="true"] { background: var(--pf-navy); border-color: var(--pf-navy); color: #fff; }
+.pf-kats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.pf-kat { min-height: 72px; padding: 6px 4px; border: 1.5px solid var(--pf-line); border-radius: 14px; background: #fff; color: var(--pf-navy); font-weight: 700; font-size: 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.pf-kat:hover { background: var(--pf-bg); }
+.pf-kat-ico { color: #5B7383; display: grid; }
+.pf-kat[aria-pressed="true"] { background: var(--pf-navy); border-color: var(--pf-navy); color: #fff; }
+.pf-kat[aria-pressed="true"] .pf-kat-ico { color: var(--sky); }
+.pf-pflicht { color: #B3261E; }
+.pf-hint { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
 #pf-note { min-height: 48px; border: 1px solid var(--pf-line); border-radius: 12px; padding: 0 14px; font-size: 16px; color: var(--pf-navy); background: #fff; width: 100%; }
 #pf-note:focus { border-color: var(--pf-petrol); outline: 2px solid rgba(11, 94, 107, .25); }
 .pf-check { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; line-height: 1.4; min-height: 44px; cursor: pointer; }

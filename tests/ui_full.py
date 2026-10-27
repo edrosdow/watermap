@@ -446,11 +446,15 @@ def photo_form(b, mobile):
     h = pg.locator('#dlg .pf-preview').bounding_box()['height']
     check(200 <= h <= 230, f'{tag}: Vorschau ca. 216 px hoch ({h:.0f})')
     check(send.get_attribute('aria-disabled') == 'true', f'{tag}: ohne Häkchen noch grau')
-    pg.locator('#dlg .pf-chip', has_text='Rampe').click(); pg.locator('#dlg .pf-chip', has_text='Parkplatz').click()
-    pg.locator('#dlg .pf-chip', has_text='Steg').click(); pg.locator('#dlg .pf-chip', has_text='Steg').click()
-    check(pg.locator('#dlg .pf-chip[aria-pressed=true]').count() == 2 and pg.locator('#dlg input[name=motiv]').input_value() == 'Rampe, Parkplatz'
-          and pg.evaluate("getComputedStyle(document.querySelector('.pf-chip[aria-pressed=true]')).backgroundColor") == 'rgb(14, 36, 51)', f'{tag}: Chips Mehrfachauswahl, aria-pressed, Navy')
+    kats = [t.strip() for t in pg.locator('#dlg .pf-kat').all_inner_texts()]
+    check(kats == ['Rampe', 'Steg', 'Zufahrt', 'Parkplatz', 'Umgebung', 'Sonstiges'], f'{tag}: sechs Kategorien ({kats})')
     pg.check('#pf-rights')
+    check(send.get_attribute('aria-disabled') == 'true', f'{tag}: ohne Kategorie noch grau')
+    pg.click('#dlg .pf-send')
+    check('was das Foto zeigt' in pg.inner_text('#dlg .pf-status'), f'{tag}: Hinweis „Bitte wähle, was das Foto zeigt“')
+    pg.click('#dlg .pf-kat[data-kat=rampe]'); pg.click('#dlg .pf-kat[data-kat=parkplatz]')
+    check(pg.locator('#dlg .pf-kat[aria-pressed=true]').count() == 1 and pg.locator('#dlg input[name=kategorie]').input_value() == 'parkplatz'
+          and pg.evaluate("getComputedStyle(document.querySelector('.pf-kat[aria-pressed=true]')).backgroundColor") == 'rgb(14, 36, 51)', f'{tag}: genau eine Kategorie, aria-pressed, Navy')
     check(send.get_attribute('aria-disabled') == 'false' and pg.evaluate("getComputedStyle(document.querySelector('.pf-send')).backgroundColor") == 'rgb(11, 94, 107)', f'{tag}: Knopf Petrol, wenn bereit')
     check(pg.locator('#pf-note').get_attribute('maxlength') == '140', f'{tag}: Notiz max. 140 Zeichen')
     pg.fill('#pf-note', 'bei Niedrigwasser, Mai 2026')
@@ -471,7 +475,7 @@ def photo_form(b, mobile):
     pg.click('#dlg .pf-link'); pg.wait_for_selector('#pickbar:not([hidden])')
     pg.evaluate("window.__watermap.selectPlace('node/2')"); pg.wait_for_selector('#dlg[open] .pf-preview img')
     check(pg.locator('#dlg input[name=standort_id]').get_attribute('value') == 'node/2' and pg.locator('#pf-note').input_value() == 'bei Niedrigwasser, Mai 2026'
-          and pg.locator('#pf-rights').is_checked() and pg.locator('#dlg .pf-chip[aria-pressed=true]').count() == 2, f'{tag}: „Ändern“ behält Foto, Motiv, Notiz, Häkchen')
+          and pg.locator('#pf-rights').is_checked() and pg.locator('#dlg .pf-kat[aria-pressed=true][data-kat=parkplatz]').count() == 1, f'{tag}: „Ändern“ behält Foto, Kategorie, Notiz, Häkchen')
     # senden
     pg.evaluate("localStorage.clear()")
     pg.evaluate("window.__texte = []; new MutationObserver(() => window.__texte.push(document.querySelector('.pf-send')?.textContent)).observe(document.querySelector('.pf-send'), { childList: true, characterData: true, subtree: true })")
@@ -483,7 +487,7 @@ def photo_form(b, mobile):
         fields = {k: v for k, v in re.findall(rb'name="([^"]+)"\r\n\r\n([^\r]*)\r\n', raw)}
         check('multipart/form-data' in posts[0]['ct'] and fields.get(b'form-name') == b'foto-einreichen', f'{tag}: multipart an Netlify Forms (foto-einreichen)')
         check(fields.get(b'standort_id') == b'node/2' and fields.get(b'standort_name') == b'TEST Slip 2', f'{tag}: Standort gesendet')
-        check(fields.get(b'motiv') == b'Rampe, Parkplatz' and fields.get(b'beschreibung') == b'bei Niedrigwasser, Mai 2026' and fields.get(b'foto_rechte') == b'on', f'{tag}: Motiv, Notiz, Einverständnis gesendet')
+        check(fields.get(b'kategorie') == b'parkplatz' and fields.get(b'beschreibung') == b'bei Niedrigwasser, Mai 2026' and fields.get(b'foto_rechte') == b'on', f'{tag}: Kategorie, Notiz, Einverständnis gesendet')
         check(b'name="foto"; filename="foto.jpg"' in raw and b'\xff\xd8\xff' in raw, f'{tag}: Foto als JPEG gesendet')
         check(b'Exif' not in raw and b'GPS' not in raw and b'TESTCAM' not in raw, f'{tag}: keine EXIF-/GPS-Daten im gesendeten Foto')
         check(raw.count(b'filename=') == 1, f'{tag}: nur das aufbereitete Foto, keine Originaldatei')

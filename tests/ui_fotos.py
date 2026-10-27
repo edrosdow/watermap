@@ -17,11 +17,11 @@ class Handler(SimpleHTTPRequestHandler):
 PNG = bytes.fromhex('89504e470d0a1a0a0000000d4948445200000001000000010806000000'
                     '1f15c4890000000d49444154789c6360f8cfc0f01f0005000201e2a2c1b10000000049454e44ae426082')
 FOTOS = [{'id': 's1', 'created': '2026-10-20T12:00:00Z', 'standort_id': 'node/632876845', 'standort_name': 'Slip Vössen',
-          'beschreibung': '<b>Rampe</b> bei Niedrigwasser', 'rechte': True, 'hat_foto': True},
+          'beschreibung': '<b>Rampe</b> bei Niedrigwasser', 'rechte': True, 'hat_foto': True, 'kategorie': 'rampe'},
          {'id': 's2', 'created': '2026-10-20T13:00:00Z', 'standort_id': 'node/1', 'standort_name': 'Ohne Rechte',
           'beschreibung': 'x', 'rechte': False, 'hat_foto': True},
          {'id': 's3', 'created': '2026-10-20T14:00:00Z', 'standort_id': '__other', 'standort_name': 'Porta In Vössen',
-          'beschreibung': 'Slipanlage', 'rechte': True, 'hat_foto': True}]
+          'beschreibung': 'Slipanlage', 'rechte': True, 'hat_foto': True, 'kategorie': None, 'motiv': 'Rampe, Steg'}]
 REPORTS = [{'id': 'r1', 'created': '2026-10-20T15:00:00Z', 'standort_id': 'node/1937154973', 'standort_name': 'Tegel',
             'foto': 'photos/a.jpg', 'grund': 'Babybett, <i>kein</i> Slip', 'veroeffentlicht': True}]
 PUBLISHED = [{'standort_id': 'node/1937154973', 'url': 'photos/a.jpg', 'alt': 'Babybett', 'credit': 'WaterMap-Community'},
@@ -98,12 +98,15 @@ with sync_playwright() as p:
     other = cards.nth(2)
     check(other.locator('button.ok').is_disabled() and 'Porta In Vössen' in other.inner_text(), 'ohne Standort: Freigeben gesperrt, Hinweis da')
     other.locator('input.where').fill('https://watermaps.netlify.app/#p=node%2F632876845')
-    check(not other.locator('button.ok').is_disabled(), 'nach Einfügen des Links freigebbar')
+    check(other.locator('button.ok').is_disabled() and 'Motiv (alte Angabe): Rampe, Steg' in other.inner_text(), 'ohne Kategorie noch gesperrt, alte Motiv-Angabe sichtbar')
+    other.locator('select.kat').select_option('steg')
+    check(not other.locator('button.ok').is_disabled(), 'mit Link und Kategorie freigebbar')
     other.locator('button.ok').click(); pg.locator('#msg', has_text='Freigegeben').wait_for()
-    check(posted == [{'aktion': 'freigeben', 'id': 's3', 'standort': 'node/632876845'}], f'Standort wird mitgeschickt ({posted})')
+    check(posted == [{'aktion': 'freigeben', 'id': 's3', 'kategorie': 'steg', 'standort': 'node/632876845'}], f'Standort und Kategorie werden mitgeschickt ({posted})')
     posted.clear()
     pg.locator('#tab-neu .card >> nth=0').locator('button.ok').click(); pg.wait_for_timeout(300)
-    check(posted == [{'aktion': 'freigeben', 'id': 's1'}], f'Freigabe gesendet ({posted})')
+    check(pg.locator('#tab-neu .card >> nth=0').locator('select.kat').input_value() == 'rampe', 'Kategorie der Einreichung vorausgewählt')
+    check(posted == [{'aktion': 'freigeben', 'id': 's1', 'kategorie': 'rampe'}], f'Freigabe mit Kategorie gesendet ({posted})')
     posted.clear()
     pg.once('dialog', lambda d: d.dismiss())
     pg.locator('#tab-neu .card >> nth=1').locator('button', has_text='Ablehnen').click(); pg.wait_for_timeout(300)
@@ -131,6 +134,11 @@ with sync_playwright() as p:
     pg.click('#tabs [data-tab=veroeffentlicht]')
     pg.locator('#tab-veroeffentlicht .card img[src^="blob:"] >> nth=1').wait_for()
     check(pg.locator('#tab-veroeffentlicht .card').count() == 2 and 'Babybett' in pg.inner_text('#published'), 'veröffentlichte Fotos mit Bild und Beschreibung')
+    pub2 = pg.locator('#tab-veroeffentlicht .card >> nth=1')
+    check(pub2.locator('select.kat').input_value() == '' and pub2.locator('button', has_text='Kategorie speichern').is_disabled(), 'älteres Foto ohne Kategorie, Speichern gesperrt')
+    pub2.locator('select.kat').select_option('rampe'); pub2.locator('button', has_text='Kategorie speichern').click(); pg.locator('#msg', has_text='Kategorie „Rampe“ gespeichert').wait_for()
+    check(posted == [{'aktion': 'kategorie', 'standort_id': 'node/632876845', 'url': 'photos/b.jpg', 'kategorie': 'rampe'}], f'Kategorie nachträglich gesetzt ({posted})')
+    posted.clear()
     pg.once('dialog', lambda d: d.accept())
     pg.locator('#tab-veroeffentlicht .card >> nth=0').locator('button', has_text='Entfernen').click(); pg.locator('#msg', has_text='Foto entfernt').wait_for()
     check(posted == [{'aktion': 'entfernen', 'standort_id': 'node/1937154973', 'url': 'photos/a.jpg'}], f'Entfernen gesendet ({posted})')
