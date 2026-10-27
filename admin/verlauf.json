@@ -1,5 +1,13 @@
 [
   {
+    "zeit": "2026-10-27T09:51:56.097Z",
+    "bereich": "ergaenzung",
+    "aktion": "übernommen",
+    "standort_id": "node/736940651",
+    "standort_name": "Slipanlage (ohne Namen)",
+    "beschreibung": "Zugang: Öffentlich, Gebühr: Kostenlos, Belag: Beton, Neigung: mittel, Trailer parken: In der Nähe, Motorboote: Erlaubt, Bootsgröße: größer als 9 m"
+  },
+  {
     "zeit": "2026-10-27T09:47:58.002Z",
     "bereich": "foto",
     "aktion": "entfernt",
