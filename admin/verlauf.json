@@ -1,5 +1,30 @@
 [
   {
+    "zeit": "2026-10-27T09:37:35.321Z",
+    "bereich": "ergaenzung",
+    "aktion": "übernommen",
+    "standort_id": "node/632876845",
+    "standort_name": "Slip Vössen",
+    "beschreibung": "Zugang: Öffentlich, Gebühr: Kostenlos, Belag: Pflaster, Trailer parken: In der Nähe, Motorboote: Erlaubt, Bootsgröße: bis 7 m"
+  },
+  {
+    "zeit": "2026-10-26T13:21:31.007Z",
+    "bereich": "hinweis",
+    "aktion": "lagemeldung entfernt",
+    "standort_id": "node/506308858",
+    "standort_name": "Slipanlage (ohne Namen)",
+    "beschreibung": "Unpassende Lagemeldung: Lagemeldung unpassend\nMeldung-ID: 225abdc0194a4f72\nArt: Warteschlange\nNotiz: „Mega voll hier“\nGemeldet: 25.10.2026, 20:07:58\nGrund: Sonstiges"
+  },
+  {
+    "zeit": "2026-10-22T13:32:20.821Z",
+    "bereich": "foto",
+    "aktion": "freigegeben",
+    "standort_id": "node/632876845",
+    "standort_name": "Slip Vössen",
+    "foto": "photos/node-632876845-mvjkywnp.jpg",
+    "beschreibung": "das ist ein Test"
+  },
+  {
     "zeit": "2026-10-20T22:49:32.449Z",
     "bereich": "preis",
     "aktion": "abgelehnt",
