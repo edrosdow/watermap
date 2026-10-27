@@ -1,5 +1,5 @@
 /* Hauptnavigation – gemeinsam für Karte (index.html) und Pegel-Ampel (pegel-ampel.html).
-   Desktop (ab 768 px): Einträge in der Kopfzeile. Handy: feste Leiste unten mit rundem „Melden“ in der Mitte. */
+   Desktop (ab 768 px): Einträge in der Kopfzeile. Handy: schwebende Glas-Leiste unten (Symbole, rundes „Melden“ in der Mitte). */
 .topnav { display: flex; align-items: center; gap: 4px; flex: none; }
 .tn-item { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 10px;
   color: #D8E6EC; text-decoration: none; font-weight: 600; font-size: 15px; white-space: nowrap; }
@@ -10,7 +10,7 @@
 .nav-badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #9CCEE3; color: #0B3045; font-size: 12px; font-weight: 800;
   display: inline-grid; place-items: center; font-variant-numeric: tabular-nums; line-height: 1; }
 .nav-badge[hidden] { display: none; }
-.tn-item :focus-visible, .tn-item:focus-visible, .bn-item:focus-visible { outline: 3px solid #9CCEE3; outline-offset: 2px; }
+.tn-item :focus-visible, .tn-item:focus-visible { outline: 3px solid #9CCEE3; outline-offset: 2px; }
 
 .report-btn { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px 0 14px; border: 0; border-radius: 12px;
   background: #fff; color: #0B3045; font-weight: 750; font-size: 15px; text-decoration: none; }
@@ -20,23 +20,52 @@
 
 .bottomnav { display: none; }
 
+/* Platz, den die schwebende Leiste unten braucht (Höhe + Abstand zum Rand + Safe-Area + etwas Luft) – überall als unterer Abstand nutzen */
+:root { --bn-h: 68px; --bn-rand: 28px; --bn-space: calc(var(--bn-h) + var(--bn-rand) + env(safe-area-inset-bottom, 0px) + 12px); }
+
 @media (max-width: 767px) {
   .topnav, .report-btn { display: none; }
+  /* Schwebende, helle Glas-Leiste (Symbole ohne Text; Beschriftung per aria-label, langes Drücken, erster Start) */
   .bottomnav {
-    display: grid; grid-template-columns: repeat(5, 1fr); align-items: end; flex: none; position: relative; z-index: 1500;
-    background: #fff; border-top: 1px solid #DCE5EA; padding: 4px 4px env(safe-area-inset-bottom);
-    box-shadow: 0 -2px 12px rgba(11, 48, 69, .08);
+    position: fixed; z-index: 1500; left: 16px; right: 16px; bottom: calc(var(--bn-rand) + env(safe-area-inset-bottom, 0px)); height: var(--bn-h); box-sizing: border-box;
+    display: grid; grid-template-columns: repeat(5, 1fr); align-items: stretch; border-radius: 34px;
+    background: rgba(255, 255, 255, .82); -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, .9);
+    box-shadow: 0 10px 30px rgba(11, 48, 69, .20), inset 0 1px 0 rgba(255, 255, 255, .9);
+    touch-action: manipulation; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+    transition: transform .22s ease, opacity .22s ease, visibility 0s;
   }
-  .bn-item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 56px; padding: 4px 0 6px;
-    color: #566878; text-decoration: none; font-size: 12px; font-weight: 600; -webkit-tap-highlight-color: transparent; }
-  .bn-item.is-active { color: #087F9C; font-weight: 800; }
-  .bottomnav { touch-action: manipulation; }
-  .bn-item:not(.bn-center):active .bn-ico { background: #E3F1F5; border-radius: 12px; }   /* sofort sichtbar: Tipp kam an */
-  .bn-ico { display: grid; }
-  .bn-ico svg { display: block; }
-  .bn-item .nav-badge { position: absolute; top: 2px; left: calc(50% + 6px); height: 18px; min-width: 18px; padding: 0 5px; font-size: 11px; background: #087F9C; color: #fff; }
-  .bn-center { color: #0B3045; font-weight: 750; }
-  .bn-plus { width: 58px; height: 58px; margin-top: -26px; border-radius: 50%; background: #0B3045; color: #fff; display: grid; place-items: center;
-    box-shadow: 0 0 0 4px #fff, 0 4px 14px rgba(11, 48, 69, .35); }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .bottomnav { background: rgba(255, 255, 255, .97); } }
+  /* Bildschirmtastatur offen: Leiste weg */
+  .bottomnav.is-weg { transform: translateY(calc(100% + 48px)); opacity: 0; visibility: hidden; pointer-events: none; transition: transform .22s ease, opacity .22s ease, visibility 0s .22s; }
+  .bn-item { position: relative; z-index: 1; display: grid; place-items: center; min-height: 56px; color: #566878; text-decoration: none; border-radius: 30px; -webkit-tap-highlight-color: transparent; }
+  .bn-item.is-active { color: #087F9C; }
+  .bn-item:focus { outline: none; }
+  .bn-item:focus-visible { outline: 3px solid #087F9C; outline-offset: -5px; }
+  .bn-ico { display: grid; transition: transform .22s cubic-bezier(.34, 1.56, .64, 1); }
+  .bn-ico svg { display: block; width: 26px; height: 26px; }
+  /* aktiv: Karte und Meldungen mit Füllung (30 %), Pegel und Mehr mit dickerer Linie */
+  .bn-item.is-active[data-nav="karte"] .bn-ico svg, .bn-item.is-active[data-nav="meldungen"] .bn-ico svg { fill: currentColor; fill-opacity: .3; }
+  .bn-item.is-active[data-nav="pegel"] .bn-ico svg, .bn-item.is-active[data-nav="mehr"] .bn-ico svg { stroke-width: 2.4; }
+  .bn-item.is-plop .bn-ico, .bn-center.is-plop .bn-plus { transform: scale(1.18); }
+  .bn-item:not(.bn-center):active .bn-ico { transform: scale(.92); }
+  /* „Melden“: Kreis in der Leiste, ohne eigene Markierung */
+  .bn-plus { width: 54px; height: 54px; border-radius: 50%; background: #087F9C; color: #fff; display: grid; place-items: center;
+    box-shadow: 0 4px 14px rgba(8, 127, 156, .40); transition: transform .22s cubic-bezier(.34, 1.56, .64, 1); }
+  .bn-plus svg { display: block; }
   .bn-center:active .bn-plus { transform: scale(.95); }
+  /* gemeinsame Markierung, die zwischen den Plätzen wandert (nav.js) */
+  .bn-ind { position: absolute; z-index: 0; top: 5px; left: 0; width: 0; height: 56px; border-radius: 28px; background: rgba(8, 127, 156, .14);
+    box-shadow: inset 0 0 0 1px rgba(8, 127, 156, .12); opacity: 0; pointer-events: none; transform-origin: 50% 50%; }
+  .bn-item .nav-badge { position: absolute; z-index: 2; top: 8px; left: calc(50% + 5px); min-width: 18px; height: 18px; padding: 0 4px; font-size: 11px;
+    background: #087F9C; color: #fff; border: 2px solid #fff; box-sizing: content-box; }
+  /* Beschriftung als Blase über dem Symbol (langes Drücken, erster Start) */
+  .bn-tip { position: absolute; z-index: 3; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); padding: 5px 9px; border-radius: 10px; background: #0B3045; color: #fff;
+    font-size: 12.5px; font-weight: 700; line-height: 1.2; white-space: nowrap; pointer-events: none; box-shadow: 0 4px 14px rgba(11, 48, 69, .3); animation: bn-tip-ein .16s ease-out; }
+  .bn-tip::after { content: ""; position: absolute; left: 50%; top: 100%; margin-left: -5px; border: 5px solid transparent; border-top-color: #0B3045; }
+}
+@keyframes bn-tip-ein { from { opacity: 0; margin-bottom: -4px; } to { opacity: 1; margin-bottom: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .bn-ico, .bn-plus, .bottomnav { transition: none; }
+  .bn-tip { animation: none; }
 }

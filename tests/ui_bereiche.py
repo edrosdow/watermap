@@ -73,12 +73,14 @@ def run(b, w, hh):
         {'id': 'aa03', 'standortId': ids[2], 'typ': 'alles_frei', 'notiz': None, 'erstelltAm': NOW - 40 * 60000, 'bestaetigt': 1, 'widersprochen': 0},
         {'id': 'aa04', 'standortId': ids[3], 'typ': 'warteschlange', 'notiz': 'ca. 20 min', 'erstelltAm': NOW - 70 * 60000, 'bestaetigt': 0, 'widersprochen': 0},
     ]
-    # Navigation
-    texte = [t.strip() for t in pg.locator(f'{nav} [data-nav]').all_inner_texts()]
+    pg.reload(); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(800)   # die „neu“-Zahl lädt die Meldungen schon beim Start
+    # Navigation (Handy: nur Symbole, Beschriftung als aria-label; „Meldungen“ trägt die Zahl der neuen Meldungen)
+    texte = [t.strip() for t in pg.locator(f'{nav} [data-nav]').all_inner_texts()] if not mobile else [re.sub(r', \d+ neu$', '', a) for a in pg.locator(f'{nav} [data-nav]').evaluate_all("els => els.map(e => e.getAttribute('aria-label'))")]
     check(texte == (['Karte', 'Pegel', 'Melden', 'Meldungen', 'Mehr'] if mobile else ['Karte', 'Pegel', 'Meldungen', 'Mehr']), f'{tag}: Navigation {texte}')
     if mobile:
         bn = pg.locator('#bottomnav').bounding_box()
-        check(bn['y'] + bn['height'] >= hh - 1 and all(pg.locator(f'#bottomnav .bn-item >> nth={i}').bounding_box()['width'] >= 44 for i in range(5)), f'{tag}: untere Leiste unten, Ziele ≥ 44 px')
+        check(abs(bn['y'] + bn['height'] - (hh - 28)) <= 1 and abs(bn['x'] - 16) <= 1 and abs(bn['x'] + bn['width'] - (w - 16)) <= 1 and abs(bn['height'] - 68) <= 1, f'{tag}: Leiste schwebt (16 px seitlich, 28 px unten, 68 px hoch) ({bn})')
+        check(all(pg.locator(f'#bottomnav .bn-item >> nth={i}').bounding_box()['width'] >= 44 and pg.locator(f'#bottomnav .bn-item >> nth={i}').bounding_box()['height'] >= 56 for i in range(5)), f'{tag}: Ziele ≥ 44 × 56 px')
         nb = pg.locator('#btn-naehe-m').bounding_box()
         check(nb['y'] + nb['height'] <= bn['y'] and nb['x'] >= 0, f'{tag}: „In der Nähe“ auf der Karte über der Leiste')
     else:

@@ -95,6 +95,9 @@ def run(b, w, hh):
     check(s['e'] - s['w'] < 45 and s['z'] >= 5, f'{tag}: Start auf Deutschland, nicht auf Europa (Breite {s["e"] - s["w"]:.1f}°, Zoom {s["z"]})')
     check(pg.locator('.leaflet-wm-maske-pane canvas').count() == 1, f'{tag}: grauer Schleier außerhalb Deutschlands (Canvas-Ebene)')
     check('OpenStreetMap' in pg.inner_text('.leaflet-control-attribution'), f'{tag}: OSM-Namensnennung sichtbar')
+    if mobile:   # die schwebende Navigationsleiste darf die Namensnennung nicht verdecken (ODbL)
+        at = pg.locator('.leaflet-control-attribution').bounding_box(); bn = pg.locator('#bottomnav').bounding_box()
+        check(at['y'] + at['height'] <= bn['y'] + 1 and at['width'] > 40, f'{tag}: OSM-Namensnennung liegt über der Navigationsleiste ({at["y"] + at["height"]:.0f} ≤ {bn["y"]:.0f})')
     pg.screenshot(path=str(SHOTS / f'gebiet_{w}_1start.png'))
     # Test 2: Herauszoomen
     pg.evaluate(f"{MAP}.setView([51, 10], 9, {{animate: false}})"); ruhe(pg, 400)

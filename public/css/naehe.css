@@ -140,7 +140,7 @@ body.list-open .sidebar { background: var(--bg); }
   .nk-sub { font-size: 13.5px; }
   .nk-dist { font-size: 18px; }
   .nh-meld { margin-top: 2px; }
-  body.view-naehe .list { padding-bottom: calc(64px + env(safe-area-inset-bottom) + 24px); }
+  body.view-naehe .list { padding-bottom: var(--bn-space); }
   .nh-fuss { padding: 14px 16px 4px; font-size: 13px; color: var(--muted); }
   .nh-fuss .version { display: block; margin-top: 4px; }
 }

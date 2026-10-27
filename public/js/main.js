@@ -12,7 +12,7 @@ import { openForm } from './forms.js';
 import { renderDetail, placeTags, tagRow, routeLink } from './detail.js';
 import { mountNav, popover, swipeToClose } from './nav.js';
 import { bewerte } from './ampel-logik.js';
-import { aktivLaden, ausgeblendetAnzahl, ausgeblendetZuruecksetzen, senden, standortLaden, statusZeile, vorOrtKarte, zusammenfassen, TYPEN as MELD_TYPEN } from './meldungen.js';
+import { aktivLaden, ausgeblendetAnzahl, ausgeblendetZuruecksetzen, gesehenSetzen, listeLaden, neueAnzahl, senden, standortLaden, statusZeile, vorOrtKarte, zusammenfassen, TYPEN as MELD_TYPEN } from './meldungen.js';
 import { openLageForm } from './lage-form.js';
 import { naehe, geoFreigabe } from './naehe.js';
 import { gruppieren, gruppeZu, naechsterPegel } from './pegel-fluss.js';
@@ -124,6 +124,18 @@ async function init() {
 async function meldAktualisieren(force = false) {
   const r = await aktivLaden({ force });
   meldSetzen(r.map, r.offline);
+  meldBadge(force);
+}
+
+/** Zahl am Navigationspunkt „Meldungen“: Meldungen, die seit dem letzten Besuch der Übersicht dazugekommen sind (nicht eigene). */
+async function meldBadge(force = false) {
+  if (!nav) return;
+  if (state.view === 'meldungen') { nav.setBadge('meldungen', 0); return; }
+  try {
+    const d = await listeLaden({ force });
+    if (d.offline && d.unbekannt) return;   // nichts bekannt: keine Zahl behaupten
+    nav.setBadge('meldungen', state.view === 'meldungen' ? 0 : neueAnzahl(d.meldungen));
+  } catch { /* ohne Zahl */ }
 }
 
 function meldSetzen(map, offline = state.meldOffline) {
@@ -420,8 +432,13 @@ function leereKategorie() {
 }
 
 // ============================================================ Auswahl und Details
+/** Handy: so viel vom unteren Kartenrand deckt die Vorschau-Karte samt schwebender Navigationsleiste ab. */
+function peekVerdeckt() {
+  const k = el.mapEl.getBoundingClientRect(), p = el.peek.getBoundingClientRect();
+  return p.height ? Math.max(0, Math.round(k.bottom - p.top)) : 0;
+}
 function detailInset() {
-  if (isMobile()) return state.peekId ? { bottom: el.peek.offsetHeight + 24, top: 16 } : { bottom: Math.round(el.mapEl.offsetHeight * 0.6), top: 16 };
+  if (isMobile()) return state.peekId ? { bottom: (peekVerdeckt() || el.peek.offsetHeight) + 16, top: 16 } : { bottom: Math.round(el.mapEl.offsetHeight * 0.6), top: 16 };
   return { right: el.detail.offsetWidth + 24, top: 16 };
 }
 
@@ -1021,9 +1038,10 @@ function writeHash(push = false) {
 function setSelHash(k, id) { selHash = k ? { k, id } : null; writeHash(false); }
 
 /** Bereich wechseln (Karte, In der Nähe, Favoriten, Pegel). push: neuer Eintrag für die Zurück-Taste. */
-function setView(view, { push = true, spaeter = false } = {}) {
+function setView(view, { push = true, spaeter = false, sofort = false } = {}) {
   if (!VIEWS.includes(view)) view = 'karte';
   const changed = view !== state.view;
+  const vorher = state.view;
   state.view = view;
   if (view === 'naehe' || view === 'favoriten') state.tab = view === 'favoriten' ? 'fav' : 'list';
   // Inhalt zeichnen. Nach einem Tipp in der Navigation erst nach dem nächsten Bild – so wechselt die Ansicht sofort
@@ -1050,7 +1068,8 @@ function setView(view, { push = true, spaeter = false } = {}) {
   if (spaeter) requestAnimationFrame(() => setTimeout(inhalt, 0)); else inhalt();
   $('#list-title').textContent = 'Favoriten';
   if (view !== 'karte' && isMobile()) { hidePeek(); closeDetailPanel(); }
-  nav?.setActive(view);
+  nav?.setActive(view, { sofort });
+  if (view === 'meldungen' || vorher === 'meldungen') { gesehenSetzen(); meldBadge(); }   // Übersicht angesehen: nichts mehr „neu“
   $('#cat-hint').hidden = !(state.places.length && !state.cats.size) || view !== 'karte';
   if (changed) writeHash(push);
   setTimeout(() => state.map?.invalidate(), 0);
@@ -1073,7 +1092,7 @@ function handleHash({ initial = false } = {}) {
   state.mehrSeite = view === 'mehr' ? mehr : null;
   if (view === 'pegel' && state.view === 'pegel') pegelBereich();
   if (view === 'mehr' && state.view === 'mehr') mehrBereich();
-  setView(view || 'karte', { push: false });
+  setView(view || 'karte', { push: false, sofort: initial });
   if (melden) setTimeout(() => { renderReportMenu({ fragen: true }); reportPop.open($(isMobile() ? '#bottomnav [data-nav="melden"]' : '#btn-report')); }, 0);
   selHash = sel;
   writeHash(false);

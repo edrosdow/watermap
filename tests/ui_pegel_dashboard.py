@@ -77,8 +77,9 @@ def run(b, w, hh, mobile):
     # Pegel der Pegel-Ampel wird einmalig übernommen
     ctx, pg = page(b, w, hh, mobile, init="if (!localStorage.getItem('watermap.ampel')) localStorage.setItem('watermap.ampel', JSON.stringify({ pegel: '%s', min: 150 }));" % U(1))
     pg.goto(uf.BASE); pg.wait_for_selector('.cat-slip')
-    check(pg.get_attribute(f'{nav} [data-nav=pegel]', 'href') == './#pegel' and pg.inner_text(f'{nav} [data-nav=pegel]').strip().startswith('Pegel')
-          and 'Ampel' not in pg.inner_text(f'{nav} [data-nav=pegel]'), f'{tag}: Tab „Pegel“ führt ins Dashboard')
+    pegel_text = pg.get_attribute(f'{nav} [data-nav=pegel]', 'aria-label') if mobile else pg.inner_text(f'{nav} [data-nav=pegel]')   # Handy: nur Symbole, Beschriftung als aria-label
+    check(pg.get_attribute(f'{nav} [data-nav=pegel]', 'href') == './#pegel' and pegel_text.strip().startswith('Pegel')
+          and 'Ampel' not in pegel_text, f'{tag}: Tab „Pegel“ führt ins Dashboard')
     pg.click(f'{nav} [data-nav=pegel]'); pg.wait_for_selector('.pg-titel')
     check(pg.url.endswith('#pegel') and pg.locator(f'{nav} [data-nav=pegel]').get_attribute('aria-current') == 'page', f'{tag}: Adresse #pegel, „Pegel“ aktiv')
     check(pg.locator('.shell').is_hidden() and pg.locator('.toolbar').is_hidden(), f'{tag}: Karte und Kategorien ausgeblendet')

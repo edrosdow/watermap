@@ -1084,3 +1084,30 @@ p.rmenu-links a { display: inline; min-height: 0; }
 .wxd-body { overflow-y: auto; overscroll-behavior: contain; padding: 4px 18px calc(22px + env(safe-area-inset-bottom)); min-height: 0; flex: 1 1 auto; }
 @media (max-width: 767px) { .wxd { position: fixed; inset: auto 0 0 0; margin: 0; width: 100vw; max-width: 100vw; max-height: 88dvh; border-radius: 24px 24px 0 0; } }
 @media (min-width: 768px) { .wxd { width: min(94vw, 580px); max-height: 88dvh; border-radius: 20px; } .wxd-grip { display: none; } .wxd-kopf { padding-top: 18px; } }
+
+/* ---------------------------------------------------------------- Schwebende Navigationsleiste unten (Handy): Abstände und Glas-Knöpfe
+   Die Leiste liegt über dem Inhalt (css/nav.css, --bn-space); alles am unteren Rand sitzt darüber, Seiten und Listen lassen Platz. */
+@media (max-width: 767px) {
+  .pegelseite { padding-bottom: var(--bn-space); }
+  /* Detail-Blatt: der Inhalt scrollt innerhalb des Blatts (vorher ragte er über den unteren Rand hinaus); unten Platz für die Leiste */
+  .detail:not([hidden]) { display: flex; flex-direction: column; overflow: hidden; }
+  .detail-scroll { flex: 1 1 auto; min-height: 0; height: auto; max-height: none; }
+  .detail-body { padding-bottom: var(--bn-space); }
+  body.list-open .list { padding-bottom: var(--bn-space); }
+  .peek { bottom: var(--bn-space); }
+  .banner { bottom: var(--bn-space); }
+  .pickbar { bottom: var(--bn-space); }
+  .toast { bottom: calc(var(--bn-space) + 8px); }
+  .has-peek .toast { bottom: calc(var(--bn-space) + var(--peek-h, 180px) + 12px); }
+  .has-detail .toast { bottom: calc(82% + 12px); }
+  /* OpenStreetMap-Quellenangabe bleibt sichtbar: direkt über der Leiste */
+  .map-wrap .leaflet-bottom { bottom: calc(var(--bn-space) - 10px); }
+  /* Schwebende Kartenknöpfe im selben hellen Glas-Stil, rechts/links über der Leiste */
+  .fab, .map-naehe { background: rgba(255, 255, 255, .82); -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, .9); box-shadow: 0 6px 20px rgba(11, 48, 69, .18), inset 0 1px 0 rgba(255, 255, 255, .9); color: var(--navy); }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .fab, .map-naehe { background: rgba(255, 255, 255, .97); } }
+  .fab { right: 20px; bottom: calc(var(--bn-space) + 16px); width: 48px; height: 48px; border-radius: 50%; }
+  .has-peek .fab { bottom: calc(var(--bn-space) + var(--peek-h, 180px) + 12px); }
+  .map-naehe { bottom: calc(var(--bn-space) + 18px); }
+  .has-detail .fab { right: 20px; }
+}

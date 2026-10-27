@@ -3,6 +3,7 @@
 // Wird von der Karte (main.js) und der Pegel-Ampel (ampel.js) genutzt.
 import { h } from './dom.js';
 import { icon } from './icons.js';
+import { CONFIG } from './config.js';
 
 /** Ziele; `href` gilt von jeder Seite aus (die Karte fängt die Klicks ab und schaltet ohne Neuladen um). */
 export const NAV = [
@@ -15,13 +16,26 @@ export const NAV = [
 /** Bereiche ohne eigenen Navigationspunkt: welcher Punkt dabei hervorgehoben wird. */
 export const NAV_ZIEL = { naehe: 'mehr', favoriten: 'mehr' };
 
+const LS_LABELS = 'wm-nav-labels-gesehen';   // die Beschriftungen wurden beim ersten Start schon gezeigt
+const LANGDRUCK_MS = 400;
+const reduziert = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/** Text der Zahl am Abzeichen („99+“ statt riesiger Zahlen). */
+export const badgeText = (n) => (n > 99 ? '99+' : String(n));
+/** Beschriftung eines Navigationspunkts für Screenreader, z. B. „Meldungen, 3 neu“. */
+export const navLabel = (item, badge = 0) => (badge > 0 ? `${item.label}, ${badge > 99 ? 'über 99' : badge} neu` : item.label);
+
 /**
  * Navigation in die Seite einhängen. active: 'karte' | 'pegel' | 'meldungen' | 'mehr' (oder ein Bereich aus NAV_ZIEL)
  * onSelect(id, event) – optional; gibt true zurück, wenn der Klick ohne Seitenwechsel erledigt wurde.
+ * Unten (Handy): schwebende Glas-Leiste nur mit Symbolen; eine gemeinsame Markierung wandert zum aktiven Punkt.
  */
 export function mountNav({ top, bottom, active, onSelect, reportLink = false }) {
+  let langDruck = false;   // der Klick nach einem langen Drücken soll nichts auslösen
   const click = (item) => (e) => {
+    if (langDruck) { langDruck = false; e.preventDefault(); return; }
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;   // neuer Tab bleibt möglich
+    if (item.center) plop(item.id);
     if (onSelect && onSelect(item.id, e)) e.preventDefault();
   };
   if (top) {
@@ -30,15 +44,106 @@ export function mountNav({ top, bottom, active, onSelect, reportLink = false }) 
     // Auf Unterseiten (Pegel-Ampel) führt „+ Melden“ zur Karte und öffnet dort die Auswahl
     if (reportLink) top.append(h('a', { class: 'report-btn', href: './#melden' }, h('span', { html: icon('plus', 20) }), h('span', { text: 'Melden' })));
   }
+
+  const ind = h('span', { class: 'bn-ind', 'aria-hidden': 'true' });
+  const platz = (id) => bottom?.querySelector(`.bn-item[data-nav="${id}"]`);
   if (bottom) {
-    bottom.replaceChildren(...NAV.map(n => n.center
-      ? h('a', { class: 'bn-item bn-center', href: n.href, dataset: { nav: n.id }, onclick: click(n), 'aria-haspopup': 'dialog' },
-        h('span', { class: 'bn-plus', html: icon('plus', 28) }), h('span', { class: 'bn-label', text: n.label }))
-      : h('a', { class: 'bn-item', href: n.href, dataset: { nav: n.id }, onclick: click(n) },
-        h('span', { class: 'bn-ico', html: icon(n.ico, 24) }), h('span', { class: 'bn-label', text: n.label }))));
+    bottom.replaceChildren(ind, ...NAV.map(n => h('a', { class: 'bn-item' + (n.center ? ' bn-center' : ''), href: n.href, dataset: { nav: n.id }, 'aria-label': n.label,
+      'aria-haspopup': n.center ? 'dialog' : null, onclick: click(n) },
+      n.center ? h('span', { class: 'bn-plus', html: icon('plus', 28) }) : h('span', { class: 'bn-ico', html: icon(n.ico, 26) }),
+      n.id === 'meldungen' ? h('span', { class: 'nav-badge', hidden: true, 'aria-hidden': 'true' }) : null)));
   }
+
+  // ---- Markierung: Maße aus den echten Plätzen (relativ zur Leiste)
+  const maße = (id) => {
+    const a = id && platz(id);
+    if (!a || !a.offsetWidth) return null;
+    const nr = bottom.getBoundingClientRect(), r = a.getBoundingClientRect();
+    const w = Math.round((r.width - 6) * 10) / 10;   // 3 px Luft je Seite, wie im Entwurf
+    return { left: Math.round((r.left - nr.left - bottom.clientLeft + (r.width - w) / 2) * 10) / 10, width: w };
+  };
+  let aktuell = null, ziel = null, timer = 0;
+  const setzen = (m, { dauer = 0, easing = 'ease', sy = 1 } = {}) => {
+    ind.style.transition = dauer ? `left ${dauer}ms ${easing}, width ${dauer}ms ${easing}, transform ${dauer}ms ease, opacity 120ms linear` : 'none';
+    ind.style.left = `${m.left}px`; ind.style.width = `${m.width}px`; ind.style.transform = sy === 1 ? '' : `scaleY(${sy})`; ind.style.opacity = '1';
+  };
+  function marke(id, animiert) {
+    if (!bottom) return;
+    clearTimeout(timer);
+    const m = id === 'melden' ? null : maße(id);
+    if (!m) { ind.style.opacity = '0'; ziel = null; return; }
+    const von = ziel; ziel = m;
+    if (!animiert || !von) { setzen(m); void ind.offsetWidth; return; }   // erster Aufruf / Seitenaufbau: sofort
+    if (reduziert()) { setzen(m, { dauer: 120, easing: 'linear' }); return; }
+    const ms = CONFIG.NAV_ANIM_MS, feder = 'cubic-bezier(.34, 1.45, .64, 1)';
+    if (!CONFIG.NAV_DEHNEN) { setzen(m, { dauer: ms, easing: feder }); return; }
+    // Phase 1 (erste ~45 %): vom alten bis zum neuen Platz dehnen und etwas flacher werden; Phase 2: auf den neuen Platz zusammenziehen
+    const l = Math.min(von.left, m.left), r = Math.max(von.left + von.width, m.left + m.width);
+    setzen({ left: l, width: r - l }, { dauer: ms, easing: feder, sy: 0.88 });
+    timer = setTimeout(() => setzen(m, { dauer: ms, easing: feder }), Math.round(ms * 0.45));
+  }
+  function plop(id) {   // das Symbol ploppt kurz
+    const a = platz(id);
+    if (!a || reduziert()) return;
+    a.classList.add('is-plop');
+    setTimeout(() => a.classList.remove('is-plop'), 220);
+  }
+  if (bottom) {
+    const neu = () => marke(aktuell, false);
+    if ('ResizeObserver' in window) new ResizeObserver(neu).observe(bottom); else window.addEventListener('resize', neu);
+    window.addEventListener('orientationchange', () => setTimeout(neu, 200));
+  }
+
+  // ---- Beschriftung als Blase: langes Drücken, beim ersten Start einmalig alle
+  const blase = (a) => {
+    const t = h('span', { class: 'bn-tip', 'aria-hidden': 'true', text: NAV.find(n => n.id === a.dataset.nav).label });
+    a.append(t);
+    return t;
+  };
+  if (bottom) {
+    let lp = 0, tip = null, x0 = 0, y0 = 0;
+    const ende = () => { clearTimeout(lp); if (tip) { const t = tip; tip = null; setTimeout(() => t.remove(), 900); } };
+    bottom.addEventListener('pointerdown', (e) => {
+      const a = e.target.closest('.bn-item');
+      if (!a) return;
+      x0 = e.clientX; y0 = e.clientY; langDruck = false; clearTimeout(lp);
+      lp = setTimeout(() => { langDruck = true; tip = blase(a); }, LANGDRUCK_MS);
+    });
+    bottom.addEventListener('pointermove', (e) => { if (!tip && Math.hypot(e.clientX - x0, e.clientY - y0) > 10) clearTimeout(lp); });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) bottom.addEventListener(ev, ende);
+    bottom.addEventListener('contextmenu', (e) => e.preventDefault());   // kein Link-Menü beim langen Drücken
+    // Erster Start: alle fünf Beschriftungen ca. 3 Sekunden zeigen, danach gemerkt
+    let gesehen = false;
+    try { gesehen = localStorage.getItem(LS_LABELS) === '1'; } catch { /* ohne Speicher: jedes Mal */ }
+    if (!gesehen) setTimeout(() => {
+      if (!bottom.offsetWidth || document.hidden) return;
+      const tips = [...bottom.querySelectorAll('.bn-item')].map(blase);
+      try { localStorage.setItem(LS_LABELS, '1'); } catch { /* egal */ }
+      setTimeout(() => tips.forEach(t => t.remove()), 3000);
+    }, 900);
+  }
+
+  // ---- Tastatur offen (Eingabefeld hat Fokus oder die sichtbare Höhe schrumpft stark): Leiste ausblenden
+  if (bottom) {
+    let maxH = window.innerHeight, breite = window.innerWidth;
+    const tastatur = () => {
+      if (window.innerWidth !== breite) { breite = window.innerWidth; maxH = window.innerHeight; }   // Drehen: neu messen
+      maxH = Math.max(maxH, window.innerHeight);
+      const f = document.activeElement;
+      const feld = !!f && (f.tagName === 'TEXTAREA' || f.isContentEditable
+        || (f.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|reset|file|range|color|image)$/.test(f.type)));
+      const vv = window.visualViewport;
+      return feld || (!!vv && vv.height < maxH * 0.75);
+    };
+    const pruefen = () => bottom.classList.toggle('is-weg', tastatur());
+    document.addEventListener('focusin', pruefen);
+    document.addEventListener('focusout', () => setTimeout(pruefen, 60));
+    window.visualViewport?.addEventListener('resize', pruefen);
+  }
+
   const api = {
-    setActive(bereich) {
+    /** sofort: ohne Animation (Seitenaufbau, Adresse beim Start). */
+    setActive(bereich, { sofort = false } = {}) {
       const id = NAV_ZIEL[bereich] || bereich;
       for (const root of [top, bottom]) {
         if (!root) continue;
@@ -48,6 +153,19 @@ export function mountNav({ top, bottom, active, onSelect, reportLink = false }) 
           if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
         }
       }
+      if (bottom) {
+        const erster = aktuell === null, gewechselt = id !== aktuell;
+        aktuell = id;
+        if (gewechselt) { const anim = !erster && !sofort; marke(id, anim); if (anim) plop(id); }
+      }
+    },
+    /** Zahl am Punkt (z. B. neue Meldungen); 0 blendet das Abzeichen aus. */
+    setBadge(id, n) {
+      const a = platz(id), b = a?.querySelector('.nav-badge');
+      if (!b) return;
+      const zahl = Math.max(0, Math.floor(Number(n) || 0));
+      b.hidden = !zahl; b.textContent = zahl ? badgeText(zahl) : '';
+      a.setAttribute('aria-label', navLabel(NAV.find(x => x.id === id), zahl));
     },
   };
   api.setActive(active);

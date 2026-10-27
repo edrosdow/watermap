@@ -4,7 +4,7 @@ const host = typeof location !== 'undefined' ? location.hostname : '';
 export const ENTWICKLUNG = /^(localhost|127\.0\.0\.1)$|^deploy-preview-/.test(host);
 
 export const CONFIG = {
-  VERSION: '7.36.0',
+  VERSION: '7.37.0',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -70,6 +70,10 @@ export const CONFIG = {
 
   // Liste
   LIST_LIMIT: 120,
+
+  // Navigation unten (Handy): Markierung wandert beim Wechsel
+  NAV_ANIM_MS: 340,   // Dauer der Animation der Markierung
+  NAV_DEHNEN: true,   // true: Markierung dehnt sich erst zum neuen Platz und zieht sich dann zusammen; false: gleitet nur
 
   // Meldungen
   NEARBY_RADIUS_M: 150,        // Prüfung auf bereits vorhandene Slipanlage

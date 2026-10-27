@@ -157,7 +157,7 @@ def defaults(b):
         nav = '#bottomnav' if mob else '#topnav'
         check(pg.locator(nav).is_visible() and pg.locator('#bottomnav' if not mob else '#topnav').is_hidden(), f'{name}: Navigation {"unten" if mob else "oben"}')
         check(pg.locator(f'{nav} [data-nav=karte]').get_attribute('aria-current') == 'page', f'{name}: „Karte“ aktiv')
-        check([t.strip() for t in pg.locator(f'{nav} [data-nav]').all_inner_texts()] == (['Karte', 'Pegel', 'Melden', 'Meldungen', 'Mehr'] if mob else ['Karte', 'Pegel', 'Meldungen', 'Mehr']),
+        check(([t.strip() for t in pg.locator(f'{nav} [data-nav]').all_inner_texts()] if not mob else [re.sub(r', .*$', '', a) for a in pg.locator(f'{nav} [data-nav]').evaluate_all("els => els.map(e => e.getAttribute('aria-label'))")]) == (['Karte', 'Pegel', 'Melden', 'Meldungen', 'Mehr'] if mob else ['Karte', 'Pegel', 'Meldungen', 'Mehr']),
               f'{name}: Navigation Karte · Pegel · (Melden) · Meldungen · Mehr')
         # „In der Nähe“: Schnellzugriff auf der Karte bzw. in der Werkzeugleiste
         pg.click('#btn-naehe-m' if mob else '#btn-naehe-d'); pg.wait_for_timeout(400)
@@ -168,7 +168,8 @@ def defaults(b):
             check(sb['x'] < 1 and sb['width'] < 420 and mw['x'] >= sb['width'] - 1, f'{name}: Liste als linke Seitenleiste neben der Karte')
         else:
             sb = pg.locator('#sidebar').bounding_box(); bn = pg.locator('#bottomnav').bounding_box()
-            check(sb['y'] + sb['height'] <= bn['y'] + 1, f'{name}: Liste endet über der Navigation')
+            lp = float(pg.evaluate("getComputedStyle(document.querySelector('#list')).paddingBottom").replace('px', ''))
+            check(sb['y'] + sb['height'] >= bn['y'] + bn['height'] and lp >= pg.viewport_size['height'] - bn['y'] and abs(bn['y'] + bn['height'] - (pg.viewport_size['height'] - 28)) <= 1, f'{name}: Liste reicht bis unten, die schwebende Navigation darüber, unten Platz für sie ({lp:.0f} px)')
         pg.click(f'{nav} [data-nav=karte]'); pg.wait_for_timeout(300)
         check(not pg.locator('#sidebar').is_visible(), f'{name}: Liste wieder geschlossen')
         pg.click(f'{nav} [data-nav=mehr]'); pg.wait_for_selector('#mehrseite:not([hidden]) .bs-zeile')
@@ -526,9 +527,9 @@ def mobile(b):
     pg.click('.cat-slip'); pg.click('.cat-marina'); pg.wait_for_timeout(200)   # nur Tankstellen
     check(pg.evaluate("getComputedStyle(document.querySelector('.cat-fuel')).backgroundColor") == 'rgb(255, 255, 255)', 'Aktive Kategorie weiß gefüllt')
     bn = pg.locator('#bottomnav').bounding_box()
-    check(bn['y'] + bn['height'] >= 843 and pg.locator('#bottomnav .bn-item').count() == 5, 'Navigation unten mit fünf Zielen')
+    check(abs(bn['y'] + bn['height'] - (844 - 28)) <= 1 and pg.locator('#bottomnav .bn-item').count() == 5, 'Navigation unten: schwebende Leiste mit fünf Zielen')
     plus = pg.locator('#bottomnav .bn-plus').bounding_box()
-    check(plus['y'] < bn['y'], '„Melden“ ragt über die Leiste hinaus')
+    check(plus['y'] >= bn['y'] and plus['y'] + plus['height'] <= bn['y'] + bn['height'], '„Melden“ sitzt innerhalb der Leiste')
     pg.click('#btn-naehe-m'); pg.wait_for_timeout(300)
     pg.screenshot(path=str(SHOTS / 'full_mobile_list.png'))
     pg.click('.place >> nth=0'); pg.wait_for_selector('#peek:not([hidden])'); pg.wait_for_timeout(300)

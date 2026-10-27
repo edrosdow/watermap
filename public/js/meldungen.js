@@ -164,7 +164,24 @@ export async function senden(standortId, typ, notiz, { fetchFn = fetch } = {}) {
   if (navigator.onLine === false) throw new Error('Keine Verbindung, bitte später erneut versuchen.');
   const j = await post(API, { standortId, typ, notiz: notiz || '' }, fetchFn);
   merkeLokal(standortId, j.meldungen || []);
+  eigeneMerken(j.meldung?.id);
   return j;
+}
+
+// ------------------------------------------------------------------ „neu“-Zahl am Navigationspunkt „Meldungen“
+const LS_GESEHEN = 'watermap.meldungen.gesehen';   // Zeitpunkt des letzten Besuchs der Übersicht
+const LS_EIGENE = 'watermap.meldungen.eigene';     // IDs eigener Meldungen (zählen nicht als neu)
+export function gesehenLesen() { try { const v = Number(localStorage.getItem(LS_GESEHEN)); return Number.isFinite(v) ? v : 0; } catch { return 0; } }
+export function gesehenSetzen(zeit = Date.now()) { try { localStorage.setItem(LS_GESEHEN, String(zeit)); } catch { /* nur Komfort */ } }
+function eigeneLesen() { try { const a = JSON.parse(localStorage.getItem(LS_EIGENE) || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } }
+export function eigeneMerken(id) {
+  if (!id) return;
+  try { localStorage.setItem(LS_EIGENE, JSON.stringify([...eigeneLesen().filter(x => x !== id), id].slice(-100))); } catch { /* nur Komfort */ }
+}
+/** Meldungen, die neuer sind als der letzte Besuch der Übersicht und nicht von diesem Gerät stammen. */
+export function neueAnzahl(meldungen, { gesehen = gesehenLesen(), eigene = eigeneLesen() } = {}) {
+  const meine = new Set(eigene);
+  return (meldungen || []).filter(m => m && m.erstelltAm > gesehen && !meine.has(m.id)).length;
 }
 
 function bewertetLesen() { try { return new Set(JSON.parse(localStorage.getItem(LS_BEWERTET) || '[]')); } catch { return new Set(); } }

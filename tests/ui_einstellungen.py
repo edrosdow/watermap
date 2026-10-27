@@ -110,7 +110,7 @@ def run(b, w, hh):
     check(ls(pg, 'watermap.boot') is not None, f'{tag}: Abbrechen löscht nichts')
     pg.click('#mehrseite .ei-rot'); pg.wait_for_selector('#dlg[open]')
     pg.click('#dlg .btn-gefahr'); pg.wait_for_load_state('load'); pg.wait_for_selector('#mehrseite .ei-profil')
-    rest = pg.evaluate("Object.keys(localStorage).filter(k => k.startsWith('watermap.') && !['watermap.cats', 'watermap.pegel.stand', 'watermap.meldungen.aktiv'].includes(k))")
+    rest = pg.evaluate("Object.keys(localStorage).filter(k => k.startsWith('watermap.') && !['watermap.cats', 'watermap.pegel.stand', 'watermap.meldungen.aktiv', 'watermap.meldungen.liste'].includes(k))")
     check(rest == ['watermap.geraet'] and ls(pg, 'watermap.geraet') == 'abc', f'{tag}: alles gelöscht außer Geräte-ID ({rest})')
     check(pg.evaluate('location.hash') == '#mehr' and 'Motorboot' in pg.inner_text('#mehrseite .ei-profil'), f'{tag}: nach dem Zurücksetzen „Mehr“ mit Standardwerten')
 

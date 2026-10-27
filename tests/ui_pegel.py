@@ -173,7 +173,8 @@ with sync_playwright() as p:
         check(pg.locator('.wm-gauge-pill.is-selected').count() == 1, f'{name}: gewählter Pegel hervorgehoben')
         check(pg.locator('#detail #heute-vor-ort').count() == 0, f'{name}: keine Karte „Heute vor Ort“')
         # Fadenkreuz
-        pg.locator('#detail .gc-svg').scroll_into_view_if_needed()
+        pg.locator('#detail .gc-svg').evaluate("e => e.scrollIntoView({ block: 'center' })")   # mittig: unten liegt die schwebende Navigation
+        pg.wait_for_timeout(100)
         svg = pg.locator('#detail .gc-svg').bounding_box()
         pg.mouse.move(svg['x'] + svg['width'] * 0.5, svg['y'] + svg['height'] * 0.5); pg.wait_for_timeout(150)
         tip = pg.locator('#detail .gc-tip')
