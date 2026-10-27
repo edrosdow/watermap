@@ -27,7 +27,7 @@ import { unpassendMelden } from './meldung-unpassend.js';
 import { slipErgaenzen } from './slip-ergaenzen.js';
 import { imGebiet, aufGebietBeschneiden, gebietLaden } from './gebiet.js';
 import { pegelDashboard, pegelSeite, slipsAmPegel } from './pegel-dashboard.js';
-import { weatherSection } from './wetter.js';
+import { weatherSection, wetterZeile } from './wetter.js';
 import { GROUPS, loadExtras, renderExtraDetail, nearbySection, glyph } from './extras.js';
 import { enrichFacts } from './hafeninfo.js';
 
@@ -449,7 +449,7 @@ function showDetail(p, { scrollTo = null } = {}) {
   const [head, body] = renderDetail(p, {
     user: state.user,
     enrichFacts: enrichFacts(state.meta, p.id),
-    weather: weatherSection(p.lat, p.lon),
+    weather: p.type === 'slip' ? wetterZeile(p.lat, p.lon, { name: displayName(p) }) : weatherSection(p.lat, p.lon),   // Slipanlagen: Zeile + Fenster
     nearby: nearbySection(hasExtras() ? extrasList() : Promise.resolve([]), p.lat, p.lon, {
       exclude: p.id,
       onSelect: (id, x) => { if (x && !state.extraById.has(id)) state.extraById.set(id, x); selectExtra(id); },   // Live-Einträge sind nicht im Import
@@ -1418,7 +1418,7 @@ function wireStatic() {
   $('#list-close').addEventListener('click', () => setView('karte'));
   swipeToClose(el.peek, closeDetail, () => !!state.peekId);
   document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || el.dlg.open || filterPop.isOpen || reportPop.isOpen || $('#naehe-bezug[open]') || $('#pa-pop[open]') || $('dialog.lightbox[open]') || el.suggest.offsetParent) return;
+    if (e.key !== 'Escape' || el.dlg.open || filterPop.isOpen || reportPop.isOpen || $('#naehe-bezug[open]') || $('#pa-pop[open]') || $('dialog.lightbox[open]') || $('dialog.wxd[open]') || el.suggest.offsetParent) return;
     if (state.selectedId || state.gaugeId || state.extraId || state.peekId || state.gaugePeekId) closeDetail();
   });
   window.addEventListener('resize', debounce(() => state.map?.invalidate(), 150));

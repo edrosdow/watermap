@@ -368,7 +368,17 @@ export function vorOrtKarte({ standortId, daten, nah, onMehr, onGesendet, onGeae
     const ton = probleme.length ? (probleme[0].typ === 'gesperrt' ? 'vo-stop' : 'vo-warn') : 'vo-ok';
     karte.className = `vo-karte ${ton}` + (st.wahl ? ' is-edit' : '');
     const teile = [];
-    if (st.wahl) {
+    // Keine Probleme, du bist nicht vor Ort: nur eine schmale Zeile (spart Platz für „Wichtig für dein Boot“)
+    const schmal = !st.wahl && !probleme.length && !nah && !(st.offline && st.unbekannt);
+    karte.classList.toggle('vo-schmal', schmal);
+    if (schmal) {
+      const frei = st.meldungen.find(m => m.typ === 'alles_frei');
+      const sub = st.offline ? `Offline · ${standVon(st.zeit)}` : frei ? `Zuletzt: „Alles frei“ · ${zeitpunkt(frei.erstelltAm)}` : null;
+      teile.push(h('div', { class: 'vo-schmal-zeile' }, kreis('check', 'is-ok'),
+        h('div', { class: 'vo-kopf-text' }, h('strong', { class: 'vo-status vo-ok', text: 'Heute keine Probleme gemeldet' }), sub ? h('small', { text: sub }) : null),
+        h('button', { type: 'button', class: 'vo-schmal-btn', disabled: !online(), 'aria-label': 'Lage melden', onclick: () => onMehr?.() },
+          h('span', { html: icon('pin', 16), 'aria-hidden': 'true' }), h('span', { text: 'Lage melden' }))));
+    } else if (st.wahl) {
       teile.push(h('div', { class: 'vo-oben' }, kopf({ klein: true })), bearbeiten());
     } else {
       const oben = h('div', { class: 'vo-oben' }, kopf());

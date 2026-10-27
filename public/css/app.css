@@ -1045,3 +1045,42 @@ p.rmenu-links a { display: inline; min-height: 0; }
   .ae-dlg { width: 100%; max-width: none; max-height: calc(100% - 36px); margin: auto 0 0; border-radius: 20px 20px 0 0; }
   .ae-fuss { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
 }
+
+/* „Heute vor Ort“ schmal: keine Probleme, nicht vor Ort (meldungen.js) */
+.vo-schmal-zeile { display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 8px 8px 8px 14px; }
+.vo-schmal-zeile .vo-kreis { width: 28px; height: 28px; }
+.vo-schmal-zeile .vo-kreis svg { width: 16px; height: 16px; }
+.vo-schmal-zeile .vo-kopf-text { flex: 1; }
+.vo-schmal-zeile .vo-status { font-size: 15px; }
+.vo-schmal-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: #E3F0F5; color: #06667E; font-weight: 750; font-size: 14.5px; }
+.vo-schmal-btn:hover:not(:disabled) { background: #D3E8F0; }
+.vo-schmal-btn:disabled { opacity: .6; }
+
+/* Wetter-Zeile und -Fenster bei Slipanlagen (wetter.js) */
+.wxz { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 14px; border: 1.5px solid #DCE5EA; border-radius: 16px; background: #fff; color: var(--navy); text-align: left; }
+.wxz:hover { background: #F7FAFB; }
+.wxz-ico { width: 40px; height: 40px; border-radius: 12px; background: #E3F0F5; color: #06667E; display: grid; place-items: center; flex: none; }
+.wxz-ico svg { display: block; }
+.wxz-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.wxz-text strong { font-size: 16px; }
+.wxz-text small { color: var(--muted); font-size: 13.5px; line-height: 1.3; }
+.wxz-pfeil { color: #9AAAB5; display: grid; flex: none; }
+.wxz-warn { background: #FFF6E3; border-color: var(--sev); }
+.wxz-warn:hover { background: #FFF1D3; }
+.wxz-warn .wxz-ico { background: var(--sev); color: #fff; }
+.wxz-warn.wxz-minor .wxz-ico { color: #3B2600; }
+.wxz-warn .wxz-text strong { color: #5A3200; }
+.wxz-warn .wxz-text small { color: #6B4A00; }
+.wxd { border: 0; padding: 0; background: #fff; color: var(--ink); box-shadow: var(--shadow-lg); overflow: hidden; flex-direction: column; }
+.wxd:not([open]) { display: none; }
+.wxd[open] { display: flex; }
+.wxd::backdrop { background: rgba(8, 36, 52, .5); }
+.wxd-grip { display: block; flex: none; width: 44px; height: 5px; border-radius: 3px; background: #C3D2DA; margin: 10px auto 0; }
+.wxd-kopf { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 8px 18px 6px; flex: none; }
+.wxd-kopf h2 { margin: 0; font-size: 22px; line-height: 1.2; color: var(--navy); }
+.wxd-kopf h2:focus { outline: none; }
+.wxd-unter { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.wxd-x { width: 44px; height: 44px; flex: none; border: 0; border-radius: 50%; background: #EEF3F5; color: var(--navy); display: grid; place-items: center; }
+.wxd-body { overflow-y: auto; overscroll-behavior: contain; padding: 4px 18px calc(22px + env(safe-area-inset-bottom)); min-height: 0; flex: 1 1 auto; }
+@media (max-width: 767px) { .wxd { position: fixed; inset: auto 0 0 0; margin: 0; width: 100vw; max-width: 100vw; max-height: 88dvh; border-radius: 24px 24px 0 0; } }
+@media (min-width: 768px) { .wxd { width: min(94vw, 580px); max-height: 88dvh; border-radius: 20px; } .wxd-grip { display: none; } .wxd-kopf { padding-top: 18px; } }

@@ -22,7 +22,7 @@ def png(rgb, w=40, h=30):
 slips = json.loads((ROOT / 'data/osm/slip.geojson').read_text(encoding='utf-8'))['features']
 MANY, ONE = slips[0]['id'], slips[1]['id']
 OVERRIDES = json.dumps([
-    {'id': MANY, 'status': 'approved', 'updated': '2026-10-20', 'photos': [
+    {'id': MANY, 'status': 'approved', 'updated': '2026-10-20', 'fields': {'access': 'public', 'fee': False}, 'photos': [
         {'url': 'photos/t-1.png', 'credit': 'WaterMap-Community', 'alt': 'Rampe bei Niedrigwasser', 'kategorie': 'rampe'},
         {'url': 'photos/t-2.png', 'credit': 'Edwin D.', 'alt': '<b>Steg</b> von oben', 'kategorie': 'steg'},
         {'url': 'photos/t-3.png', 'credit': 'WaterMap-Community', 'alt': '', 'kategorie': 'rampe'}]},
@@ -112,6 +112,11 @@ with sync_playwright() as p:
         check(pg.inner_text('dialog.lightbox .ph-count') == '2 / 2', f'{name}: Vollbild zeigt nur die gefilterten Fotos')
         pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
         pg.screenshot(path=str(SHOTS / f'karussell_{name}_kategorie.png'))
+        # Reihenfolge bei Slipanlagen: Knöpfe · Etiketten · Fotos · Heute vor Ort · Boot · Wetter-Zeile · Rest
+        folge = pg.evaluate("""() => { const b = document.querySelector('#detail .detail-body');
+          return ['.dbtns', '.dtags', '.photos, .ph-leer', '#heute-vor-ort', '.wb', '.wxz', '.source', '.detail-links'].map(s => [...b.children].findIndex(e => e.matches(s))); }""")
+        check(all(i >= 0 for i in folge) and folge == sorted(folge), f'{name}: Reihenfolge Knöpfe · Etiketten · Fotos · Heute vor Ort · Boot · Wetter-Zeile · Rest ({folge})')
+        check(pg.locator('#detail .wx-block').count() == 0, f'{name}: Wetter bei Slipanlagen nicht mehr als Abschnitt in der Seite')
         # „Foto hinzufügen“ direkt unter den Fotos; unten nur noch „Fehler melden“
         check(pg.is_visible('#detail .photos .ph-add') and pg.locator('#detail .detail-links button', has_text='Foto hinzufügen').count() == 0, f'{name}: „Foto hinzufügen“ im Fotobereich')
         # Etikett wandert beim Scrollen nicht über den festen Kopf

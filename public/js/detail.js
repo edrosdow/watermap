@@ -81,8 +81,9 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
 
   const body = h('div', { class: 'detail-body' });
   if (vorOrt?.zeile) body.append(vorOrt.zeile);   // wichtigste Lagemeldung („Heute vor Ort“)
+  const slip = p.type === 'slip';
   const tags = tagRow(placeTags(p, 4));
-  if (tags) body.append(tags);
+  if (tags && !slip) body.append(tags);   // Slipanlagen: Etiketten erst nach den Knöpfen
 
   // Route · Merken · Teilen
   body.append(h('div', { class: 'dbtns' },
@@ -90,6 +91,7 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
     h('button', { type: 'button', class: 'dbtn fav', 'aria-pressed': String(isFav), title: isFav ? 'Aus Favoriten entfernen' : 'Als Favorit speichern', onclick: actions.onFavorite },
       h('span', { html: icon('star', 18, isFav) }), h('span', { text: isFav ? 'Gemerkt' : 'Merken' })),
     h('button', { type: 'button', class: 'dbtn', title: 'Link teilen', onclick: actions.share }, h('span', { html: icon('share', 18) }), h('span', { text: 'Teilen' }))));
+  if (tags && slip) body.append(tags);
 
   // Pegel am selben Gewässer (wird nachgeladen; ohne Pegel bleibt der Platz leer)
   const pegelTeil = () => {
@@ -98,34 +100,43 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
     body.append(slot);
     pegel.then(box => { if (box) slot.replaceWith(box); else slot.remove(); }, () => slot.remove());
   };
-  const slip = p.type === 'slip';
+
+  // Fotos – „Foto hinzufügen“ direkt dabei; ohne Fotos eine Einladung an derselben Stelle
+  const fotenTeil = () => {
+    if (p.photos.length) {
+      const fotos = photoCarousel(p.photos, { name: displayName(p), onReport: actions.reportPhoto });
+      fotos.append(h('button', { type: 'button', class: 'ph-add', onclick: actions.addPhoto }, h('span', { html: icon('camera', 18), 'aria-hidden': 'true' }), h('span', { text: 'Foto hinzufügen' })));
+      body.append(fotos);
+    } else {
+      body.append(h('section', { class: 'ph-leer', 'aria-label': 'Fotos' },
+        h('span', { class: 'ph-leer-ico', html: icon('camera', 24), 'aria-hidden': 'true' }),
+        h('span', { class: 'ph-leer-text' }, h('strong', { text: 'Noch keine Fotos' }), h('small', { text: 'Zeig anderen, wie es hier aussieht.' })),
+        h('button', { type: 'button', class: 'ph-leer-btn', 'aria-label': 'Foto hinzufügen', onclick: actions.addPhoto }, h('span', { html: icon('plus', 16), 'aria-hidden': 'true' }), h('span', { text: 'Foto' }))));
+    }
+  };
 
   if (slip) {
-    // Slipanlage: Heute vor Ort → Wichtig für dein Boot → Pegel
+    // Slipanlage: Titel → Knöpfe → Etiketten → Fotos → Heute vor Ort → (Wetterwarnung) → Pegel → Wichtig für dein Boot → Wetter-Zeile → Rest
+    fotenTeil();
     if (vorOrt?.section) body.append(vorOrt.section);
-    body.append(bootBox(p, actions));
+    const wxOben = h('span', { hidden: true });   // Platz für die Wetter-Zeile, wenn eine amtliche Warnung vorliegt
+    body.append(wxOben);
     pegelTeil();
+    body.append(bootBox(p, actions));
+    if (weather?.zeile) {
+      body.append(weather.zeile);
+      weather.warnung.then((warnung) => { if (warnung) wxOben.replaceWith(weather.zeile); });
+    }
   } else {
     pegelTeil();
     // „Heute vor Ort“ direkt unter Titel und Knöpfen, vor Fotos und Wetter
     if (vorOrt?.section) body.append(vorOrt.section);
-  }
-
-  // Fotos – „Foto hinzufügen“ direkt dabei; ohne Fotos eine Einladung an derselben Stelle
-  if (p.photos.length) {
-    const fotos = photoCarousel(p.photos, { name: displayName(p), onReport: actions.reportPhoto });
-    fotos.append(h('button', { type: 'button', class: 'ph-add', onclick: actions.addPhoto }, h('span', { html: icon('camera', 18), 'aria-hidden': 'true' }), h('span', { text: 'Foto hinzufügen' })));
-    body.append(fotos);
-  } else {
-    body.append(h('section', { class: 'ph-leer', 'aria-label': 'Fotos' },
-      h('span', { class: 'ph-leer-ico', html: icon('camera', 24), 'aria-hidden': 'true' }),
-      h('span', { class: 'ph-leer-text' }, h('strong', { text: 'Noch keine Fotos' }), h('small', { text: 'Zeig anderen, wie es hier aussieht.' })),
-      h('button', { type: 'button', class: 'ph-leer-btn', 'aria-label': 'Foto hinzufügen', onclick: actions.addPhoto }, h('span', { html: icon('plus', 16), 'aria-hidden': 'true' }), h('span', { text: 'Foto' }))));
+    fotenTeil();
   }
 
   if (p.description) body.append(h('p', { class: 'desc', text: p.description }));
 
-  if (weather) body.append(weather);
+  if (weather && !slip) body.append(weather);
 
   // Preise (nur Bootstankstellen)
   if (p.type === 'fuel') {
