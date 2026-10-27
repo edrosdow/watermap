@@ -424,7 +424,7 @@ function selectPlace(id, { fly = true, updateHash = true, full = false } = {}) {
   const p = state.byId.get(id);
   if (!p) return false;
   const pick = state.placePick;
-  if (pick && pick.type && p.type !== pick.type) { toast(pick.type === 'slip' ? 'Bitte eine Slipanlage antippen.' : 'Bitte eine Bootstankstelle antippen.'); return false; }
+  if (pick && pick.type && p.type !== pick.type) { toast('Bitte eine Slipanlage antippen.'); return false; }
   if (state.gaugeId) { state.gaugeId = null; state.map?.selectGauge(null); }
   if (state.extraId) { state.extraId = null; state.map?.selectExtra(null); }
   if (!state.cats.has(p.type)) toggleCat(p.type, true);   // z. B. Link oder Suche: Kategorie des Standorts einblenden
@@ -456,7 +456,6 @@ function showDetail(p, { scrollTo = null } = {}) {
       report: () => openReport('fehler-melden', { standort_id: p.id }),
       addPhoto: () => openReport('foto-einreichen', { standort_id: p.id }),
       reportPhoto: (ph) => openReport('fehler-melden', { standort_id: p.id, art: 'foto', details: `Foto unpassend: ${ph.url}\nGrund: ` }),
-      reportPrice: () => openReport('tankpreis-melden', { standort_id: p.id }),
       ergaenzen: () => slipErgaenzen({ place: p, toast }),
     },
     pegel: pegelInfo(p).then(info => info && pegelBox(info)),
@@ -1125,7 +1124,6 @@ const PLACE_PICK = {
   'lage-melden': { text: 'Tippe auf der Karte auf die Slipanlage, an der du gerade bist.', type: 'slip' },
   'foto-einreichen': { text: 'Tippe auf der Karte auf die Slipanlage, Marina oder Tankstelle, zu der das Foto gehört.' },
   'fehler-melden': { text: 'Tippe auf der Karte auf den Standort, zu dem du etwas melden möchtest.', general: true },
-  'tankpreis-melden': { text: 'Tippe auf der Karte auf die Bootstankstelle.', type: 'fuel' },
   'slip-ergaenzen': { text: 'Tippe auf der Karte auf die Slipanlage, die du ergänzen möchtest.', type: 'slip' },
 };
 
@@ -1158,7 +1156,6 @@ function openReport(formName, preset = {}) {
     choosePlace: (name, carry = {}) => choosePlaceFor(name, carry),
   };
   const p = preset.standort_id && state.byId.get(preset.standort_id);
-  if (p && formName === 'tankpreis-melden') preset.standort_id = p.id;
   if (formName === 'slipanlage-melden' && !preset.lat && state.user) { /* Position wird nur auf Wunsch übernommen */ }
   closeMenu();
   if (formName === 'lage-melden') { const pl = state.byId.get(preset.standort_id); if (pl?.type === 'slip') lageMelden(pl); return; }

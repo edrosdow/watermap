@@ -10,7 +10,7 @@ import { CONFIG } from './config.js';
 import { photoCarousel } from './photos.js';
 
 /**
- * actions = { close, share, report, addPhoto, reportPhoto, reportPrice, onFavorite, ergaenzen }
+ * actions = { close, share, report, addPhoto, reportPhoto, onFavorite, ergaenzen }
  */
 /** Tabelle der Eigenschaften; Zeilen mit `web` zeigen die wörtlichen Website-Angaben (markiert).
  *  Unbekannte Zeilen sind eingeklappt („N weitere unbekannt“). */
@@ -127,8 +127,7 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
         r.price
           ? [h('strong', { text: r.price }), h('span', { class: 'price-date', text: `gemeldet am ${r.observed || 'unbekanntem Datum'}` }),
              r.stale ? h('span', { class: 'price-warn', text: r.age === null ? 'Aktualität unklar' : `Älter als ${CONFIG.PRICE_STALE_DAYS} Tage – möglicherweise nicht mehr aktuell` }) : null]
-          : h('span', { class: 'unknown', text: 'Kein Preis gemeldet' })))),
-      h('button', { type: 'button', class: 'btn btn-outline small', html: icon('plus', 16) + '<span>Preis melden</span>', onclick: actions.reportPrice })));
+          : h('span', { class: 'unknown', text: 'Kein Preis gemeldet' }))))));
   }
 
   // Fakten (Hafeninfos von der Website füllen die Tabelle nach, sobald sie geladen sind) – bei Slipanlagen steht alles in „Wichtig für dein Boot“

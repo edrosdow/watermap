@@ -373,19 +373,9 @@ def desktop(b):
     pg.click('#detail .detail-links button:has-text("Foto hinzufügen")'); pg.wait_for_selector('#dlg[open]')
     check(pg.locator('#dlg input[name=standort_id]').get_attribute('value') == last, f'Foto aus Detail: Standort-ID fest ({last})')
     pg.click('#dlg .pf-x')
-    # Preis-Formular
-    pg.evaluate("window.__watermap.selectPlace('node/7001', { full: true })"); pg.wait_for_selector('#detail button:has-text("Preis melden")')
-    pg.click('#detail button:has-text("Preis melden")'); pg.wait_for_selector('#dlg[open]')
-    check(pg.locator('#dlg input[name=tankstelle_id]').get_attribute('value') == 'node/7001', 'Preis aus der Tankstelle: Standort steht fest')
-    pg.fill('#dlg input[name=preis]', '25')
-    pg.click('#dlg-body button:has-text("Preis zur Prüfung senden")'); pg.wait_for_timeout(100)
-    check('zwischen' in pg.inner_text('#dlg .form-status'), 'Unplausibler Preis (25 €/l) wird abgelehnt')
-    pg.fill('#dlg input[name=preis]', '2,189')
-    pg.evaluate("localStorage.clear()")
-    n0 = len(posts)
-    pg.click('#dlg-body button:has-text("Preis zur Prüfung senden")'); pg.wait_for_timeout(300)
-    check(len(posts) == n0 + 1 and b'preis=2.189' in posts[-1]['body'], 'Preis mit Komma wird als 2.189 gesendet')
-    pg.click('#dlg-body button:has-text("Schließen")')
+    # Preis melden ist entfernt: Tankstelle zeigt Preise, aber keinen Knopf
+    pg.evaluate("window.__watermap.selectPlace('node/7001', { full: true })"); pg.wait_for_selector('#detail:not([hidden]) .prices')
+    check(pg.locator('#detail button:has-text("Preis melden")').count() == 0, 'Tankstelle: Preise ohne „Preis melden“')
     # Honeypot
     pg.evaluate("localStorage.clear()")
     report(pg, 'Fehler'); pg.wait_for_selector('#pickbar:not([hidden])')
@@ -554,9 +544,9 @@ def mobile(b):
     check(pg.evaluate("document.activeElement.closest('[data-nav]')?.dataset.nav") == 'melden', 'Fokus zurück auf „Melden“')
     pg.evaluate("window.__watermap.selectPlace('node/7000', { full: true })"); pg.wait_for_timeout(300)
     pg.screenshot(path=str(SHOTS / 'full_mobile_fuel.png'))
-    pg.click('#detail button:has-text("Preis melden")'); pg.wait_for_selector('#dlg[open]')
-    check(pg.locator('#dlg select[name=tankstelle_id]').count() == 0 and pg.locator('#dlg input[name=tankstelle_id]').get_attribute('value') == 'node/7000',
-          'Preis-Formular aus Detail: Tankstelle steht fest')
+    pg.click('#detail .detail-links button:has-text("Fehler melden")'); pg.wait_for_selector('#dlg[open]')
+    check(pg.locator('#dlg select[name=standort_id]').count() == 0 and pg.locator('#dlg input[name=standort_id]').get_attribute('value') == 'node/7000',
+          'Fehler-Formular aus Detail: Standort steht fest')
     pg.screenshot(path=str(SHOTS / 'full_mobile_form.png'))
     check(pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), 'Formular ohne horizontales Scrollen')
     check(not pg.errs, f'Keine JS-Fehler {pg.errs[:3]}')

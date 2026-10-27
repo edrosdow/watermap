@@ -30,20 +30,6 @@ export const FORMS = {
     rights: true,
     submit: 'Zur Prüfung senden',
   },
-  'tankpreis-melden': {
-    title: 'Kraftstoffpreis melden',
-    intro: 'Melde den Preis, den du an der Bootstankstelle gesehen hast. Er wird erst nach Prüfung angezeigt – mit Datum.',
-    fields: [
-      { name: 'tankstelle', type: 'station' },
-      { name: 'kraftstoff', label: 'Kraftstoff', type: 'select', required: true, options: [['diesel', 'Diesel'], ['benzin', 'Benzin']] },
-      { name: 'preis', label: 'Preis pro Liter in €', type: 'number', required: true, placeholder: 'z. B. 2,189' },
-      { name: 'datum', label: 'Datum der Beobachtung', type: 'date', required: true },
-      { name: 'beleg', label: 'Belegfoto (optional, max. 5 MB)', type: 'file' },
-      { name: 'kommentar', label: 'Kommentar (optional)', type: 'textarea', max: 500 },
-    ],
-    rights: true,
-    submit: 'Preis zur Prüfung senden',
-  },
   'foto-einreichen': {
     // eigene Oberfläche in photo-form.js; die Liste beschreibt nur die gesendeten Felder
     title: 'Foto hinzufügen',
@@ -78,10 +64,8 @@ export function submittedFieldNames(formName) {
   const names = new Set(['form-name', 'bot-field']);
   for (const f of spec.fields) {
     if (f.type === 'location') ['lat', 'lon'].forEach(n => names.add(n));
-    else if (f.type === 'station') {
-      if (formName === 'tankpreis-melden') { names.add('tankstelle_id'); names.add('tankstelle_name'); }
-      else { names.add('standort_id'); names.add('standort_name'); }
-    } else names.add(f.name);
+    else if (f.type === 'station') { names.add('standort_id'); names.add('standort_name'); }
+    else names.add(f.name);
   }
   if (spec.rights) names.add('foto_rechte');
   if (formName === 'slipanlage-melden') names.add('dublette_bestaetigt');
@@ -235,12 +219,9 @@ export function openForm(formName, ctx, preset = {}) {
   }
 
   function buildStation(f) {
-    const isPrice = formName === 'tankpreis-melden';
-    const idName = isPrice ? 'tankstelle_id' : 'standort_id';
-    const nameName = isPrice ? 'tankstelle_name' : 'standort_name';
-    const label = isPrice ? 'Bootstankstelle' : 'Standort';
+    const idName = 'standort_id', nameName = 'standort_name';
     // Keine Auswahlliste: der Standort kommt immer von der Karte (Detailansicht oder Auswahlmodus, main.js)
-    const p = preset.standort_id && ctx.places.find(x => x.id === preset.standort_id && (!isPrice || x.type === 'fuel'));
+    const p = preset.standort_id && ctx.places.find(x => x.id === preset.standort_id);
     const general = !p && preset.standort_id === '__other' && formName === 'fehler-melden';
     const idIn = h('input', { type: 'hidden', name: idName, value: p ? p.id : general ? '__other' : '' });
     const nameIn = h('input', { type: 'hidden', name: nameName, value: p ? displayName(p) : '' });
@@ -248,8 +229,8 @@ export function openForm(formName, ctx, preset = {}) {
     const shown = p ? displayName(p) + (p.locality ? ` – ${p.locality}` : '') : general ? 'Allgemeiner Hinweis (kein bestimmter Standort)' : null;
     const change = ctx.choosePlace ? h('button', { type: 'button', class: 'btn btn-outline small', text: shown ? 'Anderen Standort wählen' : 'Auf der Karte wählen',
       onclick: () => ctx.choosePlace(formName) }) : null;
-    return h('div', { class: 'field' }, h('span', { class: 'field-label', text: label }),
-      shown ? h('p', { class: 'fixed-place', text: shown }) : h('p', { class: 'hint', text: isPrice ? 'Bitte die Bootstankstelle auf der Karte antippen.' : 'Bitte den Standort auf der Karte antippen.' }),
+    return h('div', { class: 'field' }, h('span', { class: 'field-label', text: 'Standort' }),
+      shown ? h('p', { class: 'fixed-place', text: shown }) : h('p', { class: 'hint', text: 'Bitte den Standort auf der Karte antippen.' }),
       idIn, nameIn, change);
   }
 
@@ -299,7 +280,6 @@ export function openForm(formName, ctx, preset = {}) {
         } else fd.delete(fileField.name);
       }
       fd.set('form-name', formName);
-      if (formName === 'tankpreis-melden') fd.set('preis', String(fd.get('preis')).trim().replace(',', '.'));
       if (!hasFile && !(fileField && fd.has(fileField.name))) { /* kein Anhang */ }
       const body = hasFile ? fd : new URLSearchParams([...fd.entries()].map(([k, v]) => [k, typeof v === 'string' ? v : '']));
       const res = await fetch('/', { method: 'POST', body });
@@ -338,14 +318,6 @@ function validate(formName, form, fd, state, controls) {
   }
   const email = fd.get('kontakt');
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) return bad('Bitte eine gültige E-Mail-Adresse eingeben – oder das Feld leer lassen.', controls.kontakt);
-  if (formName === 'tankpreis-melden') {
-    const rawPrice = String(fd.get('preis')).trim().replace(',', '.');
-    const price = /^\d{1,2}(\.\d{1,3})?$/.test(rawPrice) ? Number(rawPrice) : NaN;
-    if (!Number.isFinite(price) || price < CONFIG.PRICE_MIN || price > CONFIG.PRICE_MAX) return bad(`Bitte einen Preis zwischen ${CONFIG.PRICE_MIN} und ${CONFIG.PRICE_MAX} € pro Liter eingeben.`, controls.preis);
-    const d = String(fd.get('datum'));
-    if (d > new Date().toISOString().slice(0, 10)) return bad('Das Datum darf nicht in der Zukunft liegen.', controls.datum);
-    if (!fd.get('tankstelle_id')) return bad('Bitte die Bootstankstelle auf der Karte wählen.', controls.tankstelle_id);
-  }
   if ((formName === 'foto-einreichen' || formName === 'fehler-melden') && !fd.get('standort_id')) return bad('Bitte den Standort auf der Karte wählen.', controls.standort_id);
   if (formName === 'slipanlage-melden') {
     const la = Number(fd.get('lat')), lo = Number(fd.get('lon'));

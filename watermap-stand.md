@@ -227,6 +227,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
 | 7.24.0 | Gezeiten aus PEGELONLINE: Tidepegel-Detailseite (Tidekurve, letztes HW/NW, Tidehub), Tide in „Meine Pegel“ und Flussseite; Prüfliste `pruefung.html` |
 | 7.24.1 | Nach Prüfliste: Ems-Reihenfolge (Unterems ab Papenburg neu ab km 0 → `flussKm` +240), Namen (Groß-/Straß-, Kürzel UW/AP/BP … groß, Bhv/Whv/LT ausgeschrieben, „auf/zur“ klein, Meißen, Roßlau, Storkower Gewässer), Tide-Kennwerte auch als Text/„cm …“, Prüfliste zeigt Datenstand, gelieferte Tide-Kennwerte und Sonderzeichen in Namen; Offline-Stand nur aus derselben Version |
+| 7.33.1 | „Preis melden“ ganz entfernt (Knopf in der Tankstellen-Ansicht, Formular, Prüfungen); gemeldete Preise werden weiter angezeigt, Verwaltung und verstecktes Netlify-Formular bleiben für offene Meldungen; Datenschutz ohne „einen Preis“ |
 | 7.33.0 | Melden-Menü mit Abschnitten „Gerade vor Ort“ · „Standort verbessern“ (Foto, Angaben ergänzen – neu im Menü, Standortauswahl nur Slipanlagen –, Neue Slipanlage) · „Fehler und Hinweise“. In der Nähe einer Slipanlage sechs Lage-Knöpfe direkt im Menü: ein Tipp sendet ohne Notiz (Fehler wie die 1-h-Sperre im Menü), „mehr“ öffnet das Formular mit Notiz. „Kraftstoffpreis melden“ aus dem Menü entfernt (bleibt in der Tankstellen-Ansicht „Preis melden“) |
 | 7.32.1 | Verwaltung schreibt in einer Vorschau in den Zweig dieser Vorschau (Netlify-API: Deploy → Branch), live weiter in `FOTO_BRANCH`/main – vorher landeten Freigaben aus der Vorschau live. Meldungen-Speicher wählt Vorschau/live über `context.deploy.context`. Freigaben aus `main` in den Vorschau-Zweig übernommen |
 | 7.32.0 | „Weißt du mehr? Ergänzen“ öffnet das Formular „Angaben ergänzen“ (nur fehlende Angaben, bekannte eingeklappt mit „ändern“; Knopfleisten, Belag/Neigung als Auswahl; leer = weiß nicht, nochmal antippen hebt auf; „N Angaben senden“, ohne Auswahl gesperrt) → Netlify-Formular `slip-ergaenzen` → Verwaltung Reiter „Ergänzungen“ (bisher → neu, Übernehmen schreibt `overrides.json`). Neues Merkmal `trailer_note` („am Slip“/„in der Nähe“) |
@@ -268,7 +269,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.33.0): alle Tests grün.**
+**Letzter Lauf (7.33.1): alle Tests grün.**
 
 ## 6. Offene Aufgaben
 
