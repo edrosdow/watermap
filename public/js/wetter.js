@@ -191,20 +191,27 @@ export function wetterZeile(lat, lon, { name = '' } = {}) {
   return { zeile, warnung };
 }
 
-/** Fenster „Wetter und Wind“ (Handy: von unten, sonst mittig): Warnungen, Wind jetzt, Vorhersage. */
-export function wetterFenster({ lat, lon, name = '', opener = null }) {
-  const box = h('div', { class: 'wx', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Wetter wird geladen …' }));
-  const dlg = h('dialog', { class: 'wxd', 'aria-labelledby': 'wxd-titel' },
-    h('span', { class: 'wxd-grip', 'aria-hidden': 'true' }),
-    h('header', { class: 'wxd-kopf' },
-      h('div', {}, h('h2', { id: 'wxd-titel', tabindex: '-1', text: 'Wetter und Wind' }), name ? h('p', { class: 'wxd-unter', text: name }) : null),
-      h('button', { type: 'button', class: 'wxd-x', 'aria-label': 'Schließen', html: icon('close', 22), onclick: () => dlg.close() })),
-    h('div', { class: 'wxd-body' }, box));
+/**
+ * Fenster über der Seite (Handy: von unten, sonst mittig). Der Inhalt kommt von außen; schließt per Escape, Klick daneben
+ * oder über `dialog.close()`; danach geht der Fokus zurück zum Auslöser. `labelId`: Überschrift, die den Fokus bekommt.
+ */
+export function fenster({ inhalt, kopf = null, klasse = '', labelId, opener = null }) {
+  const dlg = h('dialog', { class: `wxd ${klasse}`.trim(), 'aria-labelledby': labelId },
+    h('span', { class: 'wxd-grip', 'aria-hidden': 'true' }), kopf, h('div', { class: 'wxd-body' }, inhalt));
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
   dlg.addEventListener('close', () => { dlg.remove(); if (opener && document.contains(opener)) opener.focus({ preventScroll: true }); });
   document.body.append(dlg);
   dlg.showModal();
-  dlg.querySelector('#wxd-titel').focus({ preventScroll: true });
+  dlg.querySelector(`#${labelId}`)?.focus({ preventScroll: true });
+  return dlg;
+}
+
+/** Fenster „Wetter und Wind“ (Handy: von unten, sonst mittig): Warnungen, Wind jetzt, Vorhersage. */
+export function wetterFenster({ lat, lon, name = '', opener = null }) {
+  const box = h('div', { class: 'wx', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Wetter wird geladen …' }));
+  const dlg = fenster({ inhalt: box, labelId: 'wxd-titel', opener, kopf: h('header', { class: 'wxd-kopf' },
+    h('div', {}, h('h2', { id: 'wxd-titel', tabindex: '-1', text: 'Wetter und Wind' }), name ? h('p', { class: 'wxd-unter', text: name }) : null),
+    h('button', { type: 'button', class: 'wxd-x', 'aria-label': 'Schließen', html: icon('close', 22), onclick: () => dlg.close() })) });
   loadWeather(lat, lon).then((d) => { box.removeAttribute('aria-busy'); box.replaceChildren(...renderWeather(d)); },
     () => { box.removeAttribute('aria-busy'); box.replaceChildren(h('p', { class: 'unknown', text: 'Wetterdaten sind gerade nicht erreichbar.' })); });
   return dlg;

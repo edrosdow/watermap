@@ -1111,3 +1111,9 @@ p.rmenu-links a { display: inline; min-height: 0; }
   .map-naehe { bottom: calc(var(--bn-space) + 18px); }
   .has-detail .fab { right: 20px; }
 }
+
+/* Pegel-Details im Fenster (main.js pegelFenster): der Pegel-Kopf bringt Titel und „×“ selbst mit */
+.wxd-pegel .wxd-body { padding: 0; background: #F3F6F8; }
+.wxd-pegel .wxd-grip { position: absolute; z-index: 2; top: 8px; left: 50%; margin: 0 0 0 -22px; background: rgba(255, 255, 255, .45); }
+.wxd-pegel .pd { min-height: 0; }
+@media (min-width: 768px) { .wxd-pegel .wxd-grip { display: none; } .wxd-pegel { width: min(94vw, 620px); } }

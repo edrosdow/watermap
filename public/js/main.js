@@ -27,7 +27,7 @@ import { unpassendMelden } from './meldung-unpassend.js';
 import { slipErgaenzen } from './slip-ergaenzen.js';
 import { imGebiet, aufGebietBeschneiden, gebietLaden } from './gebiet.js';
 import { pegelDashboard, pegelSeite, slipsAmPegel } from './pegel-dashboard.js';
-import { weatherSection, wetterZeile } from './wetter.js';
+import { weatherSection, wetterZeile, fenster } from './wetter.js';
 import { GROUPS, loadExtras, renderExtraDetail, nearbySection, glyph } from './extras.js';
 import { enrichFacts } from './hafeninfo.js';
 
@@ -582,16 +582,31 @@ function pegelInfo(p) {
 function pegelBox({ g, d, ampel }) {
   const trend = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' }[g.trend];
   const weit = d > 2000 ? `Pegel ${formatDistance(d)} entfernt` : null;   // weiter weg: ehrlich dazusagen
-  // ganzer Kasten führt zur Pegel-Detailseite (Zurück kommt wieder hierher)
-  return h('a', { class: 'pegel-box ' + (ampel ? ampel.box : 'is-neutral'), href: `#pegel/${encodeURIComponent(g.id)}`,
-    onclick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); pegelSeiteOeffnen(g.id); } },
+  // ganzer Kasten öffnet die Pegel-Details in einem Fenster über der Standortansicht (wie „Wetter und Wind“); neuer Tab bleibt möglich
+  return h('a', { class: 'pegel-box ' + (ampel ? ampel.box : 'is-neutral'), href: `#pegel/${encodeURIComponent(g.id)}`, 'aria-haspopup': 'dialog',
+    onclick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); pegelFenster(g, e.currentTarget); } },
     h('div', {},
       h('p', {}, h('strong', { text: `Pegel ${g.name}: ${fmtN(Math.round(g.value))} ${g.unit}${trend ? `, ${trend}` : ''}` })),
       h('small', { text: [ampel ? `${ampel.tag} für dein Boot (laut Pegel-Ampel)` : 'Verlauf, Kennwerte und Trend', weit].filter(Boolean).join(' · ') })),
     h('span', { class: 'pegel-box-mehr', text: 'Details ›' }));
 }
 
-/** Pegel-Detailseite aus einer Standortansicht öffnen; „Zurück“ führt wieder zum Standort. */
+/** Pegel-Details im Fenster über der Standortansicht: dieselbe Darstellung wie im Kartenpanel, „×“ führt zurück zum Standort. */
+function pegelFenster(g, opener) {
+  const inhalt = h('div', { class: 'pegel-fenster' });
+  let dlg;
+  const zeichnen = () => inhalt.replaceChildren(pegelDetail(g, {
+    verlauf: verlaufLaden(g.id), eingebettet: true,
+    onBack: () => dlg.close(), backLabel: 'Pegel-Details schließen',
+    onShare: () => sharePegel(g, true),
+    slips: slipsAmPegel(g, state.places), onSlip: (p) => { dlg.close(); selectPlace(p.id, { full: true }); },
+    onStern: () => { zeichnen(); inhalt.querySelector('.pm-stern')?.focus(); },
+  }));
+  zeichnen();
+  dlg = fenster({ inhalt, klasse: 'wxd-pegel', labelId: 'pd-name', opener });
+}
+
+/** Pegel-Detailseite aus einer Standortansicht öffnen; „Zurück“ führt wieder zum Standort (Merkliste). */
 function pegelSeiteOeffnen(id) {
   state.pegelId = id; state.pegelFluss = null;
   setView('pegel');

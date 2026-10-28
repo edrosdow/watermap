@@ -197,16 +197,30 @@ with sync_playwright() as p:
         pg.locator('#detail .detail-scroll').evaluate('e => e.scrollTop = 99999'); pg.wait_for_timeout(100)
         pg.screenshot(path=str(SHOTS / f'{name}_4_detail_unten.png'))
 
-        # Slipanlage am selben Gewässer: Pegel-Kasten führt zur Pegel-Detailseite, Zurück wieder zur Slipanlage
+        # Slipanlage am selben Gewässer: Pegel-Kasten öffnet ein Fenster (wie „Wetter und Wind“), „×“ führt zurück zur Slipanlage
         sid = pg.evaluate("""(k) => { const st = window.__watermap.state, g = st.gauges.find(x => x.id === k), p = st.places.find(x => x.type === 'slip');
             p.water = { name: 'Rhein' }; p.lat = g.lat + 0.01; p.lon = g.lon; return p.id; }""", KOELN)
         pg.evaluate("(id) => window.__watermap.selectPlace(id, { full: true })", sid); pg.wait_for_selector('#detail .pegel-box', timeout=8000)
         box = pg.locator('#detail .pegel-box')
         check(box.get_attribute('href') == '#pegel/' + KOELN and 'Details ›' in box.inner_text() and 'Pegel-Ampel' not in box.inner_text(), f'{name}: Pegel-Kasten „Details ›“ ({box.inner_text()!r})')
-        box.click(); pg.wait_for_selector('.pegelseite .pd-name', timeout=8000)
-        check(pg.url.endswith('#pegel/' + KOELN) and pg.inner_text('.pegelseite .pd-name') == 'Köln', f'{name}: Klick öffnet die Pegel-Detailseite')
-        pg.locator('.pegelseite .pd-icon').first.click(); pg.wait_for_timeout(500)
-        check('#pegel/' not in pg.url and pg.locator('#pegelseite').is_hidden(), f'{name}: Zurück führt wieder zum Standort ({pg.url[-40:]})')
+        box.click(); pg.wait_for_selector('dialog.wxd-pegel[open] .pd-name', timeout=8000)
+        check(pg.inner_text('dialog.wxd-pegel .pd-name') == 'Köln' and '#pegel/' not in pg.url and pg.locator('#pegelseite').is_hidden() and pg.locator('#detail:not([hidden])').count() == 1,
+              f'{name}: Klick öffnet die Pegel-Details im Fenster, keine neue Seite ({pg.url[-30:]})')
+        pg.wait_for_selector('dialog.wxd-pegel .gc-line', timeout=8000)
+        check(pg.locator('dialog.wxd-pegel .pd-karte').count() >= 2 and pg.locator('dialog.wxd-pegel .pd-kachel', has_text='Passt mein Boot?').count() == 1 and pg.locator('dialog.wxd-pegel .pd-slips').count() == 1,
+              f'{name}: Fenster zeigt Skala, Verlauf, „Passt mein Boot?“ und Slipanlagen am Pegel')
+        r = pg.locator('dialog.wxd-pegel').bounding_box(); vp = pg.viewport_size
+        if mobile: check(abs(r['y'] + r['height'] - vp['height']) <= 1 and r['width'] >= vp['width'] - 1, f'{name}: Fenster sitzt unten, volle Breite')
+        else: check(abs((r['x'] + r['width'] / 2) - vp['width'] / 2) <= 2 and r['width'] <= 621, f'{name}: Fenster mittig, höchstens 620 px')
+        pg.screenshot(path=str(SHOTS / f'{name}_3b_pegel_fenster.png'))
+        pg.locator('dialog.wxd-pegel .pd-icon').first.click(); pg.wait_for_timeout(300)
+        check(pg.locator('dialog.wxd-pegel').count() == 0 and pg.locator('#detail:not([hidden]) .pegel-box').count() == 1 and pg.evaluate("document.activeElement.classList.contains('pegel-box')"),
+              f'{name}: „×“ schließt das Fenster, die Slipanlage bleibt offen, Fokus zurück auf den Kasten')
+        box.click(); pg.wait_for_selector('dialog.wxd-pegel[open] .pd-name'); pg.keyboard.press('Escape'); pg.wait_for_timeout(300)
+        check(pg.locator('dialog.wxd-pegel').count() == 0 and pg.locator('#detail:not([hidden])').count() == 1, f'{name}: Escape schließt nur das Fenster')
+        box.click(); pg.wait_for_selector('dialog.wxd-pegel[open] .pm-stern'); pg.click('dialog.wxd-pegel .pm-stern'); pg.wait_for_timeout(300)
+        check(pg.locator('dialog.wxd-pegel[open]').count() == 1 and pg.get_attribute('dialog.wxd-pegel .pm-stern', 'aria-pressed') == 'true', f'{name}: Stern im Fenster setzt „Meine Pegel“ und bleibt im Fenster')
+        pg.click('dialog.wxd-pegel .pm-stern'); pg.wait_for_timeout(200); pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
 
         # Weitere Zustände
         for uuid, expect in [(STATIONS[1]['uuid'], 'Niedrig'), (STATIONS[2]['uuid'], 'Hoch'),
