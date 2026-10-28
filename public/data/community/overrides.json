@@ -12,9 +12,14 @@
         "url": "photos/node-632876845-mvjkywnp.jpg",
         "credit": "WaterMap-Community",
         "alt": "das ist ein Test"
+      },
+      {
+        "url": "photos/node-632876845-mvs80yba.jpg",
+        "credit": "WaterMap-Community",
+        "alt": ""
       }
     ],
-    "updated": "2026-10-27",
+    "updated": "2026-10-28",
     "fields": {
       "access": "public",
       "fee": false
