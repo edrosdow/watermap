@@ -166,8 +166,8 @@ def run(b, w, hh, mobile):
           f'{tag}: Werkzeuge Pegel-Ampel und Pegel-Alarm mit gewähltem Pegel')
     check('Angaben ohne Gewähr' in pg.inner_text('.pg-fuss'), f'{tag}: Fußnote')
     # Detailseite
-    pg.locator('.pg-tabelle .pg-zeile-btn', has_text='Vlotho').click(); pg.wait_for_selector('.pd-name')
-    check(pg.url.endswith('#pegel/' + U(1)) and pg.locator(f'{nav} [data-nav=pegel]').get_attribute('aria-current') == 'page', f'{tag}: Detailseite #pegel/<id>, Tab bleibt „Pegel“')
+    pg.locator('.pg-tabelle .pg-zeile-btn', has_text='Vlotho').click(); pg.wait_for_selector('dialog.wxd-pegel[open] .pd-name')
+    check(pg.url.endswith('#pegel') and pg.locator(f'{nav} [data-nav=pegel]').get_attribute('aria-current') == 'page', f'{tag}: Details im Fenster, Adresse #pegel, Tab bleibt „Pegel“')
     t = pg.inner_text('.pd')
     check('PEGEL · WESER · KM 201,4' in ' '.join(pg.inner_text('.pd-kicker').split()).upper() and pg.inner_text('.pd-name') == 'Vlotho' and '182' in pg.inner_text('.pd-wert'), f'{tag}: Kopf mit Kicker, Name, Wert')
     check(re.search(r'Gemessen \d\d:\d\d Uhr', t) is not None, f'{tag}: „Gemessen …“')
@@ -186,8 +186,8 @@ def run(b, w, hh, mobile):
     check(pg.evaluate("JSON.parse(localStorage.getItem('watermap.meinePegel'))") == [], f'{tag}: Stern entfernt aus „Meine Pegel“')
     pg.click('.pd-kopf .pm-stern'); pg.wait_for_timeout(100)
     check(pg.evaluate("JSON.parse(localStorage.getItem('watermap.meinePegel'))") == [U(1)] and pg.evaluate("localStorage.getItem('watermap.favorites.v1')") in (None, '[]'), f'{tag}: eigene Liste, nicht bei den Favoriten')
-    pg.go_back(); pg.wait_for_selector('.pg-titel')
-    check(pg.url.endswith('#pegel'), f'{tag}: Zurück-Taste → Dashboard')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+    check(pg.locator('dialog.wxd-pegel[open]').count() == 0 and pg.url.endswith('#pegel') and pg.locator('.pg-titel').is_visible(), f'{tag}: Esc schließt das Fenster → Dashboard')
     # Ohne Kennwerte und veraltet
     pg.evaluate(f"location.hash = '#pegel/{U(9)}'"); pg.wait_for_selector('.pd-name:has-text("Testpegel")')
     check(pg.locator('.pd .ps').count() == 0 and 'keine amtlichen Kennwerte' in pg.inner_text('.pd-klartext'), f'{tag}: ohne Kennwerte: keine Skala, Klartext erklärt')

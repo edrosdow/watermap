@@ -592,13 +592,14 @@ function pegelBox({ g, d, ampel }) {
 }
 
 /** Pegel-Details im Fenster über der Standortansicht: dieselbe Darstellung wie im Kartenpanel, „×“ führt zurück zum Standort. */
-function pegelFenster(g, opener) {
+function pegelFenster(g, opener, { karte = false } = {}) {
   const inhalt = h('div', { class: 'pegel-fenster' });
   let dlg;
   const zeichnen = () => inhalt.replaceChildren(pegelDetail(g, {
     verlauf: verlaufLaden(g.id), eingebettet: true,
     onBack: () => dlg.close(), backLabel: 'Pegel-Details schließen',
     onShare: () => sharePegel(g, true),
+    onKarte: karte ? () => { dlg.close(); pegelAufKarte(g); } : undefined,
     slips: slipsAmPegel(g, state.places), onSlip: (p) => { dlg.close(); selectPlace(p.id, { full: true }); },
     onStern: () => { zeichnen(); inhalt.querySelector('.pm-stern')?.focus(); },
   }));
@@ -606,11 +607,13 @@ function pegelFenster(g, opener) {
   dlg = fenster({ inhalt, klasse: 'wxd-pegel', labelId: 'pd-name', opener });
 }
 
-/** Pegel-Detailseite aus einer Standortansicht öffnen; „Zurück“ führt wieder zum Standort (Merkliste). */
-function pegelSeiteOeffnen(id) {
-  state.pegelId = id; state.pegelFluss = null;
-  setView('pegel');
-  history.replaceState({ pegelVon: 'standort' }, '', location.pathname + location.search + appliedHash);
+/** Pegel per ID im Fenster öffnen (Merkliste, Dashboard, Flussseite): bleibt auf der aktuellen Seite, Adresse unverändert. */
+async function pegelFensterOeffnen(id, opener = document.activeElement) {
+  let st;
+  try { st = await pegelLaden(); } catch { st = null; }
+  const g = st?.byId.get(id);
+  if (!g) { toast(st ? 'Dieser Pegel wurde nicht gefunden.' : 'Pegeldaten sind gerade nicht erreichbar.'); return; }
+  pegelFenster(g, opener, { karte: true });
 }
 
 
@@ -768,11 +771,7 @@ let dashboard = null, pegelTimer = null;
 function pegelCtx() {
   return {
     user: () => state.user, places: () => state.places, isMobile, toast,
-    open: (id) => {
-      state.pegelId = id; appliedHash = hashString();
-      history.pushState({ pegelVon: state.pegelFluss ? 'fluss' : 'dashboard' }, '', location.pathname + location.search + appliedHash);
-      pegelBereich();
-    },
+    open: (id) => pegelFensterOeffnen(id),
     fluss: (slug) => {
       state.pegelFluss = slug; state.pegelId = null; appliedHash = hashString();
       history.pushState({ pegelVon: 'dashboard' }, '', location.pathname + location.search + appliedHash);
@@ -851,7 +850,7 @@ function mehrBereich() {
     merkliste(root, {
       orte, pegelIds: ids, pegel,
       oeffneOrt: (id) => { setView('karte'); selectPlace(id, { full: true }); },
-      oeffnePegel: (id) => pegelSeiteOeffnen(id),
+      oeffnePegel: (id) => pegelFensterOeffnen(id),
       entferneOrt: (id) => { favorites.toggle(id); state.map?.refresh(id); },
       entfernePegel: (id) => meinePegel.entfernen(id),
       zurueck: () => { state.mehrSeite = null; writeHash(true); mehrBereich(); },
