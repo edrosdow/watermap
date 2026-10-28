@@ -169,7 +169,7 @@ def defaults(b):
         else:
             sb = pg.locator('#sidebar').bounding_box(); bn = pg.locator('#bottomnav').bounding_box()
             lp = float(pg.evaluate("getComputedStyle(document.querySelector('#list')).paddingBottom").replace('px', ''))
-            check(sb['y'] + sb['height'] >= bn['y'] + bn['height'] and lp >= pg.viewport_size['height'] - bn['y'] and abs(bn['y'] + bn['height'] - (pg.viewport_size['height'] - 28)) <= 1, f'{name}: Liste reicht bis unten, die schwebende Navigation darüber, unten Platz für sie ({lp:.0f} px)')
+            check(sb['y'] + sb['height'] >= bn['y'] + bn['height'] and lp >= pg.viewport_size['height'] - bn['y'] and abs(bn['y'] + bn['height'] - (pg.viewport_size['height'] - 10)) <= 1, f'{name}: Liste reicht bis unten, die schwebende Navigation darüber, unten Platz für sie ({lp:.0f} px)')
         pg.click(f'{nav} [data-nav=karte]'); pg.wait_for_timeout(300)
         check(not pg.locator('#sidebar').is_visible(), f'{name}: Liste wieder geschlossen')
         pg.click(f'{nav} [data-nav=mehr]'); pg.wait_for_selector('#mehrseite:not([hidden]) .bs-zeile')
@@ -527,7 +527,7 @@ def mobile(b):
     pg.click('.cat-slip'); pg.click('.cat-marina'); pg.wait_for_timeout(200)   # nur Tankstellen
     check(pg.evaluate("getComputedStyle(document.querySelector('.cat-fuel')).backgroundColor") == 'rgb(255, 255, 255)', 'Aktive Kategorie weiß gefüllt')
     bn = pg.locator('#bottomnav').bounding_box()
-    check(abs(bn['y'] + bn['height'] - (844 - 28)) <= 1 and pg.locator('#bottomnav .bn-item').count() == 5, 'Navigation unten: schwebende Leiste mit fünf Zielen')
+    check(abs(bn['y'] + bn['height'] - (844 - 10)) <= 1 and pg.locator('#bottomnav .bn-item').count() == 5, 'Navigation unten: schwebende Leiste mit fünf Zielen')
     plus = pg.locator('#bottomnav .bn-plus').bounding_box()
     check(plus['y'] >= bn['y'] and plus['y'] + plus['height'] <= bn['y'] + bn['height'], '„Melden“ sitzt innerhalb der Leiste')
     pg.click('#btn-naehe-m'); pg.wait_for_timeout(300)

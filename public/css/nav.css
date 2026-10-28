@@ -21,7 +21,7 @@
 .bottomnav { display: none; }
 
 /* Platz, den die schwebende Leiste unten braucht (Höhe + Abstand zum Rand + Safe-Area + etwas Luft) – überall als unterer Abstand nutzen */
-:root { --bn-h: 68px; --bn-rand: 28px; --bn-space: calc(var(--bn-h) + var(--bn-rand) + env(safe-area-inset-bottom, 0px) + 12px); }
+:root { --bn-h: 68px; --bn-rand: 10px; --bn-space: calc(var(--bn-h) + var(--bn-rand) + env(safe-area-inset-bottom, 0px) + 12px); }
 
 @media (max-width: 767px) {
   .topnav, .report-btn { display: none; }

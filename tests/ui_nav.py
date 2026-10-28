@@ -63,8 +63,8 @@ def run(b, w, hh):
     # ---- Aussehen und Maße
     bar = rect(pg, '#bottomnav')
     c = pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('#bottomnav')); return { pos: s.position, r: s.borderTopLeftRadius, bg: s.backgroundColor, bf: s.backdropFilter || s.webkitBackdropFilter || '', bw: s.borderTopWidth, z: s.zIndex }; })()")
-    check(c['pos'] == 'fixed' and abs(bar['x'] - 16) <= 1 and abs(bar['x'] + bar['w'] - (w - 16)) <= 1 and abs(bar['y'] + bar['h'] - (hh - 28)) <= 1 and abs(bar['h'] - 68) <= 1,
-          f'{tag}: Leiste schwebt (16 px seitlich, 28 px unten, 68 px hoch) {bar}')
+    check(c['pos'] == 'fixed' and abs(bar['x'] - 16) <= 1 and abs(bar['x'] + bar['w'] - (w - 16)) <= 1 and abs(bar['y'] + bar['h'] - (hh - 10)) <= 1 and abs(bar['h'] - 68) <= 1,
+          f'{tag}: Leiste schwebt (16 px seitlich, 10 px unten, 68 px hoch) {bar}')
     check(c['r'] == '34px' and c['bg'] == 'rgba(255, 255, 255, 0.82)' and 'blur(22px)' in c['bf'] and c['bw'] == '1px', f'{tag}: helles Glas, Ecken 34 px, Rand 1 px ({c})')
     labels = pg.locator('#bottomnav .bn-item').evaluate_all("els => els.map(e => e.getAttribute('aria-label'))")
     check([re.sub(r', .*$', '', l) for l in labels] == LABELS, f'{tag}: fünf Plätze in der Reihenfolge Karte · Pegel · Melden · Meldungen · Mehr ({labels})')
@@ -208,7 +208,7 @@ def run(b, w, hh):
     ctx, pg = page(b, w, hh)
     pg.goto(uf.BASE + 'pegel-ampel.html'); pg.wait_for_selector('#am-q'); pg.wait_for_timeout(700)
     b2 = rect(pg, '#bottomnav')
-    check(abs(b2['y'] + b2['h'] - (hh - 28)) <= 1 and pg.get_attribute(item('pegel'), 'aria-current') == 'page' and abs(cx(rect(pg, '#bottomnav .bn-ind')) - cx(rect(pg, item('pegel')))) <= 1.5,
+    check(abs(b2['y'] + b2['h'] - (hh - 10)) <= 1 and pg.get_attribute(item('pegel'), 'aria-current') == 'page' and abs(cx(rect(pg, '#bottomnav .bn-ind')) - cx(rect(pg, item('pegel')))) <= 1.5,
           f'{tag}: Pegel-Ampel: gleiche Leiste, „Pegel“ markiert')
     tiefstes = pg.evaluate("() => { window.scrollTo(0, document.documentElement.scrollHeight); return Math.max(...[...document.querySelectorAll('body > *:not(nav):not(script)')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.bottom)); }")
     check(tiefstes <= b2['y'] + 1, f'{tag}: Pegel-Ampel: der letzte Inhalt liegt über der Leiste ({tiefstes:.0f} ≤ {b2["y"]:.0f})')
