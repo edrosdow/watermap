@@ -10,7 +10,8 @@ import { buildIndex, searchLocal, geocode } from './search.js';
 import { favorites, prefs } from './favorites.js';
 import { openForm } from './forms.js';
 import { renderDetail, placeTags, tagRow, routeLink } from './detail.js';
-import { mountNav, popover, swipeToClose } from './nav.js';
+import { mountNav, popover } from './nav.js';
+import { wischenZuMachen } from './wischen.js';
 import { bewerte } from './ampel-logik.js';
 import { aktivLaden, ausgeblendetAnzahl, ausgeblendetZuruecksetzen, gesehenSetzen, listeLaden, neueAnzahl, senden, standortLaden, statusZeile, vorOrtKarte, zusammenfassen, TYPEN as MELD_TYPEN } from './meldungen.js';
 import { openLageForm } from './lage-form.js';
@@ -1449,7 +1450,7 @@ function wireStatic() {
   el.dlg.addEventListener('click', (e) => { if (e.target === el.dlg) el.dlg.close(); });
   $('#btn-locate').addEventListener('click', () => locate().catch(() => {}));
   $('#list-close').addEventListener('click', () => setView('karte'));
-  swipeToClose(el.peek, closeDetail, () => !!state.peekId);
+  wischenZuMachen({ schliessen: { '#peek': closeDetail, '#detail': closeDetail }, mobil: isMobile });
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || el.dlg.open || filterPop.isOpen || reportPop.isOpen || $('#naehe-bezug[open]') || $('#pa-pop[open]') || $('dialog.lightbox[open]') || $('dialog.wxd[open]') || el.suggest.offsetParent) return;
     if (state.selectedId || state.gaugeId || state.extraId || state.peekId || state.gaugePeekId) closeDetail();

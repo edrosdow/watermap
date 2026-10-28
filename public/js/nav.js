@@ -219,27 +219,6 @@ export function popover(dialog, { isMobile, align = 'left' }) {
   });
   // Modal: Klick auf den abgedunkelten Rand schließt
   dialog.addEventListener('click', (e) => { if (e.target === dialog) close(); });
-  swipeToClose(dialog, close, () => dialog.classList.contains('is-sheet'));
   window.addEventListener('resize', () => { if (dialog.open && !isMobile()) place(); });
   return { open, close, toggle: (from) => (dialog.open ? close() : open(from)), get isOpen() { return dialog.open; } };
-}
-
-/** Wischen nach unten schließt ein Sheet (nur, wenn sein Inhalt ganz oben steht). */
-export function swipeToClose(el, close, enabled = () => true) {
-  let y0 = null, dy = 0;
-  el.addEventListener('touchstart', (e) => {
-    const scroller = e.target.closest('.sheet-scroll');
-    y0 = enabled() && (!scroller || scroller.scrollTop <= 0) ? e.touches[0].clientY : null; dy = 0;
-  }, { passive: true });
-  el.addEventListener('touchmove', (e) => {
-    if (y0 === null) return;
-    dy = e.touches[0].clientY - y0;
-    if (dy > 0) el.style.transform = `translateY(${dy}px)`;
-  }, { passive: true });
-  el.addEventListener('touchend', () => {
-    if (y0 === null) return;
-    el.style.transform = '';
-    if (dy > 70) close();
-    y0 = null;
-  });
 }
