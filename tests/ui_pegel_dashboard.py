@@ -1,7 +1,7 @@
 """UI-Test Bereich „Pegel“ (Dashboard, Detailseite, Pegel auf der Karte) mit nachgebildetem PEGELONLINE und den Daten aus ui_full.py.
 Start: python3 tests/ui_pegel_dashboard.py [screenshots-ordner]"""
 import datetime as dt, importlib.util, json, math, pathlib, re, sys, tempfile
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from playwright.sync_api import sync_playwright
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -53,6 +53,31 @@ def handler(route):
     if m and m.group(1) in BY_ID: return route.fulfill(status=200, content_type='application/json', body=json.dumps(measurements(m.group(1))))
     return route.fulfill(status=404, body='[]')
 
+
+# Wetter für den Wochenend-Ausblick (Bright-Sky-Format, wie ui_wetter.py)
+weather = {'gust': 26.0}
+def wetter_handler(route):
+    u = urlparse(route.request.url); q = parse_qs(u.query); path = u.path
+    j = lambda body: route.fulfill(status=200, content_type='application/json', body=json.dumps(body))
+    if path.endswith('/weather'):
+        start = dt.datetime.fromisoformat(q['date'][0].replace('Z', '+00:00')).replace(minute=0, second=0, microsecond=0)
+        end = dt.datetime.fromisoformat(q['last_date'][0].replace('Z', '+00:00'))
+        out, tt = [], start
+        while tt <= end:
+            out.append({'timestamp': iso(tt.astimezone()), 'source_id': 2, 'temperature': 14.0, 'icon': 'partly-cloudy-day', 'wind_speed': 12.0, 'wind_direction': 225,
+                        'wind_gust_speed': weather['gust'], 'precipitation': 0.0, 'precipitation_probability': 5})
+            tt += dt.timedelta(hours=1)
+        return j({'weather': out, 'sources': [{'id': 2, 'observation_type': 'forecast', 'station_name': 'TEST'}]})
+    if path.endswith('/alerts'): return j({'alerts': [], 'location': {'name': 'Test', 'warn_cell_id': 1}})
+    if path.endswith('/current_weather'): return j({'weather': {'timestamp': iso(NOW), 'temperature': 12.0, 'icon': 'cloudy', 'wind_speed_10': 10.0, 'wind_direction_10': 200, 'wind_gust_speed_10': 20.0}, 'sources': []})
+    return route.fulfill(status=404, body='{}')
+
+def wochenende_namen(heute=None):
+    heute = heute or dt.date.today(); w = (heute.weekday() + 1) % 7   # 0 = Sonntag wie in JS
+    if w == 6: return ['Samstag', 'Sonntag']
+    if w == 0: return ['Sonntag', 'Montag']
+    return ['Samstag', 'Sonntag']
+
 problems = []
 def check(cond, msg):
     print(('OK   ' if cond else 'FAIL ') + msg, flush=True)
@@ -62,6 +87,7 @@ def page(b, w, hh, mobile, init=''):
     ctx = b.new_context(viewport={'width': w, 'height': hh}, is_mobile=mobile, has_touch=mobile, device_scale_factor=1, locale='de-DE', service_workers='block')
     uf.lib_routes(ctx)
     ctx.route('**/api/pegel/**', handler)
+    ctx.route('**/api/wetter/**', wetter_handler)
     ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))
     ctx.add_init_script("try { localStorage.setItem('watermap.geoAsked', '1'); " + init + " } catch {}")
     pg = ctx.new_page(); errs = []
@@ -84,14 +110,18 @@ def run(b, w, hh, mobile):
     check(pg.url.endswith('#pegel') and pg.locator(f'{nav} [data-nav=pegel]').get_attribute('aria-current') == 'page', f'{tag}: Adresse #pegel, „Pegel“ aktiv')
     check(pg.locator('.shell').is_hidden() and pg.locator('.toolbar').is_hidden(), f'{tag}: Karte und Kategorien ausgeblendet')
     pg.wait_for_selector('.pm-karte')
-    check(re.search(r'Stand \d\d:\d\d · alle 15 Min\. aktualisiert', pg.inner_text('.pg-stand')) is not None, f'{tag}: Stand mit Uhrzeit')
-    z = {k: pg.inner_text(f'.pg-zaehler.is-{k} strong') for k in ['hsw', 'high', 'low', 'normal']}
-    check(z == {'hsw': '1', 'high': '1', 'low': '2', 'normal': '5'}, f'{tag}: Lage heute ({z})')
-    check(pg.locator('.pg-zaehler.is-normal').is_visible() != mobile, f'{tag}: „Normal“ nur am Desktop')
+    check(re.search(r'^Stand \d\d:\d\d · WSV/PEGELONLINE$', pg.inner_text('.pg-stand')) is not None, f'{tag}: „Stand <Uhrzeit> · WSV/PEGELONLINE“ ({pg.inner_text(".pg-stand")!r})')
+    tabs = pg.locator('.pg-tabs[role=tablist] [role=tab]')
+    check(tabs.count() == 2 and tabs.all_inner_texts() == ['Liste', 'Karte'] and tabs.nth(0).get_attribute('aria-selected') == 'true', f'{tag}: Umschalter Liste | Karte (tablist)')
+    if mobile: check(pg.locator('.app-header').is_hidden(), f'{tag}: Handy: Pegel-Start mit eigenem Kopf, ohne globales Suchfeld')
+    check(pg.locator('.pg-suche').count() == 1 and pg.get_attribute('#pg-suche', 'placeholder') == 'Pegel oder Gewässer suchen und merken', f'{tag}: EIN Suchfeld „Pegel oder Gewässer suchen und merken“')
+    check(pg.locator('#pa-pop').count() == 0 and pg.locator('.pg-fluesse, .fk').count() == 0, f'{tag}: kein Dialog „Pegel hinzufügen“, keine Fluss-Kacheln auf der Startansicht')
+    # Reihenfolge
+    ys = [pg.locator(s).bounding_box()['y'] for s in ['#pg-meine-t', '#pg-lage-t', '#pg-wz-t' if False else '.pg-werkzeuge']]
+    check(ys == sorted(ys), f'{tag}: Reihenfolge Meine Pegel → Lage in Deutschland → Werkzeuge')
     karten = pg.locator('.pg-meine .pm-karte')
     check(karten.count() == 1 and 'Vlotho' in karten.first.inner_text() and 'Meine Pegel' in pg.inner_text('#pg-meine-t'), f'{tag}: Pegel der Pegel-Ampel übernommen')
-    ym, yf = pg.locator('#pg-meine-t').bounding_box()['y'], pg.locator('#pg-fl-t').bounding_box()['y']
-    check((ym < yf) == (w < 768), f'{tag}: „Meine Pegel“ {"vor" if w < 768 else "nach"} „Flüsse im Überblick“')
+    check(pg.inner_text('.pg-lage-satz').strip() == 'Dein Pegel Vlotho: normal.', f'{tag}: Lage-Satz bei einem Pegel ({pg.inner_text(".pg-lage-satz")!r})')
     k = karten.first
     pg.wait_for_selector('.pm-karte .pm-spark')
     kt = k.inner_text()
@@ -101,28 +131,35 @@ def run(b, w, hh, mobile):
     check('Verlauf 7 Tage' in (k.locator('.pm-spark').get_attribute('aria-label') or ''), f'{tag}: Mini-Verlauf mit aria-label')
     hist = [c for c in api['calls'] if 'measurements' in c]
     check(len(hist) == 1, f'{tag}: Verlauf nur für sichtbare Karten geladen ({len(hist)})')
-    # Flüsse im Überblick: Kacheln statt Bänder (Weser zuerst wegen „Meine Pegel“, dann nach Schwere; Küste zuletzt)
-    check(pg.locator('.pg-band, .pg-legende').count() == 0, f'{tag}: keine Farbbänder und keine Band-Legende mehr')
-    namen = [t.strip() for t in pg.locator('.fk .fk-name').all_inner_texts()]
-    check(namen == ['Rhein', 'Weser', 'Küste'], f'{tag}: feste Kacheln (Rhein, Elbe, Weser, Donau, Main, Küste – soweit vorhanden) ({namen})')
-    check('Tippe auf einen Fluss für alle Pegel' in pg.inner_text('.pg-fluesse'), f'{tag}: Unterzeile der Kacheln')
-    rhein = pg.locator('.fk', has_text='Rhein')
+    # Lage in Deutschland: drei Zähler
+    z = {kk: pg.inner_text(f'.pg-zaehler.is-{kk} strong') for kk in ['hsw', 'high', 'low']}
+    check(z == {'hsw': '1', 'high': '1', 'low': '2'} and pg.locator('.pg-zaehler').count() == 3, f'{tag}: Lage in Deutschland: über HSW · hoch · niedrig ({z})')
+    zb = [pg.locator('.pg-zaehler').nth(i).bounding_box() for i in range(3)]
+    check(abs(zb[0]['y'] - zb[2]['y']) < 2 and zb[2]['x'] > zb[1]['x'] > zb[0]['x'], f'{tag}: die drei Zähler stehen in EINER Zeile')
+    check(pg.locator('.pg-zaehler.is-low').evaluate("e => getComputedStyle(e).borderBottomWidth") == '5px', f'{tag}: farbige Unterkante')
+    # Flüsse im Überblick: Zeile, Kacheln im Fenster
+    zeile = pg.locator('.pg-fl-zeile')
+    check('Flüsse im Überblick' in zeile.inner_text() and 'Rhein niedrig' in zeile.inner_text(), f'{tag}: Zeile „Flüsse im Überblick – Kurzfassung ›“ ({zeile.inner_text()!r})')
+    zeile.click(); pg.wait_for_selector('dialog.wxd-fluesse[open] .fk')
+    namen = [tt.strip() for tt in pg.locator('dialog.wxd-fluesse .fk .fk-name').all_inner_texts()]
+    check(namen == ['Rhein', 'Weser', 'Küste'] and 'Tippe auf einen Fluss für alle Pegel' in pg.inner_text('dialog.wxd-fluesse'), f'{tag}: Fluss-Kacheln im Fenster ({namen})')
+    rhein = pg.locator('dialog.wxd-fluesse .fk', has_text='Rhein')
     check(rhein.get_attribute('href') == '#pegel/fluss/rhein' and 'Kaub 72 cm' in rhein.inner_text(), f'{tag}: Kachel ist Link, tiefster Pegel')
-    weser = pg.locator('.fk', has_text='Weser')
+    weser = pg.locator('dialog.wxd-fluesse .fk', has_text='Weser')
     check('teils niedrig' in weser.inner_text() and '1 von 5 niedrig' in weser.inner_text() and 'Minden 96 cm' in weser.inner_text() and weser.locator('.fk-punkte i').count() == 5,
           f'{tag}: Kachel Weser „teils niedrig“, tiefster Pegel, Punkte nur mit Kennwerten')
-    check('Tide' in pg.locator('.fk', has_text='Küste').inner_text() and 'ohne Niedrig/Hoch-Bewertung' in pg.locator('.fk', has_text='Küste').inner_text(), f'{tag}: Kachel Küste mit „Tide“')
-    if not mobile and w >= 1024:
-        b0, b1, b2 = [pg.locator('.fk').nth(i).bounding_box() for i in range(3)]
-        check(abs(b0['y'] - b2['y']) < 2 and b2['x'] > b1['x'] > b0['x'], f'{tag}: Desktop drei Spalten in voller Breite')
-    elif mobile:
-        b0, b1, b2 = [pg.locator('.fk').nth(i).bounding_box() for i in range(3)]
-        check(abs(b0['y'] - b1['y']) < 2 and b2['y'] > b0['y'], f'{tag}: Handy zwei Spalten')
-    pg.click('.pg-fl-alle'); pg.wait_for_timeout(200)
-    mo = pg.locator('.fk-wz', has_text='Mosel')
+    check('Tide' in pg.locator('dialog.wxd-fluesse .fk', has_text='Küste').inner_text(), f'{tag}: Kachel Küste mit „Tide“')
+    pg.click('dialog.wxd-fluesse .pg-fl-alle'); pg.wait_for_timeout(200)
+    mo = pg.locator('dialog.wxd-fluesse .fk-wz', has_text='Mosel')
     check(mo.count() == 1 and 'über HSW' in mo.inner_text() and '2 Pegel' in mo.inner_text() and mo.get_attribute('href') == '#pegel/fluss/mosel', f'{tag}: Mosel in der kompakten Liste (über HSW)')
-    check(pg.locator('.fk-ohne').first.is_visible() and 'Kanäle und Gewässer ohne Bewertung' in pg.inner_text('.fk-weitere') and 'Test-See' in pg.inner_text('.fk-weitere'), f'{tag}: „Alle Gewässer“ mit Abschnitt ohne Bewertung')
-    pg.click('.pg-fl-alle'); pg.wait_for_timeout(200)
+    check(pg.locator('dialog.wxd-fluesse .fk-ohne').first.is_visible() and 'Test-See' in pg.inner_text('dialog.wxd-fluesse .fk-weitere'), f'{tag}: „Alle Gewässer“ mit Abschnitt ohne Bewertung')
+    pg.screenshot(path=str(SHOTS / f'pegel_{w}_1fluesse_fenster.png'))
+    pg.locator('dialog.wxd-fluesse .fk', has_text='Rhein').click(); pg.wait_for_selector('dialog.wxd-fluss[open] .pf-titel')
+    check(pg.locator('dialog.wxd-fluesse[open]').count() == 1 and 'Rhein' in pg.inner_text('dialog.wxd-fluss .pf-kopf') and pg.url.endswith('#pegel'), f'{tag}: Fluss öffnet als Fenster über dem Überblick, Adresse bleibt')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+    check(pg.locator('dialog.wxd-fluss[open]').count() == 0 and pg.locator('dialog.wxd-fluesse[open]').count() == 1, f'{tag}: Esc schließt nur das obere Fenster')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+    check(pg.locator('dialog.wxd-fluesse[open]').count() == 0, f'{tag}: zweites Esc schließt den Überblick')
     pg.screenshot(path=str(SHOTS / f'pegel_{w}_1dashboard.png'), full_page=True)
     ausserhalb = pg.evaluate("""() => [...document.querySelectorAll('.pm-karte')].flatMap(k => { const r = k.getBoundingClientRect();
         return [...k.querySelectorAll('.ps-labels > span')].filter(s => { const b = s.getBoundingClientRect(); return b.left < r.left + 4 || b.right > r.right - 4; }).map(s => s.textContent); })""")
@@ -141,49 +178,117 @@ def run(b, w, hh, mobile):
       box.remove(); return out;
     }""")
     check(not raus, f'{tag}: Skala-Beschriftungen bleiben bei engen Kennwerten innerhalb {raus}')
-    # Alle Pegel / Filter
-    # Suche steht in der Karte „Alle Pegel“ (nicht im Kopf), am Handy auch bei zugeklappter Liste
-    check(pg.locator('.pg-kopf .pg-suche').count() == 0 and pg.locator('.pg-alle .pg-alle-karte .pg-suche').is_visible(), f'{tag}: Suche in „Alle Pegel“ sichtbar')
-    pg.fill('.pg-alle .pg-suche', 'mosel'); pg.wait_for_timeout(200)
-    names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
-    check(sorted(names) == ['Cochem', 'Trier'] and pg.locator('.pg-tabelle').is_visible(), f'{tag}: Suche öffnet und filtert die Liste ({names})')
+    # Zähler → „Alle Pegel“ (Liste am Handy, Tabelle am Desktop)
+    check(pg.locator('#pg-alle').is_hidden(), f'{tag}: „Alle Pegel“ ohne Filter nicht sichtbar')
+    pg.click('.pg-zaehler.is-low'); pg.wait_for_timeout(300)
+    sel = '.pg-alle-liste .pa-text strong' if mobile else '.pg-tabelle tbody .pg-zeile-btn'
+    names = [n.strip() for n in pg.locator(sel).all_inner_texts()]
+    check(sorted(names) == ['Kaub', 'Minden'] and pg.locator('.pg-alle .ftag').get_attribute('aria-label') == 'Filter niedrig entfernen', f'{tag}: Zähler filtert „Alle Pegel“ ({names})')
+    check(pg.locator('.pg-tabelle').count() == (0 if mobile else 1), f'{tag}: {"Handy: Liste statt Tabelle" if mobile else "Desktop: Tabelle"}')
+    pg.screenshot(path=str(SHOTS / f'pegel_{w}_2alle.png'))
+    pg.click('.pg-alle .ftag'); pg.wait_for_timeout(200)
+    check(pg.locator('#pg-alle').is_hidden(), f'{tag}: Filter entfernen blendet „Alle Pegel“ aus')
+    # Suche: Treffer mit Name, Gewässer, Wert, Zustand und Stern
+    pg.fill('#pg-suche', 'mosel'); pg.wait_for_timeout(200)
+    tr = pg.locator('.pg-treffer .pa-zeile')
+    check(tr.count() == 2 and sorted(n.strip() for n in pg.locator('.pg-treffer .pa-text strong').all_inner_texts()) == ['Cochem', 'Trier'], f'{tag}: Suche nach Gewässer ({tr.count()} Treffer)')
+    tt = tr.filter(has_text='Trier')
+    check('Mosel' in tt.inner_text() and '640 cm' in tt.inner_text() and 'über HSW' in tt.inner_text() and tt.locator('.pm-stern').count() == 1, f'{tag}: Treffer mit Name, Gewässer, Wert, Zustand, Stern')
     pg.screenshot(path=str(SHOTS / f'pegel_{w}_5suche.png'))
-    pg.fill('.pg-alle .pg-suche', 'weser'); pg.wait_for_timeout(200)
-    names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
-    check(names == ['Hann. Münden', 'Hameln', 'Porta', 'Vlotho', 'Minden', 'Nienburg', 'Vegesack', 'Jade-Weser-Port'],
-          f'{tag}: Suche „Weser“: erst das Gewässer von der Quelle zur Mündung (Unterweser zuletzt), dann Namenstreffer ({names})')
-    pg.fill('.pg-alle .pg-suche', ''); pg.wait_for_timeout(200)
-    if mobile:
-        check(pg.locator('.pg-tabelle').is_hidden(), f'{tag}: Liste erst nach „Alle anzeigen“')
-        pg.click('.pg-alle .pg-link')
-    rows = pg.locator('.pg-tabelle tbody tr')
-    check(rows.count() == 14, f'{tag}: alle Pegel in der Liste ({rows.count()})')
-    names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
-    check(names[:5] == ['Jade-Weser-Port', 'Cochem', 'Trier', 'Kaub', 'Köln'] and pg.get_attribute('.pg-sort:has-text("Gewässer")', 'aria-pressed') == 'true',
-          f'{tag}: Standard nach Gewässer und km ({names[:5]})')
-    pg.click('.pg-zaehler.is-low'); pg.wait_for_timeout(300)
-    names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
-    check(sorted(names) == ['Kaub', 'Minden'] and pg.locator('.pg-filter .ftag').get_attribute('aria-label') == 'Filter Niedrigwasser entfernen', f'{tag}: Zähler filtert die Liste ({names})')
-    pg.fill('.pg-alle .pg-suche', 'mosel'); pg.wait_for_timeout(200)
-    names = [n.strip() for n in pg.locator('.pg-tabelle tbody .pg-zeile-btn').all_inner_texts()]
-    check(pg.locator('.pg-filter').count() == 0 and sorted(names) == ['Cochem', 'Trier'], f'{tag}: neue Suche entfernt den Filter „Niedrigwasser“ ({names})')
-    pg.click('.pg-zaehler.is-low'); pg.wait_for_timeout(300)
-    check(pg.input_value('.pg-alle .pg-suche') == '' and pg.locator('.pg-tabelle tbody tr').count() == 2, f'{tag}: Filter ersetzt die Suche')
-    pg.fill('.pg-alle .pg-suche', 'w'); pg.wait_for_timeout(200)
-    check(pg.locator('.pg-filter').count() == 0 and pg.locator('.pg-zaehler.is-aktiv').count() == 0, f'{tag}: Suche hebt auch den Zähler-Filter auf')
-    pg.click('.pg-zaehler.is-low'); pg.wait_for_timeout(300)
-    check(pg.input_value('.pg-alle .pg-suche') == '', f'{tag}: Zähler leert die Suche')
-    pg.click('.pg-filter .ftag'); pg.wait_for_timeout(200)
-    sorts = [t.replace('↑', '').strip() for t in pg.locator('.pg-sort').all_inner_texts()]
-    check(sorts == ['Gewässer', 'Entfernung'], f'{tag}: Sortierung nur nach Gewässer und Entfernung ({sorts})')
-    check(pg.locator('.pg-tabelle tbody tr', has_text='Testpegel').locator('.pz-tag').inner_text() == 'ohne Kennwerte', f'{tag}: Pegel ohne Kennwerte grau')
-    check(pg.locator('.pg-tabelle tbody tr', has_text='Altpegel').locator('.pz-tag').inner_text() == 'veraltet', f'{tag}: veraltete Messung gekennzeichnet')
+    tt.locator('.pm-stern').click(); pg.wait_for_timeout(300)
+    check(pg.evaluate("JSON.parse(localStorage.getItem('watermap.meinePegel'))") == [U(1), U(5)] and pg.input_value('#pg-suche') == 'mosel'
+          and pg.locator('.pg-treffer .pa-zeile', has_text='Trier').locator('.pm-stern').get_attribute('aria-pressed') == 'true', f'{tag}: Stern merkt den Pegel direkt, Suche bleibt')
+    check(sorted(n.strip() for n in pg.locator('.pg-meine .pm-name').all_inner_texts()) == ['Trier', 'Vlotho'], f'{tag}: „Meine Pegel“ aktualisiert sich')
+    pg.locator('.pg-treffer .pa-zeile', has_text='Trier').locator('.pm-stern').click(); pg.wait_for_timeout(300)
+    check(pg.evaluate("JSON.parse(localStorage.getItem('watermap.meinePegel'))") == [U(1)], f'{tag}: Stern entfernt wieder')
+    pg.fill('#pg-suche', 'xyz'); pg.wait_for_timeout(150)
+    check('Kein Pegel gefunden.' in pg.inner_text('.pg-treffer'), f'{tag}: kein Treffer')
+    pg.fill('#pg-suche', 'weser'); pg.wait_for_timeout(150)
+    check('8 Treffer' in pg.inner_text('.pg-treffer'), f'{tag}: Suche „Weser“ ({pg.inner_text(".pg-treffer .pa-kopf")})')
+    pg.fill('#pg-suche', ''); pg.wait_for_timeout(150)
+    check(pg.locator('.pg-treffer').is_hidden(), f'{tag}: leeres Suchfeld blendet die Treffer aus')
+    pg.click('.pg-hinzu'); pg.wait_for_timeout(200)
+    check(pg.evaluate("document.activeElement.id") == 'pg-suche', f'{tag}: „+ Pegel hinzufügen“ fokussiert die Suche')
     tw = pg.locator('.pg-wz.is-ampel'); al = pg.locator('.pg-wz.is-alarm')
-    check(tw.get_attribute('href') == f'./pegel-ampel?pegel={U(1)}' and al.get_attribute('href') == f'./pegel-ampel?pegel={U(1)}#am-alarm' and 'per E-Mail' in al.inner_text(),
+    check(tw.get_attribute('href') == f'./pegel-ampel?pegel={U(1)}' and al.get_attribute('href') == f'./pegel-ampel?pegel={U(1)}#am-alarm' and 'Passt mein Boot?' in tw.inner_text() and 'Pegel-Alarm' in al.inner_text(),
           f'{tag}: Werkzeuge Pegel-Ampel und Pegel-Alarm mit gewähltem Pegel')
     check('Angaben ohne Gewähr' in pg.inner_text('.pg-fuss'), f'{tag}: Fußnote')
+    # Ansicht „Karte“
+    pg.click('#pg-tab-karte'); pg.wait_for_selector('.pk-pille')
+    check(pg.url.endswith('#pegel/karte') and pg.evaluate("localStorage.getItem('watermap.pegel.ansicht')") == 'karte' and pg.get_attribute('#pg-tab-karte', 'aria-selected') == 'true', f'{tag}: Karte: Adresse #pegel/karte, Auswahl gemerkt')
+    check(pg.locator('.pk-pille').count() >= 3 and pg.locator('.pk-leg').count() == 4 and 'niedrig' in pg.inner_text('.pk-legende'), f'{tag}: Karte: Pegel als Pillen im Ausschnitt, Legende ({pg.locator(".pk-pille").count()})')
+    pg.wait_for_timeout(300)
+    zahlen = pg.locator('.pk-pille .pk-zahl').all_inner_texts()
+    check('182' in zahlen and all(z.isdigit() for z in zahlen), f'{tag}: Karte: Wert in cm in der Pille ({zahlen})')
+    check(pg.locator('.pk-pille.is-gemerkt').count() >= 1 and pg.locator('.pk-pille.is-low, .pk-pille.is-normal').count() >= 1 and pg.locator('.pk-pille').first.evaluate("e => e.style.getPropertyValue('--pk')") != '', f'{tag}: Karte: Zustandsfarbe, gemerkte Pegel größer')
+    pg.screenshot(path=str(SHOTS / f'pegel_{w}_6karte.png'))
+    # Pille antippen → Vorschau-Karte
+    pg.evaluate("document.querySelectorAll('.pk-pille')[1].closest('.pk-marker').dispatchEvent(new MouseEvent('click', { bubbles: true }))"); pg.wait_for_timeout(300)
+    if pg.locator('.pk-vorschau').is_hidden(): pg.locator('.pk-marker').nth(1).click(force=True); pg.wait_for_timeout(300)
+    check(pg.locator('.pk-vorschau').is_visible() and pg.locator('.pk-vorschau .pk-details').count() == 1 and pg.locator('.pk-vorschau .pk-merken').count() == 1, f'{tag}: Karte: Vorschau mit „Details“ und „Merken“')
+    check(pg.locator('.pk-pille.is-gewaehlt').count() == 1, f'{tag}: Karte: gewählter Pegel als dunkle Pille')
+    vname = pg.inner_text('.pk-v-name')
+    vorher = pg.get_attribute('.pk-vorschau .pk-merken', 'aria-pressed')
+    pg.click('.pk-vorschau .pk-merken'); pg.wait_for_timeout(200)
+    check(pg.get_attribute('.pk-vorschau .pk-merken', 'aria-pressed') != vorher, f'{tag}: Karte: Merken schaltet um ({vorher} → {pg.get_attribute(".pk-vorschau .pk-merken", "aria-pressed")})')
+    pg.screenshot(path=str(SHOTS / f'pegel_{w}_6karte_vorschau.png'))
+    pg.click('.pk-vorschau .pk-details'); pg.wait_for_selector('dialog.wxd-pegel[open] .pd-name')
+    check(pg.inner_text('dialog.wxd-pegel .pd-name') == vname and pg.url.endswith('#pegel/karte'), f'{tag}: Karte: „Details“ öffnet das Pegel-Fenster (Adresse bleibt)')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+    pg.reload(); pg.wait_for_selector('.pk-pille')
+    check(pg.url.endswith('#pegel/karte'), f'{tag}: Karte bleibt nach dem Neuladen (Direktlink)')
+    pg.click('#pg-tab-liste'); pg.wait_for_selector('.pg-lage-satz')
+    check(pg.url.endswith('#pegel') and pg.evaluate("localStorage.getItem('watermap.pegel.ansicht')") == 'liste', f'{tag}: Liste: Adresse #pegel, Auswahl gemerkt')
+    pg.evaluate("localStorage.setItem('watermap.pegel.ansicht', 'karte')"); pg.goto(uf.BASE); pg.wait_for_selector('.cat-slip')
+    pg.click(f'{nav} [data-nav=pegel]'); pg.wait_for_selector('.pk-pille')
+    check(pg.url.endswith('#pegel/karte'), f'{tag}: gemerkte Ansicht „Karte“ beim Öffnen des Tabs')
+    check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
+    ctx.close()
+
+    # Mehrere gemerkte Pegel: Lage-Satz, höchstens 3 Karten, Wochenende
+    ctx, pg = page(b, w, hh, mobile, init="localStorage.setItem('watermap.meinePegel', JSON.stringify(['%s','%s','%s','%s']));" % (U(1), U(2), U(5), U(8)))
+    weather['gust'] = 26.0
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pg-lage-satz'); pg.wait_for_selector('.pm-karte .pm-spark')
+    check(pg.inner_text('.pg-lage-satz').strip() == 'Deine 4 Pegel: 2 normal, Minden niedrig, Trier über HSW und steigend.', f'{tag}: Lage-Satz ({pg.inner_text(".pg-lage-satz")!r})')
+    check(pg.locator('.pg-lage-satz .ls-gelb').inner_text() == 'Minden niedrig' and pg.locator('.pg-lage-satz .ls-rot').inner_text() == 'Trier über HSW und steigend', f'{tag}: auffällige Pegel farbig, mit Text')
+    check(pg.locator('.pg-meine .pm-karte').count() == 3 and pg.inner_text('.pg-weitere') == '+ 1 weitere Pegel (Köln) ›', f'{tag}: höchstens 3 Karten, „+ 1 weitere Pegel (Köln) ›“')
+    pg.click('.pg-weitere'); pg.wait_for_timeout(200)
+    check(pg.locator('.pg-meine .pm-karte').count() == 4, f'{tag}: „+ weitere“ zeigt alle')
+    pg.wait_for_selector('.pg-wo-tag', timeout=8000)
+    check(pg.locator('.pg-wochenende').is_visible() and [x.strip() for x in pg.locator('.pg-wo-tag strong').all_inner_texts()] == wochenende_namen(), f'{tag}: Wochenend-Ausblick mit den zwei Tagen ({pg.locator(".pg-wo-tag strong").all_inner_texts()})')
+    wo = pg.inner_text('.pg-wochenende')
+    check('Hochwasser' in wo and 'Minden knapp' in wo and 'gute Bedingungen' not in wo and '14°' in wo and 'Pegel: Stand heute' in wo and 'Wind 3 Bft' in wo, f'{tag}: Etiketten „Hochwasser“, „Minden knapp“, Wetter, Hinweis „Stand heute“ ({wo!r})')
+    pg.screenshot(path=str(SHOTS / f'pegel_{w}_3wochenende.png'), full_page=True)
+    ctx.close()
+    # nur normale Pegel + starke Böen / ruhig
+    ctx, pg = page(b, w, hh, mobile, init="localStorage.setItem('watermap.meinePegel', JSON.stringify(['%s','%s']));" % (U(1), U(8)))
+    weather['gust'] = 45.0
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pg-wo-tag', timeout=10000)
+    check('windig' in pg.inner_text('.pg-wochenende') and 'Böen 6 Bft' in pg.inner_text('.pg-wochenende') and 'gute Bedingungen' not in pg.inner_text('.pg-wochenende'), f'{tag}: starke Böen → „windig“, „Böen 6 Bft“')
+    ctx.close()
+    ctx, pg = page(b, w, hh, mobile, init="localStorage.setItem('watermap.meinePegel', JSON.stringify(['%s','%s']));" % (U(1), U(8)))
+    weather['gust'] = 20.0
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pg-wo-tag', timeout=10000)
+    check('gute Bedingungen' in pg.inner_text('.pg-wochenende') and pg.locator('.pg-wo-et.is-gruen').count() == 2, f'{tag}: alle Pegel normal und ruhig → „gute Bedingungen“')
+    ctx.close()
+    # ohne Wetterdaten: kein Ausblick
+    ctx, pg = page(b, w, hh, mobile, init="localStorage.setItem('watermap.meinePegel', JSON.stringify(['%s']));" % U(1))
+    pg.route('**/api/wetter/**', lambda r: r.fulfill(status=502, body='x'))
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pg-lage-satz'); pg.wait_for_timeout(800)
+    check(pg.locator('.pg-wochenende').is_hidden(), f'{tag}: ohne Wetterdaten kein Wochenend-Ausblick (nichts erfunden)')
+    ctx.close()
+    # ohne gemerkte Pegel: kein Ausblick, kein Lage-Satz
+    ctx, pg = page(b, w, hh, mobile, init="localStorage.setItem('watermap.meinePegel.ampel', '1');")
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pg-meine'); pg.wait_for_timeout(500)
+    check(pg.locator('.pg-wochenende').is_hidden() and pg.locator('.pg-lage-satz').is_hidden(), f'{tag}: ohne gemerkte Pegel weder Lage-Satz noch Wochenend-Ausblick')
+    ctx.close()
+    # erneut mit der Pegel-Ampel-Übernahme für den Rest
+    ctx, pg = page(b, w, hh, mobile, init="if (!localStorage.getItem('watermap.ampel')) localStorage.setItem('watermap.ampel', JSON.stringify({ pegel: '%s', min: 150 }));" % U(1))
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pm-karte')
+
     # Detailseite
-    pg.locator('.pg-tabelle .pg-zeile-btn', has_text='Vlotho').click(); pg.wait_for_selector('dialog.wxd-pegel[open] .pd-name')
+    pg.fill('#pg-suche', 'vlotho'); pg.wait_for_timeout(150)
+    pg.locator('.pg-treffer .pg-treffer-btn', has_text='Vlotho').click(); pg.wait_for_selector('dialog.wxd-pegel[open] .pd-name')
     check(pg.url.endswith('#pegel') and pg.locator(f'{nav} [data-nav=pegel]').get_attribute('aria-current') == 'page', f'{tag}: Details im Fenster, Adresse #pegel, Tab bleibt „Pegel“')
     t = pg.inner_text('.pd')
     check('PEGEL · WESER · KM 201,4' in ' '.join(pg.inner_text('.pd-kicker').split()).upper() and pg.inner_text('.pd-name') == 'Vlotho' and '182' in pg.inner_text('.pd-wert'), f'{tag}: Kopf mit Kicker, Name, Wert')
@@ -204,7 +309,7 @@ def run(b, w, hh, mobile):
     pg.click('.pd-kopf .pm-stern'); pg.wait_for_timeout(100)
     check(pg.evaluate("JSON.parse(localStorage.getItem('watermap.meinePegel'))") == [U(1)] and pg.evaluate("localStorage.getItem('watermap.favorites.v1')") in (None, '[]'), f'{tag}: eigene Liste, nicht bei den Favoriten')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
-    check(pg.locator('dialog.wxd-pegel[open]').count() == 0 and pg.url.endswith('#pegel') and pg.locator('.pg-titel').is_visible(), f'{tag}: Esc schließt das Fenster → Dashboard')
+    check(pg.locator('dialog.wxd-pegel[open]').count() == 0 and pg.url.endswith('#pegel') and pg.locator('.pg-titel').is_visible() and pg.input_value('#pg-suche') == 'vlotho', f'{tag}: Esc schließt das Fenster → Dashboard, Suche bleibt')
     # Ohne Kennwerte und veraltet
     pg.evaluate(f"location.hash = '#pegel/{U(9)}'"); pg.wait_for_selector('.pd-name:has-text("Testpegel")')
     check(pg.locator('.pd .ps').count() == 0 and 'keine amtlichen Kennwerte' in pg.inner_text('.pd-klartext'), f'{tag}: ohne Kennwerte: keine Skala, Klartext erklärt')
@@ -238,7 +343,7 @@ def run(b, w, hh, mobile):
     # Leere Liste: ohne Position Hinweis, mit Position die 3 nächsten
     ctx, pg = page(b, w, hh, mobile, init="localStorage.setItem('watermap.meinePegel.ampel', '1');")
     pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pg-meine')
-    check(pg.locator('.pg-meine .pm-karte').count() == 0 and 'Pegel hinzufügen“' in pg.inner_text('.pg-meine'), f'{tag}: leer ohne Position: Hinweis')
+    check(pg.locator('.pg-meine .pm-karte').count() == 0 and 'Noch keine Pegel gemerkt' in pg.inner_text('.pg-meine'), f'{tag}: leer ohne Position: Hinweis')
     pg.evaluate("window.__watermap.state.user = { lat: 52.2, lon: 8.9 }")
     pg.click('.pg-neu'); pg.wait_for_selector('.pg-meine .pm-karte')
     names = [n.strip() for n in pg.locator('.pg-meine .pm-name').all_inner_texts()]
@@ -248,31 +353,6 @@ def run(b, w, hh, mobile):
     pg.click('.pg-neu'); pg.wait_for_timeout(500)
     check('Stand von' in pg.inner_text('.pg-stand') and pg.locator('.pg-meine .pm-karte').count() == 3, f'{tag}: offline mit „Stand von …“ und letzten Werten')
     api['fail'] = False
-    # „Pegel hinzufügen“: eigenes Fenster statt Sprung zur Suche
-    y0 = pg.evaluate('scrollY')
-    pg.click('.pg-hinzu'); pg.wait_for_selector('#pa-pop[open]'); pg.wait_for_timeout(200)
-    dlg = pg.locator('#pa-pop')
-    check(('is-sheet' if mobile else 'is-drop') in dlg.get_attribute('class') and pg.evaluate("document.activeElement.classList.contains('pa-suche')")
-          and pg.evaluate('scrollY') == y0, f'{tag}: Fenster öffnet ({"Sheet" if mobile else "Dropdown"}), Fokus im Suchfeld, Seite springt nicht')
-    box = dlg.bounding_box()
-    check(box['y'] >= 0 and box['y'] + box['height'] <= hh + 1 and box['x'] >= 0 and box['x'] + box['width'] <= w + 1, f'{tag}: Fenster ganz sichtbar ({box})')
-    namen = [n.strip() for n in dlg.locator('.pa-text strong').all_inner_texts()]
-    check(pg.inner_text('.pa-kopf') == 'In deiner Nähe' and len(namen) == 8 and namen[0] == 'Vlotho', f'{tag}: ohne Suche die nächsten Pegel ({namen[:3]})')
-    pg.fill('.pa-suche', 'mosel'); pg.wait_for_timeout(150)
-    namen = [n.strip() for n in dlg.locator('.pa-text strong').all_inner_texts()]
-    check(pg.inner_text('.pa-kopf') == '2 Treffer' and sorted(namen) == ['Cochem', 'Trier'], f'{tag}: Suche nach Gewässer ({namen})')
-    pg.screenshot(path=str(SHOTS / f'pegel_{w}_4hinzufuegen.png'))
-    knopf = dlg.locator('.pa-zeile', has_text='Trier').locator('.pa-knopf')
-    check(knopf.get_attribute('aria-label') == 'Trier zu „Meine Pegel“ hinzufügen', f'{tag}: Knopf „+“ mit aria-label')
-    knopf.click(); pg.wait_for_timeout(200)
-    check(knopf.get_attribute('aria-pressed') == 'true' and pg.locator('#pa-pop[open]').count() == 1, f'{tag}: hinzugefügt, Fenster bleibt offen')
-    check(pg.evaluate("JSON.parse(localStorage.getItem('watermap.meinePegel'))") == [U(5)], f'{tag}: in „Meine Pegel“ gespeichert')
-    pg.click('#pa-pop .pop-foot .btn'); pg.wait_for_timeout(200)
-    check(pg.locator('#pa-pop[open]').count() == 0 and [n.strip() for n in pg.locator('.pg-meine .pm-name').all_inner_texts()] == ['Trier'], f'{tag}: „Fertig“ schließt, Karte Trier unter „Meine Pegel“')
-    pg.click('.pg-hinzu'); pg.wait_for_selector('#pa-pop[open]'); pg.fill('.pa-suche', 'xyz'); pg.wait_for_timeout(100)
-    check(pg.inner_text('.pa-kopf') == 'Kein Pegel gefunden.', f'{tag}: kein Treffer')
-    pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
-    check(pg.locator('#pa-pop[open]').count() == 0, f'{tag}: Escape schließt')
     check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
     ctx.close()
 

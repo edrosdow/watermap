@@ -780,9 +780,17 @@ async function sharePegel(g, aufKarte = false) {
 
 // ============================================================ Bereich „Pegel“ (Dashboard und Detailseite)
 let dashboard = null, pegelTimer = null;
+const LS_PEGEL_ANSICHT = 'watermap.pegel.ansicht';
+state.pegelAnsicht = (() => { try { return localStorage.getItem(LS_PEGEL_ANSICHT) === 'karte' ? 'karte' : 'liste'; } catch { return 'liste'; } })();
+function pegelAnsichtSetzen(a) {
+  state.pegelAnsicht = a === 'karte' ? 'karte' : 'liste';
+  try { localStorage.setItem(LS_PEGEL_ANSICHT, state.pegelAnsicht); } catch { /* ohne Speicher */ }
+}
 function pegelCtx() {
   return {
     user: () => state.user, places: () => state.places, isMobile, toast,
+    ansicht: () => state.pegelAnsicht,
+    setAnsicht: (a) => { pegelAnsichtSetzen(a); writeHash(false); },
     open: (id) => pegelFensterOeffnen(id),
     fluss: (slug) => flussFenster(slug),
     // Zurück: in der App ein Schritt zurück (Detail → Fluss → Dashboard), sonst (direkter Link) zum Dashboard
@@ -919,6 +927,7 @@ async function pegelBereich() {
   if (!dashboard) dashboard = pegelDashboard(root, pegelCtx());
   clearInterval(pegelTimer);
   pegelTimer = setInterval(() => { if (state.view === 'pegel' && document.visibilityState === 'visible') pegelBereich(); }, CONFIG.PEGEL_REFRESH_MIN * 60e3);
+  document.body.classList.toggle('view-pegel-start', !state.pegelFluss && !state.pegelId);   // Handy: Pegel-Start hat einen eigenen Kopf (ohne globales Suchfeld)
   document.body.classList.toggle('view-fluss', !!(state.pegelFluss && !state.pegelId));   // Handy: Flussseite ohne globales Suchfeld
   if (state.pegelFluss && !state.pegelId) { await flussBereich(root); return; }
   if (!state.pegelId) {
@@ -1031,7 +1040,8 @@ function readHash() {
   const out = { view: null, sel: null, melden: false, pegel: null, fluss: null, mehr: null };
   for (const part of location.hash.replace(/^#/, '').split('&').filter(Boolean)) {
     const fl = part.match(/^pegel\/fluss\/([a-z0-9-]+)$/), pg = part.match(/^pegel\/(.+)$/), kp = part.match(/^karte\/pegel\/(.+)$/);
-    if (fl) { out.view = 'pegel'; out.fluss = fl[1]; }
+    if (part === 'pegel/karte') { out.view = 'pegel'; out.pegelKarte = true; }
+    else if (fl) { out.view = 'pegel'; out.fluss = fl[1]; }
     else if (pg) { out.view = 'pegel'; try { out.pegel = decodeURIComponent(pg[1]); } catch { /* ungültig */ } }
     else if (kp) { out.view = 'karte'; try { out.sel = { k: 'g', id: decodeURIComponent(kp[1]) }; } catch { /* ungültig */ } }
     else if (part === 'mehr/merkliste' || part === 'mehr/einstellungen') { out.view = 'mehr'; out.mehr = part.slice(5); }
@@ -1050,7 +1060,7 @@ function hashString() {
   const parts = [];
   if (state.view === 'meldungen') return '#meldungen';
   if (state.view === 'mehr') return state.mehrSeite ? `#mehr/${state.mehrSeite}` : '#mehr';
-  if (state.view === 'pegel') return '#' + (state.pegelId ? `pegel/${encodeURIComponent(state.pegelId)}` : state.pegelFluss ? `pegel/fluss/${state.pegelFluss}` : 'pegel');
+  if (state.view === 'pegel') return '#' + (state.pegelId ? `pegel/${encodeURIComponent(state.pegelId)}` : state.pegelFluss ? `pegel/fluss/${state.pegelFluss}` : state.pegelAnsicht === 'karte' ? 'pegel/karte' : 'pegel');
   if (selHash?.k === 'g' && state.view === 'karte') return `#karte/pegel/${encodeURIComponent(selHash.id)}`;
   if (state.view !== 'karte') parts.push(state.view);
   if (selHash) parts.push(`${selHash.k}=${encodeURIComponent(selHash.id)}`);
@@ -1089,7 +1099,7 @@ function setView(view, { push = true, spaeter = false, sofort = false } = {}) {
   document.body.classList.toggle('view-pegel', view === 'pegel');
   document.body.classList.toggle('view-meldungen', view === 'meldungen');
   document.body.classList.toggle('view-mehr', view === 'mehr');
-  if (view !== 'pegel') document.body.classList.remove('view-fluss');
+  if (view !== 'pegel') document.body.classList.remove('view-fluss', 'view-pegel-start');
   el.pegelseite.hidden = view !== 'pegel';
   el.meldungsseite.hidden = view !== 'meldungen';
   el.mehrseite.hidden = view !== 'mehr';
@@ -1114,7 +1124,8 @@ function onNav(id, e) {
 
 function handleHash({ initial = false } = {}) {
   if (!initial && location.hash === appliedHash) return;
-  const { view, sel, melden, pegel, fluss, mehr } = readHash();
+  const { view, sel, melden, pegel, fluss, mehr, pegelKarte } = readHash();
+  if (pegelKarte) pegelAnsichtSetzen('karte');   // „#pegel/karte“ wählt die Kartenansicht (und merkt sie); „#pegel“ behält die gemerkte Ansicht
   state.pegelId = view === 'pegel' ? pegel : null;
   state.pegelFluss = view === 'pegel' ? fluss : null;
   state.mehrSeite = view === 'mehr' ? mehr : null;

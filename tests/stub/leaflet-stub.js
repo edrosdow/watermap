@@ -16,7 +16,7 @@
   class Marker {
     constructor(latlng, opts) { this.ll = ll(latlng); this.opts = opts || {}; this.icon = this.opts.icon; this.h = {}; this.node = null; this.map = null; }
     on(ev, fn) { this.h[ev] = fn; return this; }
-    setIcon(i) { this.icon = i; if (this.map) this.map._draw(); }
+    setIcon(i) { this.icon = i; const m = this.map || this.group?.map; if (m) m._draw(); }
     setZIndexOffset(z) { this.zOffset = z; return this; }
     addTo(layer) { (layer._add ? layer._add(this) : layer.addLayer(this)); return this; }
     remove() { if (this.group) this.group._remove(this); }
@@ -65,6 +65,7 @@
     }
     addLayer(m) { const g = new Group(); g.map = this; this._groups.add(g); g._add(m); }
     setMinZoom(z) { this.minZoom = z; return this; }
+    panTo(l) { return this.setView(l); }
     getBoundsZoom(b) {
       const pts = b.pts, s = this.getSize(); let z = 18;
       while (z > 0) { const a = proj(Math.max(...pts.map(p => p.lat)), Math.min(...pts.map(p => p.lng)), z), d = proj(Math.min(...pts.map(p => p.lat)), Math.max(...pts.map(p => p.lng)), z); if (Math.abs(d.x - a.x) <= s.x && Math.abs(d.y - a.y) <= s.y) break; z--; }

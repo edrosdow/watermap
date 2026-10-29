@@ -37,7 +37,7 @@ const TREND_PFEIL = { 1: '↗', 0: '→', '-1': '↘' };
 export const trendText = (g, { kurz = false } = {}) => (g.trend === null ? '' : `${TREND_PFEIL[g.trend]} ${kurz && g.trend === 0 ? 'gleich' : TREND_TEXT[g.trend]}`);
 export const trendKlasse = (g) => (g.trend === 1 ? 'pt-up' : g.trend === -1 ? 'pt-down' : 'pt-flat');
 /** Pegel mit Trend aus dem Verlauf, wenn PEGELONLINE keinen liefert. */
-const mitTrend = (g, pts) => (g.trend === null ? { ...g, trend: trendAusVerlauf(pts) } : g);
+export const mitTrend = (g, pts) => (g.trend === null ? { ...g, trend: trendAusVerlauf(pts) } : g);
 
 /** „Etwas unter Mittelwasser, im normalen Bereich. 84 cm über dem mittleren Niedrigwasser.“ */
 export function klartext(g) {

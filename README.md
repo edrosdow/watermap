@@ -50,7 +50,7 @@ Eigene Seite unter `/pegel-ampel` (`public/pegel-ampel.html`, `js/ampel.js`, Log
 python3 -I -m unittest discover -s tests -v     # Importer, Validator, Moderationsskript
 python3 -I tests/ui_full.py                     # Oberfläche (braucht: pip install playwright pillow)
 python3 -I tests/ui_ampel.py                    # Pegel-Ampel
-python3 -I tests/ui_pegel_dashboard.py          # Pegel-Dashboard (375/390/1024/1440 px)
+python3 -I tests/ui_pegel_dashboard.py          # Pegel-Tab: Liste/Karte, Suche, Lage-Satz, Wochenende (375/390/1024/1440 px)
 python3 -I tests/ui_pegel_fluss.py              # Fluss-Kacheln, Flussseite, Tidepegel mit BSH-Vorhersage (375/390/1024/1440 px)
 python3 -I tests/ui_naehe.py                    # „In der Nähe“ (Bezugspunkt, Standortfreigabe, Liste; 375/390/1024/1440 px)
 python3 -I tests/ui_bereiche.py                 # Navigation, „Aktuelle Meldungen“, „Mehr“, Merkliste (360–1440 px)

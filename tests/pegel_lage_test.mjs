@@ -1,0 +1,52 @@
+// Tests für den Lage-Satz und den Wochenend-Ausblick (public/js/pegel-lage.js): node tests/pegel_lage_test.mjs
+import assert from 'node:assert/strict';
+import { lageText, lageSatz, wochenendTage, tageAusStunden, wochenendEtiketten } from '../public/js/pegel-lage.js';
+
+const g = (name, state, trend = null, extra = {}) => ({ id: name, name, state, trend, refs: { MNW: 100, MHW: 400 }, tide: false, ...extra });
+
+// Satz: normale nur zählen, auffällige mit Namen und Trend
+assert.equal(lageText([{ g: g('Vlotho', 'normal') }, { g: g('Petershagen', 'normal') }, { g: g('Minden', 'low', -1) }, { g: g('Trier', 'hsw', 0) }]),
+  'Deine 4 Pegel: 2 normal, Minden niedrig und fallend, Trier über HSW.');
+assert.equal(lageText([{ g: g('Vlotho', 'normal') }, { g: g('Minden', 'low', -1) }, { g: g('Trier', 'hsw') }]), 'Deine 3 Pegel: 1 normal, Minden niedrig und fallend, Trier über HSW.');
+assert.equal(lageText([{ g: g('A', 'normal') }, { g: g('B', 'normal') }]), 'Deine 2 Pegel: 2 normal.');
+assert.equal(lageText([{ g: g('Minden', 'high', 1) }, { g: g('B', 'normal') }]), 'Deine 2 Pegel: 1 normal, Minden hoch und steigend.');
+// gleichbleibend wird nicht genannt, veraltet ohne Trend
+assert.equal(lageText([{ g: g('Minden', 'low', 0) }, { g: g('B', 'old', 1) }]), 'Deine 2 Pegel: Minden niedrig, B veraltet.');
+// ein Pegel
+assert.equal(lageText([{ g: g('Vlotho', 'normal') }]), 'Dein Pegel Vlotho: normal.');
+assert.equal(lageText([{ g: g('Minden', 'low', -1) }]), 'Dein Pegel Minden: niedrig und fallend.');
+// Tide: auflaufend/ablaufend statt niedrig/hoch
+assert.equal(lageText([{ g: g('Cuxhaven', 'unknown', null, { tide: true, refs: {} }), tide: 'auflaufend' }, { g: g('B', 'normal') }]), 'Deine 2 Pegel: 1 normal, Cuxhaven auflaufend.');
+// Tonfarbe nie allein: jede Farbe hat den Text dazu
+const teile = lageSatz([{ g: g('A', 'normal') }, { g: g('Minden', 'low', -1) }]);
+assert.ok(teile.some(t => t.ton === 'gelb' && /niedrig/.test(t.text)));
+// keine gemerkten Pegel: kein Satz
+assert.equal(lageSatz([]), null); assert.equal(lageSatz(null), null);
+
+// Wochenend-Tage
+const d = (s) => new Date(s + 'T10:00:00');
+const tage = (s) => wochenendTage(d(s)).tage.map(t => t.toDateString());
+assert.deepEqual(tage('2026-10-28'), [new Date(2026, 9, 31).toDateString(), new Date(2026, 10, 1).toDateString()]);   // Mittwoch → Sa/So
+assert.deepEqual(tage('2026-10-30'), [new Date(2026, 9, 31).toDateString(), new Date(2026, 10, 1).toDateString()]);   // Freitag
+assert.deepEqual(tage('2026-10-31'), [new Date(2026, 9, 31).toDateString(), new Date(2026, 10, 1).toDateString()]);   // Samstag: heute + morgen
+assert.deepEqual(tage('2026-11-01'), [new Date(2026, 10, 1).toDateString(), new Date(2026, 10, 2).toDateString()]);   // Sonntag: heute + morgen
+assert.equal(wochenendTage(d('2026-10-28')).titel, 'Am Wochenende an deinen Pegeln');
+assert.equal(wochenendTage(d('2026-11-01')).titel, 'Heute und morgen an deinen Pegeln');
+
+// Tageswerte aus Stundenwerten (nur 6–21 Uhr, Maxima, Symbol am Mittag)
+const stunden = [];
+for (let h = 0; h < 24; h++) stunden.push({ t: new Date(2026, 9, 31, h).getTime(), temp: 8 + h / 2, icon: h >= 12 ? 'rain' : 'cloudy', wind: 10 + h, gust: h === 3 ? 90 : 20 + h });
+const [sa, so] = tageAusStunden(stunden, [new Date(2026, 9, 31), new Date(2026, 10, 1)]);
+assert.equal(so, null);   // keine Daten für den Sonntag
+assert.equal(sa.name, 'Samstag'); assert.equal(sa.icon, 'rain'); assert.equal(sa.gustKmh, 41);   // die Böe um 3 Uhr zählt nicht
+assert.equal(sa.windKmh, 31); assert.equal(sa.temp, 8 + 21 / 2);
+
+// Etiketten
+const n = g('A', 'normal'), niedrig = g('Minden', 'low', -1), hoch = g('Trier', 'hsw');
+assert.deepEqual(wochenendEtiketten({ pegel: [n, g('B', 'normal')], boeKmh: 20 }), [{ text: 'gute Bedingungen', ton: 'gruen' }]);
+assert.deepEqual(wochenendEtiketten({ pegel: [n], boeKmh: 45 }), [{ text: 'windig', ton: 'gelb' }]);   // Böen ab 39 km/h
+assert.deepEqual(wochenendEtiketten({ pegel: [n, niedrig], boeKmh: 20 }), [{ text: 'Minden knapp', ton: 'gelb' }]);
+assert.deepEqual(wochenendEtiketten({ pegel: [n, hoch], boeKmh: 20 }), [{ text: 'Hochwasser', ton: 'rot' }]);
+assert.deepEqual(wochenendEtiketten({ pegel: [n, g('Vlotho', 'normal')], boeKmh: 20, vorhersageNiedrig: ['Vlotho'] }), [{ text: 'Vlotho knapp', ton: 'gelb' }]);   // laut Vorhersage
+assert.deepEqual(wochenendEtiketten({ pegel: [n], boeKmh: null }), []);   // ohne Wetterdaten keine Zusage „gute Bedingungen“
+console.log('pegel_lage_test: OK');

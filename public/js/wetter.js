@@ -82,6 +82,26 @@ function normHours(raw, now) {
   return list.length ? list : null;
 }
 
+const cacheTage = new Map();
+
+/** Stundenwerte für die nächsten Tage (Wochenend-Ausblick im Pegel-Tab): ab heute 0 Uhr bis `tage` Tage voraus; null, wenn nicht erreichbar. */
+export function loadWetterStunden(lat, lon, { tage = 8, now = Date.now() } = {}) {
+  const key = `${lat.toFixed(2)},${lon.toFixed(2)},${tage}`;
+  const hit = cacheTage.get(key);
+  if (hit && now - hit.at < CONFIG.WETTER_CACHE_MIN * 60e3) return hit.promise;
+  const von = new Date(now); von.setHours(0, 0, 0, 0);
+  const bis = new Date(von.getTime() + tage * 86400e3);
+  const pos = { lat: lat.toFixed(4), lon: lon.toFixed(4) };
+  const promise = getJson('weather', { ...pos, date: von.toISOString(), last_date: bis.toISOString() }).then((raw) => {
+    const list = (raw?.weather || []).map(w => ({
+      t: Date.parse(w.timestamp), temp: num(w.temperature), icon: w.icon || null, wind: num(w.wind_speed), gust: num(w.wind_gust_speed),
+    })).filter(x => Number.isFinite(x.t)).sort((a, b) => a.t - b.t);
+    return list.length ? list : null;
+  }).catch(() => { cacheTage.delete(key); return null; });
+  cacheTage.set(key, { at: now, promise });
+  return promise;
+}
+
 function normAlerts(raw) {
   const list = (raw?.alerts || []).filter(a => a && SEVERITY[a.severity]).map(a => ({
     id: a.id ?? a.alert_id, severity: a.severity,
@@ -129,7 +149,7 @@ const ICON_MAP = {
   'partly-cloudy-night': ['part', 'teils bewölkt'], cloudy: ['cloud', 'bewölkt'], fog: ['fog', 'Nebel'], wind: ['wind', 'windig'],
   rain: ['rain', 'Regen'], sleet: ['snow', 'Schneeregen'], snow: ['snow', 'Schnee'], hail: ['rain', 'Hagel'], thunderstorm: ['thunder', 'Gewitter'],
 };
-function wxIcon(code, px = 22) {
+export function wxIcon(code, px = 22) {
   const [k, label] = ICON_MAP[code] || ['cloud', ''];
   return { svg: `<svg class="wx-ico" width="${px}" height="${px}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${WX[k]}</svg>`, label };
 }

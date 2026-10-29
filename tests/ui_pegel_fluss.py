@@ -103,7 +103,7 @@ def run(b, w, hh, mobile):
     print(f'--- {tag}')
     nav = '#bottomnav' if mobile else '#topnav'
     ctx, pg = page(b, w, hh, mobile)
-    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.fk')
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pg-fl-zeile'); pg.click('.pg-fl-zeile'); pg.wait_for_selector('dialog.wxd-fluesse .fk')   # Fluss-Kacheln im Fenster „Flüsse im Überblick“
     namen = [t.strip() for t in pg.locator('.fk .fk-name').all_inner_texts()]
     check(namen == ['Rhein', 'Elbe', 'Donau', 'Main', 'Küste'], f'{tag}: feste Übersicht Rhein, Elbe, (Weser), Donau, Main, Küste ({namen})')
     elbe = pg.locator('.fk', has_text='Elbe')
@@ -123,7 +123,7 @@ def run(b, w, hh, mobile):
     pg.locator('.pg-fl-alle').scroll_into_view_if_needed(); pg.wait_for_timeout(100)
     y0 = pg.locator('.pg-fl-alle').bounding_box()['y']
     pg.click('.pg-fl-alle'); pg.wait_for_timeout(200)
-    check(abs(pg.locator('.pg-fl-alle').bounding_box()['y'] - y0) < 2 and pg.locator('.fk').count() == 5, f'{tag}: Aufklappen ohne Sprung, Kacheln bleiben')
+    check(pg.locator('.fk').count() == 5 and pg.locator('.pg-fl-alle').is_visible(), f'{tag}: Aufklappen: Kacheln bleiben, Knopf bleibt sichtbar')
     wl = pg.locator('.fk-weitere-liste').inner_text()
     check('Weitere Flüsse (1)' in wl and 'Test-See' in wl and 'normal' in wl and '2 Pegel' in wl, f'{tag}: kompakte Liste mit Zustand und Pegelzahl ({wl!r})')
     check(pg.locator('.fk-ohne-zeile:not(.fk-wz)').count() == 1 and 'Mittellandkanal' in pg.inner_text('.fk-ohne:not(.fk-weitere-liste)'), f'{tag}: Kanal im eigenen Abschnitt')
@@ -145,6 +145,8 @@ def run(b, w, hh, mobile):
     pg.screenshot(path=str(SHOTS / f'fluss_{w}_0fenster.png'))
     pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
     check(pg.locator('dialog.wxd-fluss[open]').count() == 0 and pg.url.endswith('#pegel') and pg.locator('.fk').count() >= 5, f'{tag}: Esc schließt das Fluss-Fenster → Überblick')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(250)   # auch das Fenster „Flüsse im Überblick“
+    check(pg.locator('dialog[open]').count() == 0, f'{tag}: beide Fenster geschlossen')
     # die eigentliche Flussseite per Direktlink (Seite bleibt erhalten)
     pg.goto(uf.BASE + '#pegel/fluss/elbe'); pg.wait_for_selector('.pf-titel'); pg.wait_for_timeout(300)
     check(pg.url.endswith('#pegel/fluss/elbe') and pg.locator(f'{nav} [data-nav=pegel]').get_attribute('aria-current') == 'page', f'{tag}: Adresse #pegel/fluss/elbe, Tab „Pegel“ aktiv')
@@ -227,7 +229,7 @@ def run(b, w, hh, mobile):
     pg.locator('.pf-zeile').nth(0).click(); pg.wait_for_selector('dialog.wxd-pegel[open] .pd-name')
     check('Schöna' in pg.inner_text('dialog.wxd-pegel .pd-name'), f'{tag}: Zeile öffnet die Pegel-Details im Fenster')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
-    pg.click('.pf-zurueck'); pg.wait_for_selector('.fk')
+    pg.click('.pf-zurueck'); pg.wait_for_selector('.pg-fl-zeile')
     check(pg.url.endswith('#pegel'), f'{tag}: Zurück-Pfeil → Dashboard')
 
     # Tidepegel-Detailseite (Cuxhaven)
@@ -277,9 +279,10 @@ def run(b, w, hh, mobile):
     pg.evaluate("localStorage.removeItem('watermap.meinePegel')")
 
     # Küste und Kanal: ohne Profil, nur Liste
-    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.fk')
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pg-fl-zeile'); pg.click('.pg-fl-zeile'); pg.wait_for_selector('.fk')
     pg.click('.fk:has-text("Küste")'); pg.wait_for_selector('dialog.wxd-fluss[open] .pf-titel')
     check(pg.url.endswith('#pegel') and pg.locator('dialog.wxd-fluss .pf-zeile').count() == 3, f'{tag}: Küste öffnet als Fenster')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
     pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
     pg.goto(uf.BASE + '#pegel/fluss/kueste'); pg.wait_for_selector('.pf-titel')
     check(pg.url.endswith('#pegel/fluss/kueste') and pg.locator('.pf-svg').count() == 0 and pg.locator('.pf-zeile').count() == 3 and 'Tide' in pg.inner_text('.pf-kopf'), f'{tag}: Küste ohne Profil, Liste der Küstenpegel')
