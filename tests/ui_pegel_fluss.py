@@ -137,7 +137,16 @@ def run(b, w, hh, mobile):
     n_mess = len([c for c in calls if 'measurements' in c])
 
     # Flussseite Elbe
-    pg.click('.fk:has-text("Elbe")'); pg.wait_for_selector('.pf-titel'); pg.wait_for_timeout(300)
+    pg.click('.fk:has-text("Elbe")'); pg.wait_for_selector('dialog.wxd-fluss[open] .pf-titel'); pg.wait_for_timeout(300)
+    fk = pg.locator('dialog.wxd-fluss').inner_text()
+    check(pg.url.endswith('#pegel') and 'Elbe' in fk and pg.locator('dialog.wxd-fluss .pf-profilkarte').count() == 1, f'{tag}: Fluss aus dem Überblick öffnet als Fenster (Adresse bleibt #pegel)')
+    bx = pg.locator('dialog.wxd-fluss').bounding_box()
+    check(bx['x'] >= 0 and bx['x'] + bx['width'] <= w + 1 and bx['y'] + bx['height'] <= hh + 1 and (not mobile or bx['y'] + bx['height'] >= hh - 2), f'{tag}: Fluss-Fenster passt ({"unten" if mobile else "Mitte"})')
+    pg.screenshot(path=str(SHOTS / f'fluss_{w}_0fenster.png'))
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
+    check(pg.locator('dialog.wxd-fluss[open]').count() == 0 and pg.url.endswith('#pegel') and pg.locator('.fk').count() >= 5, f'{tag}: Esc schließt das Fluss-Fenster → Überblick')
+    # die eigentliche Flussseite per Direktlink (Seite bleibt erhalten)
+    pg.goto(uf.BASE + '#pegel/fluss/elbe'); pg.wait_for_selector('.pf-titel'); pg.wait_for_timeout(300)
     check(pg.url.endswith('#pegel/fluss/elbe') and pg.locator(f'{nav} [data-nav=pegel]').get_attribute('aria-current') == 'page', f'{tag}: Adresse #pegel/fluss/elbe, Tab „Pegel“ aktiv')
     kopf = pg.inner_text('.pf-kopf')
     check('GEWÄSSER' not in kopf.upper() and 'Elbe' in kopf and 'niedrig' in kopf and re.search(r'7 von 11 bewerteten Pegeln unter MNW · Stand \d\d:\d\d', kopf), f'{tag}: kompakter Kopf ({kopf!r})')
@@ -256,8 +265,9 @@ def run(b, w, hh, mobile):
     pg.reload(); pg.wait_for_selector('.pt-svg', timeout=8000); pg.wait_for_timeout(500)
     check(pg.locator('.pt-gezeiten').count() == 0 and pg.locator('.pt-vorhersage').count() == 0 and '24 h gemessen' in pg.inner_text('.pd-body'), f'{tag}: BSH nicht erreichbar → nur Messwerte')
     bsh['aus'] = False
-    pg.locator('.pd-kachel', has_text='alle Pegel').click(); pg.wait_for_selector('.pf-titel')
-    check(pg.url.endswith('#pegel/fluss/elbe'), f'{tag}: Kachel „Elbe – alle Pegel“ öffnet die Flussseite')
+    pg.locator('.pd-kachel', has_text='alle Pegel').click(); pg.wait_for_selector('dialog.wxd-fluss[open] .pf-titel')
+    check(f'#pegel/{U(21)}' in pg.url and 'Elbe' in pg.inner_text('dialog.wxd-fluss .pf-kopf'), f'{tag}: Kachel „Elbe – alle Pegel“ öffnet das Fluss-Fenster')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
     # Meine Pegel: Tidepegel-Karte mit auf-/ablaufend und letzten HW/NW statt Skala
     pg.evaluate(f"localStorage.setItem('watermap.meinePegel', JSON.stringify(['{U(21)}']))")
     pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pm-karte .pm-tide'); pg.wait_for_timeout(400)
@@ -267,11 +277,13 @@ def run(b, w, hh, mobile):
     pg.evaluate("localStorage.removeItem('watermap.meinePegel')")
 
     # Küste und Kanal: ohne Profil, nur Liste
-    pg.click('.fk:has-text("Küste")'); pg.wait_for_selector('.pf-titel')
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.fk')
+    pg.click('.fk:has-text("Küste")'); pg.wait_for_selector('dialog.wxd-fluss[open] .pf-titel')
+    check(pg.url.endswith('#pegel') and pg.locator('dialog.wxd-fluss .pf-zeile').count() == 3, f'{tag}: Küste öffnet als Fenster')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
+    pg.goto(uf.BASE + '#pegel/fluss/kueste'); pg.wait_for_selector('.pf-titel')
     check(pg.url.endswith('#pegel/fluss/kueste') and pg.locator('.pf-svg').count() == 0 and pg.locator('.pf-zeile').count() == 3 and 'Tide' in pg.inner_text('.pf-kopf'), f'{tag}: Küste ohne Profil, Liste der Küstenpegel')
-    pg.go_back(); pg.wait_for_selector('.fk')
-    if pg.locator('.fk-ohne').count() == 0: pg.click('.pg-fl-alle'); pg.wait_for_timeout(150)
-    pg.click('.fk-ohne-zeile:not(.fk-wz)'); pg.wait_for_selector('.pf-titel')
+    pg.goto(uf.BASE + '#pegel/fluss/mittellandkanal'); pg.wait_for_selector('.pf-titel')
     check(pg.url.endswith('#pegel/fluss/mittellandkanal') and pg.locator('.pf-svg').count() == 0 and 'ohne Kennwerte' in pg.inner_text('.pf-kopf')
           and pg.locator('.pf-zeile .pz-tag').first.inner_text() == 'ohne Kennw.', f'{tag}: Kanal ohne Profil, Pegel „ohne Kennw.“')
     pg.screenshot(path=str(SHOTS / f'fluss_{w}_3kanal.png'))

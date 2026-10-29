@@ -29,7 +29,7 @@ import { slipErgaenzen } from './slip-ergaenzen.js';
 import { imGebiet, aufGebietBeschneiden, gebietLaden } from './gebiet.js';
 import { pegelDashboard, pegelSeite, slipsAmPegel } from './pegel-dashboard.js';
 import { weatherSection, wetterZeile, fenster } from './wetter.js';
-import { GROUPS, loadExtras, renderExtraDetail, nearbySection, glyph } from './extras.js';
+import { GROUPS, loadExtras, renderExtraDetail, glyph } from './extras.js';
 import { enrichFacts } from './hafeninfo.js';
 
 const state = {
@@ -78,6 +78,8 @@ async function init() {
   renderSkeleton();
   wireStatic();
   nah = naehe(naeheCtx());
+  // „In der Nähe“ ist auf dem Handy ein Fenster: die Liste beginnt unter dem Kopf, dessen Höhe wechselt (Hinweiszeile, Freigabe)
+  if ('ResizeObserver' in window) new ResizeObserver(() => { const k = $('#naehe-kopf-m'); if (k?.offsetHeight) document.documentElement.style.setProperty('--nh-kopf-h', `${k.offsetHeight}px`); }).observe($('#naehe-kopf-m'));
   nah.binden({ kopfHandy: $('#naehe-kopf-m'), kopfDesktop: $('#naehe-kopf-d'), head: el.listHead, ul: el.list, aktiv: () => state.view === 'naehe' && !state.loadFailed && state.places.length > 0 });
 
   const [libs, , data] = await Promise.all([
@@ -90,7 +92,7 @@ async function init() {
     state.map = createMap(el.mapEl, {
       useCluster: libs.cluster,
       onMoveEnd: debounce(() => { if (state.tab === 'list') renderList(); updateInview(); ansichtMerken(); }, 180),
-      onMapClick: () => { if (state.selectedId || state.gaugeId || state.extraId || state.peekId || state.gaugePeekId) closeDetail(); },
+      onMapClick: () => { if (state.view === 'naehe' && isMobile()) { setView('karte'); return; } if (state.selectedId || state.gaugeId || state.extraId || state.peekId || state.gaugePeekId) closeDetail(); },
       onMarkerClick: (id) => selectPlace(id),
       onAusserhalb: () => toast(CONFIG.GEBIET.hinweis),
     });
@@ -468,10 +470,6 @@ function showDetail(p, { scrollTo = null } = {}) {
     user: state.user,
     enrichFacts: enrichFacts(state.meta, p.id),
     weather: p.type === 'slip' ? wetterZeile(p.lat, p.lon, { name: displayName(p) }) : weatherSection(p.lat, p.lon),   // Slipanlagen: Zeile + Fenster
-    nearby: nearbySection(hasExtras() ? extrasList() : Promise.resolve([]), p.lat, p.lon, {
-      exclude: p.id,
-      onSelect: (id, x) => { if (x && !state.extraById.has(id)) state.extraById.set(id, x); selectExtra(id); },   // Live-Einträge sind nicht im Import
-    }),
     actions: {
       close: closeDetail,
       onFavorite: () => { favorites.toggle(p.id); showDetail(p); renderList(); updateTabs(); state.map?.refresh(p.id); },
@@ -606,6 +604,19 @@ function pegelFenster(g, opener, { karte = false } = {}) {
   }));
   zeichnen();
   dlg = fenster({ inhalt, klasse: 'wxd-pegel', labelId: 'pd-name', opener });
+}
+
+/** Fluss (Flussüberblick, Pegelseite) im Fenster: Profil und Pegelliste; ein Pegel darin öffnet sich als weiteres Fenster darüber. */
+async function flussFenster(slug, opener = document.activeElement) {
+  let st;
+  try { st = await pegelLaden(); } catch { st = null; }
+  const gr = st ? gruppeZu(gruppieren(st.gauges), slug) : null;
+  if (!gr) { toast(st ? 'Dieses Gewässer wurde nicht gefunden.' : 'Pegeldaten sind gerade nicht erreichbar.'); return; }
+  const inhalt = h('div', { class: 'pegel-fenster fluss-fenster' });
+  let dlg;
+  const ctx = pegelCtx();
+  flussSeite(inhalt, gr, { ...ctx, onOpen: (id) => pegelFensterOeffnen(id), back: () => dlg.close(), slipsAufKarte: (l) => { dlg.close(); ctx.slipsAufKarte(l); }, stand: st, verlauf: verlaufLaden });
+  dlg = fenster({ inhalt, klasse: 'wxd-pegel wxd-fluss', labelId: 'pf-name', opener });
 }
 
 /** Pegel per ID im Fenster öffnen (Merkliste, Dashboard, Flussseite): bleibt auf der aktuellen Seite, Adresse unverändert. */
@@ -773,11 +784,7 @@ function pegelCtx() {
   return {
     user: () => state.user, places: () => state.places, isMobile, toast,
     open: (id) => pegelFensterOeffnen(id),
-    fluss: (slug) => {
-      state.pegelFluss = slug; state.pegelId = null; appliedHash = hashString();
-      history.pushState({ pegelVon: 'dashboard' }, '', location.pathname + location.search + appliedHash);
-      pegelBereich();
-    },
+    fluss: (slug) => flussFenster(slug),
     // Zurück: in der App ein Schritt zurück (Detail → Fluss → Dashboard), sonst (direkter Link) zum Dashboard
     back: () => {
       if (history.state?.pegelVon) { history.back(); return; }
@@ -1456,7 +1463,8 @@ function wireStatic() {
   el.dlg.addEventListener('click', (e) => { if (e.target === el.dlg) el.dlg.close(); });
   $('#btn-locate').addEventListener('click', () => locate().catch(() => {}));
   $('#list-close').addEventListener('click', () => setView('karte'));
-  wischenZuMachen({ schliessen: { '#peek': closeDetail, '#detail': closeDetail }, mobil: isMobile });
+  wischenZuMachen({ mobil: isMobile, schliessen: { '#peek': closeDetail, '#detail': closeDetail,
+    '.sidebar': { zu: () => setView('karte'), wenn: () => state.view === 'naehe', mit: () => [$('#naehe-kopf-m')] }, '#naehe-kopf-m': { zu: () => setView('karte'), wenn: () => state.view === 'naehe', mit: () => [el.sidebar] } } });   // „In der Nähe“ ist auf dem Handy ein Fenster über der Karte
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || el.dlg.open || filterPop.isOpen || reportPop.isOpen || $('#naehe-bezug[open]') || $('#pa-pop[open]') || $('dialog.lightbox[open]') || $('dialog.wxd[open]') || el.suggest.offsetParent) return;
     if (state.selectedId || state.gaugeId || state.extraId || state.peekId || state.gaugePeekId) closeDetail();

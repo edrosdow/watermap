@@ -64,6 +64,16 @@ def run(b, w, hh):
         check(pg.locator('dialog.wxd[open]').count() == 0 and pg.locator('#detail').is_visible(), f'{tag}: Wetter-Fenster: nach unten gewischt → zu, Standort bleibt offen')
     else:
         check(False, f'{tag}: Wetter-Zeile nicht gefunden')
+    # In der Nähe: Fenster über der Karte (Handy) – Wischen nach unten oder Karte antippen führt zurück zur Karte
+    pg.goto(uf.BASE + '#naehe'); pg.wait_for_selector('.sidebar .place, .sidebar .nh-leer, .sidebar .nh-zeile1'); pg.wait_for_timeout(500)
+    r = rect(pg, '#naehe-kopf-m'); sb = rect(pg, '.sidebar')
+    check(10 < r['y'] < 40 and abs(sb['y'] - (r['y'] + r['h'])) <= 2 and abs(sb['y'] + sb['h'] - hh) <= 2, f'{tag}: In der Nähe: Kopf und Liste bilden ein Fenster unten, Karte als Streifen darüber (Kopf bei {r["y"]:.0f} px)')
+    pg.screenshot(path=str(uf.SHOTS / f'wischen_{w}_naehe.png'))
+    wisch(pg, w / 2, r['y'] + 30, 260)
+    check(pg.evaluate("location.hash") in ('', '#karte') and not pg.evaluate("document.body.classList.contains('view-naehe')"), f'{tag}: In der Nähe: nach unten gewischt → Karte')
+    pg.goto(uf.BASE + '#naehe'); pg.wait_for_selector('.sidebar .place, .sidebar .nh-leer, .sidebar .nh-zeile1'); pg.wait_for_timeout(400)
+    pg.touchscreen.tap(w / 2, 10); pg.wait_for_timeout(300)
+    check(not pg.evaluate("document.body.classList.contains('view-naehe')"), f'{tag}: In der Nähe: Tipp auf die Karte oberhalb schließt')
     pg.errs and print(pg.errs[:3])
     check(not pg.errs, f'{tag}: keine Konsolenfehler')
     ctx.close()

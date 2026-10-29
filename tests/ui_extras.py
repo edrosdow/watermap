@@ -154,21 +154,11 @@ with sync_playwright() as p:
         check(layer(pg, 'extra-wasser')[0] == 1 and layer(pg, 'extra-service')[0] == 1, f'{name}: Schalter „Schleusen & Brücken“ und „Service“ im Filter-Fenster')
         check(not extras_calls, f'{name}: Extras werden erst bei Bedarf geladen')
 
-        # Standort öffnen → „In der Nähe“
+        # Standort öffnen → keine Umgebungsliste mehr (7.43.0), keine Live-Abfrage
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])}, {{ full: true }})")
-        pg.wait_for_selector('#detail .nearby-item', timeout=8000)
-        items = pg.locator('#detail .nearby-item')
-        check(items.count() == 10, f'{name}: 10 Einträge in der Nähe, der entfernte nicht ({items.count()})')
-        dists = [t for t in pg.locator('#detail .nearby-dist').all_inner_texts()]
-        check(dists[0].endswith(' m') and 'Toilette' in items.first.inner_text(), f'{name}: nach Entfernung sortiert ({dists[:3]})')
-        txt = pg.inner_text('#detail .nearby-list')
-        check('Durchfahrtshöhe 4,5 m' in txt and 'kein Trinkwasser' in txt and 'Kanu-Ein- und Ausstieg' in txt, f'{name}: Kurzinfos in der Liste')
-        check('null' not in txt and 'undefined' not in txt, f'{name}: kein „null“/„undefined“ im Text')
-        pg.wait_for_selector('#detail .nearby-hinweis', timeout=8000)
-        hint = pg.inner_text('#detail .nearby-hinweis')
-        check('overpass-api.de: HTTP 503' in hint and 'HTTP 503' in hint.split(';')[-1], f'{name}: Hinweis nennt den Grund der fehlgeschlagenen Live-Abfrage ({hint})')
-        pg.locator('#detail .nearby-list').scroll_into_view_if_needed()
-        pg.screenshot(path=str(SHOTS / f'{name}_1_in_der_naehe.png'))
+        pg.wait_for_selector('#detail h2', timeout=8000); pg.wait_for_timeout(600)
+        check(pg.locator('#detail .nearby-list').count() == 0 and 'Umgebung (bis' not in pg.inner_text('#detail'), f'{name}: keine Liste „Umgebung“ im Standort-Detail')
+        check(not live['queries'], f'{name}: keine Live-Abfrage der Umgebung')
 
         # Hafeninfos laut Website füllen die Eigenschaften-Tabelle (Hafen)
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(HAFEN['id'])}, {{ full: true }})")
@@ -191,10 +181,10 @@ with sync_playwright() as p:
                        ['Kran', None, 'Kran bis 10 t'], ['Öffnungszeiten', None, '']], f'{name}: Marina-Felder werden gefüllt, Rest als eigene Zeilen ({rows})')
         fb.scroll_into_view_if_needed(); pg.screenshot(path=str(SHOTS / f'{name}_0_hafeninfo.png'))
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])}, {{ full: true }})")
-        pg.wait_for_selector('#detail .nearby-item', timeout=8000)
+        pg.wait_for_selector('#detail h2', timeout=8000)
 
-        # Eintrag anklicken → Detail
-        pg.locator('#detail .nearby-item', has_text='Hubbrücke').click()
+        # Eintrag öffnen → Detail
+        pg.evaluate("window.__watermap.setExtras('wasser', true).then(() => window.__watermap.selectExtra('node/9000001', { fly: false }))"); pg.wait_for_selector('#detail .facts', timeout=8000)
         pg.wait_for_selector('#detail .facts')
         d = pg.inner_text('#detail')
         check('Hubbrücke Test' in d and '4,5 m' in d and '3,2 m' in d and 'Hubbrücke' in d, f'{name}: Brücken-Detail mit Höhen und Bauart')
@@ -211,6 +201,8 @@ with sync_playwright() as p:
         check('Rollstuhlgerecht' in d and 'Wickeltisch' in d and 'Nicht bekannt' in d, f'{name}: Unbekanntes bleibt „Nicht bekannt“')
         pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
         check(pg.locator('#detail').is_hidden(), f'{name}: Escape schließt')
+
+        pg.evaluate("window.__watermap.setExtras('wasser', false)"); pg.wait_for_timeout(200)
 
         # Ebenen
         layer(pg, 'extra-wasser', click=True); pg.wait_for_timeout(400)
@@ -239,40 +231,6 @@ with sync_playwright() as p:
         layer(pg, 'extra-wasser', click=True); layer(pg, 'extra-service', click=True); pg.wait_for_timeout(300)
         check(pg.locator('.wm-extra').count() == 0, f'{name}: Ausschalten entfernt die Marker')
 
-        # „In der Nähe“ live aus OSM: Flächen mit Mittelpunkt, Supermarkt, Campingplatz; Import ergänzt Brücken/Wehre/Kanu/Verleih
-        live['mode'] = 'data'; live['queries'].clear()
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])}, {{ full: true }})")
-        pg.wait_for_selector('#detail .nearby-item:has-text("Markt Test")', timeout=8000)
-        q = live['queries'][-1] if live['queries'] else {}
-        check(abs(float(q.get('lat', ['0'])[0]) - LAT) < 1e-4 and abs(float(q.get('lon', ['0'])[0]) - LON) < 1e-4, f'{name}: Abfrage mit den Koordinaten des Standorts')
-        check(q.get('direkt') == ['1'], f'{name}: Abfrage direkt beim Overpass-Server')
-        txt = pg.inner_text('#detail .nearby-list')
-        check('Abenteuercamp Test' in txt and 'Markt Test' in txt and 'Gasthof Test' in txt and 'Wohnmobilstellplatz' in txt and 'Parkplatz' in txt,
-              f'{name}: Campingplatz, Supermarkt, Restaurant, Wohnmobilstellplatz, Parkplatz aus OSM')
-        check('Zu weit' not in txt and 'Privat' not in txt, f'{name}: Mittelpunkt über 500 m und private Parkplätze nicht dabei')
-        check('Hubbrücke Test' in txt and 'Wehr Test' in txt and 'Kanuverleih Test' in txt and 'Biergarten am Steg' not in txt,
-              f'{name}: Brücken/Wehre/Kanu aus dem Import, Service nur live (keine Doppelten)')
-        ds = [int(re.sub(r'\D', '', t)) if t.endswith(' m') else 99999 for t in pg.locator('#detail .nearby-dist').all_inner_texts()]
-        check(ds == sorted(ds), f'{name}: nach Entfernung sortiert {ds}')
-        camp = next(t for t in pg.locator('#detail .nearby-item').all_inner_texts() if 'Abenteuercamp' in t)
-        check(re.search(r'\b(29\d|30\d) m', camp) is not None, f'{name}: Entfernung zum Mittelpunkt der Fläche ({camp.splitlines()[-1]})')
-        sub = pg.locator('#detail .nearby-item', has_text='Abenteuercamp').locator('.nearby-sub').inner_text()
-        check(sub == 'Campingplatz', f'{name}: Untertitel nur „Campingplatz“ ({sub})')
-        pg.locator('#detail .nearby-item', has_text='Markt Test').click(); pg.wait_for_timeout(200)
-        check('Markt Test' in pg.inner_text('#detail h2') and 'Supermarkt' in pg.inner_text('#detail'), f'{name}: Live-Eintrag öffnet seine Details')
-        # Nichts gefunden: neuer Text, keine Behauptung über OSM
-        live['mode'] = 'empty'
-        far = next(f for f in slips if abs(f['geometry']['coordinates'][1] - LAT) > 1)
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(far['id'])}, {{ full: true }})")
-        pg.wait_for_selector('#detail .nearby-list:not([aria-busy])'); pg.wait_for_timeout(300)
-        check(pg.inner_text('#detail .nearby-list').strip() == 'Keine weiteren Einrichtungen in unseren Daten gefunden.', f'{name}: Text bei leerem Ergebnis')
-        # Überlastet (HTTP 200 mit „runtime error“): kein leeres Ergebnis, sondern Hinweis
-        live['mode'] = 'remark'
-        far2 = next(f for f in slips if abs(f['geometry']['coordinates'][1] - LAT) > 1 and f['id'] != far['id'])
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(far2['id'])}, {{ full: true }})")
-        pg.wait_for_selector('#detail .nearby-hinweis', timeout=8000)
-        check('überlastet' in pg.inner_text('#detail .nearby-hinweis'), f'{name}: Overpass überlastet → Hinweis statt stillem leeren Ergebnis')
-        live['mode'] = 'down'
         pg.keyboard.press('Escape')
 
         csp = pg.evaluate('window.__csp || []')

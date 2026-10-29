@@ -89,6 +89,8 @@ export function skala(g, { gross = false } = {}) {
   const ueber = lp[lp.length - 1] - 94;
   if (ueber > 0) for (let i = 0; i < lp.length; i++) lp[i] -= ueber;
   for (let i = lp.length - 2; i >= 0; i--) lp[i] = Math.min(lp[i], lp[i + 1] - abstand);
+  lp[0] = Math.max(lp[0], 6);   // die erste Beschriftung („MNW“) bleibt innerhalb der Kachel
+  for (let i = 1; i < lp.length; i++) lp[i] = Math.max(lp[i], lp[i - 1] + abstand);
   return h('div', { class: 'ps' + (gross ? ' is-gross' : ''), role: 'img', 'aria-label': label },
     gross ? h('div', { class: 'ps-wert', style: `left:${pos(g.value).toFixed(2)}%`, text: fmt(g.value) }) : null,
     h('div', { class: 'ps-track' }, segs, h('span', { class: 'ps-mark', style: `left:${pos(g.value).toFixed(2)}%` })),

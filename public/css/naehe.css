@@ -141,9 +141,19 @@ body.list-open .sidebar { background: var(--bg); }
   .nk-dist { font-size: 18px; }
   .nh-meld { margin-top: 2px; }
   body.view-naehe .list { padding-bottom: var(--bn-space); }
+  /* „In der Nähe“ als Fenster von unten über der Karte (Wischen nach unten oder Karte antippen schließt): Kopf und Liste bilden
+     zusammen das Fenster, die Karte bleibt oben als abgedunkelter Streifen sichtbar. --nh-kopf-h: Höhe des Kopfs (main.js). */
+  body.view-naehe .nh-kopf-m { position: absolute; z-index: 1060; left: 0; right: 0; top: calc(22px + env(safe-area-inset-top)); padding-top: 18px; border-radius: 24px 24px 0 0;
+    animation: nh-fenster-ein .26s ease-out; }
+  body.view-naehe .nh-kopf-m::before { content: ''; position: absolute; top: 7px; left: 50%; width: 44px; height: 5px; margin-left: -22px; border-radius: 3px; background: rgba(255, 255, 255, .4); }
+  body.view-naehe .sidebar { top: calc(22px + env(safe-area-inset-top) + var(--nh-kopf-h, 160px)); overflow: hidden; animation: nh-fenster-ein .26s ease-out;
+    box-shadow: 0 0 0 100vmax rgba(8, 36, 52, .45); }
   .nh-fuss { padding: 14px 16px 4px; font-size: 13px; color: var(--muted); }
   .nh-fuss .version { display: block; margin-top: 4px; }
 }
 
 /* Lange Liste: Einträge außerhalb des Bildschirms erst bei Bedarf layouten (schnelleres Öffnen) */
 .list > li:has(> .place.nk) { content-visibility: auto; contain-intrinsic-size: auto 76px; }
+
+@keyframes nh-fenster-ein { from { transform: translateY(40px); opacity: .6; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { body.view-naehe .sidebar, body.view-naehe .nh-kopf-m { animation: none; } }

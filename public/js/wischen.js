@@ -6,7 +6,7 @@ const SCHNELL = 0.6;       // px/ms Schwung, ab dem schon ein kurzer Weg (> 40 p
 const NICHT = 'input, textarea, select, .gc, .leaflet-container, [data-no-swipe]';
 
 /**
- * schliessen: Funktionen für Fenster, die keine <dialog> sind: { '#detail': fn, '#peek': fn }.
+ * schliessen: Fenster, die keine <dialog> sind: { selektor: fn | { zu: fn, wenn: () => boolean, mit: () => [Element] } } (wenn: nur dann ist das Fenster eines; mit: weitere Teile, die mitwandern).
  * mobil: () => boolean (Handy-Breite).
  */
 export function wischenZuMachen({ schliessen = {}, mobil = () => window.innerWidth < 768 } = {}) {
@@ -19,16 +19,16 @@ export function wischenZuMachen({ schliessen = {}, mobil = () => window.innerWid
       const r = dlg.getBoundingClientRect(), vh = window.visualViewport?.height || window.innerHeight;
       // nur Blätter, die unten am Rand sitzen und nicht den ganzen Bildschirm füllen
       if (r.bottom < vh - 2 || r.top < 24 || r.width < window.innerWidth - 2) return null;
-      return { el: dlg, zu: () => {
+      return { el: dlg, mit: [], zu: () => {
         const ev = new Event('cancel', { cancelable: true });
         dlg.dispatchEvent(ev);
         if (ev.defaultPrevented) return false;
         dlg.close(); return true;
       } };
     }
-    for (const [sel, fn] of Object.entries(schliessen)) {
-      const el = t.closest(sel);
-      if (el && !el.hidden) return { el, zu: () => { fn(); return true; } };
+    for (const [sel, v] of Object.entries(schliessen)) {
+      const el = t.closest(sel), fn = v.zu || v;
+      if (el && !el.hidden && (!v.wenn || v.wenn())) return { el, mit: v.mit ? v.mit() : [], zu: () => { fn(); return true; } };
     }
     return null;
   };
@@ -58,28 +58,25 @@ export function wischenZuMachen({ schliessen = {}, mobil = () => window.innerWid
       if (dy < -SCHWELLE || Math.abs(dx) > SCHWELLE && Math.abs(dx) > Math.abs(dy)) { s = null; return; }   // hoch/seitwärts: nicht unser Wischen
       if (dy < SCHWELLE) return;
       if (!obenAngekommen(e.target, s.el)) { s = null; return; }
-      s.aktiv = true; s.el.style.transition = 'none';
+      s.aktiv = true; alle().forEach(e => { e.style.transition = 'none'; });
     }
     if (e.cancelable) e.preventDefault();
     const d = Math.max(0, dy - SCHWELLE);
     s.v = (d - s.dy) / Math.max(1, e.timeStamp - s.t); s.dy = d; s.t = e.timeStamp;
-    s.el.style.transform = `translateY(${d}px)`;
+    alle().forEach(e => { e.style.transform = `translateY(${d}px)`; });
   }, { passive: false });
 
+  const alle = () => [s.el, ...s.mit];
   const ende = (abbruch) => {
     const a = s; s = null;
     if (!a || !a.aktiv) return;
-    const { el } = a, reset = () => { el.style.transition = ''; el.style.transform = ''; };
-    if (abbruch || !(a.dy > WEIT || a.v > SCHNELL && a.dy > 40)) {   // zurückfedern
-      el.style.transition = 'transform .2s ease'; el.style.transform = 'translateY(0)';
-      setTimeout(reset, 220); return;
-    }
-    el.style.transition = 'transform .18s ease-in';
-    el.style.transform = `translateY(${el.getBoundingClientRect().height + 40}px)`;
-    setTimeout(() => {
-      if (!a.zu()) { el.style.transition = 'transform .2s ease'; el.style.transform = 'translateY(0)'; setTimeout(reset, 220); return; }
-      reset();
-    }, 180);
+    const teile = [a.el, ...a.mit];
+    const setze = (transition, transform) => teile.forEach((e) => { e.style.transition = transition; e.style.transform = transform; });
+    const reset = () => setze('', '');
+    const zurueck = () => { setze('transform .2s ease', 'translateY(0)'); setTimeout(reset, 220); };
+    if (abbruch || !(a.dy > WEIT || a.v > SCHNELL && a.dy > 40)) { zurueck(); return; }
+    setze('transform .18s ease-in', `translateY(${window.innerHeight}px)`);
+    setTimeout(() => { if (!a.zu()) { zurueck(); return; } reset(); }, 180);
   };
   document.addEventListener('touchend', () => ende(false));
   document.addEventListener('touchcancel', () => ende(true));

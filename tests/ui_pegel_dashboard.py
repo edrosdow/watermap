@@ -124,6 +124,23 @@ def run(b, w, hh, mobile):
     check(pg.locator('.fk-ohne').first.is_visible() and 'Kanäle und Gewässer ohne Bewertung' in pg.inner_text('.fk-weitere') and 'Test-See' in pg.inner_text('.fk-weitere'), f'{tag}: „Alle Gewässer“ mit Abschnitt ohne Bewertung')
     pg.click('.pg-fl-alle'); pg.wait_for_timeout(200)
     pg.screenshot(path=str(SHOTS / f'pegel_{w}_1dashboard.png'), full_page=True)
+    ausserhalb = pg.evaluate("""() => [...document.querySelectorAll('.pm-karte')].flatMap(k => { const r = k.getBoundingClientRect();
+        return [...k.querySelectorAll('.ps-labels > span')].filter(s => { const b = s.getBoundingClientRect(); return b.left < r.left + 4 || b.right > r.right - 4; }).map(s => s.textContent); })""")
+    check(not ausserhalb, f'{tag}: Beschriftungen der Skala (MNW …) liegen innerhalb der Kachel {ausserhalb}')
+    # Kennwerte eng am linken und rechten Rand (MNW/MW dicht beisammen, MHW/HSW dicht beisammen): MNW darf nicht aus der Kachel ragen
+    raus = pg.evaluate("""async () => {
+      const { skala } = await import('./js/pegel-ansicht.js');
+      const box = document.createElement('div'); box.style.cssText = 'position:fixed;left:40px;top:40px;width:260px;background:#fff;z-index:99999;padding:0';
+      document.body.append(box);
+      const out = [];
+      for (const refs of [{ MNW: 100, MW: 104, MHW: 450, HSW: 470 }, { MNW: 100, MW: 106, MHW: 300, HSW: 310 }, { MNW: 100, MW: 200, MHW: 480, HSW: 590 }]) {
+        box.replaceChildren(skala({ value: 120, unit: 'cm', refs }));
+        const r = box.getBoundingClientRect();
+        for (const s of box.querySelectorAll('.ps-labels > span')) { const b = s.getBoundingClientRect(); if (b.left < r.left - 0.5 || b.right > r.right + 0.5) out.push(s.textContent + JSON.stringify(refs)); }
+      }
+      box.remove(); return out;
+    }""")
+    check(not raus, f'{tag}: Skala-Beschriftungen bleiben bei engen Kennwerten innerhalb {raus}')
     # Alle Pegel / Filter
     # Suche steht in der Karte „Alle Pegel“ (nicht im Kopf), am Handy auch bei zugeklappter Liste
     check(pg.locator('.pg-kopf .pg-suche').count() == 0 and pg.locator('.pg-alle .pg-alle-karte .pg-suche').is_visible(), f'{tag}: Suche in „Alle Pegel“ sichtbar')
