@@ -12,6 +12,7 @@ import { openForm } from './forms.js';
 import { renderDetail, placeTags, tagRow, routeLink } from './detail.js';
 import { mountNav, popover } from './nav.js';
 import { wischenZuMachen } from './wischen.js';
+import { suchfelderMitX } from './suchfeld.js';
 import { bewerte } from './ampel-logik.js';
 import { aktivLaden, ausgeblendetAnzahl, ausgeblendetZuruecksetzen, gesehenSetzen, listeLaden, neueAnzahl, senden, standortLaden, statusZeile, vorOrtKarte, zusammenfassen, TYPEN as MELD_TYPEN } from './meldungen.js';
 import { openLageForm } from './lage-form.js';
@@ -1474,6 +1475,7 @@ function wireStatic() {
   el.dlg.addEventListener('click', (e) => { if (e.target === el.dlg) el.dlg.close(); });
   $('#btn-locate').addEventListener('click', () => locate().catch(() => {}));
   $('#list-close').addEventListener('click', () => setView('karte'));
+  suchfelderMitX();
   wischenZuMachen({ mobil: isMobile, schliessen: { '#peek': closeDetail, '#detail': closeDetail,
     '.sidebar': { zu: () => setView('karte'), wenn: () => state.view === 'naehe', mit: () => [$('#naehe-kopf-m')] }, '#naehe-kopf-m': { zu: () => setView('karte'), wenn: () => state.view === 'naehe', mit: () => [el.sidebar] } } });   // „In der Nähe“ ist auf dem Handy ein Fenster über der Karte
   document.addEventListener('keydown', (e) => {

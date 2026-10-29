@@ -600,3 +600,48 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
   .pk-legende { right: 10px; top: 8px; }
   .pk-ansicht .leaflet-top.leaflet-right { top: 44px; }
 }
+
+/* ---------------------------------------------------------------- Pegel-Tab aufgeräumt (7.46.0) */
+.pegelseite { overflow-x: hidden; }   /* nichts darf die Seite seitlich verschiebbar machen */
+.pg-stand { overflow: hidden; text-overflow: ellipsis; }
+.pg-h2-links { display: flex; align-items: center; gap: 14px; }
+.pg-meine .pg-hinzu { margin: 0; min-height: 44px; padding: 0 2px; border: 0; border-radius: 0; background: none; display: inline; color: #06667E; font-weight: 750; font-size: 15px; }
+/* Deutschland heute: kleine Chips + Flüsse in einer Karte */
+.pg-lage-karte { background: #fff; border-radius: 16px; box-shadow: 0 1px 3px rgba(11, 48, 69, .06); overflow: hidden; }
+.pg-lage .pg-zaehler-reihe { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 12px 14px 4px; }
+.pg-lage .pg-zaehler { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 6px; row-gap: 0; min-height: 52px; padding: 7px 10px; border: 0; border-radius: 12px; background: #F3F6F8; box-shadow: none; color: var(--navy); text-align: left; }
+.pg-lage .pg-zaehler b { grid-column: 1 / -1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-lage .pg-zaehler i { width: 9px; height: 9px; border-radius: 50%; background: var(--z); display: block; }
+.pg-lage .pg-zaehler strong { font-size: 17px; line-height: 1.2; }
+.pg-lage .pg-zaehler b { font-size: 13px; font-weight: 700; color: var(--muted); }
+.pg-lage .pg-zaehler.is-aktiv { background: var(--navy); color: #fff; outline: 0; }
+.pg-lage .pg-zaehler.is-aktiv b { color: #fff; }
+.pg-lage .pg-fl-zeile { margin: 0; border-radius: 0; box-shadow: none; }
+/* Wochenend-Check je Pegel */
+.pg-wochenende { background: none; padding: 0; box-shadow: none; }
+.pg-wo-karte { background: #fff; border-radius: 16px; box-shadow: 0 1px 3px rgba(11, 48, 69, .06); overflow: hidden; }
+.pg-wo-tabelle { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.pg-wo-tabelle thead th { padding: 10px 6px 4px; font-size: 13px; color: var(--muted); font-weight: 700; text-align: left; }
+.pg-wo-tabelle thead th:first-child { width: 38%; }
+.pg-wo-tabelle tbody th, .pg-wo-tabelle td { padding: 9px 6px; border-top: 1px solid #EEF3F5; vertical-align: middle; text-align: left; }
+.pg-wo-tabelle tbody th { padding-left: 14px; font-weight: 800; }
+.pg-wo-name { display: block; font-size: 15px; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-wo-tabelle tbody th small { display: block; font-weight: 500; color: var(--muted); font-size: 12px; }
+.pg-wo-wx { display: flex; align-items: center; gap: 4px; font-size: 14.5px; font-weight: 700; color: var(--navy); }
+.pg-wo-wx > span { display: grid; }
+.pg-wo-text { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.pg-wo-text.is-gelb { color: #7A5200; font-weight: 700; } .pg-wo-text.is-rot { color: #A32020; font-weight: 700; }
+.pg-wo-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; vertical-align: middle; }
+.pg-wo-dot.is-gruen { background: #6CBF84; } .pg-wo-dot.is-gelb { background: #FAB219; } .pg-wo-dot.is-rot { background: #D03B3B; } .pg-wo-dot.is-grau { background: #9AAAB5; }
+.pg-wo-leer { color: var(--muted); }
+.pg-wo-legende { margin: 0; padding: 8px 14px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid #EEF3F5; }
+/* Werkzeuge klein am Ende */
+.pg-wz { min-height: 64px; padding: 10px 14px; border-radius: 14px; }
+.pg-wz-text strong { font-size: 15.5px; }
+.pg-wz-text small { font-size: 13px; }
+
+/* Kopf: Titel und Umschalter in einer Zeile, „Stand …“ darunter in voller Breite */
+.pg-kopf { flex-direction: column; align-items: stretch; gap: 0; }
+.pg-kopf-zeile { align-items: center; }
+.pg-kopf .pg-stand { margin-top: 2px; }
+@media (max-width: 767px) { .pg-kopf { flex-direction: column; } }

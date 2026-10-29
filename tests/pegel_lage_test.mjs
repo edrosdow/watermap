@@ -50,3 +50,15 @@ assert.deepEqual(wochenendEtiketten({ pegel: [n, hoch], boeKmh: 20 }), [{ text: 
 assert.deepEqual(wochenendEtiketten({ pegel: [n, g('Vlotho', 'normal')], boeKmh: 20, vorhersageNiedrig: ['Vlotho'] }), [{ text: 'Vlotho knapp', ton: 'gelb' }]);   // laut Vorhersage
 assert.deepEqual(wochenendEtiketten({ pegel: [n], boeKmh: null }), []);   // ohne Wetterdaten keine Zusage „gute Bedingungen“
 console.log('pegel_lage_test: OK');
+
+// Wochenend-Tabelle: eine Zelle je Pegel und Tag
+import { zelle } from '../public/js/pegel-lage.js';
+const tag = (wind, gust) => ({ windKmh: wind, gustKmh: gust });
+assert.deepEqual(zelle(g('A', 'normal'), tag(10, 20)), { ton: 'gruen', text: 'Wind 2 Bft' });
+assert.deepEqual(zelle(g('A', 'normal'), tag(12, 45)), { ton: 'gelb', text: 'Böen 6 Bft' });
+assert.deepEqual(zelle(g('Minden', 'low'), tag(12, 45)), { ton: 'gelb', text: 'Pegel knapp' });   // Pegel geht vor Wind
+assert.deepEqual(zelle(g('Trier', 'hsw'), tag(10, 20)), { ton: 'rot', text: 'Hochwasser' });
+assert.deepEqual(zelle(g('Cochem', 'high'), tag(10, 20)), { ton: 'rot', text: 'Hochwasser' });
+assert.deepEqual(zelle(g('Cux', 'unknown', null, { tide: true, refs: {} }), tag(10, 20)), { ton: 'grau', text: 'Wind 2 Bft' });
+assert.equal(zelle(g('A', 'normal'), null), null);   // ohne Wetter keine Zelle
+console.log('pegel_lage_test (Zellen): OK');

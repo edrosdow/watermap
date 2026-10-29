@@ -8,6 +8,7 @@ import { loadSlips } from './data.js';
 import { haversine, formatDistance, displayName, subtitle } from './model.js';
 import { bewerte, trend, STATUS, BOOTSTYPEN, PUFFER_CM } from './ampel-logik.js';
 import { mountNav } from './nav.js';
+import { suchfelderMitX } from './suchfeld.js';
 
 const VERLAUF_TAGE = 14;
 const SLIPS_ANZAHL = 3;
@@ -278,6 +279,7 @@ async function alarmLink(params) {
 // ------------------------------------------------------------------ Start
 async function init() {
   $('am-logo').innerHTML = logoSvg(32);
+  suchfelderMitX();
   mountNav({ top: $('topnav'), bottom: $('bottomnav'), active: 'pegel', reportLink: true });
   $('am-searchico').innerHTML = icon('search', 22);
   $('am-bell').innerHTML = icon('bell', 26);

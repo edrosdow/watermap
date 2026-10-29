@@ -1122,3 +1122,12 @@ p.rmenu-links a { display: inline; min-height: 0; }
 .wxd-fluss .pf-seite { max-width: none; padding: 0 0 8px; }
 .wxd-fluss .pf-kopf { border-radius: 0; margin: 0 0 14px; padding: 22px 16px 18px 12px; }
 @media (min-width: 768px) { .wxd-fluss { width: min(94vw, 820px); } .wxd-fluss .pf-kopf { padding-top: 18px; } }
+
+/* „X“ zum Leeren in Suchfeldern (js/suchfeld.js); das eigene Kreuz der Browser entfällt */
+input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
+.such-x { position: absolute; z-index: 2; top: 50%; right: var(--x-rechts, 2px); transform: translateY(-50%); width: 44px; height: 44px; padding: 0; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; }
+.such-x[hidden] { display: none; }
+.such-x > span { width: 28px; height: 28px; border-radius: 50%; background: #E6EDF1; color: var(--navy, #0B3045); display: grid; place-items: center; }
+.such-x:hover > span { background: #D5E1E7; }
+input.hat-x { padding-right: calc(var(--x-rechts, 2px) + 44px) !important; }
+.search { --x-rechts: 44px; }

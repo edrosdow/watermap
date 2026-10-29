@@ -4,13 +4,13 @@ import { h, announce } from './dom.js';
 import { icon } from './icons.js';
 import { haversine, formatDistance, displayName } from './model.js';
 import { pegelLaden, verlaufLaden, meinePegel } from './pegel-daten.js';
-import { lageSatz, wochenendTage, tageAusStunden, wochenendEtiketten } from './pegel-lage.js';
+import { lageSatz, wochenendTage, tageAusStunden, zelle } from './pegel-lage.js';
 import { pegelKarteAnsicht } from './pegel-karte.js';
 import { tendenz } from './gezeiten.js';
-import { fenster, loadWetterStunden, wxIcon, beaufort } from './wetter.js';
+import { fenster, loadWetterStunden, wxIcon } from './wetter.js';
 import { fmt, kmText, zustand, ZUSTAND, etikett, trendText, trendKlasse, pegelKarte, pegelDetail, sternKnopf, mitTrend } from './pegel-ansicht.js';
 import { formatTime } from './pegel.js';
-import { ENTWICKLUNG, CONFIG } from './config.js';
+import { ENTWICKLUNG } from './config.js';
 import { normW, gleichesGewaesser, flussKm as flussKmRoh, gruppieren, kachelnSortieren, istKueste, slug, KUESTE_SLUG, flussZustand, FLUSS_ZUSTAND } from './pegel-fluss.js';
 import { flussKachel, weitereGewaesser } from './pegel-fluss-ansicht.js';
 import { umlautVerdacht } from './pegel-namen.js';
@@ -65,9 +65,9 @@ export function pegelDashboard(root, ctx) {
         h('div', { class: 'pg-kopf-text' },
           h('div', { class: 'pg-titelzeile' }, h('h1', { class: 'pg-titel', text: 'Pegel' }),
             h('button', { type: 'button', class: 'pg-neu', 'aria-label': 'Pegel aktualisieren', html: icon('refresh', 18), onclick: async (e) => {
-              e.currentTarget.classList.add('is-busy'); await laden(true); ctx.toast?.(stand?.offline ? 'Keine Verbindung – letzter Stand wird angezeigt.' : 'Pegel aktualisiert.'); } })),
-          h('p', { class: 'pg-stand', 'aria-live': 'polite', text: stand ? standText(stand) : 'Wird geladen …' })),
-        h('div', { class: 'pg-tabs', role: 'tablist', 'aria-label': 'Ansicht' }, tab('liste', 'Liste'), tab('karte', 'Karte'))));
+              e.currentTarget.classList.add('is-busy'); await laden(true); ctx.toast?.(stand?.offline ? 'Keine Verbindung – letzter Stand wird angezeigt.' : 'Pegel aktualisiert.'); } }))),
+        h('div', { class: 'pg-tabs', role: 'tablist', 'aria-label': 'Ansicht' }, tab('liste', 'Liste'), tab('karte', 'Karte'))),
+      h('p', { class: 'pg-stand', 'aria-live': 'polite', text: stand ? standText(stand) : 'Wird geladen …' }));
   }
   function umschalten(a, fokus = false) {
     if (a === ansicht()) return;
@@ -97,13 +97,13 @@ export function pegelDashboard(root, ctx) {
         h('button', { type: 'button', class: 'pa-text pg-treffer-btn', onclick: () => ctx.open(g.id) }, h('strong', { text: g.name }),
           h('small', { text: [g.water, kmText(g), d !== null ? formatDistance(d) : ''].filter(Boolean).join(' · ') })),
         h('span', { class: 'pa-wert' }, h('b', { text: `${fmt(g.value)} ${g.unit}` }), etikett(g)),
-        sternKnopf(g, { onChange: () => zeichneTreffer() }));
+        sternKnopf(g, { klein: true, onChange: () => zeichneTreffer() }));
     };
     trefferBox.hidden = false;
     trefferBox.replaceChildren(
       h('p', { class: 'pa-kopf', role: 'status', text: treffer.length ? `${fmt(treffer.length)} Treffer` : 'Kein Pegel gefunden.' }),
       h('ul', { class: 'pa-liste' }, treffer.slice(0, MAX_TREFFER).map(zeile)),
-      treffer.length > MAX_TREFFER ? h('p', { class: 'pa-mehr', text: `Weitere ${fmt(treffer.length - MAX_TREFFER)} – bitte genauer suchen.` }) : null);
+      ...(treffer.length > MAX_TREFFER ? [h('p', { class: 'pa-mehr', text: `Weitere ${fmt(treffer.length - MAX_TREFFER)} – bitte genauer suchen.` })] : []));
   }
   const sucheFokussieren = () => { const f = root.querySelector('#pg-suche'); root.scrollTop = 0; f?.scrollIntoView({ block: 'center' }); f?.focus(); };
 
@@ -128,8 +128,10 @@ export function pegelDashboard(root, ctx) {
     const satz = h('p', { class: 'pg-lage-satz', role: 'status', hidden: !gemerkt });
     if (gemerkt) lageSatzFuellen(satz, alle);
     const kopfZeile = h('div', { class: 'pg-h2-zeile' }, h('h2', { id: 'pg-meine-t', class: 'pg-h2', text: titel }),
-      gemerkt ? h('button', { type: 'button', class: 'pg-link', 'aria-pressed': String(ui.bearbeiten), text: ui.bearbeiten ? 'Fertig' : 'Bearbeiten',
-        onclick: () => { ui.bearbeiten = !ui.bearbeiten; aktualisieren(); root.querySelector('.pg-meine .pg-link')?.focus(); } }) : null);
+      h('div', { class: 'pg-h2-links' },
+        h('button', { type: 'button', class: 'pg-link pg-hinzu', onclick: sucheFokussieren, 'aria-label': 'Pegel hinzufügen (Suche)' }, '+ Hinzufügen'),
+        gemerkt ? h('button', { type: 'button', class: 'pg-link pg-bearb', 'aria-pressed': String(ui.bearbeiten), text: ui.bearbeiten ? 'Fertig' : 'Bearbeiten',
+          onclick: () => { ui.bearbeiten = !ui.bearbeiten; aktualisieren(); root.querySelector('.pg-meine .pg-bearb')?.focus(); } }) : null));
     const liste = h('div', { class: 'pg-karten' });
     sichtbar.forEach((id, i) => {
       const g = stand.byId.get(id);
@@ -143,8 +145,7 @@ export function pegelDashboard(root, ctx) {
     return [kopfZeile, satz, hinweis ? h('p', { class: 'pg-hinweis', text: hinweis }) : null, liste,
       rest.length ? h('button', { type: 'button', class: 'pg-link pg-weitere', 'aria-expanded': 'false', text: `+ ${rest.length} weitere Pegel (${namen}) ›`,
         onclick: () => { ui.alleMeine = true; aktualisieren(); } }) : (ui.alleMeine && !ui.bearbeiten && ids.length > MAX_KARTEN
-          ? h('button', { type: 'button', class: 'pg-link pg-weitere', 'aria-expanded': 'true', text: 'Weniger anzeigen', onclick: () => { ui.alleMeine = false; aktualisieren(); } }) : null),
-      h('button', { type: 'button', class: 'pg-hinzu', onclick: sucheFokussieren }, h('span', { html: icon('plus', 20) }), h('span', { text: 'Pegel hinzufügen' }))];
+          ? h('button', { type: 'button', class: 'pg-link pg-weitere', 'aria-expanded': 'true', text: 'Weniger anzeigen', onclick: () => { ui.alleMeine = false; aktualisieren(); } }) : null)];
   }
   function meine() {
     meineBox = h('section', { class: 'pg-meine', 'aria-labelledby': 'pg-meine-t' }, ...meineInhalt());
@@ -172,11 +173,12 @@ export function pegelDashboard(root, ctx) {
     const zaehler = (z, titel) => h('button', { type: 'button', class: `pg-zaehler is-${z}` + (ui.filter?.art === 'zustand' && ui.filter.wert === z ? ' is-aktiv' : ''),
       'aria-label': `${n[z]} Pegel ${titel}. Liste filtern`, 'aria-pressed': String(ui.filter?.art === 'zustand' && ui.filter.wert === z),
       onclick: () => setFilter(ui.filter?.wert === z ? null : { art: 'zustand', wert: z, text: titel }) },
-      h('strong', { text: fmt(n[z]) }), h('b', { text: titel }));
+      h('i', { 'aria-hidden': 'true' }), h('strong', { text: fmt(n[z]) }), h('b', { text: titel }));
     return h('section', { class: 'pg-lage', 'aria-labelledby': 'pg-lage-t' },
-      h('h2', { id: 'pg-lage-t', class: 'pg-h2', text: 'Lage in Deutschland' }),
-      h('div', { class: 'pg-zaehler-reihe' }, zaehler('hsw', 'über HSW'), zaehler('high', 'hoch'), zaehler('low', 'niedrig')),
-      fluesseZeile());
+      h('h2', { id: 'pg-lage-t', class: 'pg-h2', text: 'Deutschland heute' }),
+      h('div', { class: 'pg-lage-karte' },
+        h('div', { class: 'pg-zaehler-reihe' }, zaehler('hsw', 'über HSW'), zaehler('high', 'hoch'), zaehler('low', 'niedrig')),
+        fluesseZeile()));
   }
 
   // Fluss-Kacheln: zuerst Flüsse mit „Meine Pegel“, dann nach Schwere; Küste immer zuletzt; Kanäle nur unter „Alle Gewässer“
@@ -238,29 +240,36 @@ export function pegelDashboard(root, ctx) {
     wochenFuellen();
     return wochenBox;
   }
+  /** Wochenend-Check: je gemerktem Pegel eine Zeile, je Tag Wetter am Ort des Pegels und eine Ampel mit Text. */
+  const MAX_WO = 6;
   function wochenFuellen() {
     if (!wochenBox || !stand) return;
-    const gemerkt = meinePegel.alle().map(id => stand.byId.get(id)).filter(Boolean);
+    const gemerkt = meinePegel.alle().map(id => stand.byId.get(id)).filter(Boolean).slice(0, MAX_WO);
     if (!gemerkt.length) { wochenBox.hidden = true; wochenBox.replaceChildren(); return; }
-    const ort = gemerkt[0], { titel, tage } = wochenendTage();
-    loadWetterStunden(ort.lat, ort.lon).then((stunden) => {
+    const { titel, tage } = wochenendTage();
+    Promise.all(gemerkt.map(g => loadWetterStunden(g.lat, g.lon).then(st => tageAusStunden(st, tage)))).then((jeOrt) => {
       if (!wochenBox?.isConnected) return;
-      const taege = tageAusStunden(stunden, tage);
-      if (!taege.some(Boolean)) { wochenBox.hidden = true; wochenBox.replaceChildren(); return; }
-      const karten = taege.map((t) => {
-        if (!t) return null;
-        const w = wxIcon(t.icon, 20), bft = (kmh) => beaufort(kmh);
-        const boeig = t.gustKmh !== null && t.gustKmh >= CONFIG.WETTER_GUST_HINT_KMH;
-        const wind = t.windKmh === null ? null : boeig ? `Böen ${bft(t.gustKmh)} Bft` : `Wind ${bft(t.windKmh)} Bft`;
-        const etiketten = wochenendEtiketten({ pegel: gemerkt, boeKmh: t.gustKmh ?? t.windKmh });
-        return h('div', { class: 'pg-wo-tag' }, h('strong', { text: t.name }),
-          h('p', { class: 'pg-wo-wetter' }, h('span', { html: t.icon ? w.svg : '', 'aria-hidden': 'true' }), t.temp !== null ? ` ${Math.round(t.temp)}°` : '', w.label ? ` · ${w.label}` : ''),
-          wind ? h('p', { class: 'pg-wo-wind', text: wind }) : null,
-          h('div', { class: 'pg-wo-etiketten' }, etiketten.map(e => h('span', { class: `pg-wo-et is-${e.ton}`, text: e.text }))));
-      }).filter(Boolean);
+      if (!jeOrt.some(t => t.some(Boolean))) { wochenBox.hidden = true; wochenBox.replaceChildren(); return; }
+      const namen = tage.map(d => ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'][d.getDay()]);
+      const kurz = (n) => n.slice(0, 2);
+      const zeilen = gemerkt.map((g, i) => h('tr', {},
+        h('th', { scope: 'row' }, h('span', { class: 'pg-wo-name', text: g.name }), h('small', { text: `${fmt(g.value)} ${g.unit} · ${ZUSTAND[zustand(g)].text.toLowerCase()}` })),
+        jeOrt[i].map((t, j) => {
+          const z = zelle(g, t);
+          if (!t || !z) return h('td', { class: 'pg-wo-leer', text: '–', 'aria-label': `${namen[j]}: keine Wetterdaten` });
+          const w = wxIcon(t.icon, 18);
+          return h('td', { 'aria-label': `${namen[j]}: ${w.label ? w.label + ', ' : ''}${t.temp !== null ? Math.round(t.temp) + ' Grad, ' : ''}${z.text}` },
+            h('span', { class: 'pg-wo-wx', 'aria-hidden': 'true' }, h('i', { class: `pg-wo-dot is-${z.ton}` }), h('span', { html: t.icon ? w.svg : '' }), t.temp !== null ? `${Math.round(t.temp)}°` : ''),
+            h('span', { class: `pg-wo-text is-${z.ton}`, 'aria-hidden': 'true', text: z.text }));
+        })));
       wochenBox.hidden = false;
-      wochenBox.replaceChildren(h('h2', { id: 'pg-wo-t', class: 'pg-h2', text: titel }), h('div', { class: 'pg-wo-reihe' }, karten),
-        h('p', { class: 'pg-klein', text: `Pegel: Stand heute · Wetter: DWD für ${ort.name}` }));
+      wochenBox.replaceChildren(h('h2', { id: 'pg-wo-t', class: 'pg-h2', text: titel }),
+        h('div', { class: 'pg-wo-karte' },
+          h('table', { class: 'pg-wo-tabelle' },
+            h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, h('span', { class: 'pg-sr', text: 'Pegel' })), namen.map(n => h('th', { scope: 'col' }, h('span', { 'aria-hidden': 'true', text: kurz(n) }), h('span', { class: 'pg-sr', text: n }))))),
+            h('tbody', {}, zeilen)),
+          h('p', { class: 'pg-wo-legende' }, h('i', { class: 'pg-wo-dot is-gruen' }), ' gut · ', h('i', { class: 'pg-wo-dot is-gelb' }), ' knapp/windig · ',
+            h('i', { class: 'pg-wo-dot is-rot' }), ' Hochwasser. Wetter je Ort (DWD), Pegel: Stand heute.')));
     });
   }
 
@@ -363,7 +372,7 @@ export function pegelDashboard(root, ctx) {
       karte ||= pegelKarteAnsicht({ stand: () => stand, user: ctx.user, isMobile: ctx.isMobile, open: ctx.open, toast: ctx.toast });
       inhalt = [karte.el];
     } else {
-      inhalt = [h('div', { class: 'pg-spalte' }, meine(), lage(), alleSektion(), wochenende(), werkzeuge(),
+      inhalt = [h('div', { class: 'pg-spalte' }, meine(), wochenende(), lage(), alleSektion(), werkzeuge(),
         h('p', { class: 'pg-fuss', text: 'Pegel der WSV (PEGELONLINE). Kleinere Gewässer und Talsperren teils nicht erfasst. Angaben ohne Gewähr.' }))];
     }
     root.replaceChildren(h('div', { class: 'pg-seite' + (a === 'karte' ? ' is-karte' : '') }, kopf(), suche(), ...inhalt));

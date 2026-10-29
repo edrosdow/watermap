@@ -2,6 +2,7 @@
 // Nichts wird erfunden: was fehlt (Trend, Vorhersage), wird weggelassen bzw. kenntlich gemacht.
 import { CONFIG } from './config.js';
 import { zustand } from './pegel-ansicht.js';
+import { beaufort } from './wetter.js';
 
 const ZUSTAND_WORT = { hsw: 'über HSW', high: 'hoch', low: 'niedrig', old: 'veraltet' };
 const TREND_WORT = { 1: 'steigend', '-1': 'fallend' };   // „gleichbleibend“ wird nicht genannt (kein Hinweis)
@@ -90,4 +91,22 @@ export function wochenendEtiketten({ pegel, boeKmh, vorhersageNiedrig = [] }) {
   const alleNormal = zs.length && zs.every(x => x.z === 'normal');
   if (!out.length && alleNormal && typeof boeKmh === 'number') out.push({ text: 'gute Bedingungen', ton: 'gruen' });
   return out;
+}
+
+/**
+ * Eine Zelle der Wochenend-Tabelle (ein Pegel, ein Tag): Ampel und kurzer Text, nie nur Farbe.
+ * Hochwasser (hoch/über HSW) → rot; niedrig → gelb „Pegel knapp“; Böen ab WETTER_GUST_HINT_KMH → gelb „Böen n Bft“;
+ * sonst grün „Wind n Bft“. Pegel ohne Einordnung (Tide, ohne Kennwerte, veraltet): grau, nur das Wetter.
+ * tag: { windKmh, gustKmh } aus tageAusStunden() oder null (kein Wetter) → null.
+ */
+export function zelle(g, tag) {
+  if (!tag) return null;
+  const z = zustand(g);
+  const boe = typeof tag.gustKmh === 'number' ? tag.gustKmh : null, wind = typeof tag.windKmh === 'number' ? tag.windKmh : null;
+  const windText = boe !== null && boe >= CONFIG.WETTER_GUST_HINT_KMH ? `Böen ${beaufort(boe)} Bft` : wind !== null ? `Wind ${beaufort(wind)} Bft` : '';
+  if (z === 'hsw' || z === 'high') return { ton: 'rot', text: 'Hochwasser' };
+  if (z === 'low') return { ton: 'gelb', text: 'Pegel knapp' };
+  if (boe !== null && boe >= CONFIG.WETTER_GUST_HINT_KMH) return { ton: 'gelb', text: windText };
+  if (z === 'normal') return { ton: 'gruen', text: windText || 'ruhig' };
+  return { ton: 'grau', text: windText };
 }

@@ -136,7 +136,7 @@ def run(b, w, hh, mobile):
     check(z == {'hsw': '1', 'high': '1', 'low': '2'} and pg.locator('.pg-zaehler').count() == 3, f'{tag}: Lage in Deutschland: über HSW · hoch · niedrig ({z})')
     zb = [pg.locator('.pg-zaehler').nth(i).bounding_box() for i in range(3)]
     check(abs(zb[0]['y'] - zb[2]['y']) < 2 and zb[2]['x'] > zb[1]['x'] > zb[0]['x'], f'{tag}: die drei Zähler stehen in EINER Zeile')
-    check(pg.locator('.pg-zaehler.is-low').evaluate("e => getComputedStyle(e).borderBottomWidth") == '5px', f'{tag}: farbige Unterkante')
+    check(pg.locator('.pg-zaehler.is-low i').evaluate("e => getComputedStyle(e).backgroundColor") == 'rgb(250, 178, 25)' and 'Deutschland heute' in pg.inner_text('#pg-lage-t'), f'{tag}: „Deutschland heute“ als kleine Chips mit Farbpunkt')
     # Flüsse im Überblick: Zeile, Kacheln im Fenster
     zeile = pg.locator('.pg-fl-zeile')
     check('Flüsse im Überblick' in zeile.inner_text() and 'Rhein niedrig' in zeile.inner_text(), f'{tag}: Zeile „Flüsse im Überblick – Kurzfassung ›“ ({zeile.inner_text()!r})')
@@ -205,8 +205,9 @@ def run(b, w, hh, mobile):
     check('Kein Pegel gefunden.' in pg.inner_text('.pg-treffer'), f'{tag}: kein Treffer')
     pg.fill('#pg-suche', 'weser'); pg.wait_for_timeout(150)
     check('8 Treffer' in pg.inner_text('.pg-treffer'), f'{tag}: Suche „Weser“ ({pg.inner_text(".pg-treffer .pa-kopf")})')
-    pg.fill('#pg-suche', ''); pg.wait_for_timeout(150)
-    check(pg.locator('.pg-treffer').is_hidden(), f'{tag}: leeres Suchfeld blendet die Treffer aus')
+    check(pg.locator('.pg-suchzeile .such-x').is_visible() and pg.locator('.pg-treffer .pm-stern.is-klein').count() == 8, f'{tag}: „X“ im Suchfeld, Stern sichtbar (klein)')
+    pg.click('.pg-suchzeile .such-x'); pg.wait_for_timeout(150)
+    check(pg.input_value('#pg-suche') == '' and pg.locator('.pg-treffer').is_hidden() and pg.locator('.pg-suchzeile .such-x').is_hidden() and pg.evaluate("document.activeElement.id") == 'pg-suche', f'{tag}: „X“ leert die Suche, Treffer weg, Fokus bleibt')
     pg.click('.pg-hinzu'); pg.wait_for_timeout(200)
     check(pg.evaluate("document.activeElement.id") == 'pg-suche', f'{tag}: „+ Pegel hinzufügen“ fokussiert die Suche')
     tw = pg.locator('.pg-wz.is-ampel'); al = pg.locator('.pg-wz.is-alarm')
@@ -254,22 +255,28 @@ def run(b, w, hh, mobile):
     check(pg.locator('.pg-meine .pm-karte').count() == 3 and pg.inner_text('.pg-weitere') == '+ 1 weitere Pegel (Köln) ›', f'{tag}: höchstens 3 Karten, „+ 1 weitere Pegel (Köln) ›“')
     pg.click('.pg-weitere'); pg.wait_for_timeout(200)
     check(pg.locator('.pg-meine .pm-karte').count() == 4, f'{tag}: „+ weitere“ zeigt alle')
-    pg.wait_for_selector('.pg-wo-tag', timeout=8000)
-    check(pg.locator('.pg-wochenende').is_visible() and [x.strip() for x in pg.locator('.pg-wo-tag strong').all_inner_texts()] == wochenende_namen(), f'{tag}: Wochenend-Ausblick mit den zwei Tagen ({pg.locator(".pg-wo-tag strong").all_inner_texts()})')
-    wo = pg.inner_text('.pg-wochenende')
-    check('Hochwasser' in wo and 'Minden knapp' in wo and 'gute Bedingungen' not in wo and '14°' in wo and 'Pegel: Stand heute' in wo and 'Wind 3 Bft' in wo, f'{tag}: Etiketten „Hochwasser“, „Minden knapp“, Wetter, Hinweis „Stand heute“ ({wo!r})')
+    pg.wait_for_selector('.pg-wo-tabelle', timeout=8000)
+    tage = [x.strip() for x in pg.locator('.pg-wo-tabelle thead th:not(:first-child) .pg-sr').all_inner_texts()]
+    check(pg.locator('.pg-wochenende').is_visible() and tage == wochenende_namen() and pg.locator('.pg-wo-tabelle tbody tr').count() == 4, f'{tag}: Wochenend-Check: je Pegel eine Zeile, zwei Tage ({tage})')
+    zeile = lambda n: pg.locator('.pg-wo-tabelle tbody tr', has_text=n)
+    check('Hochwasser' in zeile('Trier').inner_text() and 'Pegel knapp' in zeile('Minden').inner_text() and 'Wind 3 Bft' in zeile('Vlotho').inner_text() and '14°' in zeile('Vlotho').inner_text(),
+          f'{tag}: Zellen je Pegel: Hochwasser, Pegel knapp, Wind ({pg.inner_text(".pg-wo-tabelle tbody")!r})')
+    check(zeile('Trier').locator('.pg-wo-dot.is-rot').count() == 2 and zeile('Minden').locator('.pg-wo-dot.is-gelb').count() == 2 and zeile('Vlotho').locator('.pg-wo-dot.is-gruen').count() == 2, f'{tag}: Ampelpunkte mit Text')
+    check('Pegel: Stand heute' in pg.inner_text('.pg-wochenende') and 'Wetter je Ort' in pg.inner_text('.pg-wochenende'), f'{tag}: Hinweis „Wetter je Ort, Pegel: Stand heute“')
+    wcalls = pg.evaluate("performance.getEntriesByType('resource').filter(e => e.name.includes('/api/wetter/weather')).map(e => new URL(e.name).searchParams.get('lat'))")
+    check(len(set(wcalls)) == 4, f'{tag}: Wetter für jeden Pegel am eigenen Ort ({sorted(set(wcalls))})')
     pg.screenshot(path=str(SHOTS / f'pegel_{w}_3wochenende.png'), full_page=True)
     ctx.close()
     # nur normale Pegel + starke Böen / ruhig
     ctx, pg = page(b, w, hh, mobile, init="localStorage.setItem('watermap.meinePegel', JSON.stringify(['%s','%s']));" % (U(1), U(8)))
     weather['gust'] = 45.0
-    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pg-wo-tag', timeout=10000)
-    check('windig' in pg.inner_text('.pg-wochenende') and 'Böen 6 Bft' in pg.inner_text('.pg-wochenende') and 'gute Bedingungen' not in pg.inner_text('.pg-wochenende'), f'{tag}: starke Böen → „windig“, „Böen 6 Bft“')
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pg-wo-tabelle', timeout=10000)
+    check('Böen 6 Bft' in pg.inner_text('.pg-wochenende') and pg.locator('.pg-wo-dot.is-gelb').count() >= 4 and pg.locator('.pg-wo-tabelle .pg-wo-dot.is-gruen').count() == 0, f'{tag}: starke Böen → gelb „Böen 6 Bft“')
     ctx.close()
     ctx, pg = page(b, w, hh, mobile, init="localStorage.setItem('watermap.meinePegel', JSON.stringify(['%s','%s']));" % (U(1), U(8)))
     weather['gust'] = 20.0
-    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pg-wo-tag', timeout=10000)
-    check('gute Bedingungen' in pg.inner_text('.pg-wochenende') and pg.locator('.pg-wo-et.is-gruen').count() == 2, f'{tag}: alle Pegel normal und ruhig → „gute Bedingungen“')
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pg-wo-tabelle', timeout=10000)
+    check(pg.locator('.pg-wo-tabelle .pg-wo-dot.is-gruen').count() == 4 and 'Wind 3 Bft' in pg.inner_text('.pg-wochenende'), f'{tag}: normale Pegel und ruhig → grün „Wind 3 Bft“')
     ctx.close()
     # ohne Wetterdaten: kein Ausblick
     ctx, pg = page(b, w, hh, mobile, init="localStorage.setItem('watermap.meinePegel', JSON.stringify(['%s']));" % U(1))
