@@ -4,6 +4,7 @@
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { BOOTSTYPEN } from './ampel-logik.js';
+import { alarmeLesen, pushAlarmLoeschen, mailAlarmVergessen } from './alarm.js';
 
 const LS_AMPEL = 'watermap.ampel';   // { pegel, min, boot, hoehe } – Bootstyp gehört der Pegel-Ampel
 const LS_BOOT = 'watermap.boot';     // { laenge, tiefgang } in Metern, beides optional
@@ -172,10 +173,23 @@ export function einstellungenSeite(root, ctx) {
   startHinweisSetzen(startArt());
 
   // ---- Benachrichtigungen
+  const alarme = alarmeLesen();
+  const alarmZeile = (a) => h('div', { class: 'ei-reihe ei-alarm' },
+    h('span', { class: 'ei-reihe-text' }, h('span', { class: 'ei-label', text: `${a.name}${a.gewaesser ? ` (${a.gewaesser})` : ''}` }),
+      h('span', { class: 'ei-hilfe', text: `${a.kanal === 'push' ? 'Push' : 'E-Mail'}, wenn ${a.richtung === 'unter' ? 'unter' : 'über'} ${a.wert} cm` })),
+    h('button', { type: 'button', class: 'ei-knopf', text: 'Löschen', 'aria-label': `Alarm für ${a.name} löschen`, onclick: async (e) => {
+      e.currentTarget.disabled = true;
+      try {
+        if (a.kanal === 'push') { await pushAlarmLoeschen(a.pegel); ctx.toast('Alarm gelöscht.'); }
+        else { mailAlarmVergessen(a.pegel); ctx.toast('Hier entfernt. E-Mail-Alarme bestellst du über den Link in der Mail ab.'); }
+      } catch (err) { ctx.toast(err.message); }
+      einstellungenSeite(root, ctx);
+    } }));
   const alarmTeil = abschnitt('Benachrichtigungen', [
+    ...(alarme.length ? alarme.map(alarmZeile) : [h('p', { class: 'ei-hilfe ei-keine-alarme', text: 'Noch keine Pegel-Alarme auf diesem Gerät. Einen Alarm legst du im Pegel-Fenster unter „Pegel-Alarm“ an.' })]),
     h('a', { class: 'bs-zeile', href: ctx.alarmHref },
       h('span', { class: 'bs-ico', html: icon('bell', 22), 'aria-hidden': 'true' }),
-      h('span', { class: 'bs-text' }, h('strong', { text: 'Pegel-Alarm' }), h('small', { text: 'Mail, wenn sich die Ampel deines Pegels ändert' })),
+      h('span', { class: 'bs-text' }, h('strong', { text: 'Ampel-Alarm (Pegel-Ampel)' }), h('small', { text: 'Mail, wenn sich die Ampel deines Pegels ändert' })),
       h('span', { class: 'bs-pfeil', html: icon('chevron', 18), 'aria-hidden': 'true' })),
   ]);
 

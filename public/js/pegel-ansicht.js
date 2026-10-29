@@ -8,6 +8,7 @@ import { historyChart, formatTime } from './pegel.js';
 import { aenderung24h, trendAusVerlauf, meinePegel, zusatzLaden, vorhersageWLaden, wtAenderungLaden } from './pegel-daten.js';
 import { vorhersageSatz } from './pegel-lage.js';
 import { pegelBild, bildTeilen } from './pegel-bild.js';
+import { alarmFenster, alarmStatus } from './alarm.js';
 import { istTidepegel, auswerten } from './gezeiten.js';
 import { tideDetail, tendenzText, letzteText, naechsteText } from './pegel-tide-ansicht.js';
 import { vorhersageLaden } from './gezeiten-bsh.js';
@@ -206,12 +207,18 @@ export function zusatzKacheln(g) {
   return box;
 }
 
-/** Zeile „Pegel-Alarm“ (öffnet die Anmeldung in der Pegel-Ampel). */
+/** Zeile „Pegel-Alarm“ mit Status („Push, wenn unter 100 cm · aktiv“ bzw. „Benachrichtigen lassen“); öffnet das Alarm-Fenster. */
 function alarmZeile(g) {
-  return h('a', { class: 'pd-alarm', href: `./pegel-ampel?pegel=${encodeURIComponent(g.id)}#am-alarm` },
+  const sub = h('small', {});
+  const stellen = () => { sub.textContent = alarmStatus(g.id) || 'Benachrichtigen lassen'; };
+  stellen();
+  const knopf = h('button', { type: 'button', class: 'pd-alarm', 'aria-haspopup': 'dialog', onclick: (e) => alarmFenster(g, { opener: e.currentTarget }) },
     h('span', { class: 'pd-alarm-ico', html: icon('bell', 20), 'aria-hidden': 'true' }),
-    h('span', { class: 'pd-alarm-text' }, h('strong', { text: 'Pegel-Alarm' }), h('small', { text: 'Benachrichtigen lassen' })),
-    h('span', { class: 'pd-alarm-pfeil', html: icon('chevron', 18), 'aria-hidden': 'true' }));
+    h('span', { class: 'pd-alarm-text' }, h('strong', { text: 'Pegel-Alarm' }), sub),
+    h('span', { class: 'pd-alarm-pfeil', text: alarmStatus(g.id) ? 'Ändern' : '', 'aria-hidden': 'true' }), h('span', { class: 'pd-alarm-chev', html: icon('chevron', 18), 'aria-hidden': 'true' }));
+  const neu = () => { if (!knopf.isConnected) { document.removeEventListener('pegel-alarme', neu); return; } stellen(); knopf.querySelector('.pd-alarm-pfeil').textContent = alarmStatus(g.id) ? 'Ändern' : ''; };
+  document.addEventListener('pegel-alarme', neu);
+  return knopf;
 }
 
 /** Knopf „Als Bild teilen“: Bild mit Wert, Zustand und Kurve erzeugen und teilen bzw. herunterladen. */

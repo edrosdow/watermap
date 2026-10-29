@@ -670,3 +670,44 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pm-et { display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 99px; background: #EEF3F5; color: #3D5160; font-size: 13px; font-weight: 700; }
 .pm-spark-vorh { stroke-dasharray: 4 3; opacity: .85; }
 .pk-v-extra:empty { display: none; }
+
+/* ---------------------------------------------------------------- Stufe 3 (7.48.0): Pegel-Alarm-Fenster */
+.wxd-alarm { width: min(94vw, 520px); }
+.al-form { display: flex; flex-direction: column; gap: 12px; padding-bottom: 4px; }
+.al-h { margin: 6px 0 0; font-weight: 800; font-size: 16px; color: var(--navy); }
+.al-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.al-r { min-height: 48px; border-radius: 14px; border: 1.5px solid var(--line); background: #fff; color: var(--navy); font-weight: 800; font-size: 16px; }
+.al-r[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
+.al-stepper { display: grid; grid-template-columns: 56px 1fr 56px; align-items: center; gap: 10px; padding: 8px; border-radius: 16px; background: #F3F6F8; }
+.al-pm { height: 52px; border: 0; border-radius: 12px; background: #fff; color: var(--navy); font-size: 26px; font-weight: 700; box-shadow: 0 1px 3px rgba(11, 48, 69, .1); }
+.al-wert-box { display: flex; align-items: baseline; justify-content: center; gap: 6px; color: var(--navy); }
+.al-wert { width: 4.2ch; border: 0; background: transparent; text-align: right; font-size: 36px; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; padding: 0; }
+.al-wert::-webkit-outer-spin-button, .al-wert::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.al-wert:focus { outline: 2px solid rgba(8, 127, 156, .35); border-radius: 8px; }
+.al-wert-box span { font-size: 18px; font-weight: 700; }
+.al-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15.5px; }
+.al-check input { width: 22px; height: 22px; accent-color: var(--slip); }
+.al-optionen { display: flex; flex-direction: column; gap: 10px; }
+.al-opt { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 14px; border-radius: 14px; border: 1.5px solid var(--line); background: #fff; cursor: pointer; }
+.al-opt:has(input:checked) { border-color: var(--slip); background: #EAF5F9; }
+.al-opt.is-aus { opacity: .6; cursor: default; }
+.al-opt input { width: 22px; height: 22px; accent-color: var(--slip); flex: none; }
+.al-opt-text { display: flex; flex-direction: column; min-width: 0; }
+.al-opt-text strong { font-size: 16px; color: var(--navy); } .al-opt-text small { font-size: 13.5px; color: var(--muted); }
+.al-anleitung { padding: 12px 14px; border-radius: 14px; background: #FFF6E3; color: #5B4A1E; font-size: 14.5px; }
+.al-anleitung ol { margin: 6px 0 4px; padding-left: 20px; }
+.al-mailbox[hidden] { display: none; }
+.al-mail { width: 100%; min-height: 50px; border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; font-size: 16px; }
+.al-honig { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.al-klein { margin: 6px 2px 0; font-size: 13px; color: var(--muted); }
+.al-meldung { margin: 0; padding: 10px 12px; border-radius: 12px; background: #EAF5F9; color: #0B4F63; font-size: 14.5px; }
+.al-meldung.is-fehler { background: #FDECEC; color: #8E2318; }
+.al-meldung[hidden] { display: none; }
+.al-los { min-height: 52px; font-size: 17px; }
+.al-los[hidden] { display: none; }
+.al-loeschen { align-self: center; min-height: 44px; border: 0; background: none; color: #A32020; font-weight: 750; }
+.al-fuss { margin: 0; text-align: center; font-size: 13px; color: var(--muted); }
+button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; cursor: pointer; }
+.pd-alarm-chev { display: grid; color: #06667E; }
+.pd-alarm-pfeil:empty { display: none; }
+.ei-keine-alarme { padding: 12px 16px; margin: 0; }

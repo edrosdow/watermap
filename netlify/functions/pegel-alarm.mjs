@@ -33,7 +33,7 @@ export async function handle(req, { store, env, fetchFn = fetch, send, now = Dat
   }
 }
 
-const KEYS = ['BREVO_API_KEY', 'ALARM_ABSENDER', 'ALARM_ABSENDER_NAME'];
+const KEYS = ['BREVO_API_KEY', 'ALARM_ABSENDER', 'ALARM_ABSENDER_NAME', 'VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT'];
 export function runtimeEnv() {
   // Netlify.env kennt auch als „Secret“ markierte Werte; process.env als Rückfall
   const nenv = globalThis.Netlify?.env;

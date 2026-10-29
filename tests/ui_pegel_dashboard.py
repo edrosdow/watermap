@@ -86,6 +86,14 @@ def wetter_handler(route):
     if path.endswith('/current_weather'): return j({'weather': {'timestamp': iso(NOW), 'temperature': 12.0, 'icon': 'cloudy', 'wind_speed_10': 10.0, 'wind_direction_10': 200, 'wind_gust_speed_10': 20.0}, 'sources': []})
     return route.fulfill(status=404, body='{}')
 
+alarm_api = {'mail': [], 'push': []}
+def alarm_mail_handler(route):
+    alarm_api['mail'].append(json.loads(route.request.post_data or '{}'))
+    return route.fulfill(status=200, content_type='application/json', body='{"ok": true}')
+def alarm_push_handler(route):
+    alarm_api['push'].append(route.request.method)
+    return route.fulfill(status=503, content_type='application/json', body=json.dumps({'fehler': 'Push ist noch nicht eingerichtet.'}))
+
 def wochenende_namen(heute=None):
     heute = heute or dt.date.today(); w = (heute.weekday() + 1) % 7   # 0 = Sonntag wie in JS
     if w == 6: return ['Samstag', 'Sonntag']
@@ -102,6 +110,8 @@ def page(b, w, hh, mobile, init=''):
     uf.lib_routes(ctx)
     ctx.route('**/api/pegel/**', handler)
     ctx.route('**/api/wetter/**', wetter_handler)
+    ctx.route('**/.netlify/functions/pegel-alarm', alarm_mail_handler)
+    ctx.route('**/.netlify/functions/pegel-push', alarm_push_handler)
     ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))
     ctx.add_init_script("try { localStorage.setItem('watermap.geoAsked', '1'); " + init + " } catch {}")
     pg = ctx.new_page(); errs = []
@@ -225,7 +235,7 @@ def run(b, w, hh, mobile):
     pg.click('.pg-hinzu'); pg.wait_for_timeout(200)
     check(pg.evaluate("document.activeElement.id") == 'pg-suche', f'{tag}: „+ Pegel hinzufügen“ fokussiert die Suche')
     tw = pg.locator('.pg-wz.is-ampel'); al = pg.locator('.pg-wz.is-alarm')
-    check(tw.get_attribute('href') == f'./pegel-ampel?pegel={U(1)}' and al.get_attribute('href') == f'./pegel-ampel?pegel={U(1)}#am-alarm' and 'Passt mein Boot?' in tw.inner_text() and 'Pegel-Alarm' in al.inner_text(),
+    check(tw.get_attribute('href') == f'./pegel-ampel?pegel={U(1)}' and al.evaluate('e => e.tagName') == 'BUTTON' and 'für Vlotho' in al.inner_text() and 'Passt mein Boot?' in tw.inner_text() and 'Pegel-Alarm' in al.inner_text(),
           f'{tag}: Werkzeuge Pegel-Ampel und Pegel-Alarm mit gewähltem Pegel')
     check('Angaben ohne Gewähr' in pg.inner_text('.pg-fuss'), f'{tag}: Fußnote')
     # Ansicht „Karte“
@@ -377,7 +387,7 @@ def run(b, w, hh, mobile):
     check('Verlauf und Vorhersage' in d.inner_text() and d.locator('.gc-jetzt').count() == 1 and d.locator('.gc-vorh-bg').count() == 1 and d.locator('.gc-tief').count() == 1, f'{tag}: Diagramm mit Vorhersage (gestrichelt, grau), Linie „jetzt“, Fläche unter MNW')
     vs = d.locator('.pd-vorh-satz').inner_text()
     check(re.fullmatch(r'Vorhersage: bleibt bis \w+ unter MNW \(66–70 cm\)\.', vs) is not None, f'{tag}: Satz zur Vorhersage ({vs!r})')
-    check(d.locator('.pd-alarm').get_attribute('href') == f'./pegel-ampel?pegel={U(7)}#am-alarm' and 'Pegel-Alarm' in d.locator('.pd-alarm').inner_text(), f'{tag}: Zeile „Pegel-Alarm“')
+    check(d.locator('.pd-alarm').evaluate('e => e.tagName') == 'BUTTON' and 'Pegel-Alarm' in d.locator('.pd-alarm').inner_text() and 'Benachrichtigen lassen' in d.locator('.pd-alarm').inner_text(), f'{tag}: Zeile „Pegel-Alarm“ (öffnet das Alarm-Fenster)')
     pg.screenshot(path=str(SHOTS / f'pegel_{w}_7detail_zusatz.png'))
     with pg.expect_download(timeout=10000) as dl:
         d.locator('.pd-bild').click()
@@ -392,6 +402,64 @@ def run(b, w, hh, mobile):
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
     ctx.close()
+
+    # Stufe 3: Pegel-Alarm-Fenster (unter/über, −/+, Push oder E-Mail)
+    ctx, pg = page(b, w, hh, mobile, init="localStorage.setItem('watermap.meinePegel', JSON.stringify(['%s']));" % U(7))
+    alarm_api['mail'].clear(); alarm_api['push'].clear()
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pm-karte')
+    pg.locator('.pm-karte .pm-flaeche').first.click(); pg.wait_for_selector('dialog.wxd-pegel[open] .pd-alarm')
+    check('Benachrichtigen lassen' in pg.inner_text('dialog.wxd-pegel .pd-alarm'), f'{tag}: Alarm-Zeile ohne Alarm: „Benachrichtigen lassen“')
+    pg.click('dialog.wxd-pegel .pd-alarm'); pg.wait_for_selector('dialog.wxd-alarm[open]')
+    al = pg.locator('dialog.wxd-alarm')
+    check('Pegel-Alarm' in al.inner_text() and 'Kaub · Rhein · jetzt 72 cm' in al.inner_text(), f'{tag}: Kopf „Pegel-Alarm“, „Kaub · Rhein · jetzt 72 cm“')
+    check(pg.input_value('#al-wert') == '70' and al.locator('.al-r[aria-pressed=true]').inner_text() == 'unter', f'{tag}: Vorschlag = aktueller Wert gerundet (70), „unter“')
+    al.locator('.al-pm', has_text='+').click(); al.locator('.al-pm', has_text='+').click()
+    check(pg.input_value('#al-wert') == '80', f'{tag}: + in 5-cm-Schritten')
+    al.locator('.al-pm', has_text='−').click()
+    check(pg.input_value('#al-wert') == '75', f'{tag}: − in 5-cm-Schritten')
+    pg.fill('#al-wert', '100')
+    check(al.locator('#al-hw').count() == 0, f'{tag}: Hochwasser-Häkchen erst mit HOCHWASSER_AKTIV')
+    check(al.locator('input[value=push]').is_checked() and 'empfohlen' in al.inner_text(), f'{tag}: Push vorausgewählt (empfohlen)')
+    bx = al.bounding_box()
+    check(bx['y'] + bx['height'] <= hh + 1 and (not mobile or bx['y'] + bx['height'] >= hh - 2), f'{tag}: Alarm-Fenster {"von unten" if mobile else "mittig"}')
+    pg.screenshot(path=str(SHOTS / f'pegel_{w}_8alarm.png'))
+    al.locator('.al-los').click(); pg.wait_for_timeout(500)
+    check('noch nicht eingerichtet' in al.locator('.al-meldung').inner_text() and al.locator('.al-meldung.is-fehler').count() == 1, f'{tag}: Push ohne Server-Schlüssel → verständlicher Hinweis')
+    al.locator('input[value=mail]').check()
+    check(al.locator('#al-mail').is_visible(), f'{tag}: E-Mail: Feld für die Adresse')
+    al.locator('.al-los').click(); pg.wait_for_timeout(200)
+    check('gültige E-Mail' in al.locator('.al-meldung').inner_text(), f'{tag}: E-Mail fehlt → Hinweis')
+    pg.fill('#al-mail', 'test@example.de'); al.locator('.al-los').click(); pg.wait_for_timeout(500)
+    m = alarm_api['mail'][-1] if alarm_api['mail'] else {}
+    check(m.get('aktion') == 'anmelden' and m.get('art') == 'schwelle' and m.get('richtung') == 'unter' and m.get('wert') == 100 and m.get('pegel') == U(7) and m.get('email') == 'test@example.de',
+          f'{tag}: E-Mail-Alarm an pegel-alarm ({m})')
+    check('Fast geschafft' in al.locator('.al-meldung').inner_text(), f'{tag}: Hinweis „bitte bestätigen“')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+    check('E-Mail, wenn unter 100 cm' in pg.inner_text('dialog.wxd-pegel .pd-alarm'), f'{tag}: Alarm-Zeile zeigt den Alarm ({pg.inner_text("dialog.wxd-pegel .pd-alarm")!r})')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+    # Einstellungen: Übersicht und Löschen
+    pg.goto(uf.BASE + '#mehr/einstellungen'); pg.wait_for_selector('.ei-alarm')
+    check('Kaub' in pg.inner_text('.ei-alarm') and 'E-Mail, wenn unter 100 cm' in pg.inner_text('.ei-alarm'), f'{tag}: Einstellungen: Alarm in der Übersicht')
+    pg.click('.ei-alarm .ei-knopf'); pg.wait_for_selector('.ei-keine-alarme')
+    check(pg.evaluate("JSON.parse(localStorage.getItem('watermap.alarme'))") == [], f'{tag}: Einstellungen: Alarm gelöscht')
+    check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
+    ctx.close()
+    # iPhone im Browser (nicht vom Home-Bildschirm): Push gesperrt, Anleitung, E-Mail vorausgewählt
+    if mobile:
+        ctx = b.new_context(viewport={'width': w, 'height': hh}, is_mobile=True, has_touch=True, locale='de-DE', service_workers='block',
+                            user_agent='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1')
+        uf.lib_routes(ctx); ctx.route('**/api/pegel/**', handler); ctx.route('**/api/wetter/**', wetter_handler)
+        ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))
+        ctx.add_init_script("try { localStorage.setItem('watermap.geoAsked', '1'); localStorage.setItem('wm-nav-labels-gesehen', '1'); } catch {}")
+        pg = ctx.new_page()
+        pg.goto(uf.BASE + f'#pf={U(7)}'); pg.wait_for_selector('dialog.wxd-pegel[open] .pd-alarm', timeout=15000)
+        check(pg.url.endswith('#pegel'), f'{tag}: Link aus der Push-Nachricht (#pf=…) öffnet das Pegel-Fenster im Pegel-Tab')
+        pg.click('dialog.wxd-pegel .pd-alarm'); pg.wait_for_selector('dialog.wxd-alarm[open]')
+        al = pg.locator('dialog.wxd-alarm')
+        check(al.locator('input[value=push]').is_disabled() and al.locator('input[value=mail]').is_checked() and 'Zum Home-Bildschirm' in al.inner_text() and 'Home-Bildschirm liegt' in al.inner_text(),
+              f'{tag}: iPhone im Browser: Push nur als Home-Bildschirm-App, Anleitung, E-Mail vorausgewählt')
+        pg.screenshot(path=str(SHOTS / f'pegel_{w}_8alarm_iphone.png'))
+        ctx.close()
 
     # Leere Liste: ohne Position Hinweis, mit Position die 3 nächsten
     ctx, pg = page(b, w, hh, mobile, init="localStorage.setItem('watermap.meinePegel.ampel', '1');")

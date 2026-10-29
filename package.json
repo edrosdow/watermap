@@ -4,6 +4,7 @@
   "description": "WaterMap – nur für die Netlify-Funktionen (Pegel-Alarm); die Web-App selbst braucht keinen Build.",
   "type": "module",
   "dependencies": {
-    "@netlify/blobs": "^11.1.6"
+    "@netlify/blobs": "^11.1.6",
+    "web-push": "^3.6.7"
   }
 }

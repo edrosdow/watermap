@@ -4,7 +4,7 @@ const host = typeof location !== 'undefined' ? location.hostname : '';
 export const ENTWICKLUNG = /^(localhost|127\.0\.0\.1)$|^deploy-preview-/.test(host);
 
 export const CONFIG = {
-  VERSION: '7.47.0',
+  VERSION: '7.48.0',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -56,7 +56,8 @@ export const CONFIG = {
   WETTER_BASE: '/api/wetter/',
   WETTER_HOURS: 48,            // Vorhersagezeitraum im Diagramm
   WETTER_CACHE_MIN: 10,        // gleiche Stelle innerhalb dieser Zeit nicht erneut abfragen
-  WETTER_GUST_HINT_KMH: 39,    // ab 6 Bft Böen ein Hinweis (gerade für kleine Boote)
+  WETTER_GUST_HINT_KMH: 39,
+  HOCHWASSER_AKTIV: false,     // Hochwasserwarnungen (Länderportale) – erst nach Prüfung der Quelle einschalten    // ab 6 Bft Böen ein Hinweis (gerade für kleine Boote)
 
   // „In der Nähe“ (Schleusen, Toiletten, Parkplätze … aus osm/extras.geojson)
   NEARBY_EXTRAS_M: 500,

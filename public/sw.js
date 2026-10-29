@@ -3,7 +3,7 @@
 //  * eigene Dateien (Seite, Skripte, Daten): erst Netzwerk, bei Ausfall Zwischenspeicher → Updates kommen sofort an
 //  * Bibliotheken von CDN und bereits gesehene Kartenkacheln: Zwischenspeicher zuerst (mit Obergrenze)
 // Offline heißt deshalb: Standortliste und Details funktionieren; Kartenkacheln nur dort, wo man vorher war.
-const VERSION = 'v7.47.0';
+const VERSION = 'v7.48.0';
 const SHELL = `watermap-shell-${VERSION}`;
 const TILES = `watermap-tiles-${VERSION}`;
 const LIBS = `watermap-libs-${VERSION}`;
@@ -12,7 +12,7 @@ const MAX_TILES = 400;
 const SHELL_FILES = [
   './', './index.html', './css/app.css', './css/chart.css', './css/ampel.css', './css/nav.css', './css/pegel.css', './css/naehe.css', './css/bereiche.css', './css/page.css', './pegel-ampel.html', './manifest.webmanifest',
   './js/main.js', './js/config.js', './js/dom.js', './js/icons.js', './js/model.js', './js/data.js',
-  './js/map.js', './js/search.js', './js/favorites.js', './js/forms.js', './js/photo-form.js', './js/nav.js', './js/wischen.js', './js/suchfeld.js', './js/meldungen.js', './js/lage-form.js', './js/pegel-daten.js', './js/pegel-ansicht.js', './js/pegel-dashboard.js', './js/pegel-lage.js', './js/pegel-karte.js', './js/pegel-bild.js', './js/pegel-fluss.js', './js/pegel-fluss-ansicht.js', './js/pegel-namen.js', './js/gezeiten.js', './js/gezeiten-bsh.js', './js/pegel-tide-ansicht.js', './js/naehe.js', './js/mehr.js', './js/einstellungen.js', './js/meldungen-uebersicht.js', './js/meldung-unpassend.js', './js/slip-ergaenzen.js', './js/gebiet.js', './js/detail.js', './js/pegel.js', './js/wetter.js', './js/chart.js', './js/extras.js', './js/umgebung-abfrage.js', './js/hafeninfo.js', './js/photos.js', './js/foto-kategorien.js', './js/ampel.js', './js/ampel-logik.js',
+  './js/map.js', './js/search.js', './js/favorites.js', './js/forms.js', './js/photo-form.js', './js/nav.js', './js/wischen.js', './js/suchfeld.js', './js/meldungen.js', './js/lage-form.js', './js/pegel-daten.js', './js/pegel-ansicht.js', './js/pegel-dashboard.js', './js/pegel-lage.js', './js/pegel-karte.js', './js/pegel-bild.js', './js/alarm.js', './js/pegel-vorhersage.js', './js/pegel-fluss.js', './js/pegel-fluss-ansicht.js', './js/pegel-namen.js', './js/gezeiten.js', './js/gezeiten-bsh.js', './js/pegel-tide-ansicht.js', './js/naehe.js', './js/mehr.js', './js/einstellungen.js', './js/meldungen-uebersicht.js', './js/meldung-unpassend.js', './js/slip-ergaenzen.js', './js/gebiet.js', './js/detail.js', './js/pegel.js', './js/wetter.js', './js/chart.js', './js/extras.js', './js/umgebung-abfrage.js', './js/hafeninfo.js', './js/photos.js', './js/foto-kategorien.js', './js/ampel.js', './js/ampel-logik.js',
   './icons/icon-192.png', './icons/favicon.svg',
   './vendor/leaflet/leaflet.js', './vendor/leaflet/leaflet.css',
   './vendor/markercluster/leaflet.markercluster.js', './vendor/markercluster/MarkerCluster.css',
@@ -83,5 +83,24 @@ self.addEventListener('fetch', (event) => {
     } catch {
       return hit || Response.error();
     }
+  })());
+});
+
+// ---------------------------------------------------------------- Pegel-Alarm per Push (netlify/functions/pegel-alarm-pruefen.mjs)
+self.addEventListener('push', (event) => {
+  let n = {};
+  try { n = event.data ? event.data.json() : {}; } catch { n = { body: event.data?.text() }; }
+  event.waitUntil(self.registration.showNotification(n.title || 'WaterMap Pegel-Alarm', {
+    body: n.body || '', tag: n.tag || 'pegel-alarm', icon: './icons/icon-192.png', badge: './icons/icon-192.png', data: { url: n.url || '/' },
+  }));
+});
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const ziel = new URL(event.notification.data?.url || '/', self.registration.scope).href;
+  event.waitUntil((async () => {
+    const fenster = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const offen = fenster.find(c => new URL(c.url).origin === self.location.origin);
+    if (offen) { await offen.navigate(ziel).catch(() => {}); return offen.focus(); }
+    return self.clients.openWindow(ziel);
   })());
 });

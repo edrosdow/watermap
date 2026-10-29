@@ -30,3 +30,31 @@ Hinweis: Ohne eigene Domain verschickt Brevo mit deiner privaten Adresse als Abs
 ## Prüfen
 - Netlify → *Logs* → *Functions* → `pegel-alarm-pruefen`: stündlich eine Zeile „Pegel-Alarm: N aktive Alarme, M Mails“.
 - Gespeicherte Alarme: Netlify → *Blobs* → Store `pegel-alarm` (Schlüssel `alarm/…`, `mail/…`, `zaehler/…`).
+
+## Schwellen-Alarm „unter/über X cm“ und Push (ab 7.48.0)
+Im Pegel-Tab öffnet „Pegel-Alarm“ (Pegel-Fenster oder Werkzeuge) ein Fenster: Richtung unter/über, Wert in 5-cm-Schritten
+(oder direkt eintippen), dann **Push aufs Handy** oder **E-Mail**.
+
+- **E-Mail:** wie oben (Double-Opt-in über Brevo), Art `schwelle`. Höchstens eine Mail pro Tag und Alarm; erst wenn der Pegel
+  zwischendurch wieder auf die andere Seite der Schwelle zurückgekehrt ist, kommt eine neue.
+- **Push:** Web Push über den Service Worker (`public/sw.js`), ohne E-Mail und ohne Konto. Gespeichert werden in Netlify Blobs
+  (Store `pegel-alarm`, Schlüssel `push/…`) nur Push-Adresse (Endpoint) und deren Schlüssel, Pegel, Richtung, Wert und Zeitpunkte.
+  Abgelaufene Abos (Antwort 404/410 des Push-Dienstes) werden bei der stündlichen Prüfung gelöscht. Gleiche Entprellung wie bei der Mail.
+- **iPhone:** Push nur, wenn WaterMap über Safari → Teilen → „Zum Home-Bildschirm“ installiert und von dort geöffnet wurde
+  (iOS 16.4 oder neuer). Im Browser zeigt das Fenster eine Anleitung und wählt die E-Mail vor.
+- Ein Tipp auf die Nachricht öffnet WaterMap im Pegel-Tab mit dem Pegel-Fenster (`/#pf=<Pegel-ID>`).
+- Übersicht und Löschen der Alarme dieses Geräts: Mehr → Einstellungen → Benachrichtigungen.
+
+### Push einmalig einrichten
+1. Auf deinem Rechner im Projektordner: `node scripts/vapid-schluessel.mjs` (Node.js ab 18). Das Skript gibt drei Zeilen aus.
+2. Netlify → *Site configuration* → *Environment variables* → drei Variablen anlegen (bei `VAPID_PRIVATE_KEY` „Contains secret values“ anhaken):
+   | Variable | Wert |
+   |---|---|
+   | `VAPID_PUBLIC_KEY` | erste Zeile |
+   | `VAPID_PRIVATE_KEY` | zweite Zeile (niemandem schicken, nicht ins Repository) |
+   | `VAPID_SUBJECT` | `mailto:` + deine Kontaktadresse, z. B. `mailto:info@deine-domain.de` |
+3. Netlify → *Deploys* → *Trigger deploy* → *Deploy site*.
+
+Neue Schlüssel machen alle bestehenden Push-Abos ungültig (sie werden beim nächsten Senden automatisch gelöscht; die Nutzer müssen
+den Alarm neu anlegen). Ohne die drei Variablen meldet das Fenster „Push ist noch nicht eingerichtet“ – die E-Mail geht weiter.
+Kostenlos: Die Push-Dienste von Apple, Google und Mozilla berechnen nichts; Funktion und Speicher laufen im Netlify-Gratis-Tarif.

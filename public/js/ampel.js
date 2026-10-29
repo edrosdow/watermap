@@ -272,7 +272,8 @@ async function alarmLink(params) {
   alarmMsg(ja ? 'Alarm wird bestätigt …' : 'Alarm wird abbestellt …');
   try {
     const r = await alarmApi(ja ? { aktion: 'bestaetigen', token: ja } : { aktion: 'abmelden', token: nein });
-    alarmMsg(ja ? `Dein Pegel-Alarm für ${r.pegelName} ist aktiv. Wir melden uns, wenn sich die Ampel ändert.` : 'Dein Pegel-Alarm ist abbestellt. Wir schicken dir keine Mails mehr dazu.');
+    alarmMsg(ja ? (r.art === 'schwelle' ? `Dein Pegel-Alarm für ${r.pegelName} ist aktiv. Wir melden uns, wenn der Pegel ${r.richtung === 'unter' ? 'unter' : 'über'} ${r.wert} cm liegt (höchstens eine Mail am Tag).`
+      : `Dein Pegel-Alarm für ${r.pegelName} ist aktiv. Wir melden uns, wenn sich die Ampel ändert.`) : 'Dein Pegel-Alarm ist abbestellt. Wir schicken dir keine Mails mehr dazu.');
   } catch (err) { alarmMsg(err.message, true); }
 }
 

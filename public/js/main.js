@@ -1042,6 +1042,7 @@ function readHash() {
   for (const part of location.hash.replace(/^#/, '').split('&').filter(Boolean)) {
     const fl = part.match(/^pegel\/fluss\/([a-z0-9-]+)$/), pg = part.match(/^pegel\/(.+)$/), kp = part.match(/^karte\/pegel\/(.+)$/);
     if (part === 'pegel/karte') { out.view = 'pegel'; out.pegelKarte = true; }
+    else if (part.startsWith('pf=')) { out.view = 'pegel'; try { out.pegelFenster = decodeURIComponent(part.slice(3)); } catch { /* ungültig */ } }   // aus der Push-Nachricht
     else if (fl) { out.view = 'pegel'; out.fluss = fl[1]; }
     else if (pg) { out.view = 'pegel'; try { out.pegel = decodeURIComponent(pg[1]); } catch { /* ungültig */ } }
     else if (kp) { out.view = 'karte'; try { out.sel = { k: 'g', id: decodeURIComponent(kp[1]) }; } catch { /* ungültig */ } }
@@ -1125,7 +1126,7 @@ function onNav(id, e) {
 
 function handleHash({ initial = false } = {}) {
   if (!initial && location.hash === appliedHash) return;
-  const { view, sel, melden, pegel, fluss, mehr, pegelKarte } = readHash();
+  const { view, sel, melden, pegel, fluss, mehr, pegelKarte, pegelFenster } = readHash();
   if (pegelKarte) pegelAnsichtSetzen('karte');   // „#pegel/karte“ wählt die Kartenansicht (und merkt sie); „#pegel“ behält die gemerkte Ansicht
   state.pegelId = view === 'pegel' ? pegel : null;
   state.pegelFluss = view === 'pegel' ? fluss : null;
@@ -1133,6 +1134,7 @@ function handleHash({ initial = false } = {}) {
   if (view === 'pegel' && state.view === 'pegel') pegelBereich();
   if (view === 'mehr' && state.view === 'mehr') mehrBereich();
   setView(view || 'karte', { push: false, sofort: initial });
+  if (pegelFenster) setTimeout(() => pegelFensterOeffnen(pegelFenster, null), 0);   // Pegel-Tab mit dem Pegel-Fenster darüber
   if (melden) setTimeout(() => { renderReportMenu({ fragen: true }); reportPop.open($(isMobile() ? '#bottomnav [data-nav="melden"]' : '#btn-report')); }, 0);
   selHash = sel;
   writeHash(false);
@@ -1476,6 +1478,7 @@ function wireStatic() {
   $('#btn-locate').addEventListener('click', () => locate().catch(() => {}));
   $('#list-close').addEventListener('click', () => setView('karte'));
   suchfelderMitX();
+  document.addEventListener('wm-toast', (e) => toast(e.detail));
   wischenZuMachen({ mobil: isMobile, schliessen: { '#peek': closeDetail, '#detail': closeDetail,
     '.sidebar': { zu: () => setView('karte'), wenn: () => state.view === 'naehe', mit: () => [$('#naehe-kopf-m')] }, '#naehe-kopf-m': { zu: () => setView('karte'), wenn: () => state.view === 'naehe', mit: () => [el.sidebar] } } });   // „In der Nähe“ ist auf dem Handy ein Fenster über der Karte
   document.addEventListener('keydown', (e) => {

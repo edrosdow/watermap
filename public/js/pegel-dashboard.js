@@ -8,6 +8,7 @@ import { lageSatz, wochenendTage, tageAusStunden, zelle, vorhersageTag, vorhersa
 import { pegelKarteAnsicht } from './pegel-karte.js';
 import { tendenz } from './gezeiten.js';
 import { fenster, loadWetterStunden, wxIcon } from './wetter.js';
+import { alarmFenster } from './alarm.js';
 import { fmt, kmText, zustand, ZUSTAND, etikett, trendText, trendKlasse, pegelKarte, pegelDetail, sternKnopf, mitTrend } from './pegel-ansicht.js';
 import { formatTime } from './pegel.js';
 import { ENTWICKLUNG } from './config.js';
@@ -281,8 +282,11 @@ export function pegelDashboard(root, ctx) {
       h('div', { class: 'pg-wz-reihe' },
         h('a', { class: 'pg-wz is-ampel', href: './pegel-ampel' + (erster ? `?pegel=${encodeURIComponent(erster)}` : '') },
           h('span', { class: 'pg-wz-text' }, h('strong', { text: 'Passt mein Boot?' }), h('small', { text: 'Pegel-Ampel ›' }))),
-        h('a', { class: 'pg-wz is-alarm', href: './pegel-ampel' + (erster ? `?pegel=${encodeURIComponent(erster)}` : '') + '#am-alarm' },
-          h('span', { class: 'pg-wz-text' }, h('strong', { text: 'Pegel-Alarm' }), h('small', { text: 'als Push oder E-Mail ›' })))));
+        // Pegel-Alarm: für den ersten gemerkten Pegel direkt das Fenster, sonst erst einen Pegel suchen
+        erster ? h('button', { type: 'button', class: 'pg-wz is-alarm', 'aria-haspopup': 'dialog', onclick: (e) => alarmFenster(stand.byId.get(erster), { opener: e.currentTarget }) },
+          h('span', { class: 'pg-wz-text' }, h('strong', { text: 'Pegel-Alarm' }), h('small', { text: `für ${stand.byId.get(erster).name} ›` })))
+          : h('button', { type: 'button', class: 'pg-wz is-alarm', onclick: () => { sucheFokussieren(); ctx.toast?.('Wähle zuerst einen Pegel – im Pegel-Fenster findest du „Pegel-Alarm“.'); } },
+            h('span', { class: 'pg-wz-text' }, h('strong', { text: 'Pegel-Alarm' }), h('small', { text: 'als Push oder E-Mail ›' })))));
   }
 
   // ---------------------------------------------------------------- Alle Pegel (über die Zähler; die Suche hat eigene Treffer)
