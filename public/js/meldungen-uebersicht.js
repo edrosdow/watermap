@@ -14,13 +14,18 @@ const FILTER = [
   ['hindernis', 'Hindernisse', ['hindernis']],
 ];
 const SORT = { neu: 'Neueste zuerst', wichtig: 'Wichtigste zuerst', nah: 'Nächste zuerst' };
-const ui = { filter: 'alle', bereich: 'ueberall', sort: 'neu' };
+const LS_KM = 'watermap.meldungen.umkreis';   // gemerkter Umkreis in km (5–100)
+const KM_MIN = 5, KM_MAX = 100, KM_SCHRITT = 5, KM_START = 25;
+const kmLesen = () => { try { const v = Number(JSON.parse(localStorage.getItem(LS_KM))); return v >= KM_MIN && v <= KM_MAX ? Math.round(v / KM_SCHRITT) * KM_SCHRITT : KM_START; } catch { return KM_START; } };
+const kmMerken = (km) => { try { localStorage.setItem(LS_KM, JSON.stringify(km)); } catch { /* ohne Speicher */ } };
+// pos: Stand der Standortabfrage für „Mein Standort“ (frei = noch nicht gefragt, laeuft, fehler)
+const ui = { filter: 'alle', bereich: 'ueberall', sort: 'neu', km: kmLesen(), pos: 'frei', posFehler: '' };
 
 const TON = { gut: 'vo-gut', warn: 'vo-warn', stop: 'vo-stop' };
 
 /**
  * ctx = { ort(id) → { name, sub, lat, lon } | null, oeffneOrt(id), bezug() → { lat, lon } | null, grenzen() → { south, north, west, east } | null,
- *         entfernung(a, b) → m, formatDistance(m), melden(), toast(text), unpassend(meldung, ortName, fertig) }
+ *         position() → Promise<{ lat, lon }> (fragt den Standort ab, Fehler mit Text), freigegeben() → boolean, entfernung(a, b) → m, formatDistance(m), melden(), toast(text), unpassend(meldung, ortName, fertig) }
  */
 export function meldungenSeite(root, ctx) {
   let daten = null, laeuft = null;
@@ -50,6 +55,7 @@ export function meldungenSeite(root, ctx) {
     const bezug = ctx.bezug();
     if (ui.sort === 'nah' && !bezug) ui.sort = 'neu';
     let liste = daten.meldungen.filter(m => !typen || typen.includes(m.typ));
+    if (ui.bereich === 'standort' && bezug) liste = liste.filter((m) => { const o = ctx.ort(m.standortId); return o && ctx.entfernung(bezug, o) <= ui.km * 1000; });
     if (b) liste = liste.filter((m) => { const o = ctx.ort(m.standortId); return o && o.lat >= b.south && o.lat <= b.north && o.lon >= b.west && o.lon <= b.east; });
     const d = (m) => { const o = ctx.ort(m.standortId); return bezug && o ? ctx.entfernung(bezug, o) : Infinity; };
     if (ui.sort === 'wichtig') liste.sort((x, y) => (TYPEN[y.typ]?.rang || 0) - (TYPEN[x.typ]?.rang || 0) || y.erstelltAm - x.erstelltAm);
@@ -88,6 +94,45 @@ export function meldungenSeite(root, ctx) {
         h('span', { html: icon('flag', 15), 'aria-hidden': 'true' }), h('span', { text: 'Unpassend melden' }))) : null);
   }
 
+  /** „Mein Standort“ antippen: Position nur auf Wunsch (oder wenn schon freigegeben) abfragen. */
+  async function bereichWaehlen(k) {
+    ui.bereich = k;
+    if (k === 'standort' && !ctx.bezug()) {
+      if (ctx.freigegeben()) await positionHolen(); else { ui.pos = 'frei'; zeichnen(); }
+      return;
+    }
+    zeichnen();
+  }
+  async function positionHolen() {
+    ui.pos = 'laeuft'; zeichnen();
+    try { await ctx.position(); ui.pos = 'frei'; ui.posFehler = ''; }
+    catch (e) { ui.pos = 'fehler'; ui.posFehler = e.message; }
+    if (ui.bereich === 'standort') zeichnen();
+  }
+
+  function inhaltBauen(liste, bezug, d) {
+    if (ui.bereich === 'standort' && !bezug) {
+      return h('div', { class: 'bs-gruppe mu-leer mu-pos' },
+        h('p', { class: 'mu-leer-titel', text: ui.pos === 'laeuft' ? 'Standort wird bestimmt …' : 'Standort verwenden?' }),
+        h('p', { class: 'bs-leer', role: ui.pos === 'fehler' ? 'alert' : null, text: ui.pos === 'fehler' ? ui.posFehler
+          : 'Damit zeigen wir Meldungen im Umkreis deines Standorts. Dein Standort bleibt auf deinem Gerät.' }),
+        ui.pos === 'laeuft' ? null : h('button', { type: 'button', class: 'btn btn-primary mu-melden', onclick: positionHolen }, ui.pos === 'fehler' ? 'Erneut versuchen' : 'Standort verwenden'));
+    }
+    if (!daten.meldungen.length) {
+      return h('div', { class: 'bs-gruppe mu-leer' },
+        h('p', { class: 'mu-leer-titel', text: daten.offline ? 'Keine gespeicherten Meldungen' : 'Gerade keine aktuellen Meldungen' }),
+        h('p', { class: 'bs-leer', text: 'Meldungen gelten 24 Stunden. Bist du an einer Slipanlage? Teile kurz, wie es vor Ort aussieht.' }),
+        h('button', { type: 'button', class: 'btn btn-primary mu-melden', onclick: ctx.melden }, h('span', { html: icon('plus', 18) }), 'Lage melden'));
+    }
+    if (!liste.length) {
+      return h('div', { class: 'bs-gruppe mu-leer' },
+        h('p', { class: 'bs-leer', text: ui.bereich === 'karte' ? 'Im Kartenausschnitt gibt es dazu gerade keine Meldungen.'
+          : ui.bereich === 'standort' ? `Im Umkreis von ${ui.km} km gibt es dazu gerade keine Meldungen.` : 'Für diesen Filter gibt es gerade keine Meldungen.' }),
+        h('button', { type: 'button', class: 'bs-link', text: 'Alle Meldungen zeigen', onclick: () => { ui.filter = 'alle'; ui.bereich = 'ueberall'; zeichnen(); } }));
+    }
+    return h('div', { class: 'mu-liste' }, liste.map(m => karte(m, bezug, d)));
+  }
+
   function zeichnen() {
     if (!daten) return;
     const fokus = root.contains(document.activeElement) ? document.activeElement.dataset?.fokus : null;
@@ -100,25 +145,30 @@ export function meldungenSeite(root, ctx) {
     }));
     const kartenOk = !!ctx.grenzen();
     const seg = h('div', { class: 'mu-seg', role: 'group', 'aria-label': 'Bereich' },
-      [['ueberall', 'Überall'], ['karte', 'Kartenausschnitt']].map(([k, text]) => h('button', { type: 'button', class: ui.bereich === k ? 'is-an' : '', 'aria-pressed': String(ui.bereich === k),
-        dataset: { fokus: `b-${k}` }, disabled: k === 'karte' && !kartenOk, onclick: () => { ui.bereich = k; zeichnen(); } }, text)));
+      [['ueberall', 'Überall'], ['karte', 'Kartenausschnitt'], ['standort', 'Mein Standort']].map(([k, text]) => h('button', { type: 'button', class: ui.bereich === k ? 'is-an' : '', 'aria-pressed': String(ui.bereich === k),
+        dataset: { fokus: `b-${k}` }, disabled: k === 'karte' && !kartenOk, onclick: () => bereichWaehlen(k) }, text)));
     const sort = h('select', { class: 'mu-sort', 'aria-label': 'Sortierung', dataset: { fokus: 'sort' }, onchange: (e) => { ui.sort = e.target.value; zeichnen(); } },
       Object.entries(SORT).filter(([k]) => k !== 'nah' || bezug).map(([k, text]) => h('option', { value: k, selected: ui.sort === k, text })));
     const hinweis = daten.offline
       ? h('p', { class: 'bs-hinweis mu-offline', role: 'status', text: daten.unbekannt ? 'Offline – noch kein gespeicherter Stand vorhanden.' : `Offline – letzter gespeicherter Stand (${standVon(daten.zeit).replace('Stand von ', '')}). Bewerten ist erst wieder mit Verbindung möglich.` })
       : null;
-    let inhalt;
-    if (!daten.meldungen.length) {
-      inhalt = h('div', { class: 'bs-gruppe mu-leer' },
-        h('p', { class: 'mu-leer-titel', text: daten.offline ? 'Keine gespeicherten Meldungen' : 'Gerade keine aktuellen Meldungen' }),
-        h('p', { class: 'bs-leer', text: 'Meldungen gelten 24 Stunden. Bist du an einer Slipanlage? Teile kurz, wie es vor Ort aussieht.' }),
-        h('button', { type: 'button', class: 'btn btn-primary mu-melden', onclick: ctx.melden }, h('span', { html: icon('plus', 18) }), 'Lage melden'));
-    } else if (!liste.length) {
-      inhalt = h('div', { class: 'bs-gruppe mu-leer' },
-        h('p', { class: 'bs-leer', text: ui.bereich === 'karte' ? 'Im Kartenausschnitt gibt es dazu gerade keine Meldungen.' : 'Für diesen Filter gibt es gerade keine Meldungen.' }),
-        h('button', { type: 'button', class: 'bs-link', text: 'Alle Meldungen zeigen', onclick: () => { ui.filter = 'alle'; ui.bereich = 'ueberall'; zeichnen(); } }));
-    } else inhalt = h('div', { class: 'mu-liste' }, liste.map(m => karte(m, bezug, d)));
-    root.replaceChildren(rahmen(chips, h('div', { class: 'mu-steuer' }, seg, h('span', { class: 'mu-sort-box' }, sort)), hinweis, inhalt));
+    // Liste und Zählzeile werden beim Ziehen des Reglers allein neu gezeichnet (der Regler bleibt stehen)
+    const zaehler = h('p', { class: 'mu-umkreis-zahl', role: 'status' });
+    const rumpf = h('div', { class: 'mu-rumpf' });
+    const fuellen = () => {
+      const a = auswahl();
+      zaehler.textContent = `${a.liste.length} ${a.liste.length === 1 ? 'Meldung' : 'Meldungen'} im Umkreis von ${ui.km} km um deinen Standort.`;
+      rumpf.replaceChildren(inhaltBauen(a.liste, a.bezug, a.d));
+    };
+    const regler = ui.bereich === 'standort' && bezug ? h('div', { class: 'mu-umkreis' },
+      h('label', { class: 'mu-umkreis-kopf', for: 'mu-km' }, h('span', { text: 'Umkreis' }), h('b', { class: 'mu-km-wert', text: `${ui.km} km` })),
+      h('input', { type: 'range', id: 'mu-km', class: 'mu-range', min: String(KM_MIN), max: String(KM_MAX), step: String(KM_SCHRITT), value: String(ui.km), 'aria-valuetext': `${ui.km} Kilometer`, dataset: { fokus: 'km' },
+        oninput: (e) => { ui.km = Number(e.target.value); e.target.setAttribute('aria-valuetext', `${ui.km} Kilometer`); root.querySelector('.mu-km-wert').textContent = `${ui.km} km`; fuellen(); },
+        onchange: () => kmMerken(ui.km) }),
+      h('div', { class: 'mu-skala', 'aria-hidden': 'true' }, [5, 25, 50, 75, 100].map(n => h('span', { text: n === 100 ? '100 km' : String(n) }))),
+      zaehler) : null;
+    fuellen();
+    root.replaceChildren(rahmen(chips, h('div', { class: 'mu-steuer' }, seg, h('span', { class: 'mu-sort-box' }, sort)), regler, hinweis, rumpf));
     if (fokus) root.querySelector(`[data-fokus="${fokus}"]`)?.focus();
   }
 

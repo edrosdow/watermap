@@ -819,6 +819,12 @@ function meldungenBereich() {
     oeffneOrt: (id) => { setView('karte'); selectPlace(id, { full: true }); },
     bezug: () => (state.user ? { lat: state.user.lat, lon: state.user.lon } : null),   // nur, wenn die Position schon freigegeben und bekannt ist
     grenzen: () => (state.mapOk ? state.map.getBounds() : null),
+    freigegeben: () => geoFreigabe.status === 'granted',
+    position: async () => {   // „Mein Standort“: Position abfragen (Freigabe erst auf Wunsch)
+      const pos = await requestUserPos();
+      state.user = pos; state.map?.showUser(pos.lat, pos.lon, pos.accuracy); geoFreigabe.merken(true);
+      return { lat: pos.lat, lon: pos.lon };
+    },
     entfernung: (a, b) => haversine(a.lat, a.lon, b.lat, b.lon),
     formatDistance,
     melden: () => { renderReportMenu({ fragen: true }); reportPop.open($(isMobile() ? '#bottomnav [data-nav="melden"]' : '#btn-report')); },

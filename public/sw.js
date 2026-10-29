@@ -3,7 +3,7 @@
 //  * eigene Dateien (Seite, Skripte, Daten): erst Netzwerk, bei Ausfall Zwischenspeicher → Updates kommen sofort an
 //  * Bibliotheken von CDN und bereits gesehene Kartenkacheln: Zwischenspeicher zuerst (mit Obergrenze)
 // Offline heißt deshalb: Standortliste und Details funktionieren; Kartenkacheln nur dort, wo man vorher war.
-const VERSION = 'v7.41.0';
+const VERSION = 'v7.42.0';
 const SHELL = `watermap-shell-${VERSION}`;
 const TILES = `watermap-tiles-${VERSION}`;
 const LIBS = `watermap-libs-${VERSION}`;
