@@ -51,6 +51,20 @@ def handler(route):
     if rest == 'stations.json': return route.fulfill(status=200, content_type='application/json', body=json.dumps(STATIONS))
     m = re.fullmatch(r'stations/([^/]+)/W/measurements\.json', rest)
     if m and m.group(1) in BY_ID: return route.fulfill(status=200, content_type='application/json', body=json.dumps(measurements(m.group(1))))
+    # Zusatzwerte (Stufe 2): nur Kaub liefert Wassertemperatur, Abfluss und Vorhersage
+    m = re.fullmatch(r'stations/([^/]+)\.json', rest)
+    if m and m.group(1) in BY_ID:
+        st = dict(BY_ID[m.group(1)]); ts = list(st['timeseries'])
+        if m.group(1) == U(7):
+            ts += [{'shortname': 'WT', 'unit': '°C', 'currentMeasurement': {'timestamp': iso(NOW), 'value': 12.5}},
+                   {'shortname': 'Q', 'unit': 'm³/s', 'currentMeasurement': {'timestamp': iso(NOW), 'value': 624.0}},
+                   {'shortname': 'WV', 'unit': 'cm'}]
+        st['timeseries'] = ts
+        return route.fulfill(status=200, content_type='application/json', body=json.dumps(st))
+    if rest == f'stations/{U(7)}/WT/measurements.json':
+        return route.fulfill(status=200, content_type='application/json', body=json.dumps([{'timestamp': iso(NOW - dt.timedelta(hours=h)), 'value': 12.5 - h / 24} for h in range(48, -1, -1)]))
+    if rest == f'stations/{U(7)}/WV/measurements.json':
+        return route.fulfill(status=200, content_type='application/json', body=json.dumps([{'initialized': iso(NOW), 'timestamp': iso(NOW + dt.timedelta(hours=6 * i)), 'value': 70 - i * 4 / 12, 'type': 'forecast' if i < 8 else 'estimate'} for i in range(1, 13)]))
     return route.fulfill(status=404, body='[]')
 
 
@@ -344,6 +358,38 @@ def run(b, w, hh, mobile):
     # Marker-Klick auf der Karte bleibt auf der Karte
     pg.evaluate(f"window.__watermap.selectGauge('{U(2)}')"); pg.wait_for_timeout(300)
     check(pg.locator('.shell').is_visible() and pg.locator('#pegelseite').is_hidden() and pg.url.endswith('#karte/pegel/' + U(2)), f'{tag}: Pegel-Marker bleibt auf der Karte')
+    check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
+    ctx.close()
+
+    # Stufe 2: Wassertemperatur, Abfluss, Vorhersage (nur wo geliefert), Alarm-Zeile, Bild teilen
+    ctx, pg = page(b, w, hh, mobile, init="localStorage.setItem('watermap.meinePegel', JSON.stringify(['%s','%s']));" % (U(7), U(1)))
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pm-karte .pm-et', timeout=10000)
+    kk = pg.locator('.pm-karte', has_text='Kaub')
+    check([e.strip() for e in kk.locator('.pm-et').all_inner_texts()] == ['Wasser 12,5 °C', 'Abfluss 624 m³/s'], f'{tag}: Karte Kaub mit „Wasser 12,5 °C“ und „Abfluss 624 m³/s“')
+    pg.wait_for_selector('.pm-karte .pm-spark-vorh', timeout=8000)
+    check(kk.locator('.pm-spark-vorh').count() == 1 and pg.locator('.pm-karte', has_text='Vlotho').locator('.pm-et, .pm-spark-vorh').count() == 0, f'{tag}: Vorhersage als gestrichelte Verlängerung, Vlotho ohne Zusatz (nichts erfunden)')
+    kk.locator('.pm-flaeche').click(); pg.wait_for_selector('dialog.wxd-pegel[open] .pd-z.is-q')
+    d = pg.locator('dialog.wxd-pegel')
+    pg.wait_for_function("document.querySelector('dialog.wxd-pegel .pd-z.is-wt .pd-z-sub')?.textContent.includes('seit gestern')", timeout=5000) if False else pg.wait_for_timeout(600)
+    check('12,5' in d.locator('.pd-z.is-wt').inner_text() and '+1 °C seit gestern' in d.locator('.pd-z.is-wt').inner_text() and '624' in d.locator('.pd-z.is-q').inner_text() and 'm³/s' in d.locator('.pd-z.is-q').inner_text(),
+          f'{tag}: Kacheln Wassertemperatur (+ Änderung seit gestern) und Abfluss ({d.locator(".pd-zusatz").inner_text()!r})')
+    pg.wait_for_selector('dialog.wxd-pegel .gc-vorh', timeout=8000)
+    check('Verlauf und Vorhersage' in d.inner_text() and d.locator('.gc-jetzt').count() == 1 and d.locator('.gc-vorh-bg').count() == 1 and d.locator('.gc-tief').count() == 1, f'{tag}: Diagramm mit Vorhersage (gestrichelt, grau), Linie „jetzt“, Fläche unter MNW')
+    vs = d.locator('.pd-vorh-satz').inner_text()
+    check(re.fullmatch(r'Vorhersage: bleibt bis \w+ unter MNW \(66–70 cm\)\.', vs) is not None, f'{tag}: Satz zur Vorhersage ({vs!r})')
+    check(d.locator('.pd-alarm').get_attribute('href') == f'./pegel-ampel?pegel={U(7)}#am-alarm' and 'Pegel-Alarm' in d.locator('.pd-alarm').inner_text(), f'{tag}: Zeile „Pegel-Alarm“')
+    pg.screenshot(path=str(SHOTS / f'pegel_{w}_7detail_zusatz.png'))
+    with pg.expect_download(timeout=10000) as dl:
+        d.locator('.pd-bild').click()
+    check(dl.value.suggested_filename == 'Pegel-Kaub.png', f'{tag}: „Als Bild teilen“ erzeugt ein Bild (ohne Teilen-Funktion: Download {dl.value.suggested_filename})')
+    if w == 390:
+        pfad = SHOTS / 'pegel_bild_kaub.png'; dl.value.save_as(str(pfad))
+        from PIL import Image
+        check(Image.open(pfad).size == (1080, 1350), f'{tag}: Bild 1080 × 1350')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+    pg.locator('.pm-karte', has_text='Vlotho').locator('.pm-flaeche').click(); pg.wait_for_selector('dialog.wxd-pegel[open] .pd-name'); pg.wait_for_timeout(800)
+    check(pg.locator('dialog.wxd-pegel .pd-zusatz').is_hidden() and pg.locator('dialog.wxd-pegel .gc-vorh').count() == 0 and 'Verlauf und Vorhersage' not in pg.inner_text('dialog.wxd-pegel'), f'{tag}: Vlotho ohne Zusatzwerte und ohne Vorhersage')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
     ctx.close()
 

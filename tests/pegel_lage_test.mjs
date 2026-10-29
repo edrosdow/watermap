@@ -62,3 +62,31 @@ assert.deepEqual(zelle(g('Cochem', 'high'), tag(10, 20)), { ton: 'rot', text: 'H
 assert.deepEqual(zelle(g('Cux', 'unknown', null, { tide: true, refs: {} }), tag(10, 20)), { ton: 'grau', text: 'Wind 2 Bft' });
 assert.equal(zelle(g('A', 'normal'), null), null);   // ohne Wetter keine Zelle
 console.log('pegel_lage_test (Zellen): OK');
+
+// Vorhersage
+import { vorhersageSatz, vorhersageTag, vorhersageZustand } from '../public/js/pegel-lage.js';
+const jetzt = new Date(2026, 9, 29, 12).getTime();   // Donnerstag
+const reihe = (werte, tage = 3) => werte.map((v, i) => ({ t: jetzt + (i + 1) * (tage * 864e5 / werte.length), v, art: 'forecast' }));
+const gm = (value) => ({ id: 'x', name: 'Minden', state: 'low', value, trend: null, refs: { MNW: 98, MW: 210, MHW: 480, HSW: 590 }, tide: false });
+assert.equal(vorhersageSatz(gm(96), reihe([93, 92, 91])), 'Vorhersage: bleibt bis Sonntag knapp unter MNW (91–93 cm).');
+assert.equal(vorhersageSatz(gm(96), reihe([80, 75, 70])), 'Vorhersage: bleibt bis Sonntag unter MNW (70–80 cm).');
+assert.equal(vorhersageSatz(gm(120), reihe([110, 100, 95])), 'Vorhersage: fällt bis Sonntag unter MNW (bis 95 cm).');
+assert.equal(vorhersageSatz(gm(96), reihe([97, 105, 120])), 'Vorhersage: steigt bis Sonntag wieder über MNW (bis 120 cm).');
+assert.equal(vorhersageSatz(gm(300), reihe([300, 320, 350])), 'Vorhersage: bleibt bis Sonntag im normalen Bereich (300–350 cm).');
+assert.equal(vorhersageSatz(gm(400), reihe([450, 500, 520])), 'Vorhersage: steigt bis Sonntag über MHW (bis 520 cm).');
+assert.equal(vorhersageSatz(gm(96), reihe([93, 92], 1)), 'Vorhersage: bleibt bis morgen knapp unter MNW (92–93 cm).');
+assert.equal(vorhersageSatz({ ...gm(50), refs: {} }, reihe([50, 60])), 'Vorhersage: bis Sonntag zwischen 50–60 cm.');
+assert.equal(vorhersageSatz(gm(96), []), null); assert.equal(vorhersageSatz(gm(96), null), null);
+const samstag = new Date(2026, 9, 31);
+const wv = [{ t: new Date(2026, 9, 31, 8).getTime(), v: 95 }, { t: new Date(2026, 9, 31, 20).getTime(), v: 101 }, { t: new Date(2026, 10, 1, 8).getTime(), v: 120 }];
+assert.deepEqual(vorhersageTag(wv, samstag), { min: 95, max: 101 });
+assert.equal(vorhersageTag(wv, new Date(2026, 10, 2)), null);
+assert.equal(vorhersageZustand(gm(96), { min: 95, max: 101 }), 'low');
+assert.equal(vorhersageZustand(gm(96), { min: 120, max: 130 }), 'normal');
+assert.equal(vorhersageZustand(gm(96), { min: 400, max: 500 }), 'high');
+assert.equal(vorhersageZustand({ ...gm(96), refs: {} }, { min: 1, max: 2 }), null);
+// Zelle: Vorhersage geht vor dem Stand heute
+assert.deepEqual(zelle(g('Vlotho', 'normal'), tag(10, 20), 'low'), { ton: 'gelb', text: 'Pegel knapp' });
+assert.deepEqual(zelle(g('Minden', 'low'), tag(10, 20), 'normal'), { ton: 'gruen', text: 'Wind 2 Bft' });
+assert.deepEqual(zelle(g('Trier', 'normal'), tag(10, 20), 'high'), { ton: 'rot', text: 'Hochwasser' });
+console.log('pegel_lage_test (Vorhersage): OK');

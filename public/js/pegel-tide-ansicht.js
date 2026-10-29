@@ -5,7 +5,7 @@ import { icon } from './icons.js';
 import { formatTime } from './pegel.js';
 import { auswerten, TENDENZ } from './gezeiten.js';
 import { vorhersageLaden, kommende, hoehe, inText, tagUhr, standText, ART } from './gezeiten-bsh.js';
-import { fmt, sternKnopf, etikett, kicker } from './pegel-ansicht.js';
+import { fmt, sternKnopf, etikett, kicker, zusatzKacheln } from './pegel-ansicht.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const uhr = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -177,7 +177,7 @@ export function tideDetail(g, opts) {
   });
   ro.observe(box);
 
-  const body = h('div', { class: 'pd-body' }, gzPlatz, kurvenKarte, einordnung,
+  const body = h('div', { class: 'pd-body' }, zusatzKacheln(g), gzPlatz, kurvenKarte, einordnung,
     h('div', { class: 'pd-kacheln' },
       opts.onKarte ? h('button', { type: 'button', class: 'pd-kachel', onclick: opts.onKarte }, h('strong', { text: 'Auf der Karte' }), h('span', { text: 'Häfen in der Nähe ›' })) : null,
       opts.onFluss ? h('button', { type: 'button', class: 'pd-kachel', onclick: opts.onFluss }, h('strong', { text: g.water || 'Gewässer' }), h('span', { text: 'alle Pegel ›' })) : null));

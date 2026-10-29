@@ -82,6 +82,10 @@ def api(route):
     m = re.fullmatch(r'stations/([^/]+)/W/measurements\.json', rest)
     if m and m.group(1) in BY_ID and 'start=P7D' in u.query:
         return route.fulfill(status=200, content_type='application/json', body=json.dumps(measurements(m.group(1))))
+    m = re.fullmatch(r'stations/([^/]+)\.json', rest)   # Zusatzwerte (Stufe 2): hier nur Wasserstand, keine WT/Q/WV
+    if m:
+        st = next((x for x in STATIONS if x['uuid'] == m.group(1)), None)
+        if st: return route.fulfill(status=200, content_type='application/json', body=json.dumps(st))
     return route.fulfill(status=404, body='[]')
 
 problems = []

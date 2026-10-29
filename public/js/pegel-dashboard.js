@@ -3,8 +3,8 @@
 import { h, announce } from './dom.js';
 import { icon } from './icons.js';
 import { haversine, formatDistance, displayName } from './model.js';
-import { pegelLaden, verlaufLaden, meinePegel } from './pegel-daten.js';
-import { lageSatz, wochenendTage, tageAusStunden, zelle } from './pegel-lage.js';
+import { pegelLaden, verlaufLaden, meinePegel, vorhersageWLaden } from './pegel-daten.js';
+import { lageSatz, wochenendTage, tageAusStunden, zelle, vorhersageTag, vorhersageZustand } from './pegel-lage.js';
 import { pegelKarteAnsicht } from './pegel-karte.js';
 import { tendenz } from './gezeiten.js';
 import { fenster, loadWetterStunden, wxIcon } from './wetter.js';
@@ -247,7 +247,8 @@ export function pegelDashboard(root, ctx) {
     const gemerkt = meinePegel.alle().map(id => stand.byId.get(id)).filter(Boolean).slice(0, MAX_WO);
     if (!gemerkt.length) { wochenBox.hidden = true; wochenBox.replaceChildren(); return; }
     const { titel, tage } = wochenendTage();
-    Promise.all(gemerkt.map(g => loadWetterStunden(g.lat, g.lon).then(st => tageAusStunden(st, tage)))).then((jeOrt) => {
+    Promise.all([Promise.all(gemerkt.map(g => loadWetterStunden(g.lat, g.lon).then(st => tageAusStunden(st, tage)))),
+      Promise.all(gemerkt.map(g => (g.tide ? Promise.resolve(null) : vorhersageWLaden(g.id))))]).then(([jeOrt, prog]) => {
       if (!wochenBox?.isConnected) return;
       if (!jeOrt.some(t => t.some(Boolean))) { wochenBox.hidden = true; wochenBox.replaceChildren(); return; }
       const namen = tage.map(d => ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'][d.getDay()]);
@@ -255,7 +256,7 @@ export function pegelDashboard(root, ctx) {
       const zeilen = gemerkt.map((g, i) => h('tr', {},
         h('th', { scope: 'row' }, h('span', { class: 'pg-wo-name', text: g.name }), h('small', { text: `${fmt(g.value)} ${g.unit} · ${ZUSTAND[zustand(g)].text.toLowerCase()}` })),
         jeOrt[i].map((t, j) => {
-          const z = zelle(g, t);
+          const z = zelle(g, t, vorhersageZustand(g, vorhersageTag(prog[i], tage[j])));
           if (!t || !z) return h('td', { class: 'pg-wo-leer', text: '–', 'aria-label': `${namen[j]}: keine Wetterdaten` });
           const w = wxIcon(t.icon, 18);
           return h('td', { 'aria-label': `${namen[j]}: ${w.label ? w.label + ', ' : ''}${t.temp !== null ? Math.round(t.temp) + ' Grad, ' : ''}${z.text}` },
@@ -269,7 +270,7 @@ export function pegelDashboard(root, ctx) {
             h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, h('span', { class: 'pg-sr', text: 'Pegel' })), namen.map(n => h('th', { scope: 'col' }, h('span', { 'aria-hidden': 'true', text: kurz(n) }), h('span', { class: 'pg-sr', text: n }))))),
             h('tbody', {}, zeilen)),
           h('p', { class: 'pg-wo-legende' }, h('i', { class: 'pg-wo-dot is-gruen' }), ' gut · ', h('i', { class: 'pg-wo-dot is-gelb' }), ' knapp/windig · ',
-            h('i', { class: 'pg-wo-dot is-rot' }), ' Hochwasser. Wetter je Ort (DWD), Pegel: Stand heute.')));
+            h('i', { class: 'pg-wo-dot is-rot' }), ` Hochwasser. Wetter je Ort (DWD), Pegel: ${prog.some(v => v?.length) ? 'Vorhersage (WSV), wo vorhanden, sonst Stand heute' : 'Stand heute'}.`)));
     });
   }
 

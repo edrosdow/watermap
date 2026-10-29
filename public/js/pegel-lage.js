@@ -98,10 +98,12 @@ export function wochenendEtiketten({ pegel, boeKmh, vorhersageNiedrig = [] }) {
  * Hochwasser (hoch/über HSW) → rot; niedrig → gelb „Pegel knapp“; Böen ab WETTER_GUST_HINT_KMH → gelb „Böen n Bft“;
  * sonst grün „Wind n Bft“. Pegel ohne Einordnung (Tide, ohne Kennwerte, veraltet): grau, nur das Wetter.
  * tag: { windKmh, gustKmh } aus tageAusStunden() oder null (kein Wetter) → null.
+ * prognose: Zustand laut Wasserstandsvorhersage für diesen Tag ('low' | 'high' | 'normal') oder null.
  */
-export function zelle(g, tag) {
+export function zelle(g, tag, prognose = null) {
   if (!tag) return null;
-  const z = zustand(g);
+  // mit Vorhersage für diesen Tag zählt die Vorhersage (Hochwasser/knapp), sonst der Stand heute
+  const z = prognose && g.state !== 'old' ? (prognose === 'high' && zustand(g) === 'hsw' ? 'hsw' : prognose) : zustand(g);
   const boe = typeof tag.gustKmh === 'number' ? tag.gustKmh : null, wind = typeof tag.windKmh === 'number' ? tag.windKmh : null;
   const windText = boe !== null && boe >= CONFIG.WETTER_GUST_HINT_KMH ? `Böen ${beaufort(boe)} Bft` : wind !== null ? `Wind ${beaufort(wind)} Bft` : '';
   if (z === 'hsw' || z === 'high') return { ton: 'rot', text: 'Hochwasser' };
@@ -109,4 +111,45 @@ export function zelle(g, tag) {
   if (boe !== null && boe >= CONFIG.WETTER_GUST_HINT_KMH) return { ton: 'gelb', text: windText };
   if (z === 'normal') return { ton: 'gruen', text: windText || 'ruhig' };
   return { ton: 'grau', text: windText };
+}
+
+// ------------------------------------------------------------------ Wasserstandsvorhersage (PEGELONLINE „WV“)
+const TAG = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+const cm = (v) => Math.round(v).toLocaleString('de-DE');
+const spanne = (a, b) => (Math.round(a) === Math.round(b) ? `${cm(a)} cm` : `${cm(a)}–${cm(b)} cm`);
+
+/** Tiefster und höchster vorhergesagter Wert eines Tages (Ortszeit) oder null. */
+export function vorhersageTag(wv, tag) {
+  const key = ymd(tag);
+  const vs = (wv || []).filter(p => ymd(new Date(p.t)) === key).map(p => p.v);
+  return vs.length ? { min: Math.min(...vs), max: Math.max(...vs) } : null;
+}
+
+/**
+ * Ein Satz zur Vorhersage, z. B. „Vorhersage: bleibt bis Sonntag knapp unter MNW (91–93 cm).“
+ * Nur aus den gelieferten Werten und den amtlichen Kennwerten des Pegels; ohne Vorhersage null.
+ */
+export function vorhersageSatz(g, wv, jetzt = Date.now()) {
+  const pts = (wv || []).filter(p => p.t > jetzt);
+  if (pts.length < 2) return null;
+  const vs = pts.map(p => p.v), lo = Math.min(...vs), hi = Math.max(...vs), ende = pts[pts.length - 1];
+  const tage = Math.round((new Date(ende.t).setHours(0, 0, 0, 0) - new Date(jetzt).setHours(0, 0, 0, 0)) / 864e5);
+  const bis = tage <= 0 ? 'heute' : tage === 1 ? 'morgen' : tage < 7 ? TAG[new Date(ende.t).getDay()] : new Date(ende.t).toLocaleDateString('de-DE', { day: 'numeric', month: 'numeric' });
+  const r = g.refs || {}, v = g.value;
+  let satz;
+  if (r.MHW !== undefined && hi > r.MHW) satz = v > r.MHW ? `bleibt bis ${bis} über MHW (${spanne(lo, hi)})` : `steigt bis ${bis} über MHW (bis ${cm(hi)} cm)`;
+  else if (r.MNW !== undefined && hi < r.MNW) satz = `bleibt bis ${bis} ${r.MNW - hi <= 10 ? 'knapp ' : ''}unter MNW (${spanne(lo, hi)})`;
+  else if (r.MNW !== undefined && lo < r.MNW) satz = v >= r.MNW ? `fällt bis ${bis} unter MNW (bis ${cm(lo)} cm)` : `steigt bis ${bis} wieder über MNW (bis ${cm(hi)} cm)`;
+  else if (r.MNW !== undefined && r.MHW !== undefined) satz = `bleibt bis ${bis} im normalen Bereich (${spanne(lo, hi)})`;
+  else satz = `bis ${bis} zwischen ${spanne(lo, hi)}`;
+  return `Vorhersage: ${satz}.`;
+}
+
+/** Zustand eines Tages laut Vorhersage: 'low' | 'high' | 'normal' | null (ohne Kennwerte/Vorhersage). */
+export function vorhersageZustand(g, tagWerte) {
+  if (!tagWerte) return null;
+  const r = g.refs || {};
+  if (r.MHW !== undefined && tagWerte.max > r.MHW) return 'high';
+  if (r.MNW !== undefined && tagWerte.min < r.MNW) return 'low';
+  return r.MNW !== undefined || r.MHW !== undefined ? 'normal' : null;
 }

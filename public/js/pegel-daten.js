@@ -1,7 +1,7 @@
 // Pegeldaten für Karte, Dashboard und Detailseite: EINE Stationsliste (mit Werten und Kennwerten) für alle,
 // Verläufe nur bei Bedarf (zwischengespeichert), „Meine Pegel“ als eigene Liste im Browser.
 import { CONFIG } from './config.js';
-import { loadGauges, loadHistory } from './pegel.js';
+import { loadGauges, loadHistory, loadZusatz, loadReihe, loadVorhersage } from './pegel.js';
 
 const LS_SNAP = 'watermap.pegel.stand';
 const LS_MEINE = 'watermap.meinePegel';
@@ -49,6 +49,26 @@ export function verlaufLaden(id) {
   verlauf.set(id, { at: Date.now(), promise });
   return promise;
 }
+
+// ------------------------------------------------------------------ Zusatzwerte und Vorhersage (nur bei Bedarf, zwischengespeichert)
+const zwischen = new Map();   // Schlüssel → { at, promise }
+function gemerkt(key, laden) {
+  const e = zwischen.get(key);
+  if (e && Date.now() - e.at < REFRESH_MS) return e.promise;
+  const promise = laden().catch((err) => { zwischen.delete(key); throw err; });
+  zwischen.set(key, { at: Date.now(), promise });
+  return promise;
+}
+/** { wt, q, wv } – Wassertemperatur, Abfluss, Vorhersage vorhanden? Fehler → alles null (nichts anzeigen). */
+export const zusatzLaden = (id) => gemerkt('z:' + id, () => loadZusatz(id)).catch(() => ({ wt: null, q: null, wv: false }));
+/** Wasserstandsvorhersage oder null, wenn der Pegel keine hat. */
+export const vorhersageWLaden = (id) => zusatzLaden(id).then(z => (z.wv ? gemerkt('v:' + id, () => loadVorhersage(id)) : null)).catch(() => null);
+/** Änderung der Wassertemperatur seit gestern (°C) oder null. */
+export const wtAenderungLaden = (id) => gemerkt('wt:' + id, () => loadReihe(id, 'WT', 2)).then((pts) => {
+  if (!pts.length) return null;
+  const last = pts[pts.length - 1], vor = [...pts].reverse().find(p => p.t <= last.t - 24 * 3600e3 + 3600e3);
+  return vor && last.t - vor.t <= 26 * 3600e3 ? Math.round((last.v - vor.v) * 10) / 10 : null;
+}).catch(() => null);
 
 /** Trend (-1/0/1) aus den letzten 2 Stunden der Messreihe (ab 2 cm Änderung); null, wenn sie nicht reicht. */
 export function trendAusVerlauf(pts) {

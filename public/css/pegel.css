@@ -645,3 +645,28 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pg-kopf-zeile { align-items: center; }
 .pg-kopf .pg-stand { margin-top: 2px; }
 @media (max-width: 767px) { .pg-kopf { flex-direction: column; } }
+
+/* ---------------------------------------------------------------- Stufe 2 (7.47.0): Zusatzwerte, Vorhersage, Alarm-Zeile, Bild */
+.pd-zusatz { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.pd-zusatz[hidden] { display: none; }
+.pd-z { background: #fff; border-radius: 18px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(11, 48, 69, .06); min-width: 0; }
+.pd-z p { margin: 0; }
+.pd-z-titel { display: flex; align-items: center; gap: 6px; color: var(--muted); font-weight: 700; font-size: 14px; }
+.pd-z-titel span { display: grid; }
+.pd-z-wert { margin-top: 4px !important; color: var(--navy); }
+.pd-z-wert strong { font-size: 30px; font-variant-numeric: tabular-nums; }
+.pd-z-wert span { font-size: 17px; font-weight: 700; }
+.pd-z-sub { font-size: 13.5px; color: var(--muted); margin-top: 2px !important; }
+.pd-vorh-satz { margin: 8px 0 4px; font-size: 15px; color: var(--navy); }
+.pd-vorh-satz[hidden] { display: none; }
+.pd-alarm { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; border-radius: 18px; background: #fff; box-shadow: 0 1px 3px rgba(11, 48, 69, .06); color: var(--navy); text-decoration: none; }
+.pd-alarm-ico { width: 40px; height: 40px; border-radius: 12px; background: #E3F2F7; color: var(--slip); display: grid; place-items: center; flex: none; }
+.pd-alarm-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.pd-alarm-text strong { font-size: 16px; } .pd-alarm-text small { color: var(--muted); font-size: 13.5px; }
+.pd-alarm-pfeil { color: #06667E; font-weight: 750; font-size: 14.5px; flex: none; }
+.pd-bild { text-align: left; }
+.pm-etiketten { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; position: relative; z-index: 1; pointer-events: none; }
+.pm-etiketten[hidden] { display: none; }
+.pm-et { display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 99px; background: #EEF3F5; color: #3D5160; font-size: 13px; font-weight: 700; }
+.pm-spark-vorh { stroke-dasharray: 4 3; opacity: .85; }
+.pk-v-extra:empty { display: none; }

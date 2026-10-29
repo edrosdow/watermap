@@ -92,6 +92,32 @@ export async function loadHistory(id, days = CONFIG.PEGEL_HISTORY_DAYS) {
     .filter(m => Number.isFinite(m.t) && m.v !== null).sort((a, b) => a.t - b.t);
 }
 
+/**
+ * Zusatzwerte eines Pegels (nur bei Bedarf, nicht in der Stationsliste): Wassertemperatur (WT), Abfluss (Q) und ob es eine
+ * Wasserstandsvorhersage (WV) gibt. Was der Pegel nicht liefert, ist null.
+ */
+export async function loadZusatz(id) {
+  const raw = await getJson(`stations/${encodeURIComponent(id)}.json?includeTimeseries=true&includeCurrentMeasurement=true&includeForecastTimeseries=true`);
+  const ts = (k) => (raw?.timeseries || []).find(t => t && t.shortname === k);
+  const wert = (t) => { const v = num(t?.currentMeasurement?.value), z = Date.parse(t?.currentMeasurement?.timestamp || ''); return v === null ? null : { v, t: Number.isFinite(z) ? z : null, unit: t.unit || '' }; };
+  return { wt: wert(ts('WT')), q: wert(ts('Q')), wv: !!ts('WV') };
+}
+
+/** Messreihe einer anderen Größe (z. B. WT) über `tage`. */
+export async function loadReihe(id, kurz, tage = 1) {
+  const raw = await getJson(`stations/${encodeURIComponent(id)}/${kurz}/measurements.json?start=P${tage}D`);
+  if (!Array.isArray(raw)) throw new Error('Unerwartete Antwort');
+  return raw.map(m => ({ t: Date.parse(m.timestamp), v: num(m.value) })).filter(m => Number.isFinite(m.t) && m.v !== null).sort((a, b) => a.t - b.t);
+}
+
+/** Wasserstandsvorhersage (WV): [{ t, v, art: 'forecast' | 'estimate' }], nur Zeitpunkte ab jetzt minus 1 h. */
+export async function loadVorhersage(id, now = Date.now()) {
+  const raw = await getJson(`stations/${encodeURIComponent(id)}/WV/measurements.json`);
+  if (!Array.isArray(raw)) throw new Error('Unerwartete Antwort');
+  return raw.map(m => ({ t: Date.parse(m.timestamp), v: num(m.value), art: m.type === 'estimate' ? 'estimate' : 'forecast' }))
+    .filter(m => Number.isFinite(m.t) && m.v !== null && m.t >= now - 3600e3).sort((a, b) => a.t - b.t);
+}
+
 // ------------------------------------------------------------------ Darstellung
 const TREND = { 1: '↑', 0: '→', '-1': '↓' };
 const TREND_TEXT = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' };
@@ -187,9 +213,13 @@ function gaugeMeter(g) {
 // ------------------------------------------------------------------ Verlaufsdiagramm (eigenes SVG, keine Bibliothek)
 
 /** opts.threshold = { value, label } zeichnet eine gestrichelte Linie (z. B. Mindestpegel der Pegel-Ampel). */
-export function historyChart(pts, g, { threshold = null } = {}) {
+export function historyChart(pts, g, { threshold = null, vorhersage = null } = {}) {
   const W = 360, H = 176, L = 40, R = 46, T = 10, B = 24;
-  const vs = pts.map(p => p.v);
+  // Vorhersage (PEGELONLINE „WV“): gestrichelt rechts von „jetzt“, nur Zeitpunkte nach der letzten Messung
+  const tJetzt = pts[pts.length - 1].t;
+  const wv = (vorhersage || []).filter(p => p.t > tJetzt);
+  const alle = wv.length ? [...pts, ...wv] : pts;
+  const vs = alle.map(p => p.v);
   let lo = Math.min(...vs), hi = Math.max(...vs);
   const span = Math.max(hi - lo, 20);
   // Kennwerte nur zeigen, wenn sie das Diagramm nicht platt drücken
@@ -199,12 +229,16 @@ export function historyChart(pts, g, { threshold = null } = {}) {
   const step = niceStep(Math.max(hi - lo, 10));
   lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
   if (hi === lo) hi = lo + step;
-  const t0 = pts[0].t, t1 = pts[pts.length - 1].t;
+  const t0 = pts[0].t, t1 = alle[alle.length - 1].t;
   const x = (t) => L + (t - t0) / Math.max(t1 - t0, 1) * (W - L - R);
   const y = (v) => T + (hi - v) / (hi - lo) * (H - T - B);
 
   const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, class: 'gc-svg', role: 'img',
-    'aria-label': `Wasserstand ${pts.length} Messwerte, von ${fmtNum(Math.min(...vs))} bis ${fmtNum(Math.max(...vs))} ${g.unit}` });
+    'aria-label': `Wasserstand ${pts.length} Messwerte, von ${fmtNum(Math.min(...pts.map(p => p.v)))} bis ${fmtNum(Math.max(...pts.map(p => p.v)))} ${g.unit}`
+      + (wv.length ? `; Vorhersage bis ${new Date(t1).toLocaleDateString('de-DE', { weekday: 'long' })}: ${fmtNum(Math.min(...wv.map(p => p.v)))} bis ${fmtNum(Math.max(...wv.map(p => p.v)))} ${g.unit}` : '') });
+  // Vorhersage-Bereich leicht grau, Fläche unter MNW leicht gelb (wie im Flussprofil)
+  if (wv.length) svg.append(s('rect', { x: x(tJetzt), y: T, width: W - R - x(tJetzt), height: H - T - B, class: 'gc-vorh-bg' }));
+  if (wv.length && g.refs.MNW !== undefined && g.refs.MNW > lo) svg.append(s('rect', { x: L, y: y(Math.min(g.refs.MNW, hi)), width: W - L - R, height: y(lo) - y(Math.min(g.refs.MNW, hi)), class: 'gc-tief' }));
 
   // Raster und y-Achse
   for (let v = lo; v <= hi + 1e-9; v += step) {
@@ -233,6 +267,12 @@ export function historyChart(pts, g, { threshold = null } = {}) {
   const area = `M${x(t0).toFixed(1)} ${y(lo)}` + pts.map(p => `L${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join('') + `L${x(t1).toFixed(1)} ${y(lo)}Z`;
   svg.append(s('path', { d: area, class: 'gc-area' }), s('path', { d, class: 'gc-line' }));
   const last = pts[pts.length - 1];
+  if (wv.length) {
+    const dv = `M${x(last.t).toFixed(1)} ${y(last.v).toFixed(1)}` + wv.map(p => `L${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join('');
+    svg.append(s('path', { d: dv, class: 'gc-vorh' }));
+    svg.append(s('line', { x1: x(tJetzt), x2: x(tJetzt), y1: T, y2: H - B, class: 'gc-jetzt' }));
+    const jt = s('text', { x: x(tJetzt), y: T + 10, class: 'gc-jetzt-text', 'text-anchor': 'middle' }); jt.textContent = 'jetzt'; svg.append(jt);
+  }
   svg.append(s('circle', { cx: x(last.t), cy: y(last.v), r: 4, class: 'gc-dot' }));
 
   // Fadenkreuz + Tooltip
@@ -247,12 +287,12 @@ export function historyChart(pts, g, { threshold = null } = {}) {
     const px = Math.min(Math.max((clientX - r.left) / r.width * W, L), W - R);
     const t = t0 + (px - L) / (W - L - R) * (t1 - t0);
     let i = 0, best = Infinity;
-    for (let j = 0; j < pts.length; j++) { const dd = Math.abs(pts[j].t - t); if (dd < best) { best = dd; i = j; } }
-    const p = pts[i], cx = x(p.t), cy = y(p.v);
+    for (let j = 0; j < alle.length; j++) { const dd = Math.abs(alle[j].t - t); if (dd < best) { best = dd; i = j; } }
+    const p = alle[i], cx = x(p.t), cy = y(p.v);
     cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.setAttribute('visibility', 'visible');
     hdot.setAttribute('cx', cx); hdot.setAttribute('cy', cy); hdot.setAttribute('visibility', 'visible');
     tip.hidden = false;
-    tip.textContent = `${new Date(p.t).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })} ${new Date(p.t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} · ${fmtNum(p.v)} ${g.unit}`;
+    tip.textContent = `${new Date(p.t).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })} ${new Date(p.t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} · ${fmtNum(p.v)} ${g.unit}${p.art ? (p.art === 'estimate' ? ' (Abschätzung)' : ' (Vorhersage)') : ''}`;
     const left = cx / W * r.width;
     const half = tip.offsetWidth / 2;   // nie über den Rand hinaus
     tip.style.left = `${Math.min(Math.max(left, half), r.width - half)}px`;

@@ -18,3 +18,10 @@
 .gc-table th { color: var(--muted); font-weight: 600; }
 .gc-threshold { stroke: #B91C1C; stroke-width: 1.5; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
 .gc-threshold-label { fill: #B91C1C; }
+
+/* Wasserstandsvorhersage im Pegel-Verlauf */
+.gc-vorh-bg { fill: #EEF2F5; }
+.gc-tief { fill: #FFF4D6; opacity: .75; }
+.gc-vorh { fill: none; stroke: #1F6FB2; stroke-width: 2; stroke-dasharray: 5 4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.gc-jetzt { stroke: var(--navy, #0B3045); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.gc-jetzt-text { font-size: 10px; font-weight: 800; fill: var(--navy, #0B3045); }

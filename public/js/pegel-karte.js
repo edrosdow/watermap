@@ -6,7 +6,8 @@ import { icon } from './icons.js';
 import { loadMapLibraries } from './map.js';
 import { formatDistance, haversine } from './model.js';
 import { fmt, zustand, ZUSTAND, etikett, trendText, trendKlasse, sternKnopf } from './pegel-ansicht.js';
-import { meinePegel } from './pegel-daten.js';
+import { meinePegel, zusatzLaden } from './pegel-daten.js';
+import { zusatzEtiketten } from './pegel-ansicht.js';
 
 const FARBE = { low: '#FAB219', normal: '#6CBF84', high: '#EC835A', hsw: '#D03B3B', none: '#9AAAB5' };
 const FARBE_ZUSTAND = (z) => (FARBE[z] || FARBE.none);
@@ -77,6 +78,7 @@ export function pegelKarteAnsicht(ctx) {
         h('button', { type: 'button', class: 'btn btn-primary pk-details', onclick: () => ctx.open(g.id) }, 'Details'), merken));
     vorschau.hidden = false;
     vorschau.dataset.id = g.id;
+    zusatzLaden(g.id).then((z) => { if (vorschau.dataset.id === g.id) { const e = vorschau.querySelector('[data-extra]'); if (e) e.textContent = zusatzEtiketten(z).join(' · '); } });
   }
 
   function waehlen(id, { fly = false } = {}) {
