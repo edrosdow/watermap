@@ -303,8 +303,8 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pf-etikett { flex: none; text-transform: none; }
 .fk-klein { font-size: 14px; color: var(--muted); }
 .fk-gross { font-size: 17px; font-weight: 800; color: var(--navy); line-height: 1.25; overflow-wrap: anywhere; }
-.fk-punkte { display: flex; gap: 4px; margin: 8px 0 4px; flex-wrap: wrap; }
-.fk-punkte i { width: 8px; height: 8px; border-radius: 50%; display: block; }
+.fk-punkte { display: flex; gap: 4px; margin: 8px 0 4px; flex-wrap: nowrap; min-width: 0; }   /* eine Zeile, nie ein einzelner Punkt in Zeile 2 */
+.fk-punkte i { flex: 0 1 8px; min-width: 5px; height: 8px; border-radius: 99px; display: block; }
 .fk-zus { font-size: 14px; color: var(--muted); margin-top: auto; padding-top: 4px; }
 .pf-trend { font-weight: 800; }
 .pf-trend.t1 { color: #9A3B12; } .pf-trend.t-1 { color: #7A3B0A; } .pf-trend.t0 { color: var(--muted); }
@@ -510,7 +510,7 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pg-fl-kurz { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 14.5px; text-align: right; }
 .pg-fl-pfeil { flex: none; display: grid; color: #06667E; }
 .pg-fl-fenster .fk-raster { margin-top: 6px; }
-.wxd-fluesse { width: min(94vw, 680px); }
+/* Handy: volle Breite von unten (wie alle Fenster), erst ab Tablet schmaler */
 @media (min-width: 768px) { .wxd-fluesse { width: min(94vw, 720px); } }
 /* Wochenende */
 .pg-wochenende { background: #fff; border-radius: 18px; padding: 14px; box-shadow: 0 1px 3px rgba(11, 48, 69, .06); }
@@ -672,7 +672,7 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pk-v-extra:empty { display: none; }
 
 /* ---------------------------------------------------------------- Stufe 3 (7.48.0): Pegel-Alarm-Fenster */
-.wxd-alarm { width: min(94vw, 520px); }
+@media (min-width: 768px) { .wxd-alarm { width: min(94vw, 520px); } }
 .al-form { display: flex; flex-direction: column; gap: 12px; padding-bottom: 4px; }
 .al-h { margin: 6px 0 0; font-weight: 800; font-size: 16px; color: var(--navy); }
 .al-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

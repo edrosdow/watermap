@@ -222,7 +222,6 @@ export function pegelDashboard(root, ctx) {
     const zeichnenFl = () => {
       const anzahl = d.zeigen.length + d.weitere.length + d.gr.ohne.length, mehr = d.weitere.length + d.gr.ohne.length;
       inhalt.replaceChildren(
-        h('p', { class: 'pg-klein', text: 'Tippe auf einen Fluss für alle Pegel' }),
         h('div', { class: 'fk-raster' }, d.zeigen.map(f => flussKachel(f, (slug) => ctx.fluss(slug)))),
         mehr ? h('button', { type: 'button', class: 'pg-link pg-fl-alle', 'aria-expanded': String(alle), 'aria-controls': 'fk-weitere',
           text: alle ? 'Weniger Gewässer anzeigen' : `Alle ${anzahl} Gewässer anzeigen ›`,
@@ -231,7 +230,7 @@ export function pegelDashboard(root, ctx) {
     };
     zeichnenFl();
     dlg = fenster({ inhalt, klasse: 'wxd-fluesse', labelId: 'pgfl-titel', opener, kopf: h('header', { class: 'wxd-kopf' },
-      h('div', {}, h('h2', { id: 'pgfl-titel', tabindex: '-1', text: 'Flüsse im Überblick' }), h('p', { class: 'wxd-unter', text: 'Gewässer nach Lage der Pegel' })),
+      h('div', {}, h('h2', { id: 'pgfl-titel', tabindex: '-1', text: 'Flüsse im Überblick' }), h('p', { class: 'wxd-unter', text: 'Tippe auf einen Fluss für alle Pegel' })),
       h('button', { type: 'button', class: 'wxd-x', 'aria-label': 'Schließen', html: icon('close', 22), onclick: () => dlg.close() })) });
   }
 

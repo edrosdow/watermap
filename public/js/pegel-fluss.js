@@ -148,8 +148,8 @@ export const FLUSS_ZUSTAND = {
  * → { key, n, hoch, niedrig, hsw, hervor: Pegel|null, hervorArt: 'höchster'|'tiefster'|null, kachel, kopf }
  */
 export function flussZustand(gr) {
-  if (gr.art === 'kueste') return { key: 'kueste', n: gr.pegel.length, hervor: null, hervorArt: null, kachel: 'ohne Niedrig/Hoch-Bewertung', kopf: `${gr.pegel.length} Pegel an Nord- und Ostsee · ohne Niedrig/Hoch-Bewertung` };
-  if (gr.art === 'ohne') return { key: 'ohne', n: gr.pegel.length, hervor: null, hervorArt: null, kachel: 'ohne Niedrig/Hoch-Bewertung', kopf: `${gr.pegel.length} Pegel · ohne Niedrig/Hoch-Bewertung` };
+  if (gr.art === 'kueste') return { key: 'kueste', n: gr.pegel.length, hervor: null, hervorArt: null, kachel: 'ohne Einstufung niedrig/hoch', kopf: `${gr.pegel.length} Pegel an Nord- und Ostsee · ohne Niedrig/Hoch-Bewertung` };
+  if (gr.art === 'ohne') return { key: 'ohne', n: gr.pegel.length, hervor: null, hervorArt: null, kachel: 'ohne Einstufung niedrig/hoch', kopf: `${gr.pegel.length} Pegel · ohne Niedrig/Hoch-Bewertung` };
   const b = gr.pegel.filter(bewertet);
   const n = b.length;
   if (!n) return { key: 'keine', n: 0, hervor: null, hervorArt: null, kachel: 'keine aktuellen Daten', kopf: 'Keine aktuellen Messwerte' };

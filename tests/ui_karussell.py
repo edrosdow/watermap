@@ -107,7 +107,11 @@ with sync_playwright() as p:
         pg.click('#detail .ph-chip[data-kat=rampe]'); pg.locator('#detail .ph-count').wait_for()
         check(count() == '1 / 2' and pg.get_attribute('#detail .ph-chip[data-kat=rampe]', 'aria-pressed') == 'true', f'{name}: Filter „Rampe“: 1 / 2')
         pg.click('#detail .ph-next'); pg.wait_for_function("document.querySelector('#detail .ph-count').textContent === '2 / 2'")
-        check('t-3.png' in src() and pg.locator('#detail .ph-caption').is_hidden(), f'{name}: Blättern nur innerhalb der Kategorie')
+        # beim Wechsel liegen kurz zwei Bilder übereinander: warten, bis das neue das letzte ist
+        for _ in range(30):
+            if 't-3.png' in (src() or ''): break
+            pg.wait_for_timeout(100)
+        check('t-3.png' in src() and pg.locator('#detail .ph-caption').is_hidden(), f'{name}: Blättern nur innerhalb der Kategorie ({src()}, Beschriftung sichtbar: {pg.locator("#detail .ph-caption").is_visible()})')
         pg.locator('#detail .ph-frame img').last.click(); pg.wait_for_selector('dialog.lightbox[open]')
         check(pg.inner_text('dialog.lightbox .ph-count') == '2 / 2', f'{name}: Vollbild zeigt nur die gefilterten Fotos')
         pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
