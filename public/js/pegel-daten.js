@@ -70,7 +70,7 @@ function gemerkt(key, laden) {
   return promise;
 }
 /** { wt, q, wv } – Wassertemperatur, Abfluss, Vorhersage vorhanden? Fehler → alles null (nichts anzeigen). */
-export const zusatzLaden = (id) => gemerkt('z:' + id, () => loadZusatz(id)).catch(() => ({ wt: null, q: null, wv: false }));
+export const zusatzLaden = (id) => gemerkt('z:' + id, () => loadZusatz(id)).catch(() => ({ wt: null, q: null, wv: false, kennwerte: [] }));
 /** Wasserstandsvorhersage oder null, wenn der Pegel keine hat. */
 export const vorhersageWLaden = (id) => zusatzLaden(id).then(z => (z.wv ? gemerkt('v:' + id, () => loadVorhersage(id)) : null)).catch(() => null);
 /** Änderung der Wassertemperatur seit gestern (°C) oder null. */

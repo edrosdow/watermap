@@ -92,15 +92,44 @@ export async function loadHistory(id, days = CONFIG.PEGEL_HISTORY_DAYS) {
     .filter(m => Number.isFinite(m.t) && m.v !== null).sort((a, b) => a.t - b.t);
 }
 
+/** Zusatzwerte (Wassertemperatur, Abfluss) gelten nur, wenn die Messung höchstens so alt ist – sonst werden sie nicht gezeigt. */
+export const ZUSATZ_MAX_ALTER_H = 24;
+const ERSTE_GROSS = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+
 /**
- * Zusatzwerte eines Pegels (nur bei Bedarf, nicht in der Stationsliste): Wassertemperatur (WT), Abfluss (Q) und ob es eine
- * Wasserstandsvorhersage (WV) gibt. Was der Pegel nicht liefert, ist null.
+ * Aus der Stationsantwort (stations/<id>.json mit Zeitreihen, aktuellen Messwerten, Vorhersagen und Kennwerten):
+ *  wt, q: { v, t, unit } nur mit gültigem Zahlenwert UND Zeitstempel, höchstens ZUSATZ_MAX_ALTER_H alt (0 °C bleibt 0 °C;
+ *         fehlende, ungültige oder veraltete Werte → null, nie ein Ersatzwert)
+ *  wv: gibt es eine Wasserstandsvorhersage?
+ *  kennwerte: alle Kennwerte des Wasserstands mit amtlichem Namen, nach Wert sortiert
+ *             [{ k, name, v, zeitraum: '1996–2006' | null, datum: '1953' | null }]
  */
-export async function loadZusatz(id) {
-  const raw = await getJson(`stations/${encodeURIComponent(id)}.json?includeTimeseries=true&includeCurrentMeasurement=true&includeForecastTimeseries=true`);
+export function zusatzAusStation(raw, now = Date.now()) {
   const ts = (k) => (raw?.timeseries || []).find(t => t && t.shortname === k);
-  const wert = (t) => { const v = num(t?.currentMeasurement?.value), z = Date.parse(t?.currentMeasurement?.timestamp || ''); return v === null ? null : { v, t: Number.isFinite(z) ? z : null, unit: t.unit || '' }; };
-  return { wt: wert(ts('WT')), q: wert(ts('Q')), wv: !!ts('WV') };
+  const wert = (t) => {
+    const v = num(t?.currentMeasurement?.value), z = Date.parse(t?.currentMeasurement?.timestamp || '');
+    if (v === null || !Number.isFinite(z) || now - z > ZUSATZ_MAX_ALTER_H * 3600e3 || z - now > 3600e3) return null;
+    return { v, t: z, unit: t.unit || '' };
+  };
+  const w = ts('W');
+  const jahr = (d) => (typeof d === 'string' && /^\d{4}/.test(d) ? d.slice(0, 4) : null);
+  const kennwerte = (w?.characteristicValues || [])
+    .filter(c => c && typeof c.shortname === 'string' && num(c.value) !== null && (!c.unit || c.unit === (w.unit || 'cm')))
+    .map(c => ({
+      k: c.shortname.replace(/_/g, ' '),
+      name: ERSTE_GROSS(String(c.longname || c.shortname).replace(/_/g, ' ').trim()),
+      v: c.value,
+      zeitraum: jahr(c.timespanStart) && jahr(c.timespanEnd) ? `${jahr(c.timespanStart)}–${jahr(c.timespanEnd)}` : null,
+      datum: Array.isArray(c.occurrences) && jahr(c.occurrences[0]) ? jahr(c.occurrences[0]) : null,
+    }))
+    .sort((a, b) => a.v - b.v);
+  return { wt: wert(ts('WT')), q: wert(ts('Q')), wv: !!ts('WV'), kennwerte };
+}
+
+/** Zusatzwerte eines Pegels (nur bei Bedarf, nicht in der Stationsliste), siehe zusatzAusStation(). */
+export async function loadZusatz(id) {
+  const raw = await getJson(`stations/${encodeURIComponent(id)}.json?includeTimeseries=true&includeCurrentMeasurement=true&includeForecastTimeseries=true&includeCharacteristicValues=true`);
+  return zusatzAusStation(raw);
 }
 
 /** Messreihe einer anderen Größe (z. B. WT) über `tage`. */

@@ -4,8 +4,9 @@ import { CONFIG } from './config.js';
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { historyChart, formatTime } from './pegel.js';
-import { aenderung24h, trendAusVerlauf, meinePegel, zusatzLaden, vorhersageWLaden, wtAenderungLaden, verlauf30Laden } from './pegel-daten.js';
+import { aenderung24h, meinePegel, zusatzLaden, vorhersageWLaden, wtAenderungLaden, verlauf30Laden } from './pegel-daten.js';
 import { vorhersageSatz } from './pegel-vorhersage.js';
+import { einordnungSatz, einordnungKurz, skalaLage, tendenz, tendenzText as tendenzTextKurz, aenderungKurz } from './pegel-einordnung.js';
 import { pegelBild, bildTeilen } from './pegel-bild.js';
 import { alarmFenster, alarmStatus } from './alarm.js';
 import { istTidepegel } from './gezeiten.js';
@@ -37,85 +38,75 @@ const TREND_TEXT = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' };
 const TREND_PFEIL = { 1: '↗', 0: '→', '-1': '↘' };
 export const trendText = (g, { kurz = false } = {}) => (g.trend === null ? '' : `${TREND_PFEIL[g.trend]} ${kurz && g.trend === 0 ? 'gleich' : TREND_TEXT[g.trend]}`);
 export const trendKlasse = (g) => (g.trend === 1 ? 'pt-up' : g.trend === -1 ? 'pt-down' : 'pt-flat');
-/** Pegel mit Trend aus dem Verlauf, wenn PEGELONLINE keinen liefert. */
-export const mitTrend = (g, pts) => (g.trend === null ? { ...g, trend: trendAusVerlauf(pts) } : g);
 
-/** „Etwas unter Mittelwasser, im normalen Bereich. 84 cm über dem mittleren Niedrigwasser.“ */
+/** Erklärsatz aus den vorhandenen Kennwerten (pegel-einordnung.js); ohne Kennwerte ein Hinweis. */
 export function klartext(g) {
-  const r = g.refs, v = g.value, u = g.unit;
-  if (g.state === 'old') return 'Der letzte Messwert ist älter als ' + CONFIG.PEGEL_STALE_HOURS + ' Stunden – die Einordnung kann überholt sein.';
-  if (r.HSW !== undefined && v > r.HSW) return `Über dem höchsten Schifffahrtswasserstand – die Schifffahrt ist eingeschränkt. ${fmt(v - r.HSW)} ${u} über HSW.`;
-  if (r.MHW !== undefined && v > r.MHW) return `Hochwasser: über dem mittleren Hochwasser. ${fmt(v - r.MHW)} ${u} über MHW${r.HSW !== undefined ? `, ${fmt(r.HSW - v)} ${u} unter HSW` : ''}.`;
-  if (r.MNW !== undefined && v < r.MNW) return `Niedrigwasser: unter dem mittleren Niedrigwasser. ${fmt(r.MNW - v)} ${u} unter MNW.`;
-  if (r.MW !== undefined && r.MNW !== undefined && v <= r.MW) {
-    const naeher = (r.MW - v) < (r.MW - r.MNW) / 3;
-    return `${naeher ? 'Etwas' : 'Deutlich'} unter Mittelwasser, im normalen Bereich. ${fmt(v - r.MNW)} ${u} über dem mittleren Niedrigwasser.`;
-  }
-  if (r.MW !== undefined && r.MHW !== undefined && v > r.MW) {
-    const naeher = (v - r.MW) < (r.MHW - r.MW) / 3;
-    return `${naeher ? 'Etwas' : 'Deutlich'} über Mittelwasser, im normalen Bereich. ${fmt(r.MHW - v)} ${u} unter dem mittleren Hochwasser.`;
-  }
-  if (r.MNW !== undefined && r.MHW !== undefined) return 'Im normalen Bereich zwischen mittlerem Niedrig- und Hochwasser.';
-  return 'Für diesen Pegel gibt es keine amtlichen Kennwerte – eine Einordnung ist nicht möglich.';
+  return einordnungSatz(g) || 'Für diesen Pegel gibt es keine amtlichen Kennwerte – eine Einordnung ist nicht möglich.';
 }
 
 const KW = ['MNW', 'MW', 'MHW', 'HSW'];
 export const KW_NAME = { MNW: 'Mittleres Niedrigwasser', MW: 'Mittelwasser', MHW: 'Mittleres Hochwasser', HSW: 'Höchster Schifffahrtswasserstand' };
 
-/** Liste der amtlichen Kennwerte dieses Pegels (nur, was PEGELONLINE liefert); null ohne Kennwerte. */
+/**
+ * „Alle Kennwerte anzeigen“ (eingeklappt): alle Kennwerte des Pegels mit amtlichem Namen aus PEGELONLINE, nach Wert sortiert;
+ * bis die geladen sind (oder ohne Verbindung) die vier Hauptwerte. null ohne Kennwerte.
+ */
 export function kennwerteListe(g) {
   const keys = KW.filter(k => g.refs[k] !== undefined);
   if (!keys.length) return null;
-  return h('div', { class: 'pd-kw' },
-    h('h3', { class: 'pd-kw-titel', text: 'Kennwerte dieses Pegels (PEGELONLINE)' }),
-    h('dl', { class: 'pd-kw-liste' }, keys.flatMap(k => [h('dt', {}, h('b', { text: k }), ` · ${KW_NAME[k]}`), h('dd', { text: `${fmt(g.refs[k])} ${g.unit}` })])),
-    h('p', { class: 'pd-kw-hinweis', text: 'Statistische Kennwerte des Pegels – keine Warn- oder Meldegrenzen.' }));
+  const zeile = (k, name, v, zusatz) => [h('dt', {}, h('b', { text: k }), ' ', h('span', { class: 'pd-kw-name', text: name + (zusatz ? ` (${zusatz})` : '') })),
+    h('dd', { text: `${fmt(v)} ${g.unit}` })];
+  const liste = h('dl', { class: 'pd-kw-liste' }, keys.map(k => ({ k, v: g.refs[k] })).sort((a, b) => a.v - b.v).flatMap(({ k, v }) => zeile(k, KW_NAME[k], v)));
+  const box = h('details', { class: 'pd-kw' },
+    h('summary', { text: 'Alle Kennwerte anzeigen' }), liste,
+    h('p', { class: 'pd-kw-hinweis', text: 'Kennwerte und Marken laut PEGELONLINE. Statistische Werte (z. B. MNW, MW, MHW) sind Mittelwerte über eine Zeitspanne – keine Warnstufen.' }));
+  zusatzLaden(g.id).then((z) => {
+    if (!z?.kennwerte?.length) return;
+    liste.replaceChildren(...z.kennwerte.flatMap(c => zeile(c.k, c.name === c.k && KW_NAME[c.k] ? KW_NAME[c.k] : c.name, c.v, c.zeitraum || c.datum)));
+  });
+  return box;
 }
 
-/** Aufklappbare Stammdaten (Gewässer, Flusskilometer, Pegelnummer, zuständige Stelle, Quelle). */
+/** Messstation und Datenquelle (Gewässer, Flusskilometer, Pegelnummer, zuständige Stelle, Link, Hinweise). */
 function stammdaten(g) {
   const zeilen = [['Gewässer', g.water], ['Flusskilometer', g.km !== null && g.km !== undefined ? g.km.toLocaleString('de-DE', { maximumFractionDigits: 3 }) : null],
     ['Pegelnummer', g.number], ['Zuständig', g.agency], ['Letzte Messung', g.time ? formatTime(g.time) : null]].filter(([, v]) => v);
-  return h('details', { class: 'pd-karte pd-stamm' }, h('summary', { text: 'Stammdaten des Pegels' }),
+  return h('section', { class: 'pd-karte pd-stamm' }, h('h2', { text: 'Messstation und Quelle' }),
     h('dl', { class: 'pd-kw-liste' }, zeilen.flatMap(([k, v]) => [h('dt', { text: k }), h('dd', { text: String(v) })])),
-    g.number ? h('p', { class: 'pd-kw-hinweis' }, h('a', { href: `https://www.pegelonline.wsv.de/gast/stammdaten?pegelnr=${encodeURIComponent(g.number)}`, target: '_blank', rel: 'noopener noreferrer', text: 'Pegel bei PEGELONLINE ansehen ↗' })) : null);
+    g.number ? h('p', { class: 'pd-kw-hinweis' }, h('a', { href: `https://www.pegelonline.wsv.de/gast/stammdaten?pegelnr=${encodeURIComponent(g.number)}`, target: '_blank', rel: 'noopener noreferrer', text: 'Pegel bei PEGELONLINE ansehen ↗' })) : null,
+    h('p', { class: 'pd-hinweis', text: 'Daten: WSV/PEGELONLINE, soweit der Pegel sie liefert. Normal/Niedrig/Hoch beziehen sich auf die statistischen Kennwerte dieses Pegels, nicht auf dein Boot. Der Pegel ist nicht die Wassertiefe – aus einem Pegelstand folgt keine Aussage zur Befahrbarkeit.' }));
 }
 
 /**
- * Skala MNW – MW – MHW – HSW (nur vorhandene Kennwerte) mit Markierung des aktuellen Werts.
- * gross: Wert über der Markierung, Kennwerte mit Zahlen darunter.
+ * Skala der Kennwerte, maßstabsgetreu nach ihren Zahlenwerten (Lage aus skalaLage()): MNW, MW, MHW unten, HSW (Schifffahrt, ⚓) oben.
+ * Dezente Flächen, keine Warnfarben; Punkt = aktueller Wasserstand. Weniger als 2 Kennwerte → null (keine kaputte Skala).
  */
-export function skala(g, { gross = false } = {}) {
-  const keys = KW.filter(k => g.refs[k] !== undefined);
-  if (keys.length < 2) return null;
-  const vals = keys.map(k => g.refs[k]);
-  const lo0 = Math.min(...vals, g.value), hi0 = Math.max(...vals, g.value);
-  const span = hi0 - lo0 || 1;
-  const lo = lo0 - span * 0.12, hi = hi0 + span * 0.08;
-  const pos = (v) => Math.max(0, Math.min(100, (v - lo) / (hi - lo) * 100));
-  const seg = (a, b, cls) => h('span', { class: `ps-seg ${cls}`, style: `left:${pos(a).toFixed(2)}%;width:${(pos(b) - pos(a)).toFixed(2)}%` });
-  const r = g.refs;
-  const segs = [];
-  const unten = r.MNW ?? lo, mitte = r.MHW ?? (r.HSW ?? hi);
-  if (r.MNW !== undefined) segs.push(seg(lo, r.MNW, 'is-low'));
-  segs.push(seg(unten, mitte, 'is-normal'));
-  if (r.MHW !== undefined) segs.push(seg(r.MHW, r.HSW ?? hi, 'is-high'));
-  if (r.HSW !== undefined) segs.push(seg(r.HSW, hi, 'is-hsw'));
-  const label = `Aktuell ${fmt(g.value)} ${g.unit}. ` + keys.map(k => `${k} ${fmt(r[k])} ${g.unit}`).join(', ') + '.';
-  // Beschriftungen mit Mindestabstand, damit nahe Kennwerte nicht übereinander stehen
-  const abstand = gross ? 17 : 15;
-  const lp = keys.map(k => Math.min(94, Math.max(6, pos(r[k]))));
-  for (let i = 1; i < lp.length; i++) lp[i] = Math.max(lp[i], lp[i - 1] + abstand);
-  const ueber = lp[lp.length - 1] - 94;
-  if (ueber > 0) for (let i = 0; i < lp.length; i++) lp[i] -= ueber;
-  for (let i = lp.length - 2; i >= 0; i--) lp[i] = Math.min(lp[i], lp[i + 1] - abstand);
-  lp[0] = Math.max(lp[0], 6);   // die erste Beschriftung („MNW“) bleibt innerhalb der Kachel
-  for (let i = 1; i < lp.length; i++) lp[i] = Math.max(lp[i], lp[i - 1] + abstand);
-  return h('div', { class: 'ps' + (gross ? ' is-gross' : ''), role: 'img', 'aria-label': label },
-    gross ? h('div', { class: 'ps-wert', style: `left:${pos(g.value).toFixed(2)}%`, text: fmt(g.value) }) : null,
-    h('div', { class: 'ps-track' }, segs, h('span', { class: 'ps-mark', style: `left:${pos(g.value).toFixed(2)}%` })),
-    h('div', { class: 'ps-labels' }, keys.map((k, i) => h('span', { style: `left:${lp[i].toFixed(2)}%`, title: KW_NAME[k] },
-      gross ? h('b', { text: fmt(r[k]) }) : null, h('span', { text: k })))));
+export function skala(g) {
+  const lage = skalaLage(g.refs, g.value);
+  if (!lage) return null;
+  const label = `Aktuell ${fmt(g.value)} ${g.unit}. ` + lage.punkte.map(p => `${p.k} ${fmt(p.v)} ${g.unit}`).join(', ') + '.';
+  const mnw = lage.punkte.find(p => p.k === 'MNW'), mhw = lage.punkte.find(p => p.k === 'MHW');
+  const band = mnw && mhw ? h('span', { class: 'ps-band', style: `left:${mnw.pos.toFixed(2)}%;width:${(mhw.pos - mnw.pos).toFixed(2)}%` }) : null;
+  return h('div', { class: 'ps ps-neu' + (lage.punkte.some(p => p.oben) ? ' mit-oben' : ''), role: 'img', 'aria-label': label },
+    h('div', { class: 'ps-labels ps-oben' }, lage.punkte.filter(p => p.oben).map(p => h('span', { style: `left:${p.label.toFixed(2)}%`, title: KW_NAME[p.k], class: 'is-hsw' },
+      h('span', { text: `${p.k} ⚓` }), h('b', { text: fmt(p.v) })))),
+    h('div', { class: 'ps-track' }, band,
+      lage.punkte.map(p => h('span', { class: 'ps-tick' + (p.oben ? ' is-hsw' : ''), style: `left:${p.pos.toFixed(2)}%` })),
+      h('span', { class: 'ps-mark', style: `left:${lage.wert.toFixed(2)}%` })),
+    h('div', { class: 'ps-labels' }, lage.punkte.filter(p => !p.oben).map(p => h('span', { style: `left:${p.label.toFixed(2)}%`, title: KW_NAME[p.k] },
+      h('span', { text: p.k }), h('b', { text: fmt(p.v) })))));
+}
+
+/** Pegel-Einordnung kompakt: aktueller Wert und Abstand, Skala, Erklärsatz, „Alle Kennwerte anzeigen“. */
+export function einordnungKarte(g) {
+  const kurz = einordnungKurz(g);
+  return h('section', { class: 'pd-karte pd-einordnung' },
+    h('div', { class: 'pd-karte-kopf' }, h('h2', { text: 'Pegel-Einordnung' }), etikett(g)),
+    kurz ? h('p', { class: 'pd-ein-kurz' }, h('strong', { text: `${fmt(g.value)} ${g.unit}` }), ` · ${kurz}`) : null,
+    skala(g),
+    h('p', { class: 'pd-klartext', text: klartext(g) }),
+    g.refs.HSW !== undefined ? h('p', { class: 'pd-kw-hinweis', text: '⚓ HSW = höchster Schifffahrtswasserstand: Bezugswert der Schifffahrt, keine Hochwasser-Warnstufe.' }) : null,
+    kennwerteListe(g));
 }
 
 export function sternKnopf(g, { klein = false, onChange } = {}) {
@@ -126,7 +117,6 @@ export function sternKnopf(g, { klein = false, onChange } = {}) {
   return b;
 }
 
-const aenderungText = (d) => (d === null ? null : `${d > 0 ? '+' : d < 0 ? '−' : '±'}${fmt(Math.abs(d))} cm in 24 h`);
 
 const fmt1 = (v) => v.toLocaleString('de-DE', { maximumFractionDigits: 1 });
 const signiert = (v, e) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${fmt1(Math.abs(v))} ${e}`;
@@ -195,7 +185,11 @@ export function pegelDetail(g, opts) {
   if (istTidepegel(g)) return tideDetail(g, opts);   // Tidepegel: Tidekurve und Einordnung statt MNW/MHW-Skala
   const z = zustand(g);
   const titel = h('h1', { class: 'pd-name', id: 'pd-name', tabindex: '-1', text: g.name });
-  const aend = h('span', { class: `pd-aend ${trendKlasse(g)}`, text: trendText(g) });
+  // Änderung in 24 h und kurzfristige Tendenz (2 h) getrennt – beides aus derselben Messreihe wie das Diagramm
+  const aend24 = h('strong', { class: 'pt-flat', text: '…' }), tend = h('strong', { class: 'pt-flat', text: '…' });
+  const felder = g.state === 'old' ? null : h('div', { class: 'pd-tz' },
+    h('div', {}, h('span', { text: 'Änderung 24 h' }), aend24),
+    h('div', {}, h('span', { text: 'Tendenz (letzte 2 h)' }), tend));
   const kopf = h('header', { class: 'pd-kopf' },
     h('div', { class: 'pd-leiste' },
       h('button', { type: 'button', class: 'pd-icon', 'aria-label': opts.backLabel || 'Zurück', html: icon(opts.eingebettet ? 'close' : 'back', 24), onclick: opts.onBack }),
@@ -205,15 +199,13 @@ export function pegelDetail(g, opts) {
     titel,
     h('div', { class: 'pd-wertzeile' },
       h('p', { class: 'pd-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: g.unit })),
-      h('div', { class: 'pd-wertinfo' }, etikett(g), aend,
+      h('div', { class: 'pd-wertinfo' }, etikett(g),
         h('p', { class: 'pd-zeit' + (g.state === 'old' ? ' is-alt' : '') },
           g.state === 'old' ? h('span', { html: icon('clock', 15) }) : null,
-          g.state === 'old' ? `Veraltet – gemessen ${formatTime(g.time)}` : `Gemessen ${formatTime(g.time)}`))));
+          g.state === 'old' ? `Veraltet – gemessen ${formatTime(g.time)}` : `Gemessen ${formatTime(g.time)}`))),
+    felder);
 
-  const body = h('div', { class: 'pd-body' }, zusatzKacheln(g));
-  // Wo steht der Pegel?
-  const sk = skala(g, { gross: true });
-  body.append(h('section', { class: 'pd-karte' }, h('h2', { text: 'Wo steht der Pegel?' }), sk, h('p', { class: 'pd-klartext', text: klartext(g) }), kennwerteListe(g)));
+  const body = h('div', { class: 'pd-body' });
 
   // Verlauf 24 h / 7 Tage / 30 Tage (30 Tage erst auf Wunsch laden); Vorhersage gestrichelt, wenn PEGELONLINE eine liefert
   const chart = h('div', { class: 'gauge-chart', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Verlauf wird geladen …' }));
@@ -266,10 +258,16 @@ export function pegelDetail(g, opts) {
   if (bereich === '30d') verlauf30Laden(g.id).then((pts) => { alle30 = pts; zeichnen(); }, () => { fehler30 = true; zeichnen(); });
   opts.verlauf.then((pts) => {
     alle = pts; zeichnen();
-    const d = aenderung24h(pts), tg = mitTrend(g, pts);
-    aend.className = `pd-aend ${trendKlasse(tg)}`;
-    aend.textContent = [trendText(tg), d !== null ? aenderungText(d) : null].filter(Boolean).join(' · ');
-  }, () => { if (bereich !== '30d') { chart.removeAttribute('aria-busy'); chart.replaceChildren(h('p', { class: 'unknown', text: 'Verlauf konnte nicht geladen werden.' })); } });
+    const d = aenderung24h(pts), t = tendenz(pts);
+    aend24.textContent = aenderungKurz(d) || 'nicht verfügbar'; aend24.className = d > 0 ? 'pt-up' : d < 0 ? 'pt-down' : 'pt-flat';
+    tend.textContent = tendenzTextKurz(t) || 'Keine Tendenz verfügbar'; tend.className = t?.richtung === 1 ? 'pt-up' : t?.richtung === -1 ? 'pt-down' : 'pt-flat';
+  }, () => {
+    aend24.textContent = 'nicht verfügbar'; tend.textContent = 'Keine Tendenz verfügbar';
+    if (bereich !== '30d') { chart.removeAttribute('aria-busy'); chart.replaceChildren(h('p', { class: 'unknown', text: 'Verlauf konnte nicht geladen werden.' })); }
+  });
+
+  // Einordnung (kompakt, Kennwerte aufklappbar), weitere Messwerte
+  body.append(einordnungKarte(g), zusatzKacheln(g));
 
   // Pegel-Alarm und Kacheln
   body.append(alarmZeile(g));

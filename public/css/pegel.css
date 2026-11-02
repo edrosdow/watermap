@@ -879,7 +879,8 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
   .pa-panel { position: absolute; z-index: 1000; left: 0; right: 0; bottom: 0; max-height: 46%; border: 0; border-radius: 22px 22px 0 0; background: #fff;
     box-shadow: 0 -4px 20px rgba(11, 48, 69, .2); padding-bottom: var(--bn-space, 0px); }
   .pa-panel.hat-auswahl { max-height: 64%; }
-  .pa-panel.is-gross { max-height: none; top: calc(env(safe-area-inset-top) + 8px); z-index: 1200; }
+  .pa-panel.is-gross { max-height: none; top: 18%; z-index: 1200; transition: top .22s ease; }   /* Stufe 2: ca. 80 % */
+  .pa-panel.is-gross.is-voll { top: calc(env(safe-area-inset-top) + 8px); }                          /* Stufe 3: ganz */
   .pa-griff { display: flex; justify-content: center; align-items: center; flex: none; width: 100%; height: 26px; padding: 0; border: 0; background: none; cursor: pointer; }
   .pa-griff span { width: 40px; height: 5px; border-radius: 3px; background: #C9D4DA; }
   .pa-inhalt { padding: 0 16px 12px; }
@@ -904,3 +905,80 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
   .pa-panel .pd-umschalter button { padding: 0 10px; font-size: 14px; }
 }
 .pa-panel .pd-kopf .pm-stern { background: var(--bg); }
+
+/* ---------------------------------------------------------------- Pegel optimiert (7.50.0): Pillen, kompakte Ansicht, Stufen, Einordnung */
+/* Pillen „● 245 cm ↗“ – kräftige Ampel nur mit Kennwerten, über HSW gefüllt */
+.pk-pille { font-weight: 800; gap: 5px; min-height: 28px; border-width: 2.5px; }
+.pk-zahl small { font-size: .82em; font-weight: 750; }
+.pk-pfeil { font-style: normal; font-weight: 900; font-size: 13px; line-height: 1; color: var(--navy); }
+.pk-pille.is-low .pk-pfeil, .pk-pille.is-low .pk-zahl { color: #5C3A00; }
+.pk-pille.is-hsw { background: #B42318; border-color: #B42318; color: #fff; }
+.pk-pille.is-hsw b { background: #fff; }
+.pk-pille.is-hsw .pk-pfeil, .pk-pille.is-hsw .pk-zahl { color: #fff; }
+.pk-pille.is-gewaehlt .pk-pfeil, .pk-pille.is-gewaehlt .pk-zahl { color: #fff; }
+.pk-pille.is-gewaehlt { box-shadow: 0 0 0 3px var(--pk), 0 3px 10px rgba(11, 48, 69, .5); border-color: #fff; }
+.pk-kompakt .pk-pille .pk-pfeil { display: none; }
+
+/* Stufe 1: kompakt, ohne Leerraum; Wert und 24-h-Kurve nebeneinander */
+.pa-kurz { padding: 14px 16px 16px; }
+.pa-sub { font-weight: 600; color: #3F5262; }
+.pa-k-mitte { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 14px; margin-top: 6px; }
+.pa-wert strong { font-size: 50px; }
+.pa-kurve-box { min-height: 56px; }
+.pa-kurve-box .pa-kurve { height: 56px; }
+.pa-trend { margin: 6px 0 0; font-size: 14.5px; font-weight: 650; color: #3F5262; min-height: 1.35em; line-height: 1.35; }
+.pa-trend b { font-weight: 800; }
+.pa-trend b.pt-up { color: #0B5F7A; } .pa-trend b.pt-down { color: #9A3B0C; } .pa-trend b.pt-flat { color: var(--navy); }
+.pa-tr-24, .pa-tr-tend { white-space: nowrap; }
+.pa-tr-laden { color: var(--muted); font-weight: 600; }
+.pa-einordnung { margin-top: 8px; font-weight: 800; }
+.pa-k-knoepfe { margin-top: 12px; }
+.pa-k-knoepfe .btn { min-height: 48px; font-weight: 800; }
+.pa-z-aend { font-weight: 800; }
+
+/* Cockpit-Kopf: Änderung 24 h und Tendenz (2 h) als zwei Felder */
+.pd-tz { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.pd-tz > div { padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, .1); display: flex; flex-direction: column; min-width: 0; }
+.pd-tz span { font-size: 12.5px; font-weight: 700; color: #C5D8E1; }
+.pd-tz strong { font-size: 17px; font-weight: 800; color: #fff; }
+.pd-kopf .pd-tz strong.pt-up { color: #A9D4FF; } .pd-kopf .pd-tz strong.pt-down { color: #FFB59A; }
+.pa-panel .pd-tz > div { background: var(--bg); }
+.pa-panel .pd-tz span { color: #3F5262; }
+.pa-panel .pd-tz strong { color: var(--navy); }
+.pa-panel .pd-kopf .pd-tz strong.pt-up { color: #0B5F7A; } .pa-panel .pd-kopf .pd-tz strong.pt-down { color: #9A3B0C; }
+.pd-body { gap: 12px; }
+.pd-karte { padding: 14px 16px; }
+.pd-karte h2 { margin-bottom: 8px; font-size: 18px; }
+.pd-stats { margin-top: 8px; }
+.pd-stat { padding: 8px 12px; }
+
+/* Pegel-Einordnung: Skala maßstabsgetreu nach Zahlenwerten, HSW (⚓) oben, keine Warnfarben */
+.pd-ein-kurz { margin: 0 0 6px; font-size: 15px; font-weight: 650; color: #3F5262; }
+.pd-ein-kurz strong { color: var(--navy); font-weight: 800; }
+.ps.ps-neu { padding: 0; margin: 4px 0 2px; }
+.ps-neu .ps-track { height: 10px; border-radius: 5px; background: #E7EEF1; }
+.ps-neu .ps-band { position: absolute; top: 0; bottom: 0; background: #CFE3EA; }
+.ps-neu .ps-tick { position: absolute; top: -4px; width: 2px; height: 18px; margin-left: -1px; background: #5E717E; border-radius: 1px; }
+.ps-neu .ps-tick.is-hsw { background: #0B5F7A; top: -7px; height: 21px; width: 3px; margin-left: -1.5px; }
+.ps-neu .ps-mark { top: -5px; width: 20px; height: 20px; margin-left: -10px; border-radius: 50%; background: var(--navy); box-shadow: 0 0 0 3px #fff, 0 1px 4px rgba(11, 48, 69, .4); }
+.ps-neu .ps-labels { height: 34px; margin-top: 6px; font-size: 12.5px; color: #3F5262; font-weight: 700; }
+.ps-neu .ps-labels b { color: var(--navy); font-size: 14px; font-weight: 800; }
+.ps-neu .ps-labels.ps-oben { height: 34px; margin: 0 0 4px; }
+.ps-neu .ps-labels.ps-oben > span { flex-direction: column-reverse; color: #0B5F7A; }
+.ps-neu .ps-labels.ps-oben b { color: #0B5F7A; }
+.ps-neu:not(.mit-oben) .ps-labels.ps-oben { display: none; }
+.pd-einordnung .pd-klartext { margin: 6px 0 0; font-size: 15px; font-weight: 600; color: var(--ink); }
+.pd-kw { margin-top: 10px; padding-top: 8px; border-top: 1px solid #EEF3F5; }
+.pd-kw summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 800; color: var(--slip); font-size: 15px; }
+.pd-kw[open] summary { margin-bottom: 4px; }
+.pd-kw-liste dt { font-size: 14px; }
+.pd-kw-name { color: #3F5262; font-weight: 600; font-size: 13px; }
+.pd-stamm h2 { margin: 0 0 8px; }
+.pd-stamm .pd-hinweis { margin: 8px 0 0; }
+.pa-k-knoepfe .pa-verlauf { white-space: nowrap; }
+.pd-tz strong { font-size: 15.5px; line-height: 1.3; }
+@media (max-width: 400px) {
+  .pa-k-knoepfe .btn { font-size: 15px; padding: 0 12px; }
+  .pa-k-knoepfe .pa-alarm { font-size: 0; gap: 0; padding: 0 14px; }   /* nur Glocke; Name steht im aria-label */
+  .pa-wert strong { font-size: 44px; }
+}

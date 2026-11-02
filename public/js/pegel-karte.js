@@ -7,19 +7,22 @@ import { loadMapLibraries } from './map.js';
 import { fmt, zustand } from './pegel-ansicht.js';
 import { meinePegel } from './pegel-daten.js';
 
-export const FARBE = { low: '#FAB219', normal: '#6CBF84', high: '#EC835A', hsw: '#D03B3B', neutral: '#9AAAB5' };
+// Ampel nach den Kennwerten DIESES Pegels: normal grün, unter MNW gelb-orange, über MHW rot, über HSW dunkelrot (gefüllt), ohne Kennwerte grau
+export const FARBE = { low: '#E59A00', normal: '#2E9E5B', high: '#D9381E', hsw: '#B42318', neutral: '#8E9EAA' };
+const PFEIL = { 1: '↗', 0: '→', '-1': '↘' }, PFEIL_WORT = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' };
 const MIT_FARBE = new Set(['low', 'normal', 'high', 'hsw']);
 const WELLE = '<svg class="pk-welle" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M2 9c3-3 5 3 8 0s5 3 8 0 3 2 4 1M2 16c3-3 5 3 8 0s5 3 8 0 3 2 4 1"/></svg>';
 export const ZOOM_MIT_ZAHL = 8;
 export const ZOOM_OHNE_CLUSTER = 10;
 export const ZOOM_AUSWAHL = 11;
 
-/** Marker-HTML einer Pille: nur feste Strings und Zahlen. */
+/** Marker-HTML einer Pille: „● 245 cm ↗“ (Pfeil = Tendenz laut PEGELONLINE); nur feste Strings und Zahlen. */
 export function pillenHtml(g, { gewaehlt = false, gemerkt = false } = {}) {
   const z = zustand(g);
   const farbe = MIT_FARBE.has(z) ? FARBE[z] : FARBE.neutral;
   const punkt = g.tide ? WELLE : '<b></b>';
-  return `<span class="pk-pille is-${g.tide ? 'tide' : z}${gewaehlt ? ' is-gewaehlt' : ''}${gemerkt ? ' is-gemerkt' : ''}" style="--pk:${farbe}">${punkt}<span class="pk-zahl">${fmt(g.value)}</span>${gemerkt ? '<i class="pk-stern" aria-hidden="true">★</i>' : ''}</span>`;
+  const pfeil = g.state !== 'old' && !g.tide && PFEIL[g.trend] ? `<em class="pk-pfeil" title="${PFEIL_WORT[g.trend]}">${PFEIL[g.trend]}</em>` : '';
+  return `<span class="pk-pille is-${g.tide ? 'tide' : z}${gewaehlt ? ' is-gewaehlt' : ''}${gemerkt ? ' is-gemerkt' : ''}" style="--pk:${farbe}">${punkt}<span class="pk-zahl">${fmt(g.value)}<small> ${g.unit === 'cm' ? 'cm' : ''}</small></span>${pfeil}${gemerkt ? '<i class="pk-stern" aria-hidden="true">★</i>' : ''}</span>`;
 }
 
 /**
@@ -32,7 +35,7 @@ export function pegelKarteAnsicht(ctx) {
   const behaelter = h('div', { class: 'pk-karte', role: 'region', 'aria-label': 'Karte der Pegel' });
   const meldung = h('p', { class: 'pk-meldung', role: 'status', hidden: true });
   const legende = h('ul', { class: 'pk-legende', 'aria-label': 'Legende' },
-    [['unter MNW', FARBE.low], ['zwischen MNW und MHW', FARBE.normal], ['über MHW', FARBE.high], ['über HSW', FARBE.hsw], ['ohne Kennwerte', FARBE.neutral]].map(([t, f]) =>
+    [['zwischen MNW und MHW', FARBE.normal], ['unter MNW', FARBE.low], ['über MHW', FARBE.high], ['über HSW', FARBE.hsw], ['ohne Kennwerte', FARBE.neutral]].map(([t, f]) =>
       h('li', { class: 'pk-leg' }, h('i', { style: `background:${f}`, 'aria-hidden': 'true' }), t)));
   const el = h('section', { class: 'pk-ansicht', 'aria-label': 'Pegel auf der Karte' }, behaelter, legende, meldung);
 
@@ -58,7 +61,7 @@ export function pegelKarteAnsicht(ctx) {
     const liste = [];
     for (const g of ctx.stand()?.gauges || []) {
       if (!filter(g)) continue;
-      const m = L.marker([g.lat, g.lon], { icon: ikone(g), title: `Pegel ${g.name}, ${fmt(g.value)} ${g.unit}`, alt: `Pegel ${g.name}`, keyboard: true, zIndexOffset: zIndex(g) });
+      const m = L.marker([g.lat, g.lon], { icon: ikone(g), title: `Pegel ${g.name}, ${fmt(g.value)} ${g.unit}${g.state !== 'old' && PFEIL_WORT[g.trend] ? `, ${PFEIL_WORT[g.trend]}` : ''}`, alt: `Pegel ${g.name}`, keyboard: true, zIndexOffset: zIndex(g) });
       m.on('click', () => ctx.waehlen(g.id));
       marker.set(g.id, { m, g });
       liste.push(m);
