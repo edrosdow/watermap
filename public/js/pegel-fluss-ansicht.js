@@ -42,7 +42,8 @@ export function flussKachel(f, onOpen) {
     gross = h('span', {}, `${z.hervor.name} ${fmt(z.hervor.value)} ${z.hervor.unit}`, trendPfeil(z.hervor) ? ' ' : null, trendPfeil(z.hervor));
   } else { klein = `alle ${z.n} Pegel`; gross = h('span', { text: 'im Normalbereich' }); }
   if (f.art === 'fluss' && z.key !== 'keine') {
-    reihe = h('span', { class: 'fk-punkte', 'aria-hidden': 'true' }, punkte(f).map(g => h('i', { style: `background:${PUNKT_FARBE[g.state]}` })));
+    // alle bewerteten Pegel in Fließrichtung als dünner Farbbalken (ein Abschnitt je Pegel; Zahlen stehen im Text darunter)
+    reihe = h('span', { class: 'fk-punkte fk-balken', 'aria-hidden': 'true' }, punkte(f, Infinity).map(g => h('i', { style: `background:${PUNKT_FARBE[g.state]}` })));
   }
   const label = `${f.name}: ${fz.text}. ${z.hervor ? `${z.hervorArt} Pegel ${z.hervor.name} ${fmt(z.hervor.value)} ${z.hervor.unit}. ` : ''}${z.kachel}. Alle Pegel zeigen`;
   const kachel = h('a', { class: `fk fk-${z.key}`, href: `#pegel/fluss/${f.slug}`, style: `--fk:${fz.farbe}`, 'aria-label': label,

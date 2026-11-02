@@ -110,6 +110,11 @@ def run(b, w, hh, mobile):
     t = elbe.inner_text()
     check('niedrig' in t and 'tiefster Pegel' in t and 'Dresden 62 cm' in t and '7 von 11 niedrig' in t and elbe.locator('.fk-punkte i').count() == 11, f'{tag}: Kachel Elbe ({t!r})')
     check(elbe.locator('.pf-trend').get_attribute('aria-label') == 'fallend', f'{tag}: Trendpfeil mit Text')
+    stimmt = pg.evaluate("""() => [...document.querySelectorAll('.fk')].filter(k => k.querySelector('.fk-balken')).map(k => {
+        const m = k.textContent.match(/von (\\d+)/); return [k.querySelector('.fk-balken').children.length, m ? Number(m[1]) : null]; })""")
+    check(stimmt and all(a == b for a, b in stimmt if b is not None), f'{tag}: Farbbalken: ein Abschnitt je bewertetem Pegel, passt zur Zahl im Text ({stimmt})')
+    hb = pg.locator('.fk-balken').first.bounding_box()
+    check(hb['height'] <= 10, f'{tag}: Farbbalken dünn ({hb["height"]:.0f} px)')
     check(pg.locator('.fk', has_text='Main').locator('.fk-punkte i').count() == 2 and 'über HSW' in pg.locator('.fk', has_text='Main').inner_text(), f'{tag}: Kachel Main über HSW')
     nk = pg.locator('.fk', has_text='Donau').inner_text()
     check('alle 5 Pegel' in nk and 'im Normalbereich' in nk and 'keine Auffälligkeiten' in nk, f'{tag}: Kachel Donau normal')
