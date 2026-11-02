@@ -231,7 +231,7 @@ def run(b, w, hh):
     check('Deine Angaben werden geprüft' in pg.inner_text('body'), f'{tag}: Danke-Hinweis')
 
     # Alte Adressen
-    for adresse, sel in [('#pegel', '.pegelseite .fk, .pegelseite .pg-titel'), ('#favoriten', '#list-title'), ('#naehe', '.place.nk, .nh-leer'), ('#melden', '#report-menu[open]')]:
+    for adresse, sel in [('#pegel', '.pegelseite .pa-h1'), ('#favoriten', '#list-title'), ('#naehe', '.place.nk, .nh-leer'), ('#melden', '#report-menu[open]')]:
         pg.goto(uf.BASE + adresse); pg.wait_for_selector(sel, timeout=10000)
         check(True, f'{tag}: alte Adresse {adresse} funktioniert')
     check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')

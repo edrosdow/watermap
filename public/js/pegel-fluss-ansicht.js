@@ -1,4 +1,4 @@
-// Bereich „Pegel“: Fluss-Kacheln im Dashboard und Flussseite (#pegel/fluss/<name>) mit Profil und Pegelliste.
+// Bereich „Pegel“: Flussseite (#pegel/fluss/<name>) mit Profil und Pegelliste (erreichbar per Link und aus dem Pegel-Cockpit).
 import { h } from './dom.js';
 import { icon, glyphSvg } from './icons.js';
 import { fmt } from './pegel-ansicht.js';
@@ -27,88 +27,6 @@ function pegelEtikett(g) {
   const t = { hsw: ['über HSW', 'pz-hsw'], high: ['hoch', 'pz-high'], low: ['niedrig', 'pz-low'], normal: ['normal', 'pz-normal'] }[g.state]
     || (g.state === 'old' ? ['veraltet', 'pz-old'] : [g.tide ? 'Tide' : 'ohne Kennw.', 'pz-none']);
   return h('span', { class: `pz-tag ${t[1]} pf-etikett`, text: t[0] });
-}
-
-// ------------------------------------------------------------------ Kacheln im Dashboard
-/** Eine Kachel (Link zur Flussseite). */
-export function flussKachel(f, onOpen) {
-  const z = f.zustand || flussZustand(f);
-  const fz = FLUSS_ZUSTAND[z.key];
-  let klein, gross, reihe = null;
-  if (f.art === 'kueste') { klein = 'Nord- und Ostsee'; gross = h('span', { text: `${f.pegel.length} Pegel` }); }
-  else if (z.key === 'keine') { klein = `${f.pegel.length} Pegel`; gross = h('span', { text: 'keine aktuellen Daten' }); }
-  else if (z.hervor) {
-    klein = `${z.hervorArt} Pegel`;
-    gross = h('span', {}, `${z.hervor.name} ${fmt(z.hervor.value)} ${z.hervor.unit}`, trendPfeil(z.hervor) ? ' ' : null, trendPfeil(z.hervor));
-  } else { klein = `alle ${z.n} Pegel`; gross = h('span', { text: 'im Normalbereich' }); }
-  if (f.art === 'fluss' && z.key !== 'keine') {
-    // alle bewerteten Pegel in Fließrichtung als dünner Farbbalken (ein Abschnitt je Pegel; Zahlen stehen im Text darunter)
-    reihe = h('span', { class: 'fk-punkte fk-balken', 'aria-hidden': 'true' }, punkte(f, Infinity).map(g => h('i', { style: `background:${PUNKT_FARBE[g.state]}` })));
-  }
-  const label = `${f.name}: ${fz.text}. ${z.hervor ? `${z.hervorArt} Pegel ${z.hervor.name} ${fmt(z.hervor.value)} ${z.hervor.unit}. ` : ''}${z.kachel}. Alle Pegel zeigen`;
-  const kachel = h('a', { class: `fk fk-${z.key}`, href: `#pegel/fluss/${f.slug}`, style: `--fk:${fz.farbe}`, 'aria-label': label,
-    onclick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); onOpen(f.slug); } },
-    h('span', { class: 'fk-kopf' }, h('strong', { class: 'fk-name', text: f.name }), fzEtikett(z.key)),
-    h('span', { class: 'fk-klein', text: klein }),
-    h('span', { class: 'fk-gross' }, gross),
-    reihe,
-    h('span', { class: 'fk-zus', text: z.kachel }));
-  // Küste: nächstes Hochwasser in Cuxhaven (BSH-Vorhersage), sonst bleibt die Pegelzahl
-  if (f.art === 'kueste' && CONFIG.GEZEITEN_BSH_AKTIV) {
-    const ort = CONFIG.GEZEITEN_KUESTE_PEGEL;
-    vorhersageLaden(ort).then((v) => {
-      const hw = kommende(v?.d).find(e => e.typ === 'HW');
-      if (!hw) return;
-      kachel.querySelector('.fk-klein').textContent = `Nord- und Ostsee · ${f.pegel.length} Pegel`;
-      kachel.querySelector('.fk-gross').replaceChildren(`${ort.name}: Hochwasser ${tagUhr(hw.t)}`);
-      kachel.setAttribute('aria-label', `${label.replace(/\. Alle Pegel zeigen$/, '')}. ${ort.name}: nächstes Hochwasser ${tagUhr(hw.t)} (Vorhersage BSH). Alle Pegel zeigen`);
-    }, () => {});
-  }
-  return kachel;
-}
-
-const oeffnen = (onOpen, f) => (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); onOpen(f.slug); };
-let gewSuche = '';   // Suchtext der Liste „Weitere Gewässer“ (bleibt beim Neuzeichnen erhalten)
-
-/** Kompakte Liste unter den Kacheln: weitere Flüsse (Zustand, Pegelzahl), danach Kanäle ohne Bewertung; Suche blendet nur Zeilen aus. */
-export function weitereGewaesser(fluesse, ohne, onOpen) {
-  const zeilen = fluesse.map((f) => {
-    const z = f.zustand || flussZustand(f), fz = FLUSS_ZUSTAND[z.key];
-    return h('li', { dataset: { name: f.name.toLowerCase() } }, h('a', { href: `#pegel/fluss/${f.slug}`, class: 'fk-ohne-zeile fk-wz', onclick: oeffnen(onOpen, f),
-      'aria-label': `${f.name}: ${fz.text}, ${f.pegel.length} Pegel` },
-      h('i', { class: 'fk-wz-punkt', style: `background:${fz.farbe}`, 'aria-hidden': 'true' }),
-      h('span', { class: 'fk-ohne-name', text: f.name }), fzEtikett(z.key), h('span', { class: 'fk-ohne-n', text: `${f.pegel.length} Pegel` }),
-      h('span', { html: icon('chevron', 18), 'aria-hidden': 'true' })));
-  });
-  const liste = fluesse.length ? h('section', { class: 'fk-ohne fk-weitere-liste', 'aria-labelledby': 'fk-wl-t' },
-    h('h3', { id: 'fk-wl-t', text: `Weitere Flüsse (${fluesse.length})` }), h('ul', {}, zeilen)) : null;
-  const ohneTeil = ohneBewertung(ohne, onOpen);
-  const leer = h('p', { class: 'fk-leer', role: 'status', hidden: true });
-  const filtern = () => {
-    const q = gewSuche.trim().toLowerCase();
-    let n = 0;
-    for (const sec of [liste, ohneTeil].filter(Boolean)) {
-      let sichtbar = 0;
-      for (const li of sec.querySelectorAll('li')) { const an = !q || li.dataset.name.includes(q); li.hidden = !an; sichtbar += an; }
-      sec.hidden = !sichtbar; n += sichtbar;
-    }
-    leer.hidden = !!n; leer.textContent = n ? '' : `Kein Gewässer zu „${gewSuche.trim()}“ gefunden.`;
-  };
-  const suche = h('input', { type: 'search', class: 'fk-suche', placeholder: 'Gewässer suchen', 'aria-label': 'Gewässer suchen', value: gewSuche, autocomplete: 'off',
-    oninput: (e) => { gewSuche = e.target.value; filtern(); } });
-  const box = h('div', { class: 'fk-weitere', id: 'fk-weitere' }, h('div', { class: 'fk-suche-box' }, suche), leer, liste, ohneTeil);
-  filtern();
-  return box;
-}
-
-/** Abschnitt „Kanäle und Gewässer ohne Bewertung“ (nur unter „Alle Gewässer“). */
-export function ohneBewertung(ohne, onOpen) {
-  if (!ohne.length) return null;
-  return h('section', { class: 'fk-ohne', 'aria-labelledby': 'fk-ohne-t' },
-    h('h3', { id: 'fk-ohne-t', text: `Kanäle und Gewässer ohne Bewertung (${ohne.length})` }),
-    h('ul', {}, ohne.map(f => h('li', { dataset: { name: f.name.toLowerCase() } }, h('a', { href: `#pegel/fluss/${f.slug}`, class: 'fk-ohne-zeile', onclick: oeffnen(onOpen, f) },
-      h('span', { class: 'fk-ohne-name', text: f.name }), h('span', { class: 'fk-ohne-n', text: `${f.pegel.length} Pegel` }),
-      h('span', { html: icon('chevron', 18), 'aria-hidden': 'true' }))))));
 }
 
 // ------------------------------------------------------------------ Profil (SVG)

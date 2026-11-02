@@ -1,107 +1,110 @@
-// Ansicht „Karte“ im Pegel-Tab: eigene Leaflet-Karte mit allen Pegeln als Wert-Pillen (Zustandsfarbe, Tidepegel mit Wellen-Symbol),
-// Legende, Vorschau-Karte zum gewählten Pegel. Die Hauptkarte bleibt unberührt.
+// Karte im Pegel-Tab: eine eigene Leaflet-Karte (dieselbe Bibliothek und dieselben Kacheln wie die Hauptkarte) mit allen Pegeln
+// als Wert-Pillen. Farbe nur, wenn der Pegel amtliche Kennwerte hat (MNW/MHW), sonst neutral grau. Viele Pegel → Cluster.
+// Die Auswahl zeigt das Panel bzw. Bottom Sheet (pegel-dashboard.js); die Karte meldet nur, welcher Pegel gewählt wurde.
 import { CONFIG } from './config.js';
 import { h } from './dom.js';
-import { icon } from './icons.js';
 import { loadMapLibraries } from './map.js';
-import { formatDistance, haversine } from './model.js';
-import { fmt, zustand, ZUSTAND, etikett, trendText, trendKlasse, sternKnopf } from './pegel-ansicht.js';
-import { meinePegel, zusatzLaden } from './pegel-daten.js';
-import { zusatzEtiketten } from './pegel-ansicht.js';
+import { fmt, zustand } from './pegel-ansicht.js';
+import { meinePegel } from './pegel-daten.js';
 
-const FARBE = { low: '#FAB219', normal: '#6CBF84', high: '#EC835A', hsw: '#D03B3B', none: '#9AAAB5' };
-const FARBE_ZUSTAND = (z) => (FARBE[z] || FARBE.none);
+export const FARBE = { low: '#FAB219', normal: '#6CBF84', high: '#EC835A', hsw: '#D03B3B', neutral: '#9AAAB5' };
+const MIT_FARBE = new Set(['low', 'normal', 'high', 'hsw']);
 const WELLE = '<svg class="pk-welle" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M2 9c3-3 5 3 8 0s5 3 8 0 3 2 4 1M2 16c3-3 5 3 8 0s5 3 8 0 3 2 4 1"/></svg>';
-export const ZOOM_MIT_ZAHL = 9;
+export const ZOOM_MIT_ZAHL = 8;
+export const ZOOM_OHNE_CLUSTER = 10;
+export const ZOOM_AUSWAHL = 11;
 
 /** Marker-HTML einer Pille: nur feste Strings und Zahlen. */
 export function pillenHtml(g, { gewaehlt = false, gemerkt = false } = {}) {
   const z = zustand(g);
-  const tide = !!g.tide;
-  const farbe = tide ? '#4A90B8' : FARBE_ZUSTAND(z);
-  const punkt = tide ? WELLE : '<b></b>';
-  return `<span class="pk-pille is-${tide ? 'tide' : z}${gewaehlt ? ' is-gewaehlt' : ''}${gemerkt ? ' is-gemerkt' : ''}" style="--pk:${farbe}">${punkt}<span class="pk-zahl">${fmt(g.value)}</span></span>`;
+  const farbe = MIT_FARBE.has(z) ? FARBE[z] : FARBE.neutral;
+  const punkt = g.tide ? WELLE : '<b></b>';
+  return `<span class="pk-pille is-${g.tide ? 'tide' : z}${gewaehlt ? ' is-gewaehlt' : ''}${gemerkt ? ' is-gemerkt' : ''}" style="--pk:${farbe}">${punkt}<span class="pk-zahl">${fmt(g.value)}</span>${gemerkt ? '<i class="pk-stern" aria-hidden="true">★</i>' : ''}</span>`;
 }
 
 /**
- * ctx = { stand(): { gauges, byId }, user(): {lat,lon}|null, isMobile(), open(id), toast(text) }
- * Rückgabe: { el, zeigen(), aktualisieren(), waehlen(id) }
+ * ctx = { stand(): { gauges, byId }, user(): {lat,lon}|null, waehlen(id), abwaehlen(), bewegt(), unten(): px, das Panel/Sheet unten verdeckt }
+ * Rückgabe: { el, zeigen(), aktualisieren(), markieren(id), hinzeigen(g, {zoom}), filtern(fn), imAusschnitt(), mitte(), flyTo(lat, lon, zoom), passend(gauges) }
  */
 export function pegelKarteAnsicht(ctx) {
-  let map = null, layer = null, L = null, gewaehlt = null;
+  let map = null, layer = null, L = null, gewaehlt = null, filter = () => true, cluster = false;
   const marker = new Map();   // id → { m, g }
-  const behaelter = h('div', { class: 'pk-karte', role: 'application', 'aria-label': 'Karte der Pegel' });
+  const behaelter = h('div', { class: 'pk-karte', role: 'region', 'aria-label': 'Karte der Pegel' });
   const meldung = h('p', { class: 'pk-meldung', role: 'status', hidden: true });
-  const vorschau = h('div', { class: 'pk-vorschau', hidden: true });
   const legende = h('ul', { class: 'pk-legende', 'aria-label': 'Legende' },
-    [['niedrig', FARBE.low], ['normal', FARBE.normal], ['hoch', FARBE.high], ['über HSW', FARBE.hsw]].map(([t, f]) =>
+    [['unter MNW', FARBE.low], ['zwischen MNW und MHW', FARBE.normal], ['über MHW', FARBE.high], ['über HSW', FARBE.hsw], ['ohne Kennwerte', FARBE.neutral]].map(([t, f]) =>
       h('li', { class: 'pk-leg' }, h('i', { style: `background:${f}`, 'aria-hidden': 'true' }), t)));
-  const el = h('section', { class: 'pk-ansicht', 'aria-label': 'Pegel auf der Karte' }, behaelter, legende, meldung, vorschau);
+  const el = h('section', { class: 'pk-ansicht', 'aria-label': 'Pegel auf der Karte' }, behaelter, legende, meldung);
 
   const ikone = (g) => L.divIcon({ className: 'pk-marker', html: pillenHtml(g, { gewaehlt: g.id === gewaehlt, gemerkt: meinePegel.hat(g.id) }), iconSize: null, iconAnchor: [20, 13] });
   const kompakt = () => behaelter.classList.toggle('pk-kompakt', map.getZoom() < ZOOM_MIT_ZAHL);
+  const zIndex = (g) => (g.id === gewaehlt ? 1000 : meinePegel.hat(g.id) ? 600 : 0);
 
-  function startAusschnitt(liste) {
-    const gemerkt = meinePegel.alle().map(id => ctx.stand().byId.get(id)).filter(Boolean);
-    if (gemerkt.length) { map.fitBounds(L.latLngBounds(gemerkt.map(g => [g.lat, g.lon])), { padding: [60, 60], maxZoom: 11, animate: false }); return; }
+  function startAusschnitt() {
+    const gemerkt = meinePegel.alle().map(id => ctx.stand()?.byId.get(id)).filter(Boolean);
+    if (gemerkt.length) { map.fitBounds(L.latLngBounds(gemerkt.map(g => [g.lat, g.lon])), { padding: [60, 60], maxZoom: 10, animate: false }); return; }
     const u = ctx.user();
-    if (u) { map.setView([u.lat, u.lon], 10, { animate: false }); return; }
+    if (u) { map.setView([u.lat, u.lon], 9, { animate: false }); return; }
     map.fitBounds(L.latLngBounds(CONFIG.GEBIET.bounds), { padding: [6, 6], animate: false });
   }
 
   function markerSetzen() {
     if (layer) layer.remove();
     marker.clear();
-    layer = L.layerGroup().addTo(map);
-    for (const g of ctx.stand().gauges) {
-      const m = L.marker([g.lat, g.lon], { icon: ikone(g), title: `Pegel ${g.name}`, alt: `Pegel ${g.name}`, keyboard: true, zIndexOffset: meinePegel.hat(g.id) ? 600 : 0 });
-      m.on('click', () => waehlen(g.id));
+    layer = cluster
+      ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 44, disableClusteringAtZoom: ZOOM_OHNE_CLUSTER, chunkedLoading: true, spiderfyOnMaxZoom: false,
+        iconCreateFunction: (c) => L.divIcon({ html: `<span>${c.getChildCount()}</span>`, className: 'pk-cluster', iconSize: [40, 40] }) })
+      : L.layerGroup();
+    const liste = [];
+    for (const g of ctx.stand()?.gauges || []) {
+      if (!filter(g)) continue;
+      const m = L.marker([g.lat, g.lon], { icon: ikone(g), title: `Pegel ${g.name}, ${fmt(g.value)} ${g.unit}`, alt: `Pegel ${g.name}`, keyboard: true, zIndexOffset: zIndex(g) });
+      m.on('click', () => ctx.waehlen(g.id));
       marker.set(g.id, { m, g });
-      m.addTo(layer);
+      liste.push(m);
     }
+    if (layer.addLayers) layer.addLayers(liste); else liste.forEach(m => m.addTo(layer));
+    layer.addTo(map);
   }
 
-  function vorschauZeichnen(g) {
-    const z = zustand(g), u = ctx.user();
-    const d = u ? haversine(u.lat, u.lon, g.lat, g.lon) : null;
-    const gemerkt = () => meinePegel.hat(g.id);
-    const merken = h('button', { type: 'button', class: 'pk-merken', 'aria-pressed': String(gemerkt()), onclick: () => { meinePegel.umschalten(g.id); vorschauZeichnen(g); } },
-      gemerkt() ? 'Gemerkt ' : 'Merken ', h('span', { html: icon('star', 18, gemerkt()), 'aria-hidden': 'true' }));
-    vorschau.replaceChildren(
-      h('div', { class: 'pk-v-kopf' },
-        h('div', {}, h('h3', { class: 'pk-v-name', text: g.name }), h('p', { class: 'pk-v-sub', text: [g.water, d !== null ? `${formatDistance(d)} entfernt` : ''].filter(Boolean).join(' · ') })),
-        etikett(g)),
-      h('div', { class: 'pk-v-wert' }, h('strong', { text: fmt(g.value) }), h('span', { class: 'pk-v-einheit', text: ` ${g.unit}` }),
-        g.trend !== null ? h('span', { class: `pk-v-trend ${trendKlasse(g)}`, text: trendText(g) }) : null,
-        h('span', { class: 'pk-v-extra', 'data-extra': '' })),
-      h('div', { class: 'pk-v-knoepfe' },
-        h('button', { type: 'button', class: 'btn btn-primary pk-details', onclick: () => ctx.open(g.id) }, 'Details'), merken));
-    vorschau.hidden = false;
-    vorschau.dataset.id = g.id;
-    zusatzLaden(g.id).then((z) => { if (vorschau.dataset.id === g.id) { const e = vorschau.querySelector('[data-extra]'); if (e) e.textContent = zusatzEtiketten(z).join(' · '); } });
+  /** Bildschirmpunkt eines Orts in der Karte (ohne Leaflet-Hilfen, damit es auch mit dem Test-Ersatz geht). */
+  function punkt(lat, lon) {
+    const z = map.getZoom(), c = map.project(map.getCenter(), z), p = map.project([lat, lon], z), s = map.getSize();
+    return { x: p.x - c.x + s.x / 2, y: p.y - c.y + s.y / 2 };
   }
 
-  function waehlen(id, { fly = false } = {}) {
+  /** Pegel sichtbar machen: in den freien Teil der Karte rücken (über dem Bottom Sheet), bei Bedarf hineinzoomen. */
+  function hinzeigen(g, { zoom = null, immer = false } = {}) {
+    if (!map) return;
+    const s = map.getSize(), unten = Math.min(ctx.unten?.() || 0, s.y * 0.7);
+    const z = zoom !== null ? Math.max(map.getZoom(), zoom) : map.getZoom();
+    const p = punkt(g.lat, g.lon), rand = 40;
+    const sichtbar = p.x > rand && p.x < s.x - rand && p.y > rand + 60 && p.y < s.y - unten - rand;
+    if (!immer && sichtbar && z === map.getZoom()) return;
+    // Mitte so setzen, dass der Pegel in der Mitte des freien Bereichs liegt
+    const ziel = map.project([g.lat, g.lon], z).add([0, unten / 2]);
+    map.setView(map.unproject(ziel, z), z, { animate: true });
+  }
+
+  function markieren(id) {
     const alt = marker.get(gewaehlt);
     gewaehlt = id;
-    if (alt) { alt.m.setIcon(ikone(alt.g)); alt.m.setZIndexOffset(meinePegel.hat(alt.g.id) ? 600 : 0); }
+    if (alt) { alt.m.setIcon(ikone(alt.g)); alt.m.setZIndexOffset(zIndex(alt.g)); }
     const neu = marker.get(id);
-    if (!neu) { vorschau.hidden = true; return; }
-    neu.m.setIcon(ikone(neu.g)); neu.m.setZIndexOffset(1000);
-    vorschauZeichnen(neu.g);
-    if (fly) map.panTo([neu.g.lat, neu.g.lon]);
+    if (neu) { neu.m.setIcon(ikone(neu.g)); neu.m.setZIndexOffset(1000); }
   }
 
   async function erzeugen() {
     const libs = await loadMapLibraries();
-    if (!libs.leaflet) { meldung.textContent = 'Die Karte konnte nicht geladen werden.'; meldung.hidden = false; return false; }
-    L = window.L;
-    map = L.map(behaelter, { zoomControl: false, worldCopyJump: false, tap: true, zoomSnap: 0.25, zoomDelta: 1, minZoom: 4, maxBounds: L.latLngBounds(CONFIG.GEBIET.europa), maxBoundsViscosity: 0.9 });
+    if (!libs.leaflet) { meldung.textContent = 'Die Karte konnte nicht geladen werden. Suche und „Meine Pegel“ funktionieren trotzdem.'; meldung.hidden = false; return false; }
+    L = window.L; cluster = !!libs.cluster && typeof L.markerClusterGroup === 'function';
+    map = L.map(behaelter, { zoomControl: false, worldCopyJump: false, tap: true, zoomSnap: 0.25, zoomDelta: 1, minZoom: 5, maxBounds: L.latLngBounds(CONFIG.GEBIET.europa), maxBoundsViscosity: 0.9 });
     L.control.zoom({ position: 'topright', zoomInTitle: 'Vergrößern', zoomOutTitle: 'Verkleinern' }).addTo(map);
     L.tileLayer(CONFIG.TILE_URL, { maxZoom: CONFIG.TILE_MAX_ZOOM, attribution: `${CONFIG.TILE_ATTRIBUTION} · ${CONFIG.PEGEL_ATTRIBUTION}` }).addTo(map);
     map.attributionControl.setPrefix(false);
     map.on('zoomend', kompakt);
-    map.on('click', () => { if (gewaehlt) { const a = marker.get(gewaehlt); gewaehlt = null; if (a) a.m.setIcon(ikone(a.g)); vorschau.hidden = true; } });
+    map.on('moveend', () => ctx.bewegt?.());
+    map.on('click', () => { if (gewaehlt) ctx.abwaehlen(); });
     return true;
   }
 
@@ -111,21 +114,30 @@ export function pegelKarteAnsicht(ctx) {
     /** Beim Anzeigen: Karte (einmal) aufbauen, Größe neu bestimmen. */
     async zeigen() {
       bereit ||= erzeugen();
-      if (!(await bereit)) return;
+      if (!(await bereit)) return false;
       map.invalidateSize();
-      if (behaelter.offsetWidth < 50) return;   // noch unsichtbar (Hintergrundaufbau): Ausschnitt erst beim Anzeigen setzen
+      if (behaelter.offsetWidth < 50) return false;   // noch unsichtbar: Ausschnitt erst beim Anzeigen setzen
       if (ersterAusschnitt || !layer) { markerSetzen(); startAusschnitt(); kompakt(); ersterAusschnitt = false; }
+      return true;
     },
-    /** Neue Messwerte / geänderte „Meine Pegel“: Marker neu setzen (Ausschnitt bleibt). */
-    aktualisieren() {
-      if (!map || !layer) return;
-      const id = gewaehlt;
-      markerSetzen(); kompakt();
-      if (id && marker.has(id)) waehlen(id);
+    get bereit() { return !!map && !ersterAusschnitt; },
+    /** Neue Messwerte, geänderter Filter oder „Meine Pegel“: Marker neu setzen (Ausschnitt bleibt). */
+    aktualisieren() { if (map && layer) { markerSetzen(); kompakt(); } },
+    filtern(fn) { filter = fn || (() => true); if (map && layer) markerSetzen(); },
+    markieren, hinzeigen,
+    /** Pegel im sichtbaren Kartenausschnitt (über dem Sheet), nach Abstand zur Mitte. */
+    imAusschnitt() {
+      if (!map) return [];
+      const s = map.getSize(), unten = Math.min(ctx.unten?.() || 0, s.y * 0.7);
+      const mx = s.x / 2, my = (s.y - unten) / 2;
+      return (ctx.stand()?.gauges || []).map(g => ({ g, p: punkt(g.lat, g.lon) }))
+        .filter(({ p }) => p.x >= 0 && p.x <= s.x && p.y >= 0 && p.y <= s.y - unten)
+        .sort((a, b) => Math.hypot(a.p.x - mx, a.p.y - my) - Math.hypot(b.p.x - mx, b.p.y - my)).map(e => e.g);
     },
-    waehlen,
+    flyTo(lat, lon, zoom) { if (!map) return; const z = zoom ?? map.getZoom(); const unten = Math.min(ctx.unten?.() || 0, map.getSize().y * 0.7); map.setView(map.unproject(map.project([lat, lon], z).add([0, unten / 2]), z), z); },
+    /** Alle genannten Pegel ins Bild holen. */
+    passend(gauges) { if (!map || !gauges.length) return; map.fitBounds(L.latLngBounds(gauges.map(g => [g.lat, g.lon])), { padding: [50, 50], paddingBottomRight: [50, 50 + (ctx.unten?.() || 0)], maxZoom: 11 }); },
     get gewaehlt() { return gewaehlt; },
-    /** Zusatzzeile in der Vorschau (z. B. Wassertemperatur in Stufe 2). */
-    extra(text) { const e = vorschau.querySelector('[data-extra]'); if (e) e.textContent = text || ''; },
+    get map() { return map; },
   };
 }

@@ -212,6 +212,7 @@ function gaugeMeter(g) {
 
 // ------------------------------------------------------------------ Verlaufsdiagramm (eigenes SVG, keine Bibliothek)
 
+let schraffurNr = 0;
 /** opts.threshold = { value, label } zeichnet eine gestrichelte Linie (z. B. Mindestpegel der Pegel-Ampel). */
 export function historyChart(pts, g, { threshold = null, vorhersage = null } = {}) {
   const W = 360, H = 176, L = 40, R = 46, T = 10, B = 24;
@@ -245,12 +246,19 @@ export function historyChart(pts, g, { threshold = null, vorhersage = null } = {
     svg.append(s('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'gc-grid' }));
     const t = s('text', { x: L - 6, y: y(v) + 4, class: 'gc-axis', 'text-anchor': 'end' }); t.textContent = fmtNum(v); svg.append(t);
   }
-  // x-Achse: Mitternacht jedes Tages
-  const day = new Date(t0); day.setHours(24, 0, 0, 0);
-  for (let d = day.getTime(); d < t1; d += 864e5) {
-    svg.append(s('line', { x1: x(d), x2: x(d), y1: T, y2: H - B, class: 'gc-grid' }));
-    const t = s('text', { x: x(d) + 3, y: H - 8, class: 'gc-axis' });
-    t.textContent = new Date(d).toLocaleDateString('de-DE', { weekday: 'short' }).replace('.', ''); svg.append(t);
+  // x-Achse je nach Zeitraum: bis 2 Tage alle 6 h (Uhrzeit), bis 10 Tage jede Mitternacht (Wochentag), länger jede Woche (Datum)
+  const spanne = t1 - t0;
+  const schritt = spanne <= 2 * 864e5 ? 6 * 3600e3 : spanne <= 10 * 864e5 ? 864e5 : 7 * 864e5;
+  const start = new Date(t0); start.setMinutes(0, 0, 0);
+  if (schritt === 6 * 3600e3) { do start.setHours(start.getHours() + 1); while (start.getHours() % 6); }
+  else { start.setHours(24, 0, 0, 0); if (schritt > 864e5) while (start.getDay() !== 1) start.setDate(start.getDate() + 1); }   // Wochen ab Montag
+  for (let d = new Date(start); d.getTime() < t1; schritt === 6 * 3600e3 ? d.setHours(d.getHours() + 6) : d.setDate(d.getDate() + schritt / 864e5)) {
+    const tx = d.getTime();
+    svg.append(s('line', { x1: x(tx), x2: x(tx), y1: T, y2: H - B, class: 'gc-grid' }));
+    const t = s('text', { x: x(tx) + 3, y: H - 8, class: 'gc-axis' });
+    t.textContent = schritt === 6 * 3600e3 ? (d.getHours() === 0 ? d.toLocaleDateString('de-DE', { weekday: 'short' }).replace('.', '') : `${String(d.getHours()).padStart(2, '0')}:00`)
+      : schritt === 864e5 ? d.toLocaleDateString('de-DE', { weekday: 'short' }).replace('.', '') : d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+    svg.append(t);
   }
   // Kennwerte als Haarlinien mit Beschriftung rechts
   for (const [k, v] of refs) {
@@ -261,10 +269,19 @@ export function historyChart(pts, g, { threshold = null, vorhersage = null } = {
     svg.append(s('line', { x1: L, x2: W - R, y1: y(threshold.value), y2: y(threshold.value), class: 'gc-threshold' }));
     const t = s('text', { x: W - R + 4, y: y(threshold.value) + 4, class: 'gc-reflabel gc-threshold-label' }); t.textContent = threshold.label; svg.append(t);
   }
-  // Linie (Lücken > 1 h werden nicht überbrückt) und Fläche
+  // Linie und Fläche; Lücken (deutlich länger als der übliche Messabstand) werden nicht überbrückt, sondern schraffiert
+  const luecken = messluecken(pts);
+  if (luecken.length) {
+    const id = `gc-schraffur-${++schraffurNr}`;
+    const muster = s('pattern', { id, width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' });
+    muster.append(s('line', { x1: 0, y1: 0, x2: 0, y2: 6, class: 'gc-schraffur' }));
+    const defs = s('defs', {}); defs.append(muster); svg.append(defs);
+    for (const [a, b] of luecken) svg.append(s('rect', { x: x(a), y: T, width: Math.max(x(b) - x(a), 2), height: H - T - B, class: 'gc-luecke', fill: `url(#${id})` }));
+  }
+  const istLuecke = (p0, p1) => luecken.some(([a, b]) => a === p0.t && b === p1.t);
   let d = '', prev = null;
-  for (const p of pts) { d += (prev && p.t - prev.t <= 3600e3 ? 'L' : 'M') + x(p.t).toFixed(1) + ' ' + y(p.v).toFixed(1); prev = p; }
-  const area = `M${x(t0).toFixed(1)} ${y(lo)}` + pts.map(p => `L${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join('') + `L${x(t1).toFixed(1)} ${y(lo)}Z`;
+  for (const p of pts) { d += (prev && !istLuecke(prev, p) ? 'L' : 'M') + x(p.t).toFixed(1) + ' ' + y(p.v).toFixed(1); prev = p; }
+  const area = `M${x(t0).toFixed(1)} ${y(lo)}` + pts.map(p => `L${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join('') + `L${x(pts[pts.length - 1].t).toFixed(1)} ${y(lo)}Z`;
   svg.append(s('path', { d: area, class: 'gc-area' }), s('path', { d, class: 'gc-line' }));
   const last = pts[pts.length - 1];
   if (wv.length) {
@@ -312,5 +329,21 @@ export function historyChart(pts, g, { threshold = null, vorhersage = null } = {
       h('tbody', {}, [...days.values()].map(e => h('tr', {},
         h('td', { text: new Date(e.t).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }) }),
         h('td', { text: fmtNum(e.min) }), h('td', { text: fmtNum(e.max) }))))));
-  return [wrap, table];
+  const lueckenHinweis = luecken.length ? h('p', { class: 'gc-luecken-text', text: `Schraffiert: ${luecken.length === 1 ? 'eine Lücke' : `${luecken.length} Lücken`} in den Messwerten (keine Daten von PEGELONLINE).` }) : null;
+  return lueckenHinweis ? [wrap, lueckenHinweis, table] : [wrap, table];
+}
+
+/**
+ * Lücken in einer Messreihe: Abstände, die deutlich länger sind als der übliche Messabstand des Pegels
+ * (mehr als das 2,5-Fache des Medians, mindestens 90 Minuten, da manche Pegel nur stündlich melden). Rückgabe: [[t_vor, t_nach], …].
+ */
+export function messluecken(pts) {
+  if (!pts || pts.length < 3) return [];
+  const abst = [];
+  for (let i = 1; i < pts.length; i++) abst.push(pts[i].t - pts[i - 1].t);
+  const median = [...abst].sort((a, b) => a - b)[Math.floor(abst.length / 2)];
+  const grenze = Math.max(2.5 * median, 90 * 60e3);
+  const out = [];
+  for (let i = 1; i < pts.length; i++) if (abst[i - 1] > grenze) out.push([pts[i - 1].t, pts[i].t]);
+  return out;
 }

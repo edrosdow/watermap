@@ -25,3 +25,7 @@
 .gc-vorh { fill: none; stroke: #1F6FB2; stroke-width: 2; stroke-dasharray: 5 4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .gc-jetzt { stroke: var(--navy, #0B3045); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .gc-jetzt-text { font-size: 10px; font-weight: 800; fill: var(--navy, #0B3045); }
+/* Messlücken (7.49.0) */
+.gc-luecke { stroke: none; }
+.gc-schraffur { stroke: #B9C6CF; stroke-width: 2; }
+.gc-luecken-text { margin: 4px 0 0; font-size: 13px; color: var(--muted); }

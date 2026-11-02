@@ -1,28 +1,31 @@
-// Bereich „Pegel“: Dashboard (#pegel) und Pegel-Detailseite (#pegel/<id>); Flussseite siehe pegel-fluss-ansicht.js.
-// Daten: eine Stationsliste (pegel-daten.js) für Zähler, Fluss-Kacheln und Tabelle; Verläufe nur für sichtbare Karten.
+// Bereich „Pegel“ (#pegel, #pegel/<id>): Kartenanwendung für Bootsfahrer.
+//  Kopf: „Pegelstände“, Suche (Pegel, Gewässer, Ort), Filter Alle Pegel | In Kartennähe | Favoriten.
+//  Karte (pegel-karte.js) mit allen Pegeln; daneben (Desktop) bzw. darüber als Bottom Sheet (Handy) das Panel:
+//  gewählter Pegel kurz (Wert, Trend 24 h, Kurve 24 h) → „Verlauf anzeigen“ öffnet das Cockpit (pegelDetail).
+//  Ohne Auswahl: „Meine Pegel“ bzw. die Pegel im Kartenausschnitt.
+// Daten: eine Stationsliste (pegel-daten.js); Verläufe nur für den gewählten Pegel und die Favoriten (zwischengespeichert).
 import { h, announce } from './dom.js';
 import { icon } from './icons.js';
-import { haversine, formatDistance, displayName } from './model.js';
-import { pegelLaden, verlaufLaden, meinePegel, vorhersageWLaden } from './pegel-daten.js';
-import { lageSatz, wochenendTage, tageAusStunden, zelle, vorhersageTag, vorhersageZustand } from './pegel-lage.js';
-import { pegelKarteAnsicht } from './pegel-karte.js';
-import { tendenz } from './gezeiten.js';
-import { fenster, loadWetterStunden, wxIcon } from './wetter.js';
+import { haversine, displayName } from './model.js';
+import { s } from './chart.js';
+import { pegelLaden, verlaufLaden, meinePegel, aenderung24h, richtung24 } from './pegel-daten.js';
+import { pegelKarteAnsicht, ZOOM_AUSWAHL } from './pegel-karte.js';
+import { fmt, kmText, zustand, ZUSTAND, etikett, pegelDetail, sternKnopf } from './pegel-ansicht.js';
+import { formatTime, messluecken } from './pegel.js';
 import { alarmFenster } from './alarm.js';
-import { fmt, kmText, zustand, ZUSTAND, etikett, trendText, trendKlasse, pegelKarte, pegelDetail, sternKnopf, mitTrend } from './pegel-ansicht.js';
-import { formatTime } from './pegel.js';
-import { ENTWICKLUNG } from './config.js';
-import { normW, gleichesGewaesser, flussKm as flussKmRoh, gruppieren, kachelnSortieren, istKueste, slug, KUESTE_SLUG, flussZustand, FLUSS_ZUSTAND } from './pegel-fluss.js';
-import { flussKachel, weitereGewaesser } from './pegel-fluss-ansicht.js';
-import { umlautVerdacht } from './pegel-namen.js';
+import { istTidepegel, auswerten } from './gezeiten.js';
+import { tendenzText } from './pegel-tide-ansicht.js';
+import { normW, gleichesGewaesser, istKueste, slug, KUESTE_SLUG } from './pegel-fluss.js';
 
-const flussKm = (g) => flussKmRoh(g) ?? 1e9;
-const UEBERSICHT = ['rhein', 'elbe', 'weser', 'donau', 'main'];   // feste Kacheln (dazu die Küste); alle anderen Gewässer in der Liste
 const zeitText = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 const standText = (st) => (st.offline ? `Offline · Stand von ${new Date(st.zeit).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}, ${zeitText(st.zeit)} Uhr`
-  : `Stand ${zeitText(st.zeit)} · WSV/PEGELONLINE`);
+  : `Stand ${zeitText(st.zeit)} · Daten WSV/PEGELONLINE`);
+const EINORDNUNG = { low: 'unter MNW', normal: 'zwischen MNW und MHW', high: 'über MHW', hsw: 'über HSW' };
+const RICHTUNG = { 1: ['↗', 'steigend', 'pt-up'], 0: ['→', 'nahezu unverändert', 'pt-flat'], '-1': ['↘', 'fallend', 'pt-down'] };
+const FILTER = [['alle', 'Alle Pegel'], ['naehe', 'In Kartennähe'], ['fav', 'Favoriten']];
+const MAX_NAEHE = 30;
 
-/** Nächste Slipanlagen am selben Gewässer (für Detailseite). */
+/** Nächste Slipanlagen am selben Gewässer (für das Cockpit). */
 export function slipsAmPegel(g, places, max = 5, radius = 30000) {
   if (!normW(g.water)) return [];
   return places.filter(p => p.type === 'slip' && p.water?.name && gleichesGewaesser(p.water.name, g.water))
@@ -30,386 +33,387 @@ export function slipsAmPegel(g, places, max = 5, radius = 30000) {
     .filter(e => e.d <= radius).sort((a, b) => a.d - b.d).slice(0, max);
 }
 
+/** „+6 cm in 24 h“ */
+const aenderungText = (d) => `${d > 0 ? '+' : d < 0 ? '−' : '±'}${fmt(Math.abs(d))} cm in 24 h`;
+
+/** Trendzeile aus dem Verlauf: „↗ steigend · +6 cm in 24 h“; kleine Änderungen „→ nahezu unverändert“. */
+export function trendZeile(g, pts) {
+  if (istTidepegel(g)) { const t = tendenzText(auswerten(g, pts || [])); return t ? { text: `${t} (Tide)`, cls: 'pt-flat' } : null; }
+  const d = aenderung24h(pts);
+  const r = richtung24(d);
+  if (r === null) return null;
+  const [pfeil, wort, cls] = RICHTUNG[r];
+  return { text: `${pfeil} ${wort} · ${aenderungText(d)}`, kurz: `${pfeil} ${d > 0 ? '+' : d < 0 ? '−' : '±'}${fmt(Math.abs(d))} cm`, cls };
+}
+
+/** Kurve der letzten 24 Stunden (Linie und Fläche, Lücken nicht überbrückt). */
+export function kurve24(pts, g, { breite = 300, hoehe = 60, klein = false } = {}) {
+  if (!pts?.length) return null;
+  const ende = pts[pts.length - 1].t;
+  const p24 = pts.filter(p => p.t >= ende - 24 * 3600e3);
+  if (p24.length < 2) return null;
+  const vs = p24.map(p => p.v), lo = Math.min(...vs), hi = Math.max(...vs), sp = Math.max(hi - lo, 4);
+  const t0 = p24[0].t, W = breite, H = hoehe, pad = klein ? 3 : 6;
+  const x = (t) => pad + (t - t0) / Math.max(ende - t0, 1) * (W - 2 * pad);
+  const y = (v) => pad + (hi - v) / sp * (H - 2 * pad);
+  const luecken = messluecken(p24);
+  let d = '', prev = null;
+  for (const p of p24) { d += (prev && !luecken.some(([a, b]) => a === prev.t && b === p.t) ? 'L' : 'M') + x(p.t).toFixed(1) + ' ' + y(p.v).toFixed(1); prev = p; }
+  const last = p24[p24.length - 1];
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: 'none', class: 'pa-kurve' + (klein ? ' is-klein' : ''), role: 'img',
+    'aria-label': `Verlauf der letzten 24 Stunden: von ${fmt(p24[0].v)} auf ${fmt(last.v)} ${g.unit}, tiefster ${fmt(lo)}, höchster ${fmt(hi)} ${g.unit}` });
+  if (!klein) svg.append(s('path', { d: `M${x(t0).toFixed(1)} ${H}` + p24.map(p => `L${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join('') + `L${x(last.t).toFixed(1)} ${H}Z`, class: 'pa-kurve-flaeche' }));
+  svg.append(s('path', { d, class: 'pa-kurve-linie' }));
+  svg.append(s('circle', { cx: x(last.t), cy: y(last.v), r: klein ? 2.5 : 4, class: 'pa-kurve-punkt' }));
+  return svg;
+}
+
 /**
- * ctx = { user(): {lat,lon}|null, places(): Place[], isMobile(), open(id), ampel(id, {alarm}), karte(g), slip(p), share(g), toast,
- *         fluss(slug), ansicht(): 'liste' | 'karte', setAnsicht(a) }
- * Aufbau: Kopf mit Umschalter Liste | Karte, ein Suchfeld, dann je nach Ansicht
- *  Liste: Meine Pegel (mit Lage-Satz) · Lage in Deutschland (3 Zähler, Flüsse im Überblick) · Wochenende · Werkzeuge
- *  Karte: Pegel als Wert-Pillen, Legende, Vorschau-Karte.
+ * ctx = { user(): {lat,lon}|null, places(): Place[], isMobile(), toast(text), share(g), slip(p), auswahl(id|null) }
+ * Rückgabe: { zeigen(force), waehlen(id, opts), abwaehlen(opts), vorbereiten(), stand, auswahl }
  */
 export function pegelDashboard(root, ctx) {
-  const ui = { filter: null, sort: null, suche: '', alleMeine: false, bearbeiten: false, zeilen: 60 };
-  let stand = null, seite = null, veraltet = false;   // seite: zuletzt gezeichneter Inhalt (wird beim erneuten Öffnen wiederverwendet)
-  let karte = null, meineBox = null, trefferBox = null, wochenBox = null, alleBox = null;
+  const ui = { filter: 'alle', auswahl: null, gross: false, aktiv: -1, treffer: [] };
+  let stand = null, ladeFehler = false, app = null, karte = null, panel = null, inhalt = null, griff = null, standZeile = null, feld = null, trefferBox = null, filterBox = null;
+  let karteFertig = false;
 
-  const entfernung = (g) => { const u = ctx.user(); return u ? haversine(u.lat, u.lon, g.lat, g.lon) : null; };
-  const ansicht = () => (ctx.ansicht?.() === 'karte' ? 'karte' : 'liste');
+  const isMobile = () => ctx.isMobile?.() ?? window.matchMedia('(max-width: 767px)').matches;
+  const gewaehlt = () => (ui.auswahl && stand ? stand.byId.get(ui.auswahl) : null);
 
+  // ---------------------------------------------------------------- Aufbau (einmal)
+  function aufbauen() {
+    karte = pegelKarteAnsicht({
+      stand: () => stand, user: () => ctx.user(),
+      waehlen: (id) => waehlen(id, { quelle: 'karte' }),
+      abwaehlen: () => abwaehlen(),
+      bewegt: () => { if (ui.filter === 'naehe' && !ui.gross) listeNeu(); },
+      unten: () => (isMobile() && panel ? panel.offsetHeight : 0),
+    });
+    standZeile = h('p', { class: 'pa-stand', 'aria-live': 'polite', text: 'Pegel werden geladen …' });
+    feld = h('input', { type: 'search', id: 'pa-suche', class: 'pa-suche', placeholder: 'Pegel, Gewässer oder Ort suchen', autocomplete: 'off', enterkeyhint: 'search',
+      role: 'combobox', 'aria-label': 'Pegel, Gewässer oder Ort suchen', 'aria-autocomplete': 'list', 'aria-expanded': 'false', 'aria-controls': 'pa-treffer',
+      oninput: () => sucheZeichnen(), onkeydown: sucheTaste, onfocus: () => { if (feld.value.trim()) sucheZeichnen(); } });
+    trefferBox = h('ul', { class: 'pa-treffer', id: 'pa-treffer', role: 'listbox', 'aria-label': 'Suchtreffer', hidden: true });
+    filterBox = h('div', { class: 'pa-filter', role: 'group', 'aria-label': 'Pegel zeigen' },
+      FILTER.map(([k, t]) => h('button', { type: 'button', class: 'pa-chip', dataset: { filter: k }, 'aria-pressed': String(ui.filter === k), onclick: () => filterSetzen(k) },
+        k === 'fav' ? h('span', { html: icon('star', 15, true), 'aria-hidden': 'true' }) : null, h('span', { text: t }), k === 'fav' ? h('span', { class: 'pa-chip-zahl' }) : null)));
+    const kopf = h('header', { class: 'pa-kopf' },
+      h('div', { class: 'pa-titelblock' },
+        h('div', { class: 'pa-titelzeile' }, h('h1', { class: 'pa-h1', text: 'Pegelstände' }),
+          h('button', { type: 'button', class: 'pa-neu', 'aria-label': 'Pegel aktualisieren', title: 'Aktualisieren', html: icon('refresh', 18), onclick: async (e) => {
+            const b = e.currentTarget; b.classList.add('is-busy'); await laden(true); b.classList.remove('is-busy');
+            ctx.toast?.(stand?.offline ? 'Keine Verbindung – letzter Stand wird angezeigt.' : stand ? 'Pegel aktualisiert.' : 'Pegeldaten sind gerade nicht erreichbar.'); } })),
+        standZeile),
+      h('div', { class: 'pa-suchbox' }, h('span', { class: 'pa-suche-ico', html: icon('search', 19), 'aria-hidden': 'true' }), feld, trefferBox),
+      filterBox);
+    inhalt = h('div', { class: 'pa-inhalt' });
+    griff = h('button', { type: 'button', class: 'pa-griff', 'aria-controls': 'pa-panel', onclick: () => grossSetzen(!ui.gross) }, h('span', { 'aria-hidden': 'true' }));
+    panel = h('aside', { class: 'pa-panel', id: 'pa-panel', 'aria-label': 'Pegel-Details' }, griff, inhalt);
+    wischen(panel);
+    app = h('div', { class: 'pa' }, kopf, h('div', { class: 'pa-haupt' }, karte.el, panel));
+    app.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || e.target === feld) return;
+      if (ui.gross) { e.preventDefault(); grossSetzen(false); } else if (ui.auswahl) { e.preventDefault(); abwaehlen(); }
+    });
+    document.addEventListener('click', (e) => { if (!trefferBox.hidden && !e.target.closest?.('.pa-suchbox')) sucheZu(); });
+    root.replaceChildren(app);
+    root.classList.add('pa-modus');
+    new ResizeObserver(() => app.style.setProperty('--pa-unten', `${isMobile() ? panel.offsetHeight : 0}px`)).observe(panel);
+  }
+
+  /** Bottom Sheet (Handy): nach oben wischen vergrößert, nach unten verkleinert bzw. schließt die Auswahl. */
+  function wischen(el) {
+    let y0 = null;
+    el.addEventListener('touchstart', (e) => {
+      y0 = null;
+      if (!isMobile() || e.touches.length !== 1 || e.target.closest('.gc-wrap, .pd-umschalter, input, select')) return;
+      if (inhalt.scrollTop > 0 && !e.target.closest('.pa-griff')) return;
+      y0 = e.touches[0].clientY;
+    }, { passive: true });
+    el.addEventListener('touchend', (e) => {
+      if (y0 === null) return;
+      const dy = e.changedTouches[0].clientY - y0; y0 = null;
+      if (dy < -45 && !ui.gross) grossSetzen(true);
+      else if (dy > 60) { if (ui.gross) grossSetzen(false); else if (ui.auswahl) abwaehlen(); }
+    }, { passive: true });
+  }
+
+  // ---------------------------------------------------------------- Laden
   async function laden(force = false) {
-    let neu;
-    try { neu = await pegelLaden({ force }); }
-    catch { neu = null; }
-    // Gleicher Datenstand und Inhalt noch da: nichts neu aufbauen (Wechsel zu „Pegel“ ohne Wartezeit)
-    if (!force && neu && neu === stand && seite?.isConnected && !veraltet) { if (ansicht() === 'karte') karte?.zeigen(); return; }
-    stand = neu;
-    if (stand) karte?.aktualisieren();
-    zeichnen();
+    let neu = null;
+    try { neu = await pegelLaden({ force }); ladeFehler = false; } catch { ladeFehler = true; }
+    const anders = neu !== stand;
+    if (neu) stand = neu;
+    standZeile.textContent = stand ? standText(stand) : 'Pegeldaten sind gerade nicht erreichbar.';
+    standZeile.classList.toggle('is-offline', !!stand?.offline || !stand);
+    if (ui.auswahl && stand && !stand.byId.has(ui.auswahl)) { ui.auswahl = null; ui.gross = false; }
+    if (anders && karteFertig) karte.aktualisieren();
+    if (anders || !inhalt.childElementCount || ladeFehler) zeichnen({ cockpitBehalten: true });
   }
 
-  // ---------------------------------------------------------------- Kopf, Umschalter, Suche
-  function kopf() {
-    const tab = (a, text) => h('button', { type: 'button', role: 'tab', id: `pg-tab-${a}`, class: 'pg-tab' + (ansicht() === a ? ' is-an' : ''), 'aria-selected': String(ansicht() === a),
-      tabindex: ansicht() === a ? '0' : '-1', onclick: () => umschalten(a),
-      onkeydown: (e) => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); umschalten(a === 'liste' ? 'karte' : 'liste', true); } } }, text);
-    return h('header', { class: 'pg-kopf' },
-      h('div', { class: 'pg-kopf-zeile' },
-        h('div', { class: 'pg-kopf-text' },
-          h('div', { class: 'pg-titelzeile' }, h('h1', { class: 'pg-titel', text: 'Pegel' }),
-            h('button', { type: 'button', class: 'pg-neu', 'aria-label': 'Pegel aktualisieren', html: icon('refresh', 18), onclick: async (e) => {
-              e.currentTarget.classList.add('is-busy'); await laden(true); ctx.toast?.(stand?.offline ? 'Keine Verbindung – letzter Stand wird angezeigt.' : 'Pegel aktualisiert.'); } }))),
-        h('div', { class: 'pg-tabs', role: 'tablist', 'aria-label': 'Ansicht' }, tab('liste', 'Liste'), tab('karte', 'Karte'))),
-      h('p', { class: 'pg-stand', 'aria-live': 'polite', text: stand ? standText(stand) : 'Wird geladen …' }));
-  }
-  function umschalten(a, fokus = false) {
-    if (a === ansicht()) return;
-    ctx.setAnsicht?.(a);
-    zeichnen();
-    if (fokus) root.querySelector(`#pg-tab-${a}`)?.focus();
-  }
-
-  const MAX_TREFFER = 40;
-  function suche() {
-    const feld = h('input', { type: 'search', class: 'pg-suche', id: 'pg-suche', placeholder: 'Pegel oder Gewässer suchen und merken', 'aria-label': 'Pegel oder Gewässer suchen und merken', value: ui.suche, autocomplete: 'off',
-      oninput: () => { ui.suche = feld.value; if (feld.value.trim()) ui.filter = null; zeichneTreffer(); zeichneAlle(); } });
-    trefferBox = h('div', { class: 'pg-treffer', id: 'pg-treffer' });
-    zeichneTreffer();
-    return h('div', { class: 'pg-suchzeile' }, h('div', { class: 'pg-suche-box' }, h('span', { class: 'pg-suche-ico', html: icon('search', 20), 'aria-hidden': 'true' }), feld), trefferBox);
-  }
-  function zeichneTreffer() {
-    if (!trefferBox || !stand) return;
-    const q = normW(ui.suche);
-    if (!q) { trefferBox.replaceChildren(); trefferBox.hidden = true; return; }
-    const start = (g) => (normW(g.name).startsWith(q) ? 0 : 1);
-    const treffer = stand.gauges.filter(g => normW(g.name).includes(q) || normW(g.water).includes(q))
-      .sort((a, b) => start(a) - start(b) || (entfernung(a) ?? 0) - (entfernung(b) ?? 0) || a.name.localeCompare(b.name, 'de'));
-    const zeile = (g) => {
-      const d = entfernung(g);
-      return h('li', { class: 'pa-zeile' },
-        h('button', { type: 'button', class: 'pa-text pg-treffer-btn', onclick: () => ctx.open(g.id) }, h('strong', { text: g.name }),
-          h('small', { text: [g.water, kmText(g), d !== null ? formatDistance(d) : ''].filter(Boolean).join(' · ') })),
-        h('span', { class: 'pa-wert' }, h('b', { text: `${fmt(g.value)} ${g.unit}` }), etikett(g)),
-        sternKnopf(g, { klein: true, onChange: () => zeichneTreffer() }));
-    };
-    trefferBox.hidden = false;
-    trefferBox.replaceChildren(
-      h('p', { class: 'pa-kopf', role: 'status', text: treffer.length ? `${fmt(treffer.length)} Treffer` : 'Kein Pegel gefunden.' }),
-      h('ul', { class: 'pa-liste' }, treffer.slice(0, MAX_TREFFER).map(zeile)),
-      ...(treffer.length > MAX_TREFFER ? [h('p', { class: 'pa-mehr', text: `Weitere ${fmt(treffer.length - MAX_TREFFER)} – bitte genauer suchen.` })] : []));
-  }
-  const sucheFokussieren = () => { const f = root.querySelector('#pg-suche'); root.scrollTop = 0; f?.scrollIntoView({ block: 'center' }); f?.focus(); };
-
-  // ---------------------------------------------------------------- Meine Pegel
-  const MAX_KARTEN = 3;
-  function meineInhalt() {
-    meinePegel.ampelUebernehmen();
-    const alle = meinePegel.alle().filter(id => stand.byId.has(id));
-    let ids = alle, titel = 'Meine Pegel', hinweis = null;
-    if (!ids.length) {
-      const u = ctx.user();
-      if (u) {
-        ids = [...stand.gauges].sort((a, b) => entfernung(a) - entfernung(b)).slice(0, 3).map(g => g.id);
-        titel = 'Pegel in deiner Nähe'; hinweis = 'Tippe auf ☆, um Pegel zu merken.';
-      } else {
-        hinweis = 'Noch keine Pegel gemerkt. Suche oben nach einem Pegel und tippe auf den Stern.';
-      }
+  async function karteZeigen() {
+    if (!stand) return;
+    const ok = await karte.zeigen();
+    if (!ok) return;
+    if (!karteFertig) {
+      karteFertig = true;
+      if (ui.filter === 'fav') karte.filtern(g => meinePegel.hat(g.id));
+      const g = gewaehlt();
+      if (g) { karte.markieren(g.id); karte.hinzeigen(g, { zoom: ZOOM_AUSWAHL, immer: true }); }
+      if (ui.filter === 'naehe') listeNeu();
     }
-    const gemerkt = alle.length > 0;
-    const sichtbar = ui.alleMeine || ui.bearbeiten ? ids : ids.slice(0, MAX_KARTEN);
-    const rest = ids.slice(sichtbar.length);
-    const satz = h('p', { class: 'pg-lage-satz', role: 'status', hidden: !gemerkt });
-    if (gemerkt) lageSatzFuellen(satz, alle);
-    const kopfZeile = h('div', { class: 'pg-h2-zeile' }, h('h2', { id: 'pg-meine-t', class: 'pg-h2', text: titel }),
-      h('div', { class: 'pg-h2-links' },
-        h('button', { type: 'button', class: 'pg-link pg-hinzu', onclick: sucheFokussieren, 'aria-label': 'Pegel hinzufügen (Suche)' }, '+ Hinzufügen'),
-        gemerkt ? h('button', { type: 'button', class: 'pg-link pg-bearb', 'aria-pressed': String(ui.bearbeiten), text: ui.bearbeiten ? 'Fertig' : 'Bearbeiten',
-          onclick: () => { ui.bearbeiten = !ui.bearbeiten; aktualisieren(); root.querySelector('.pg-meine .pg-bearb')?.focus(); } }) : null));
-    const liste = h('div', { class: 'pg-karten' });
-    sichtbar.forEach((id, i) => {
-      const g = stand.byId.get(id);
-      const bearb = ui.bearbeiten && gemerkt ? h('div', { class: 'pm-bearb' },
-        h('button', { type: 'button', class: 'pm-bbtn', 'aria-label': `${g.name} nach oben`, html: icon('back', 18), disabled: i === 0, onclick: () => { meinePegel.verschieben(id, -1); } }),
-        h('button', { type: 'button', class: 'pm-bbtn is-runter', 'aria-label': `${g.name} nach unten`, html: icon('back', 18), disabled: i === ids.length - 1, onclick: () => { meinePegel.verschieben(id, 1); } }),
-        h('button', { type: 'button', class: 'pm-bbtn is-weg', text: 'Entfernen', onclick: () => { meinePegel.entfernen(id); } })) : null;
-      liste.append(pegelKarte(g, { verlauf: verlaufLaden(id), onOpen: () => ctx.open(id), bearbeiten: bearb }));
-    });
-    const namen = rest.slice(0, 3).map(id => stand.byId.get(id).name).join(', ') + (rest.length > 3 ? ' …' : '');
-    return [kopfZeile, satz, hinweis ? h('p', { class: 'pg-hinweis', text: hinweis }) : null, liste,
-      rest.length ? h('button', { type: 'button', class: 'pg-link pg-weitere', 'aria-expanded': 'false', text: `+ ${rest.length} weitere Pegel (${namen}) ›`,
-        onclick: () => { ui.alleMeine = true; aktualisieren(); } }) : (ui.alleMeine && !ui.bearbeiten && ids.length > MAX_KARTEN
-          ? h('button', { type: 'button', class: 'pg-link pg-weitere', 'aria-expanded': 'true', text: 'Weniger anzeigen', onclick: () => { ui.alleMeine = false; aktualisieren(); } }) : null)];
-  }
-  function meine() {
-    meineBox = h('section', { class: 'pg-meine', 'aria-labelledby': 'pg-meine-t' }, ...meineInhalt());
-    return meineBox;
   }
 
-  /** Lage-Satz: erst mit den Daten der Stationsliste, dann (sobald die Verläufe da sind) mit Trend und Tide-Tendenz. */
-  function lageSatzFuellen(p, ids) {
-    const gauges = ids.map(id => stand.byId.get(id)).filter(Boolean);
-    const zeigen = (eintraege) => {
-      const teile = lageSatz(eintraege);
-      if (!teile) { p.hidden = true; return; }
-      p.hidden = false;
-      p.replaceChildren(...teile.map(t => (t.ton ? h('span', { class: `ls-${t.ton}`, text: t.text }) : t.text)));
-    };
-    zeigen(gauges.map(g => ({ g, tide: null })));
-    Promise.all(gauges.map(g => verlaufLaden(g.id).then(pts => ({ g: g.tide ? g : mitTrend(g, pts), tide: g.tide ? tendenz(pts) : null }), () => ({ g, tide: null }))))
-      .then((e) => { if (p.isConnected) zeigen(e); });
-  }
-
-  // ---------------------------------------------------------------- Lage in Deutschland, Flüsse im Überblick
-  function lage() {
-    const n = { hsw: 0, high: 0, low: 0 };
-    for (const g of stand.gauges) { const z = zustand(g); if (z in n) n[z]++; }
-    const zaehler = (z, titel) => h('button', { type: 'button', class: `pg-zaehler is-${z}` + (ui.filter?.art === 'zustand' && ui.filter.wert === z ? ' is-aktiv' : ''),
-      'aria-label': `${n[z]} Pegel ${titel}. Liste filtern`, 'aria-pressed': String(ui.filter?.art === 'zustand' && ui.filter.wert === z),
-      onclick: () => setFilter(ui.filter?.wert === z ? null : { art: 'zustand', wert: z, text: titel }) },
-      h('i', { 'aria-hidden': 'true' }), h('strong', { text: fmt(n[z]) }), h('b', { text: titel }));
-    return h('section', { class: 'pg-lage', 'aria-labelledby': 'pg-lage-t' },
-      h('h2', { id: 'pg-lage-t', class: 'pg-h2', text: 'Deutschland heute' }),
-      h('div', { class: 'pg-lage-karte' },
-        h('div', { class: 'pg-zaehler-reihe' }, zaehler('hsw', 'über HSW'), zaehler('high', 'hoch'), zaehler('low', 'niedrig')),
-        fluesseZeile()));
-  }
-
-  // Fluss-Kacheln: zuerst Flüsse mit „Meine Pegel“, dann nach Schwere; Küste immer zuletzt; Kanäle nur unter „Alle Gewässer“
-  let gemeldet = false;
-  function fluesseDaten() {
-    meinePegel.ampelUebernehmen();   // vor der Sortierung: Pegel der Pegel-Ampel zählt schon als „Meine Pegel“
-    const gr = gruppieren(stand.gauges);
-    if (ENTWICKLUNG && !gemeldet) {
-      // Prüflisten für die Vorschau: Zuordnung Küste/Kanäle, Reihenfolge in Fließrichtung, Namen mit möglichen Umlauten
-      gemeldet = true;
-      if (gr.ohne.length) console.info('[WaterMap] Gewässer ohne Bewertung (keine Küste laut CONFIG.PEGEL_KUESTE):', gr.ohne.map(f => `${f.name} (${f.pegel.length})`).join(', '));
-      for (const name of ['Weser', 'Elbe', 'Rhein', 'Ems']) {
-        const f = gr.fluesse.find(x => x.name === name);
-        if (f) console.info(`[WaterMap] Reihenfolge ${name}:`, f.pegel.map(g => `${g.name} (${g.km ?? '–'})`).join(' → '));
-      }
-      const verdacht = [...new Set(stand.gauges.flatMap(g => [g.nameRoh, g.water]).filter(umlautVerdacht))].sort();
-      if (verdacht.length) console.info('[WaterMap] Namen mit ae/oe/ue (Umlaut prüfen, Korrektur in js/pegel-namen.js):', verdacht.join(', '));
-    }
-    // Übersicht: feste Kacheln der großen Flüsse und der Küste; alle übrigen Gewässer als kompakte Liste darunter
-    const fl = kachelnSortieren(gr.fluesse, meinePegel.alle());
-    const haupt = UEBERSICHT.map(n => fl.find(f => f.name.toLowerCase() === n)).filter(Boolean);
-    const weitere = fl.filter(f => !haupt.includes(f));
-    return { gr, haupt, weitere, zeigen: [...haupt, ...(gr.kueste ? [gr.kueste] : [])] };
-  }
-  /** Kurzfassung für die Zeile: die auffälligen Flüsse („Elbe niedrig · Mosel hoch“), sonst „alle normal“. */
-  function fluesseKurz(d) {
-    const auff = d.zeigen.filter(f => !['normal', 'keine', 'kueste'].includes(flussZustand(f).key)).slice(0, 2);
-    return auff.length ? auff.map(f => `${f.name} ${FLUSS_ZUSTAND[flussZustand(f).key].text}`).join(' · ') : 'Hauptflüsse normal';
-  }
-  function fluesseZeile() {
-    const d = fluesseDaten();
-    return h('button', { type: 'button', class: 'pg-fl-zeile', 'aria-haspopup': 'dialog', onclick: (e) => fluesseFenster(e.currentTarget) },
-      h('strong', { text: 'Flüsse im Überblick' }), h('span', { class: 'pg-fl-kurz', text: fluesseKurz(d) }), h('span', { class: 'pg-fl-pfeil', html: icon('chevron', 18), 'aria-hidden': 'true' }));
-  }
-  /** Die Fluss-Kacheln in einem Fenster; ein Fluss darin öffnet sein eigenes Fenster darüber. */
-  function fluesseFenster(opener) {
-    const d = fluesseDaten();
-    let alle = false, dlg;
-    const inhalt = h('div', { class: 'pg-fl-fenster' });
-    const zeichnenFl = () => {
-      const anzahl = d.zeigen.length + d.weitere.length + d.gr.ohne.length, mehr = d.weitere.length + d.gr.ohne.length;
-      inhalt.replaceChildren(
-        h('div', { class: 'fk-raster' }, d.zeigen.map(f => flussKachel(f, (slug) => ctx.fluss(slug)))),
-        mehr ? h('button', { type: 'button', class: 'pg-link pg-fl-alle', 'aria-expanded': String(alle), 'aria-controls': 'fk-weitere',
-          text: alle ? 'Weniger Gewässer anzeigen' : `Alle ${anzahl} Gewässer anzeigen ›`,
-          onclick: () => { alle = !alle; zeichnenFl(); inhalt.querySelector('.pg-fl-alle')?.focus({ preventScroll: true }); } }) : null,
-        alle && mehr ? weitereGewaesser(d.weitere, d.gr.ohne, (slug) => ctx.fluss(slug)) : null);
-    };
-    zeichnenFl();
-    dlg = fenster({ inhalt, klasse: 'wxd-fluesse', labelId: 'pgfl-titel', opener, kopf: h('header', { class: 'wxd-kopf' },
-      h('div', {}, h('h2', { id: 'pgfl-titel', tabindex: '-1', text: 'Flüsse im Überblick' }), h('p', { class: 'wxd-unter', text: 'Tippe auf einen Fluss für alle Pegel' })),
-      h('button', { type: 'button', class: 'wxd-x', 'aria-label': 'Schließen', html: icon('close', 22), onclick: () => dlg.close() })) });
-  }
-
-  // ---------------------------------------------------------------- Wochenende an den gemerkten Pegeln
-  function wochenende() {
-    wochenBox = h('section', { class: 'pg-wochenende', 'aria-labelledby': 'pg-wo-t', hidden: true });
-    wochenFuellen();
-    return wochenBox;
-  }
-  /** Wochenend-Check: je gemerktem Pegel eine Zeile, je Tag Wetter am Ort des Pegels und eine Ampel mit Text. */
-  const MAX_WO = 6;
-  function wochenFuellen() {
-    if (!wochenBox || !stand) return;
-    const gemerkt = meinePegel.alle().map(id => stand.byId.get(id)).filter(Boolean).slice(0, MAX_WO);
-    if (!gemerkt.length) { wochenBox.hidden = true; wochenBox.replaceChildren(); return; }
-    const { titel, tage } = wochenendTage();
-    Promise.all([Promise.all(gemerkt.map(g => loadWetterStunden(g.lat, g.lon).then(st => tageAusStunden(st, tage)))),
-      Promise.all(gemerkt.map(g => (g.tide ? Promise.resolve(null) : vorhersageWLaden(g.id))))]).then(([jeOrt, prog]) => {
-      if (!wochenBox?.isConnected) return;
-      if (!jeOrt.some(t => t.some(Boolean))) { wochenBox.hidden = true; wochenBox.replaceChildren(); return; }
-      const namen = tage.map(d => ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'][d.getDay()]);
-      const kurz = (n) => n.slice(0, 2);
-      const zeilen = gemerkt.map((g, i) => h('tr', {},
-        h('th', { scope: 'row' }, h('span', { class: 'pg-wo-name', text: g.name }), h('small', { text: `${fmt(g.value)} ${g.unit} · ${ZUSTAND[zustand(g)].text.toLowerCase()}` })),
-        jeOrt[i].map((t, j) => {
-          const z = zelle(g, t, vorhersageZustand(g, vorhersageTag(prog[i], tage[j])));
-          if (!t || !z) return h('td', { class: 'pg-wo-leer', text: '–', 'aria-label': `${namen[j]}: keine Wetterdaten` });
-          const w = wxIcon(t.icon, 18);
-          return h('td', { 'aria-label': `${namen[j]}: ${w.label ? w.label + ', ' : ''}${t.temp !== null ? Math.round(t.temp) + ' Grad, ' : ''}${z.text}` },
-            h('span', { class: 'pg-wo-wx', 'aria-hidden': 'true' }, h('i', { class: `pg-wo-dot is-${z.ton}` }), h('span', { html: t.icon ? w.svg : '' }), t.temp !== null ? `${Math.round(t.temp)}°` : ''),
-            h('span', { class: `pg-wo-text is-${z.ton}`, 'aria-hidden': 'true', text: z.text }));
-        })));
-      wochenBox.hidden = false;
-      wochenBox.replaceChildren(h('h2', { id: 'pg-wo-t', class: 'pg-h2', text: titel }),
-        h('div', { class: 'pg-wo-karte' },
-          h('table', { class: 'pg-wo-tabelle' },
-            h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, h('span', { class: 'pg-sr', text: 'Pegel' })), namen.map(n => h('th', { scope: 'col' }, h('span', { 'aria-hidden': 'true', text: kurz(n) }), h('span', { class: 'pg-sr', text: n }))))),
-            h('tbody', {}, zeilen)),
-          h('p', { class: 'pg-wo-legende' }, h('i', { class: 'pg-wo-dot is-gruen' }), ' gut · ', h('i', { class: 'pg-wo-dot is-gelb' }), ' knapp/windig · ',
-            h('i', { class: 'pg-wo-dot is-rot' }), ` Hochwasser. Wetter je Ort (DWD), Pegel: ${prog.some(v => v?.length) ? 'Vorhersage (WSV), wo vorhanden, sonst Stand heute' : 'Stand heute'}.`)));
-    });
-  }
-
-  function werkzeuge() {
-    const erster = meinePegel.alle().find(id => stand?.byId.has(id)) || null;
-    return h('section', { class: 'pg-werkzeuge', 'aria-labelledby': 'pg-wz-t' },
-      h('h2', { id: 'pg-wz-t', class: 'pg-h2 pg-sr', text: 'Werkzeuge' }),
-      h('div', { class: 'pg-wz-reihe' },
-        h('a', { class: 'pg-wz is-ampel', href: './pegel-ampel' + (erster ? `?pegel=${encodeURIComponent(erster)}` : '') },
-          h('span', { class: 'pg-wz-text' }, h('strong', { text: 'Passt mein Boot?' }), h('small', { text: 'Pegel-Ampel ›' }))),
-        // Pegel-Alarm: für den ersten gemerkten Pegel direkt das Fenster, sonst erst einen Pegel suchen
-        erster ? h('button', { type: 'button', class: 'pg-wz is-alarm', 'aria-haspopup': 'dialog', onclick: (e) => alarmFenster(stand.byId.get(erster), { opener: e.currentTarget }) },
-          h('span', { class: 'pg-wz-text' }, h('strong', { text: 'Pegel-Alarm' }), h('small', { text: `für ${stand.byId.get(erster).name} ›` })))
-          : h('button', { type: 'button', class: 'pg-wz is-alarm', onclick: () => { sucheFokussieren(); ctx.toast?.('Wähle zuerst einen Pegel – im Pegel-Fenster findest du „Pegel-Alarm“.'); } },
-            h('span', { class: 'pg-wz-text' }, h('strong', { text: 'Pegel-Alarm' }), h('small', { text: 'als Push oder E-Mail ›' })))));
-  }
-
-  // ---------------------------------------------------------------- Alle Pegel (über die Zähler; die Suche hat eigene Treffer)
-  function setFilter(f) {
-    ui.filter = f; ui.suche = ''; ui.zeilen = 60;
-    root.querySelector('#pg-suche') && (root.querySelector('#pg-suche').value = '');
-    zeichneTreffer();
-    const neu = lage();
-    root.querySelector('.pg-lage')?.replaceWith(neu);
-    zeichneAlle();
-    if (f) root.querySelector('#pg-alle')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-  }
-  function alleSektion() {
-    alleBox = h('section', { class: 'pg-alle', id: 'pg-alle', 'aria-labelledby': 'pg-alle-t', hidden: true });
-    return alleBox;
-  }
-  function zeichneAlle() {
-    if (!stand || !alleBox) return;
-    if (!ui.filter) { alleBox.hidden = true; alleBox.replaceChildren(); return; }
-    alleBox.hidden = false;
-    let liste = stand.gauges.filter(g => zustand(g) === ui.filter.wert);
-    const hatPos = !!ctx.user();
-    // Standard: nach Gewässer und Flusskilometer
-    const sort = ui.sort === 'entfernung' && hatPos ? 'entfernung' : 'gewaesser';
-    const cmp = {
-      entfernung: (a, b) => (entfernung(a) ?? 1e12) - (entfernung(b) ?? 1e12),
-      gewaesser: (a, b) => a.water.localeCompare(b.water, 'de') || flussKm(a) - flussKm(b),
-    }[sort];
-    liste = [...liste].sort(cmp);
-    const sortKnopf = (key, text) => h('button', { type: 'button', class: 'pg-sort' + (sort === key ? ' is-aktiv' : ''), 'aria-pressed': String(sort === key),
-      disabled: key === 'entfernung' && !hatPos, title: key === 'entfernung' && !hatPos ? 'Erst „Meine Position“ auf der Karte freigeben' : null,
-      onclick: () => { ui.sort = key; zeichneAlle(); } }, text, sort === key ? ' ↑' : '');
-    const zeilen = liste.slice(0, ui.zeilen);
-    const handy = ctx.isMobile();
-    const inhalt = [];
-    if (handy) {
-      inhalt.push(h('ul', { class: 'pa-liste pg-alle-liste' }, zeilen.map((g) => {
-        const d = entfernung(g);
-        return h('li', { class: 'pa-zeile', dataset: { id: g.id } },
-          h('button', { type: 'button', class: 'pa-text pg-treffer-btn', onclick: () => ctx.open(g.id) }, h('strong', { text: g.name }),
-            h('small', { text: [g.water, kmText(g), d !== null ? formatDistance(d) : ''].filter(Boolean).join(' · ') })),
-          h('span', { class: 'pa-wert' }, h('b', { text: `${fmt(g.value)} ${g.unit}` }), etikett(g)));
-      })));
-    } else {
-      const trendSpalte = zeilen.some(g => g.trend !== null);   // ohne Trend von PEGELONLINE keine leere Spalte
-      inhalt.push(h('table', { class: 'pg-tabelle' },
-        h('thead', {}, h('tr', {}, h('th', { text: 'Pegel' }), h('th', { text: 'Gewässer' }), h('th', { class: 'is-zahl', text: 'Stand' }),
-          trendSpalte ? h('th', { text: 'Trend' }) : null, h('th', { text: 'Zustand' }), h('th', { class: 'is-zahl', text: 'Entfernung' }))),
-        h('tbody', {}, zeilen.map((g) => {
-          const d = entfernung(g);
-          return h('tr', { dataset: { id: g.id } },
-            h('th', { scope: 'row' }, h('button', { type: 'button', class: 'pg-zeile-btn', onclick: () => ctx.open(g.id), text: g.name })),
-            h('td', { class: 'pg-td-wasser', text: [g.water, kmText(g)].filter(Boolean).join(' · ') }),
-            h('td', { class: 'is-zahl pg-td-wert', text: `${fmt(g.value)} ${g.unit}` }),
-            trendSpalte ? h('td', { class: `pg-td-trend ${trendKlasse(g)}`, text: trendText(g, { kurz: true }) }) : null,
-            h('td', { class: 'pg-td-zustand' }, etikett(g)),
-            h('td', { class: 'is-zahl pg-td-km', text: d !== null ? formatDistance(d) : '–' }));
-        }))));
-    }
-    if (!liste.length) inhalt.push(h('p', { class: 'muted', text: 'Kein Pegel gefunden.' }));
-    if (liste.length > zeilen.length) inhalt.push(h('button', { type: 'button', class: 'btn btn-outline pg-mehr', text: `Weitere ${fmt(Math.min(60, liste.length - zeilen.length))} anzeigen`,
-      onclick: () => { ui.zeilen += 60; zeichneAlle(); } }));
-    alleBox.replaceChildren(
-      h('div', { class: 'pg-h2-zeile' }, h('h2', { id: 'pg-alle-t', class: 'pg-h2', text: `Alle Pegel ${ui.filter.text}` }),
-        h('button', { type: 'button', class: 'ftag', 'aria-label': `Filter ${ui.filter.text} entfernen`, onclick: () => setFilter(null) }, h('span', { text: `${fmt(liste.length)} Pegel` }), h('span', { html: icon('close', 16) }))),
-      h('div', { class: 'pg-alle-karte' }, h('div', { class: 'pg-sortleiste', role: 'group', 'aria-label': 'Sortieren nach' }, h('span', { class: 'pg-klein', text: 'Sortieren:' }),
-        sortKnopf('gewaesser', 'Gewässer'), sortKnopf('entfernung', 'Entfernung')), h('div', { class: 'pg-alle-inhalt' }, ...inhalt)));
-  }
-
-  /** „Meine Pegel“ geändert (Stern, Reihenfolge): nur Meine Pegel, Treffer und Wochenende neu, der Rest der Seite (Suchfeld, Scroll) bleibt. */
-  function aktualisieren() {
-    if (!stand || !meineBox?.isConnected) { veraltet = true; return; }
-    meineBox.replaceChildren(...meineInhalt());
-    zeichneTreffer();
-    wochenFuellen();
-  }
-
-  function zeichnen() {
+  // ---------------------------------------------------------------- Panel
+  function zeichnen({ cockpitBehalten = false, fokus = null } = {}) {
+    const g = gewaehlt();
+    panel.classList.toggle('hat-auswahl', !!g);
+    panel.classList.toggle('is-gross', ui.gross);
+    app.classList.toggle('pa-gross', ui.gross);
+    griff.setAttribute('aria-expanded', String(ui.gross));
+    griff.setAttribute('aria-label', ui.gross ? 'Fenster verkleinern' : 'Fenster vergrößern');
+    const zahl = filterBox.querySelector('.pa-chip-zahl'); const n = meinePegel.alle().length; zahl.textContent = n ? String(n) : '';
+    if (cockpitBehalten && ui.gross && g && inhalt.querySelector('.pd')) return;
     if (!stand) {
-      root.replaceChildren(h('div', { class: 'pg-seite' }, kopf(), h('p', { class: 'pg-fehler', role: 'alert', text: 'Pegeldaten sind gerade nicht erreichbar. Bitte später erneut versuchen.' })));
+      inhalt.replaceChildren(h('div', { class: 'pa-leer pa-fehler', role: 'alert' },
+        h('strong', { text: ladeFehler ? 'Pegeldaten sind gerade nicht erreichbar.' : 'Pegel werden geladen …' }),
+        ladeFehler ? h('p', { text: 'PEGELONLINE antwortet nicht. Bitte gleich noch einmal versuchen.' }) : null,
+        ladeFehler ? h('button', { type: 'button', class: 'btn btn-outline pa-nochmal', text: 'Erneut versuchen', onclick: () => laden(true).then(karteZeigen) }) : null));
       return;
     }
-    const fokus = document.activeElement?.id === 'pg-suche';
-    const a = ansicht();
-    root.classList.toggle('pg-ist-karte', a === 'karte');
-    let inhalt;
-    if (a === 'karte') {
-      karte ||= pegelKarteAnsicht({ stand: () => stand, user: ctx.user, isMobile: ctx.isMobile, open: ctx.open, toast: ctx.toast });
-      inhalt = [karte.el];
-    } else {
-      inhalt = [h('div', { class: 'pg-spalte' }, meine(), wochenende(), lage(), alleSektion(), werkzeuge(),
-        h('p', { class: 'pg-fuss', text: 'Pegel der WSV (PEGELONLINE). Kleinere Gewässer und Talsperren teils nicht erfasst. Angaben ohne Gewähr.' }))];
+    const teile = [];
+    if (g) teile.push(ui.gross ? cockpit(g) : kurz(g));
+    else teile.push(h('p', { class: 'pa-tipp', text: 'Wähle einen Pegel auf der Karte oder suche ihn oben – Wasserstand und Trend erscheinen hier.' }));
+    if (!ui.gross || !g) teile.push(liste());
+    teile.push(h('p', { class: 'pa-fuss', text: `${standText(stand)}. Wasserstände beziehen sich auf den Pegelnullpunkt des jeweiligen Pegels und sind untereinander nicht vergleichbar.` }));
+    inhalt.replaceChildren(...teile);
+    inhalt.scrollTop = 0;
+    if (fokus) inhalt.querySelector(fokus)?.focus({ preventScroll: true });
+  }
+
+  function listeNeu() {
+    const alt = inhalt.querySelector('.pa-liste');
+    if (alt) alt.replaceWith(liste());
+  }
+
+  /** Gewählter Pegel kurz: Name, Wert, Trend und Kurve der letzten 24 Stunden. */
+  function kurz(g) {
+    const z = zustand(g), alt = g.state === 'old';
+    const trend = h('p', { class: 'pa-trend pt-flat', text: alt ? '' : 'Veränderung wird berechnet …' });
+    const kurveBox = h('div', { class: 'pa-kurve-box' });
+    const kurveFuss = h('div', { class: 'pa-kurve-fuss', hidden: true }, h('span', { text: 'vor 24 h' }), h('span', { text: 'jetzt' }));
+    verlaufLaden(g.id).then((pts) => {
+      if (!trend.isConnected) return;
+      const t = alt ? null : trendZeile(g, pts);
+      trend.className = `pa-trend ${t?.cls || 'pt-flat'}`;
+      trend.textContent = alt ? '' : t ? t.text : 'Veränderung in 24 h nicht verfügbar';
+      const k = kurve24(pts, g);
+      if (k) { kurveBox.replaceChildren(k); kurveFuss.hidden = false; }
+    }, () => { if (trend.isConnected) trend.textContent = 'Verlauf gerade nicht abrufbar'; });
+    return h('article', { class: `pa-kurz ${ZUSTAND[z].cls}` + (alt ? ' is-alt' : ''), 'aria-labelledby': 'pa-name' },
+      h('div', { class: 'pa-k-kopf' },
+        h('div', { class: 'pa-k-titel' },
+          h('h2', { class: 'pa-name', id: 'pa-name', tabindex: '-1', text: g.name }),
+          h('p', { class: 'pa-sub', text: [g.water, kmText(g)].filter(Boolean).join(' · ') })),
+        sternKnopf(g, { klein: true, onChange: () => {} }),   // neu gezeichnet wird über das Ereignis „meine-pegel“
+        h('button', { type: 'button', class: 'pa-schliessen', 'aria-label': 'Auswahl schließen', html: icon('close', 20), onclick: () => abwaehlen() })),
+      h('p', { class: 'pa-zeit' + (alt ? ' is-alt' : '') }, alt ? h('span', { html: icon('clock', 15), 'aria-hidden': 'true' }) : null,
+        alt ? `Messwert veraltet – letzte Messung ${formatTime(g.time)}` : `Messung ${formatTime(g.time)}`),
+      h('div', { class: 'pa-k-mitte' },
+        h('div', { class: 'pa-k-wert' },
+          h('p', { class: 'pa-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: ` ${g.unit}` })),
+          trend),
+        h('div', { class: 'pa-k-kurve' }, kurveBox, kurveFuss)),
+      EINORDNUNG[z] && !alt ? h('p', { class: `pa-einordnung ${ZUSTAND[z].cls}`, title: 'Einordnung nach den amtlichen Kennwerten dieses Pegels' }, h('i', { 'aria-hidden': 'true' }), EINORDNUNG[z]) : null,
+      h('div', { class: 'pa-k-knoepfe' },
+        h('button', { type: 'button', class: 'btn btn-primary pa-verlauf', 'aria-expanded': 'false', 'aria-controls': 'pa-panel', onclick: () => grossSetzen(true) }, 'Verlauf anzeigen'),
+        h('button', { type: 'button', class: 'btn btn-outline pa-alarm', 'aria-haspopup': 'dialog', onclick: (e) => alarmFenster(g, { opener: e.currentTarget, toast: ctx.toast }) },
+          h('span', { html: icon('bell', 18), 'aria-hidden': 'true' }), 'Alarm')),
+      h('p', { class: 'pa-hinweis', text: 'Wasserstand am Pegel – nicht die Wassertiefe in der Fahrrinne.' }));
+  }
+
+  /** Cockpit: ausführliche Ansicht (Diagramm 24 h / 7 Tage / 30 Tage, Kennwerte, Vorhersage, Zusatzwerte). */
+  function cockpit(g) {
+    return pegelDetail(g, {
+      verlauf: verlaufLaden(g.id), eingebettet: true,
+      onBack: () => grossSetzen(false), backLabel: 'Verlauf schließen',
+      onShare: () => ctx.share?.(g),
+      slips: slipsAmPegel(g, ctx.places?.() || []), onSlip: ctx.slip,
+      onKarte: ctx.karte ? () => ctx.karte(g) : undefined,   // Hauptkarte mit Slipanlagen bzw. Häfen in der Nähe
+      onFluss: g.water && ctx.fluss ? () => ctx.fluss(istKueste(g.water) ? KUESTE_SLUG : slug(g.water)) : null,
+      onStern: () => { zeichnen(); inhalt.querySelector('.pd .pm-stern')?.focus(); },
+    });
+  }
+
+  /** Liste unter dem Pegel: Favoriten bzw. Pegel im Kartenausschnitt. */
+  function liste() {
+    if (ui.filter === 'naehe') {
+      const pegel = karteFertig ? karte.imAusschnitt().slice(0, MAX_NAEHE) : [];
+      return h('section', { class: 'pa-liste', 'aria-labelledby': 'pa-liste-t' },
+        h('div', { class: 'pa-liste-kopf' }, h('h2', { class: 'pa-h2', id: 'pa-liste-t', text: 'Im Kartenausschnitt' }),
+          pegel.length ? h('span', { class: 'pa-anzahl', text: pegel.length >= MAX_NAEHE ? `die ${MAX_NAEHE} nächsten` : `${pegel.length} Pegel` }) : null),
+        pegel.length ? h('ul', { class: 'pa-zeilen' }, pegel.map(g => zeile(g, { verlauf: false })))
+          : h('p', { class: 'pa-leer-text', text: karteFertig ? 'Im Kartenausschnitt ist kein Pegel. Karte verschieben oder herauszoomen.' : 'Die Karte wird geladen …' }));
     }
-    root.replaceChildren(h('div', { class: 'pg-seite' + (a === 'karte' ? ' is-karte' : '') }, kopf(), suche(), ...inhalt));
-    seite = root.firstElementChild; veraltet = false;
-    if (a === 'karte') karte.zeigen(); else zeichneAlle();
-    if (fokus) { const f = root.querySelector('#pg-suche'); f.focus(); f.setSelectionRange(f.value.length, f.value.length); }
+    meinePegel.ampelUebernehmen();
+    const ids = meinePegel.alle().filter(id => stand.byId.has(id));
+    return h('section', { class: 'pa-liste', 'aria-labelledby': 'pa-liste-t' },
+      h('div', { class: 'pa-liste-kopf' }, h('h2', { class: 'pa-h2', id: 'pa-liste-t', text: 'Meine Pegel' }),
+        ids.length ? h('span', { class: 'pa-anzahl', text: `${ids.length} gespeichert` }) : null),
+      ids.length ? h('ul', { class: 'pa-zeilen' }, ids.map(id => zeile(stand.byId.get(id), { verlauf: true })))
+        : h('div', { class: 'pa-leer' },
+          h('span', { class: 'pa-leer-ico', html: icon('star', 22), 'aria-hidden': 'true' }),
+          h('div', {}, h('strong', { text: 'Noch keine Favoriten' }),
+            h('p', { text: 'Tippe auf einen Pegel in der Karte oder suche ihn oben und dann auf ☆. So findest du ihn beim nächsten Besuch hier wieder – gespeichert nur in diesem Browser.' }))));
+  }
+
+  /** Zeile: Name, Gewässer, Wert, Änderung 24 h, Mini-Verlauf (nur Favoriten), Stern. */
+  function zeile(g, { verlauf }) {
+    const z = zustand(g);
+    const aend = h('small', { class: 'pa-z-aend pt-flat' });
+    const spark = h('span', { class: 'pa-z-spark', 'aria-hidden': verlauf ? 'false' : 'true' });
+    if (verlauf) {
+      verlaufLaden(g.id).then((pts) => {
+        if (!aend.isConnected) return;
+        const t = g.state === 'old' ? null : trendZeile(g, pts);
+        if (t) { aend.textContent = t.kurz || t.text; aend.className = `pa-z-aend ${t.cls}`; }
+        const k = kurve24(pts, g, { breite: 72, hoehe: 26, klein: true });
+        if (k) spark.replaceChildren(k);
+      }, () => {});
+    } else if (g.state !== 'old' && g.trend !== null) {
+      const [pfeil, wort, cls] = RICHTUNG[g.trend]; aend.textContent = `${pfeil} ${g.trend === 0 ? 'gleich' : wort}`; aend.className = `pa-z-aend ${cls}`;
+    }
+    if (g.state === 'old') { aend.textContent = 'veraltet'; aend.className = 'pa-z-aend is-alt'; }
+    return h('li', { class: 'pa-z' + (g.id === ui.auswahl ? ' is-gewaehlt' : '') },
+      h('button', { type: 'button', class: 'pa-z-knopf', dataset: { id: g.id }, 'aria-current': g.id === ui.auswahl ? 'true' : null,
+        'aria-label': `${g.name}, ${g.water}: ${fmt(g.value)} ${g.unit}${EINORDNUNG[z] ? `, ${EINORDNUNG[z]}` : ''}`, onclick: () => waehlen(g.id, { fly: true }) },
+        h('span', { class: `pa-z-punkt ${ZUSTAND[z].cls}`, 'aria-hidden': 'true' }),
+        h('span', { class: 'pa-z-text' }, h('b', { text: g.name }), h('small', { text: [g.water, kmText(g)].filter(Boolean).join(' · ') })),
+        spark,
+        h('span', { class: 'pa-z-wert' }, h('b', { text: `${fmt(g.value)} ${g.unit}` }), aend)),
+      sternKnopf(g, { klein: true, onChange: () => {} }));
+  }
+
+  // ---------------------------------------------------------------- Auswahl, Größe, Filter
+  function waehlen(id, { fly = false, gross = false, quelle = null, still = false } = {}) {
+    if (!stand) { ui.auswahl = id; return false; }
+    const g = stand.byId.get(id);
+    if (!g) { ctx.toast?.('Dieser Pegel wurde nicht gefunden.'); return false; }
+    ui.auswahl = id; ui.gross = gross;
+    if (karteFertig) { karte.markieren(id); karte.hinzeigen(g, fly ? { zoom: ZOOM_AUSWAHL, immer: true } : {}); }
+    zeichnen({ fokus: quelle === 'karte' && isMobile() ? null : gross ? '#pd-name' : '#pa-name' });
+    if (!still) ctx.auswahl?.(id);
+    announce(`Pegel ${g.name}: ${fmt(g.value)} ${g.unit}`);
+    return true;
+  }
+  function abwaehlen({ still = false } = {}) {
+    if (!ui.auswahl && !ui.gross) return;
+    const war = ui.auswahl;
+    ui.auswahl = null; ui.gross = false;
+    if (karteFertig) karte.markieren(null);
+    zeichnen();
+    if (!still) ctx.auswahl?.(null);
+    if (war) inhalt.querySelector(`.pa-z-knopf[data-id="${CSS.escape(war)}"]`)?.focus({ preventScroll: true });
+  }
+  function grossSetzen(gross) {
+    if (gross === ui.gross) return;
+    ui.gross = gross;
+    zeichnen({ fokus: gross ? (ui.auswahl ? '#pd-name' : null) : (ui.auswahl ? '.pa-verlauf' : null) });
+    if (!gross && ui.auswahl && karteFertig) karte.hinzeigen(gewaehlt());
+  }
+  function filterSetzen(f) {
+    ui.filter = f;
+    for (const b of filterBox.children) b.setAttribute('aria-pressed', String(b.dataset.filter === f));
+    if (karteFertig) {
+      karte.filtern(f === 'fav' ? (g) => meinePegel.hat(g.id) || g.id === ui.auswahl : null);
+      if (f === 'fav') { const favs = meinePegel.alle().map(id => stand?.byId.get(id)).filter(Boolean); if (favs.length) karte.passend(favs); }
+    }
+    ui.gross = false;
+    zeichnen();
+  }
+
+  // ---------------------------------------------------------------- Suche: Pegel, Gewässer, Orte
+  function treffer(q) {
+    const n = normW(q);
+    if (!n || !stand) return [];
+    const u = ctx.user();
+    const ent = (g) => (u ? haversine(u.lat, u.lon, g.lat, g.lon) : 0);
+    const pegel = stand.gauges.filter(g => normW(g.name).includes(n))
+      .sort((a, b) => (normW(a.name).startsWith(n) ? 0 : 1) - (normW(b.name).startsWith(n) ? 0 : 1) || ent(a) - ent(b) || a.name.localeCompare(b.name, 'de')).slice(0, 8)
+      .map(g => ({ art: 'pegel', g, titel: g.name, sub: [g.water, kmText(g)].filter(Boolean).join(' · '), wert: `${fmt(g.value)} ${g.unit}` }));
+    const gew = new Map();
+    for (const g of stand.gauges) if (g.water && normW(g.water).includes(n)) { const k = normW(g.water); const e = gew.get(k) || { name: g.water, liste: [] }; e.liste.push(g); gew.set(k, e); }
+    const gewaesser = [...gew.values()].sort((a, b) => (normW(a.name).startsWith(n) ? 0 : 1) - (normW(b.name).startsWith(n) ? 0 : 1) || b.liste.length - a.liste.length).slice(0, 4)
+      .map(e => ({ art: 'gewaesser', liste: e.liste, titel: e.name, sub: `Gewässer · ${e.liste.length} ${e.liste.length === 1 ? 'Pegel' : 'Pegel'}` }));
+    const orte = new Map();
+    for (const p of ctx.places?.() || []) {
+      if (!p.locality || p.locality_kind === 'nearest' || !normW(p.locality).includes(n)) continue;
+      const k = normW(p.locality);
+      if (!orte.has(k)) orte.set(k, { art: 'ort', titel: p.locality, sub: 'Ort · Pegel in der Nähe zeigen', lat: p.lat, lon: p.lon });
+    }
+    const ortListe = [...orte.values()].filter(o => !pegel.some(t => normW(t.titel) === normW(o.titel))).slice(0, 4);
+    return [...pegel, ...gewaesser, ...ortListe];
+  }
+  function sucheZeichnen() {
+    const q = feld.value.trim();
+    ui.treffer = treffer(q); ui.aktiv = -1;
+    if (!q) { sucheZu(); return; }
+    const ico = { pegel: 'gauge', gewaesser: 'welle', ort: 'pin' };
+    trefferBox.replaceChildren(...(ui.treffer.length ? ui.treffer.map((t, i) => h('li', { role: 'option', id: `pa-t-${i}`, class: `pa-t pa-t-${t.art}`, 'aria-selected': 'false',
+      onmousedown: (e) => e.preventDefault(), onclick: () => trefferWaehlen(i) },
+      h('span', { class: 'pa-t-ico', html: icon(ico[t.art], 18), 'aria-hidden': 'true' }),
+      h('span', { class: 'pa-t-text' }, h('b', { text: t.titel }), h('small', { text: t.sub })),
+      t.wert ? h('span', { class: 'pa-t-wert', text: t.wert }) : null))
+      : [h('li', { class: 'pa-t-leer', role: 'option', 'aria-disabled': 'true', text: `Nichts gefunden zu „${q}“.` })]));
+    trefferBox.hidden = false; feld.setAttribute('aria-expanded', 'true'); feld.removeAttribute('aria-activedescendant');
+  }
+  function sucheZu() { trefferBox.hidden = true; feld.setAttribute('aria-expanded', 'false'); feld.removeAttribute('aria-activedescendant'); ui.aktiv = -1; }
+  function sucheTaste(e) {
+    if (e.key === 'Escape') { if (!trefferBox.hidden) { e.preventDefault(); sucheZu(); } return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (trefferBox.hidden) sucheZeichnen();
+      if (!ui.treffer.length) return;
+      e.preventDefault();
+      ui.aktiv = (ui.aktiv + (e.key === 'ArrowDown' ? 1 : -1) + ui.treffer.length) % ui.treffer.length;
+      trefferBox.querySelectorAll('[role=option]').forEach((o, i) => o.setAttribute('aria-selected', String(i === ui.aktiv)));
+      feld.setAttribute('aria-activedescendant', `pa-t-${ui.aktiv}`);
+      trefferBox.querySelector(`#pa-t-${ui.aktiv}`)?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (ui.treffer.length) trefferWaehlen(ui.aktiv >= 0 ? ui.aktiv : 0);
+    }
+  }
+  function trefferWaehlen(i) {
+    const t = ui.treffer[i];
+    if (!t) return;
+    sucheZu(); feld.value = ''; feld.blur();
+    if (t.art === 'pegel') waehlen(t.g.id, { fly: true });
+    else if (t.art === 'gewaesser') { if (ui.filter === 'fav') filterSetzen('alle'); karte.passend(t.liste); announce(`${t.titel}: ${t.liste.length} Pegel auf der Karte`); }
+    else { if (ui.auswahl) abwaehlen(); karte.flyTo(t.lat, t.lon, ZOOM_AUSWAHL); filterSetzen('naehe'); announce(`Pegel in der Nähe von ${t.titel}`); }
   }
 
   document.addEventListener('meine-pegel', () => {
-    if (root.isConnected && !root.hidden && stand) { if (ansicht() === 'karte') { karte?.aktualisieren(); zeichneTreffer(); } else aktualisieren(); } else veraltet = true;
+    if (!app?.isConnected || !stand) return;
+    if (karteFertig) { if (ui.filter === 'fav') karte.filtern(g => meinePegel.hat(g.id) || g.id === ui.auswahl); else karte.aktualisieren(); if (ui.auswahl) karte.markieren(ui.auswahl); }
+    const fokusStern = document.activeElement?.closest?.('.pa-kurz') ? '.pa-kurz .pm-stern' : null;
+    if (!(ui.gross && ui.auswahl)) zeichnen({ fokus: fokusStern });
+    else { const zahl = filterBox.querySelector('.pa-chip-zahl'); const n = meinePegel.alle().length; zahl.textContent = n ? String(n) : ''; }
   });
-  return {
-    zeigen: (force = false) => { if (!stand) root.replaceChildren(h('div', { class: 'pg-seite' }, kopf(), h('p', { class: 'muted pg-laden', text: 'Pegel werden geladen …' }))); return laden(force); },
-    neuZeichnen: () => { if (stand) zeichnen(); },
-    /** Im Hintergrund laden und (unsichtbar) aufbauen, damit das erste Öffnen sofort geht. */
-    vorbereiten: () => laden(false),
-    get stand() { return stand; },
-  };
-}
 
-/** Detailseite eines Pegels im Bereich „Pegel“ (ganze Seite). */
-export function pegelSeite(root, g, ctx) {
-  const el = pegelDetail(g, {
-    verlauf: verlaufLaden(g.id),
-    onBack: ctx.back, backLabel: 'Zurück zur Übersicht',
-    onShare: () => ctx.share(g),
-    onKarte: () => ctx.karte(g),
-    onFluss: g.water && ctx.fluss ? () => ctx.fluss(istKueste(g.water) ? KUESTE_SLUG : slug(g.water)) : null,
-    slips: slipsAmPegel(g, ctx.places()), onSlip: ctx.slip,
-    onStern: () => { const neu = pegelSeite(root, g, ctx); neu.querySelector('.pm-stern')?.focus(); },
-  });
-  root.replaceChildren(h('div', { class: 'pg-seite pg-detailseite' }, el));
-  return el;
+  return {
+    async zeigen(force = false) {
+      if (!app) aufbauen();
+      else if (!app.isConnected) { root.replaceChildren(app); root.classList.add('pa-modus'); }   // zurück von der Flussseite
+      await laden(force);
+      await karteZeigen();
+    },
+    waehlen: (id, opts = {}) => waehlen(id, { ...opts, still: true }),
+    abwaehlen: () => abwaehlen({ still: true }),
+    /** Im Hintergrund laden, damit das erste Öffnen schnell geht (die Karte entsteht erst beim Anzeigen). */
+    vorbereiten: () => pegelLaden().catch(() => null),
+    get stand() { return stand; },
+    get auswahl() { return ui.auswahl; },
+  };
 }
 
 export { formatTime, etikett, ZUSTAND, zustand };

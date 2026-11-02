@@ -28,7 +28,7 @@ import { meldungenSeite } from './meldungen-uebersicht.js';
 import { unpassendMelden } from './meldung-unpassend.js';
 import { slipErgaenzen } from './slip-ergaenzen.js';
 import { imGebiet, aufGebietBeschneiden, gebietLaden } from './gebiet.js';
-import { pegelDashboard, pegelSeite, slipsAmPegel } from './pegel-dashboard.js';
+import { pegelDashboard, slipsAmPegel } from './pegel-dashboard.js';
 import { weatherSection, wetterZeile, fenster } from './wetter.js';
 import { GROUPS, loadExtras, renderExtraDetail, glyph } from './extras.js';
 import { enrichFacts } from './hafeninfo.js';
@@ -781,25 +781,18 @@ async function sharePegel(g, aufKarte = false) {
 
 // ============================================================ Bereich „Pegel“ (Dashboard und Detailseite)
 let dashboard = null, pegelTimer = null;
-const LS_PEGEL_ANSICHT = 'watermap.pegel.ansicht';
-state.pegelAnsicht = (() => { try { return localStorage.getItem(LS_PEGEL_ANSICHT) === 'karte' ? 'karte' : 'liste'; } catch { return 'liste'; } })();
-function pegelAnsichtSetzen(a) {
-  state.pegelAnsicht = a === 'karte' ? 'karte' : 'liste';
-  try { localStorage.setItem(LS_PEGEL_ANSICHT, state.pegelAnsicht); } catch { /* ohne Speicher */ }
-}
 function pegelCtx() {
   return {
     user: () => state.user, places: () => state.places, isMobile, toast,
-    ansicht: () => state.pegelAnsicht,
-    setAnsicht: (a) => { pegelAnsichtSetzen(a); writeHash(false); },
-    open: (id) => pegelFensterOeffnen(id),
-    fluss: (slug) => flussFenster(slug),
-    // Zurück: in der App ein Schritt zurück (Detail → Fluss → Dashboard), sonst (direkter Link) zum Dashboard
+    // Auswahl in der Pegelkarte: Adresse #pegel/<id> mitführen (ohne neuen Verlaufseintrag)
+    auswahl: (id) => { if (state.view !== 'pegel') return; state.pegelId = id; state.pegelFluss = null; writeHash(false); },
     back: () => {
       if (history.state?.pegelVon) { history.back(); return; }
-      if (state.pegelId && state.pegelFluss) state.pegelId = null; else { state.pegelId = null; state.pegelFluss = null; }
+      state.pegelId = null; state.pegelFluss = null;
       writeHash(true); pegelBereich();
     },
+    open: (id) => pegelFensterOeffnen(id),
+    fluss: (slug) => flussFenster(slug),
     slipsAufKarte: (liste) => {
       setView('karte');
       if (!state.cats.has('slip')) toggleCat('slip', true);   // zusätzlich – andere Kategorien bleiben
@@ -922,28 +915,20 @@ function ansichtMerken() {
 document.addEventListener('meine-pegel', () => { if (state.view === 'mehr') mehrBereich(); });
 document.addEventListener('favorites-changed', () => { if (state.view === 'mehr') mehrBereich(); });
 
-/** Dashboard bzw. Detailseite zeichnen (je nach state.pegelId). */
+/** Pegelkarte (#pegel, #pegel/<id> mit gewähltem Pegel) bzw. Flussseite (#pegel/fluss/<name>). */
 async function pegelBereich() {
   const root = el.pegelseite;
-  if (!dashboard) dashboard = pegelDashboard(root, pegelCtx());
   clearInterval(pegelTimer);
   pegelTimer = setInterval(() => { if (state.view === 'pegel' && document.visibilityState === 'visible') pegelBereich(); }, CONFIG.PEGEL_REFRESH_MIN * 60e3);
-  document.body.classList.toggle('view-pegel-start', !state.pegelFluss && !state.pegelId);   // Handy: Pegel-Start hat einen eigenen Kopf (ohne globales Suchfeld)
-  document.body.classList.toggle('view-fluss', !!(state.pegelFluss && !state.pegelId));   // Handy: Flussseite ohne globales Suchfeld
-  if (state.pegelFluss && !state.pegelId) { await flussBereich(root); return; }
-  if (!state.pegelId) {
-    await dashboard.zeigen();
-    root.scrollTop = 0;
-    return;
-  }
-  let st;
-  try { st = await pegelLaden(); } catch { st = null; }
-  const g = st?.byId.get(state.pegelId);
-  if (!g) { root.replaceChildren(h('div', { class: 'pg-seite' }, h('p', { class: 'pg-fehler', role: 'alert', text: st ? 'Dieser Pegel wurde nicht gefunden.' : 'Pegeldaten sind gerade nicht erreichbar.' }),
-    h('a', { class: 'btn btn-outline', href: '#pegel', text: 'Zur Übersicht' }))); return; }
-  pegelSeite(root, g, pegelCtx());
-  root.scrollTop = 0;
-  root.querySelector('#pd-name')?.focus({ preventScroll: true });
+  document.body.classList.toggle('view-pegel-start', !state.pegelFluss);   // Handy: Pegelkarte mit eigenem Kopf (ohne globales Suchfeld)
+  document.body.classList.toggle('view-fluss', !!state.pegelFluss);       // Handy: Flussseite ohne globales Suchfeld
+  if (state.pegelFluss) { root.classList.remove('pa-modus'); await flussBereich(root); return; }
+  dashboard ||= pegelDashboard(root, pegelCtx());
+  await dashboard.zeigen();
+  if (state.view !== 'pegel' || state.pegelFluss) return;
+  if (state.pegelId && dashboard.auswahl !== state.pegelId) {
+    if (!dashboard.waehlen(state.pegelId, { fly: true }) && dashboard.stand) { state.pegelId = null; writeHash(false); }
+  } else if (!state.pegelId && dashboard.auswahl) dashboard.abwaehlen();
 }
 
 /** Flussseite #pegel/fluss/<name> (aus der geladenen Stationsliste). */
@@ -1062,7 +1047,7 @@ function hashString() {
   const parts = [];
   if (state.view === 'meldungen') return '#meldungen';
   if (state.view === 'mehr') return state.mehrSeite ? `#mehr/${state.mehrSeite}` : '#mehr';
-  if (state.view === 'pegel') return '#' + (state.pegelId ? `pegel/${encodeURIComponent(state.pegelId)}` : state.pegelFluss ? `pegel/fluss/${state.pegelFluss}` : state.pegelAnsicht === 'karte' ? 'pegel/karte' : 'pegel');
+  if (state.view === 'pegel') return '#' + (state.pegelId ? `pegel/${encodeURIComponent(state.pegelId)}` : state.pegelFluss ? `pegel/fluss/${state.pegelFluss}` : 'pegel');
   if (selHash?.k === 'g' && state.view === 'karte') return `#karte/pegel/${encodeURIComponent(selHash.id)}`;
   if (state.view !== 'karte') parts.push(state.view);
   if (selHash) parts.push(`${selHash.k}=${encodeURIComponent(selHash.id)}`);
@@ -1126,8 +1111,7 @@ function onNav(id, e) {
 
 function handleHash({ initial = false } = {}) {
   if (!initial && location.hash === appliedHash) return;
-  const { view, sel, melden, pegel, fluss, mehr, pegelKarte, pegelFenster } = readHash();
-  if (pegelKarte) pegelAnsichtSetzen('karte');   // „#pegel/karte“ wählt die Kartenansicht (und merkt sie); „#pegel“ behält die gemerkte Ansicht
+  const { view, sel, melden, pegel, fluss, mehr, pegelFenster } = readHash();   // „#pegel/karte“ (frühere Kartenansicht) zeigt einfach die Pegelkarte
   state.pegelId = view === 'pegel' ? pegel : null;
   state.pegelFluss = view === 'pegel' ? fluss : null;
   state.mehrSeite = view === 'mehr' ? mehr : null;

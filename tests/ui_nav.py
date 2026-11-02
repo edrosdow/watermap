@@ -178,8 +178,12 @@ def run(b, w, hh):
 
     # ---- Nichts verdeckt
     bar = rect(pg, '#bottomnav')
-    for adr, sel in [('#pegel', '#pegelseite'), ('#meldungen', '#meldungsseite'), ('#mehr', '#mehrseite')]:
+    # Pegel: die Karte reicht wie die Hauptkarte bis unten; frei liegen muss der Inhalt des Bottom Sheets
+    for adr, sel in [('#pegel', '#pegelseite .pa-inhalt'), ('#meldungen', '#meldungsseite'), ('#mehr', '#mehrseite')]:
         pg.goto(uf.BASE + adr); pg.reload(); pg.wait_for_selector(f'{sel}:not([hidden])'); pg.wait_for_timeout(700)
+        if adr == '#pegel':
+            ib = rect(pg, sel)
+            check(ib['y'] + ib['h'] <= bar['y'] + 1, f'{tag}: pegel: Bottom Sheet endet über der Leiste ({ib["y"] + ib["h"]:.0f} ≤ {bar["y"]:.0f})')
         tiefstes = pg.evaluate("""(sel) => { const sc = document.querySelector(sel); sc.scrollTop = sc.scrollHeight;
           return Math.max(...[...sc.querySelectorAll('*')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.bottom)); }""", sel)
         check(tiefstes <= bar['y'] + 1, f'{tag}: {adr[1:]}-Seite: der letzte Inhalt liegt über der Leiste ({tiefstes:.0f} ≤ {bar["y"]:.0f})')

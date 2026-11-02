@@ -50,6 +50,16 @@ export function verlaufLaden(id) {
   return promise;
 }
 
+/** 30 Tage Messwerte (nur auf Wunsch im Cockpit, PEGELONLINE liefert höchstens 31 Tage zurück). */
+const verlauf30 = new Map();
+export function verlauf30Laden(id) {
+  const e = verlauf30.get(id);
+  if (e && Date.now() - e.at < REFRESH_MS) return e.promise;
+  const promise = loadHistory(id, 30).catch((err) => { verlauf30.delete(id); throw err; });
+  verlauf30.set(id, { at: Date.now(), promise });
+  return promise;
+}
+
 // ------------------------------------------------------------------ Zusatzwerte und Vorhersage (nur bei Bedarf, zwischengespeichert)
 const zwischen = new Map();   // Schlüssel → { at, promise }
 function gemerkt(key, laden) {
@@ -90,6 +100,11 @@ export function aenderung24h(pts) {
   for (const p of pts) { if (Math.abs(p.t - ziel) < Math.abs(best.t - ziel)) best = p; if (p.t > ziel) break; }
   return Math.round(last.v - best.v);
 }
+
+/** Ab dieser Änderung in 24 h (cm) gilt ein Pegel als steigend bzw. fallend; darunter „nahezu unverändert“. */
+export const TREND24_SCHWELLE_CM = 3;
+/** Richtung aus der Änderung in 24 h: 1 | 0 | -1, null ohne Wert. Kleine Schwankungen zählen nicht. */
+export const richtung24 = (d) => (d === null || d === undefined || !Number.isFinite(d) ? null : d >= TREND24_SCHWELLE_CM ? 1 : d <= -TREND24_SCHWELLE_CM ? -1 : 0);
 
 // ------------------------------------------------------------------ Meine Pegel (getrennt von den Standort-Favoriten)
 let memory = null;
