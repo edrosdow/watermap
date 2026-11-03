@@ -113,7 +113,7 @@ def touch_wisch(pg, sel, dy):
     cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': x, 'y': y}]})
     for i in range(1, 6): cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': x, 'y': y + dy * i / 5}]})
     cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
-    pg.wait_for_timeout(250)
+    pg.wait_for_timeout(450)   # Einrasten (.24 s) abwarten
 
 def warte(pg, js, timeout=5000):
     """Wartet, bis der Ausdruck wahr ist (die CSP der App verbietet wait_for_function mit Text)."""
@@ -295,6 +295,16 @@ def run(b, w, hh, mobile):
         check('is-gross' in pg.get_attribute('.pa-panel', 'class') and pg.locator('.pa-panel .pd').count() == 1 and pg.get_attribute('.pa-griff', 'aria-expanded') == 'true', f'{tag}: Griff antippen vergrößert das Sheet (Cockpit)')
         touch_wisch(pg, '.pa-griff', 140)
         check('is-gross' not in pg.get_attribute('.pa-panel', 'class') and pg.locator('.pa-kurz').count() == 1, f'{tag}: nach unten wischen verkleinert')
+        # folgt dem Finger: mitten im Ziehen steht das Sheet schon weiter oben, erst danach rastet es ein
+        bb = pg.locator('.pa-griff').bounding_box(); x, y = bb['x'] + bb['width'] / 2, bb['y'] + bb['height'] / 2
+        top0 = pg.locator('.pa-panel').bounding_box()['y']
+        cdp = pg.context.new_cdp_session(pg)
+        cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': x, 'y': y}]})
+        for i in range(1, 7): cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': x, 'y': y - 15 * i}]}); pg.wait_for_timeout(16)
+        mitten = pg.locator('.pa-panel').bounding_box()['y']
+        cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); pg.wait_for_timeout(450)
+        check(abs((top0 - mitten) - 90) <= 12, f'{tag}: Sheet folgt beim Ziehen dem Finger ({top0 - mitten:.0f} px bei 90 px Weg)')
+        if 'is-gross' in pg.get_attribute('.pa-panel', 'class'): pg.click('.pa-griff'); pg.click('.pa-griff'); pg.wait_for_timeout(300)   # zurück auf klein
         touch_wisch(pg, '.pa-k-kopf', -120)
         pb = pg.locator('.pa-panel').bounding_box()
         check('is-gross' in pg.get_attribute('.pa-panel', 'class') and 'is-voll' not in pg.get_attribute('.pa-panel', 'class') and 0.12 * hh < pb['y'] < 0.25 * hh,

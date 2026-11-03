@@ -215,6 +215,7 @@ with sync_playwright() as p:
         pg.wait_for_selector('dialog.wxd-pegel .gc-line', timeout=8000)
         check(pg.locator('dialog.wxd-pegel .pd-karte').count() >= 2 and pg.locator('dialog.wxd-pegel .pd-aktion', has_text='Passt mein Boot?').count() == 1 and pg.locator('dialog.wxd-pegel .pd-slips').count() == 1,
               f'{name}: Fenster zeigt Skala, Verlauf, „Passt mein Boot?“ und Slipanlagen am Pegel')
+        pg.wait_for_timeout(350)   # Einblenden (.28 s) abwarten
         r = pg.locator('dialog.wxd-pegel').bounding_box(); vp = pg.viewport_size
         if mobile: check(abs(r['y'] + r['height'] - vp['height']) <= 1 and r['width'] >= vp['width'] - 1, f'{name}: Fenster sitzt unten, volle Breite')
         else: check(abs((r['x'] + r['width'] / 2) - vp['width'] / 2) <= 2 and r['width'] <= 621, f'{name}: Fenster mittig, höchstens 620 px')

@@ -122,21 +122,65 @@ export function pegelDashboard(root, ctx) {
     new ResizeObserver(() => app.style.setProperty('--pa-unten', `${isMobile() ? panel.offsetHeight : 0}px`)).observe(panel);
   }
 
-  /** Bottom Sheet (Handy): nach oben wischen vergrößert, nach unten verkleinert bzw. schließt die Auswahl. */
+  /**
+   * Bottom Sheet (Handy): folgt beim Ziehen dem Finger und rastet weich ein – klein, ca. 80 % (gross), ganz (voll) oder zu.
+   * Gezogen wird am Griff oder überall, solange der Inhalt ganz oben steht (sonst gehört die Bewegung dem Scrollen).
+   */
   function wischen(el) {
-    let y0 = null;
+    let z = null;   // { y0, top0, h0, dy, t, v, aktiv }
+    const vh = () => window.visualViewport?.height || window.innerHeight;
+    const oben = () => Math.max(8, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 8);
+    const stufen = () => ({ voll: oben(), gross: vh() * 0.18 });
     el.addEventListener('touchstart', (e) => {
-      y0 = null;
-      if (!isMobile() || e.touches.length !== 1 || e.target.closest('.gc-wrap, .pd-umschalter, input, select')) return;
+      z = null;
+      if (!isMobile() || e.touches.length !== 1 || e.target.closest('.gc-wrap, .pd-umschalter, input, select, .pt-kurve')) return;
       if (inhalt.scrollTop > 0 && !e.target.closest('.pa-griff')) return;
-      y0 = e.touches[0].clientY;
+      const r = el.getBoundingClientRect();
+      z = { y0: e.touches[0].clientY, top0: r.top, h0: r.height, dy: 0, t: e.timeStamp, v: 0, aktiv: false };
     }, { passive: true });
-    el.addEventListener('touchend', (e) => {
-      if (y0 === null) return;
-      const dy = e.changedTouches[0].clientY - y0; y0 = null;
-      if (dy < -45) { if (!ui.gross) grossSetzen(true); else if (!ui.voll) vollSetzen(true); }
-      else if (dy > 60) { if (ui.voll) vollSetzen(false); else if (ui.gross) grossSetzen(false); else if (ui.auswahl) abwaehlen(); else if (ui.liste) listeSetzen(null); }
-    }, { passive: true });
+    el.addEventListener('touchmove', (e) => {
+      if (!z) return;
+      const dy = e.touches[0].clientY - z.y0;
+      if (!z.aktiv) {
+        if (Math.abs(dy) < 8) return;
+        if (dy < 0 && ui.voll) { z = null; return; }                       // ganz offen: nach oben gehört dem Scrollen
+        if (dy > 0 && inhalt.scrollTop > 0 && !e.target.closest('.pa-griff')) { z = null; return; }
+        z.aktiv = true;
+        el.style.transition = 'none';
+        el.style.maxHeight = 'none';
+        el.style.top = `${z.top0}px`;
+      }
+      if (e.cancelable) e.preventDefault();
+      z.v = (dy - z.dy) / Math.max(1, e.timeStamp - z.t); z.dy = dy; z.t = e.timeStamp;
+      const top = Math.max(stufen().voll, z.top0 + dy);
+      el.style.top = `${top}px`;
+    }, { passive: false });
+    const ende = (abbruch) => {
+      const a = z; z = null;
+      if (!a || !a.aktiv) return;
+      const top = a.top0 + a.dy, st = stufen(), schnell = Math.abs(a.v) > 0.5;
+      const kleinTop = vh() - Math.min(a.h0, vh() * 0.6);
+      // Ziel: nächste Stufe; schneller Schwung nimmt die nächste in Bewegungsrichtung
+      let ziel;
+      if (abbruch) ziel = ui.voll ? 'voll' : ui.gross ? 'gross' : 'klein';
+      else if (schnell) ziel = a.v < 0 ? (ui.gross ? 'voll' : 'gross') : (ui.voll ? 'gross' : ui.gross ? 'klein' : 'zu');
+      else {
+        const kandidaten = [['voll', st.voll], ['gross', st.gross], ['klein', ui.gross ? vh() * 0.55 : kleinTop], ['zu', vh() - 40]];
+        ziel = kandidaten.reduce((b, k) => (Math.abs(k[1] - top) < Math.abs(b[1] - top) ? k : b))[0];
+      }
+      const zielTop = { voll: st.voll, gross: st.gross, klein: ui.gross ? vh() * 0.55 : kleinTop, zu: vh() }[ziel];
+      el.style.transition = 'top .24s cubic-bezier(.2, .8, .2, 1)';
+      el.style.top = `${zielTop}px`;
+      setTimeout(() => {
+        el.style.transition = ''; el.style.top = ''; el.style.maxHeight = '';
+        if (ziel === 'voll') { if (!ui.gross) grossSetzen(true); vollSetzen(true); }
+        else if (ziel === 'gross') { if (!ui.gross) grossSetzen(true); else vollSetzen(false); }
+        else if (ziel === 'klein') { if (ui.gross) grossSetzen(false); }
+        else if (ui.auswahl) abwaehlen(); else if (ui.liste) listeSetzen(null);
+      }, 240);
+    };
+    el.addEventListener('touchend', () => ende(false), { passive: true });
+    el.addEventListener('touchcancel', () => ende(true), { passive: true });
   }
 
   // ---------------------------------------------------------------- Laden

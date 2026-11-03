@@ -1131,3 +1131,10 @@ input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webki
 .such-x:hover > span { background: #D5E1E7; }
 input.hat-x { padding-right: calc(var(--x-rechts, 2px) + 44px) !important; }
 .search { --x-rechts: 44px; }
+
+/* Fenster von unten (Handy): weich hochfahren statt plötzlich erscheinen (7.54.0) */
+@keyframes sheet-ein { from { transform: translateY(36%); opacity: .4; } to { transform: none; opacity: 1; } }
+@media (max-width: 767px) {
+  .wxd[open], .peek:not([hidden]), .detail:not([hidden]), .pa-panel:not([hidden]) { animation: sheet-ein .28s cubic-bezier(.2, .8, .2, 1); }
+}
+@media (prefers-reduced-motion: reduce) { .wxd[open], .peek:not([hidden]), .detail:not([hidden]), .pa-panel:not([hidden]) { animation: none; } }
