@@ -302,6 +302,10 @@ def run(b, w, hh, mobile):
         cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': x, 'y': y}]})
         for i in range(1, 7): cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': x, 'y': y - 15 * i}]}); pg.wait_for_timeout(16)
         mitten = pg.locator('.pa-panel').bounding_box()['y']
+        stil = pg.evaluate("(() => { const p = document.querySelector('.pa-panel'); return [p.style.top, p.style.transform]; })()")
+        for i in range(7, 10): cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': x, 'y': y - 15 * i}]}); pg.wait_for_timeout(16)
+        stil2 = pg.evaluate("(() => { const p = document.querySelector('.pa-panel'); return [p.style.top, p.style.transform]; })()")
+        check(stil[0] == stil2[0] and 'translate3d' in stil[1] and stil[1] != stil2[1], f'{tag}: beim Ziehen nur verschoben (transform), Größe bleibt ({stil} → {stil2})')
         cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); pg.wait_for_timeout(450)
         check(abs((top0 - mitten) - 90) <= 12, f'{tag}: Sheet folgt beim Ziehen dem Finger ({top0 - mitten:.0f} px bei 90 px Weg)')
         if 'is-gross' in pg.get_attribute('.pa-panel', 'class'): pg.click('.pa-griff'); pg.click('.pa-griff'); pg.wait_for_timeout(300)   # zurück auf klein

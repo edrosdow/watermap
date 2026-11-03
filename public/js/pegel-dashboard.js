@@ -127,57 +127,57 @@ export function pegelDashboard(root, ctx) {
    * Gezogen wird am Griff oder überall, solange der Inhalt ganz oben steht (sonst gehört die Bewegung dem Scrollen).
    */
   function wischen(el) {
-    let z = null;   // { y0, top0, h0, dy, t, v, aktiv }
+    // Wie auf der Hauptkarte: beim Ziehen nur verschieben (transform, flüssig), Größe erst beim Einrasten ändern.
+    // Damit das Sheet beim Hochziehen wachsen kann, wird es zu Beginn auf volle Höhe gestellt und um den Rest nach unten verschoben.
+    let z = null;   // { y0, x0, top0, h0, basis, dy, t, v, aktiv }
     const vh = () => window.visualViewport?.height || window.innerHeight;
-    const oben = () => Math.max(8, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 8);
-    const stufen = () => ({ voll: oben(), gross: vh() * 0.18 });
+    const stufen = () => ({ voll: 8, gross: vh() * 0.18 });
+    const setze = (y, mitAnimation = false) => { el.style.transition = mitAnimation ? 'transform .26s cubic-bezier(.2, .8, .2, 1)' : 'none'; el.style.transform = `translate3d(0, ${y}px, 0)`; };
     el.addEventListener('touchstart', (e) => {
       z = null;
       if (!isMobile() || e.touches.length !== 1 || e.target.closest('.gc-wrap, .pd-umschalter, input, select, .pt-kurve')) return;
       if (inhalt.scrollTop > 0 && !e.target.closest('.pa-griff')) return;
       const r = el.getBoundingClientRect();
-      z = { y0: e.touches[0].clientY, top0: r.top, h0: r.height, dy: 0, t: e.timeStamp, v: 0, aktiv: false };
+      z = { y0: e.touches[0].clientY, x0: e.touches[0].clientX, top0: r.top, h0: r.height, dy: 0, t: e.timeStamp, v: 0, aktiv: false };
     }, { passive: true });
     el.addEventListener('touchmove', (e) => {
       if (!z) return;
-      const dy = e.touches[0].clientY - z.y0;
+      const dy = e.touches[0].clientY - z.y0, dx = e.touches[0].clientX - z.x0;
       if (!z.aktiv) {
-        if (Math.abs(dy) < 8) return;
+        if (Math.abs(dy) < 8 || Math.abs(dx) > Math.abs(dy)) return;
         if (dy < 0 && ui.voll) { z = null; return; }                       // ganz offen: nach oben gehört dem Scrollen
         if (dy > 0 && inhalt.scrollTop > 0 && !e.target.closest('.pa-griff')) { z = null; return; }
         z.aktiv = true;
-        el.style.transition = 'none';
+        // einmalig: volle Höhe, um den Abstand nach unten verschoben – ab jetzt nur noch transform
+        z.basis = Math.max(0, z.top0 - stufen().voll);
+        el.style.willChange = 'transform';
         el.style.maxHeight = 'none';
-        el.style.top = `${z.top0}px`;
+        el.style.top = `${stufen().voll}px`;
+        setze(z.basis);
       }
       if (e.cancelable) e.preventDefault();
       z.v = (dy - z.dy) / Math.max(1, e.timeStamp - z.t); z.dy = dy; z.t = e.timeStamp;
-      const top = Math.max(stufen().voll, z.top0 + dy);
-      el.style.top = `${top}px`;
+      setze(Math.max(0, z.basis + dy));
     }, { passive: false });
     const ende = (abbruch) => {
       const a = z; z = null;
       if (!a || !a.aktiv) return;
       const top = a.top0 + a.dy, st = stufen(), schnell = Math.abs(a.v) > 0.5;
       const kleinTop = vh() - Math.min(a.h0, vh() * 0.6);
-      // Ziel: nächste Stufe; schneller Schwung nimmt die nächste in Bewegungsrichtung
+      const kTop = ui.gross ? vh() * 0.55 : kleinTop;
       let ziel;
       if (abbruch) ziel = ui.voll ? 'voll' : ui.gross ? 'gross' : 'klein';
       else if (schnell) ziel = a.v < 0 ? (ui.gross ? 'voll' : 'gross') : (ui.voll ? 'gross' : ui.gross ? 'klein' : 'zu');
-      else {
-        const kandidaten = [['voll', st.voll], ['gross', st.gross], ['klein', ui.gross ? vh() * 0.55 : kleinTop], ['zu', vh() - 40]];
-        ziel = kandidaten.reduce((b, k) => (Math.abs(k[1] - top) < Math.abs(b[1] - top) ? k : b))[0];
-      }
-      const zielTop = { voll: st.voll, gross: st.gross, klein: ui.gross ? vh() * 0.55 : kleinTop, zu: vh() }[ziel];
-      el.style.transition = 'top .24s cubic-bezier(.2, .8, .2, 1)';
-      el.style.top = `${zielTop}px`;
+      else ziel = [['voll', st.voll], ['gross', st.gross], ['klein', kTop], ['zu', vh() - 40]].reduce((b, k) => (Math.abs(k[1] - top) < Math.abs(b[1] - top) ? k : b))[0];
+      const zielTop = { voll: st.voll, gross: st.gross, klein: kTop, zu: vh() }[ziel];
+      setze(Math.max(0, zielTop - st.voll), true);
       setTimeout(() => {
-        el.style.transition = ''; el.style.top = ''; el.style.maxHeight = '';
+        el.style.transition = ''; el.style.transform = ''; el.style.top = ''; el.style.maxHeight = ''; el.style.willChange = '';
         if (ziel === 'voll') { if (!ui.gross) grossSetzen(true); vollSetzen(true); }
         else if (ziel === 'gross') { if (!ui.gross) grossSetzen(true); else vollSetzen(false); }
         else if (ziel === 'klein') { if (ui.gross) grossSetzen(false); }
         else if (ui.auswahl) abwaehlen(); else if (ui.liste) listeSetzen(null);
-      }, 240);
+      }, 260);
     };
     el.addEventListener('touchend', () => ende(false), { passive: true });
     el.addEventListener('touchcancel', () => ende(true), { passive: true });
