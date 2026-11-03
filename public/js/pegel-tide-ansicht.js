@@ -5,7 +5,7 @@ import { icon } from './icons.js';
 import { formatTime } from './pegel.js';
 import { auswerten, TENDENZ } from './gezeiten.js';
 import { vorhersageLaden, kommende, hoehe, inText, tagUhr, standText, ART } from './gezeiten-bsh.js';
-import { fmt, sternKnopf, etikett, kicker, zusatzKacheln } from './pegel-ansicht.js';
+import { fmt, kmText, zusatzKacheln, glasKnopf, alarmKnopf, merkKnopf, stammdaten } from './pegel-ansicht.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const uhr = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -99,7 +99,7 @@ function gezeitenKarte(v) {
     h('small', { text: e.vh !== undefined ? [`${fmt(e.vh)} cm`, e.abw ? `${e.abw} zum Mittel` : null].filter(Boolean).join(' · ') : `${fmt(e.astro)} cm (Gezeitenrechnung)` }));
   const erste = k.slice(0, 2), weitere = k.slice(2, 5);
   return h('section', { class: 'pd-karte pt-gezeiten', 'aria-labelledby': 'pt-gz-t' },
-    h('div', { class: 'pd-karte-kopf' }, h('h2', { id: 'pt-gz-t', text: 'Gezeiten' }), h('span', { class: 'pt-klein' + (v.offline ? ' is-alt' : ''), text: `Vorhersage BSH · ${standText(v)}` })),
+    h('div', { class: 'pd-karte-kopf' }, h('h2', { id: 'pt-gz-t', class: 'pd-ct', text: 'Gezeiten' }), h('span', { class: 'pt-klein' + (v.offline ? ' is-alt' : ''), text: `Vorhersage BSH · ${standText(v)}` })),
     h('div', { class: 'pt-gz-reihe' }, erste.map(kachel)),
     weitere.length ? h('ul', { class: 'pt-gz-pillen', 'aria-label': 'Danach' }, weitere.map(e => h('li', { text: `${e.typ} ${tagUhr(e.t)}` }))) : null,
     v.d.zusatz || v.d.text ? h('p', { class: 'pt-gz-text', text: [v.d.text, v.d.zusatz].filter(Boolean).join(' ') }) : null,
@@ -115,18 +115,19 @@ const HINWEIS_BSH = 'Messwerte: WSV/PEGELONLINE. Gezeitenvorhersage: BSH (CC BY 
 
 export function tideDetail(g, opts) {
   const quelle = h('p', { class: 'pd-hinweis', text: HINWEIS });
-  const tend = h('span', { class: 'pd-aend pt-tendenz' });
+  const tend = h('span', { class: 'pd-tz pt-tendenz' });
+  const alt = g.state === 'old';
+  // Kopf wie bei allen Pegeln: Name, Ort und Zeit, große Zahl, Zustandszeile, drei Knöpfe
   const kopf = h('header', { class: 'pd-kopf is-tide' },
     h('div', { class: 'pd-leiste' },
-      h('button', { type: 'button', class: 'pd-icon', 'aria-label': opts.backLabel || 'Zurück', html: icon(opts.eingebettet ? 'close' : 'back', 24), onclick: opts.onBack }),
-      kicker('Tidepegel', g),
-      h('button', { type: 'button', class: 'pd-icon', 'aria-label': 'Pegel teilen', html: icon('share', 22), onclick: opts.onShare }),
-      sternKnopf(g, { onChange: opts.onStern })),
+      h('button', { type: 'button', class: 'pd-icon', 'aria-label': opts.backLabel || 'Zurück', html: icon(opts.eingebettet ? 'close' : 'back', 22), onclick: opts.onBack })),
     h('h1', { class: 'pd-name', id: 'pd-name', tabindex: '-1', text: g.name }),
-    h('div', { class: 'pd-wertzeile' },
-      h('p', { class: 'pd-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: g.unit })),
-      h('div', { class: 'pd-wertinfo' }, etikett(g), tend,
-        h('p', { class: 'pd-zeit' + (g.state === 'old' ? ' is-alt' : '') }, g.state === 'old' ? `Veraltet – gemessen ${formatTime(g.time)}` : `Gemessen ${formatTime(g.time)}`))));
+    h('p', { class: 'pd-ort' + (alt ? ' is-alt' : '') }, h('span', { class: 'sr-only', text: 'Tidepegel · ' }),
+      [g.water, kmText(g), alt ? `veraltet – ${formatTime(g.time)}` : formatTime(g.time)].filter(Boolean).join(' · ')),
+    h('p', { class: 'pd-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: g.unit })),
+    h('p', { class: 'pd-zeile-kopf' }, h('span', { class: 'pd-zdot pz-tide', 'aria-hidden': 'true' }), h('b', { class: 'pz-tag-text', text: alt ? 'veraltet' : 'Tide' }), alt ? null : tend),
+    h('div', { class: 'pd-knoepfe' }, alarmKnopf(g), merkKnopf(g, opts.onStern),
+      glasKnopf('pd-teilen', icon('share', 20), 'Teilen', { onclick: opts.onShare, 'aria-label': 'Pegel teilen' })));
 
   const box = h('div', { class: 'pt-kurve', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Tidekurve wird geladen …' }));
   const achse = h('p', { class: 'pt-achse' });
@@ -134,7 +135,7 @@ export function tideDetail(g, opts) {
   const vhLegende = h('span', { hidden: true }, h('i', { class: 'is-vorhersage' }), 'Vorhersage (BSH)');
   const gzPlatz = h('div', { class: 'pt-gz-platz' });
   const kurvenKarte = h('section', { class: 'pd-karte' },
-    h('div', { class: 'pd-karte-kopf' }, h('h2', { text: 'Tidekurve' }), zeitraum),
+    h('div', { class: 'pd-karte-kopf' }, h('h2', { class: 'pd-ct', text: 'Tidekurve' }), zeitraum),
     box, achse,
     h('p', { class: 'pt-legende' }, h('span', {}, h('i', { class: 'is-linie' }), 'gemessen (WSV)'), vhLegende,
       Number.isFinite(g.tideRefs?.MThw) || Number.isFinite(g.tideRefs?.MTnw) ? h('span', {}, h('i', { class: 'is-mittel' }), 'mittleres Hoch-/Niedrigwasser') : null));
@@ -159,7 +160,7 @@ export function tideDetail(g, opts) {
     pts = p; a = auswerten(g, p);
     box.removeAttribute('aria-busy');
     if (!p || p.length < 10) { box.replaceChildren(h('p', { class: 'unknown', text: 'Keine Messreihe verfügbar.' })); return; }
-    tend.textContent = tendenzText(a) || '';
+    tend.textContent = tendenzText(a) ? ` · ${tendenzText(a)}` : '';
     achse.replaceChildren(h('span', { text: tagStunde(p[p.length - 1].t - 24 * 3600e3) }), h('span', { text: 'jetzt' }));
     requestAnimationFrame(zeichnen);
     const spalte = (titel, e, text) => h('div', {}, h('span', { class: 'pt-klein', text: titel }),
@@ -177,11 +178,13 @@ export function tideDetail(g, opts) {
   });
   ro.observe(box);
 
-  const body = h('div', { class: 'pd-body' }, zusatzKacheln(g), gzPlatz, kurvenKarte, einordnung,
-    h('div', { class: 'pd-kacheln' },
-      opts.onKarte ? h('button', { type: 'button', class: 'pd-kachel', onclick: opts.onKarte }, h('strong', { text: 'Auf der Karte' }), h('span', { text: 'Häfen in der Nähe ›' })) : null,
-      opts.onFluss ? h('button', { type: 'button', class: 'pd-kachel', onclick: opts.onFluss }, h('strong', { text: g.water || 'Gewässer' }), h('span', { text: 'alle Pegel ›' })) : null));
+  const chev = () => h('span', { class: 'pd-chev', html: icon('chevron', 16), 'aria-hidden': 'true' });
+  const body = h('div', { class: 'pd-body' }, gzPlatz, kurvenKarte, einordnung, zusatzKacheln(g));
   if (opts.wetter) { opts.wetter.classList.add('pd-karte', 'pd-wetter'); body.append(opts.wetter); }
+  body.append(h('section', { class: 'pd-karte pd-liste', 'aria-label': 'Weiteres' },
+    opts.onKarte ? h('button', { type: 'button', class: 'pd-zeile pd-kachel', onclick: opts.onKarte }, h('span', { html: icon('map', 18), 'aria-hidden': 'true' }), 'Häfen in der Nähe', chev()) : null,
+    opts.onFluss ? h('button', { type: 'button', class: 'pd-zeile pd-kachel', onclick: opts.onFluss }, h('span', { html: icon('welle', 18), 'aria-hidden': 'true' }), `${g.water || 'Gewässer'} – alle Pegel`, chev()) : null,
+    stammdaten(g)));
   body.append(quelle);
-  return h('article', { class: 'pd pz-tide' + (opts.eingebettet ? ' is-eingebettet' : ''), 'aria-labelledby': 'pd-name' }, kopf, body);
+  return h('article', { class: 'pd pd-blau pz-tide' + (opts.eingebettet ? ' is-eingebettet' : ''), 'aria-labelledby': 'pd-name' }, kopf, body);
 }

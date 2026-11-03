@@ -195,15 +195,15 @@ def run(b, w, hh, mobile):
     # Tidepegel-Detailseite (Cuxhaven)
     pg.goto(uf.BASE + f'#pegel/{U(21)}'); pg.wait_for_selector('.pa-kurz'); pg.click('.pa-verlauf'); pg.wait_for_selector('.pt-svg', timeout=8000); pg.wait_for_timeout(300)
     kp = ' '.join(pg.inner_text('.pd-kopf').split())
-    check('TIDEPEGEL · ELBE · KM 727' in kp.upper() and 'Cuxhaven' in kp and '610' in kp and pg.inner_text('.pd-kopf .pz-tag') == 'Tide' and '↗ auflaufend' in kp,
+    check('TIDEPEGEL · ELBE · KM 727' in kp.upper() and 'Cuxhaven' in kp and '610' in kp and pg.inner_text('.pd-kopf .pz-tag-text') == 'Tide' and '↗ auflaufend' in kp,
           f'{tag}: Tidepegel-Kopf mit „Tide“ und „auflaufend“ ({kp!r})')
     check(pg.locator('.pd .ps').count() == 0 and 'Wo steht der Pegel' not in pg.inner_text('.pd'), f'{tag}: keine MNW/MHW-Skala')
     tk = pg.locator('.pt-svg')
     check('jetzt' in (tk.text_content() or '') and 'MThw' in (tk.text_content() or '') and tk.locator('circle').count() >= 3, f'{tag}: Tidekurve mit „jetzt“, MThw und Hoch-/Niedrigwassern')
     eo = pg.inner_text('.pt-einordnung')
     check('letztes Hochwasser' in eo and 'letztes Niedrigwasser' in eo and re.search(r'Tidehub \d+ cm', eo) and 'mittleren Tide' in eo, f'{tag}: Einordnung ({eo!r})')
-    check('Häfen in der Nähe' in pg.inner_text('.pd-kacheln') and 'alle Pegel' in pg.inner_text('.pd-kacheln'), f'{tag}: Kacheln Karte und Gewässer')
-    check('nicht für die Navigation' in pg.inner_text('.pd-hinweis') and 'BSH' in pg.inner_text('.pd-hinweis'), f'{tag}: Hinweis ohne Gewähr, Quelle BSH')
+    check('Häfen in der Nähe' in pg.inner_text('.pd-liste') and 'alle Pegel' in pg.inner_text('.pd-liste') and [t.strip() for t in pg.locator('.pd-knoepfe .pd-kb').all_inner_texts()] == ['Alarm', 'Merken', 'Teilen'], f'{tag}: gleiches Muster: drei Knöpfe, Liste mit Häfen und Gewässer')
+    check('nicht für die Navigation' in pg.inner_text('.pd-body > .pd-hinweis') and 'BSH' in pg.inner_text('.pd-body > .pd-hinweis'), f'{tag}: Hinweis ohne Gewähr, Quelle BSH')
     # Gezeiten (BSH): nächstes HW/NW, drei weitere als Pillen, Vorhersage gestrichelt in der Kurve
     pg.wait_for_selector('.pt-gezeiten', timeout=5000); pg.wait_for_timeout(200)
     gz = pg.inner_text('.pt-gezeiten')

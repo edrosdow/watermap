@@ -74,7 +74,7 @@ export function kennwerteKarte(g) {
 }
 
 /** Station und Quelle (aufklappbar in der Liste). */
-function stammdaten(g) {
+export function stammdaten(g) {
   const zeilen = [['Gewässer', g.water], ['Flusskilometer', g.km !== null && g.km !== undefined ? g.km.toLocaleString('de-DE', { maximumFractionDigits: 3 }) : null],
     ['Pegelnummer', g.number], ['Zuständig', g.agency], ['Letzte Messung', g.time ? formatTime(g.time) : null]].filter(([, v]) => v);
   return h('details', { class: 'pd-zeile pd-stamm' }, h('summary', {}, h('span', { html: icon('info', 18), 'aria-hidden': 'true' }), 'Station und Quelle'),
@@ -119,10 +119,10 @@ export function zusatzKacheln(g) {
 }
 
 /** Runder Glasknopf mit Symbol und Beschriftung (Alarm, Merken, Teilen). */
-const glasKnopf = (cls, ico, text, attrs = {}) => h('button', { type: 'button', class: `pd-kb ${cls}`, ...attrs }, h('span', { class: 'pd-kb-ico', html: ico, 'aria-hidden': 'true' }), h('span', { class: 'pd-kb-text', text }));
+export const glasKnopf = (cls, ico, text, attrs = {}) => h('button', { type: 'button', class: `pd-kb ${cls}`, ...attrs }, h('span', { class: 'pd-kb-ico', html: ico, 'aria-hidden': 'true' }), h('span', { class: 'pd-kb-text', text }));
 
 /** Knopf „Alarm“ (aktiv hervorgehoben, Status im Titel); öffnet das Alarm-Fenster. */
-function alarmKnopf(g) {
+export function alarmKnopf(g) {
   const knopf = glasKnopf('pd-alarm', icon('bell', 20), 'Alarm', { 'aria-haspopup': 'dialog', onclick: (e) => alarmFenster(g, { opener: e.currentTarget }) });
   const stellen = () => { const st = alarmStatus(g.id); knopf.classList.toggle('is-an', !!st); knopf.title = st || 'Benachrichtigen lassen'; knopf.setAttribute('aria-label', st ? `Pegel-Alarm: ${st}` : 'Pegel-Alarm einrichten'); };
   stellen();
@@ -132,7 +132,7 @@ function alarmKnopf(g) {
 }
 
 /** Knopf „Merken“ (Stern, „Meine Pegel“). */
-function merkKnopf(g, onChange) {
+export function merkKnopf(g, onChange) {
   const an = meinePegel.hat(g.id);
   const knopf = glasKnopf('pm-stern pd-merken' + (an ? ' is-on' : ''), icon('star', 20, an), an ? 'Gemerkt' : 'Merken',
     { 'aria-pressed': String(an), 'aria-label': an ? `${g.name} aus „Meine Pegel“ entfernen` : `${g.name} zu „Meine Pegel“ hinzufügen` });
