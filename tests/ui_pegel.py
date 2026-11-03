@@ -166,10 +166,10 @@ with sync_playwright() as p:
         pg.wait_for_selector('#detail:not([hidden]) .gc-line', timeout=8000)
         txt = pg.inner_text('#detail')
         check('Köln' in txt and 'Rhein' in txt.title(), f'{name}: Name und Gewässer lesbar')
-        pg.wait_for_selector('#detail .pd-tz strong:not(:text("…"))')
+        pg.wait_for_selector('#detail .pd-tz b:not(:text("…"))')
         tz = pg.inner_text('#detail .pd-tz')
-        check('312' in txt and 'Normal' in txt and re.search(r'2 h (↗ steigend|↘ fallend|→ gleichbleibend), [+−±]\d+ cm\s*24 h [+−±]\d+ cm', tz), f'{name}: Wert, Zustand, Tendenz (2 h) und Änderung 24 h als Text ({tz!r})')
-        check(pg.locator('#detail .ps-mark').count() == 1 and pg.locator('#detail .ps-labels > span').count() == 4, f'{name}: Einordnung MNW/MW/MHW/HSW')
+        check('312' in txt and 'Normal' in txt and re.search(r'2 Std\. [+−±]\d+ cm\s*·\s*24 Std\. [+−±]\d+ cm', tz), f'{name}: Wert, Zustand, Tendenz (2 h) und Änderung 24 h als Text ({tz!r})')
+        check(pg.locator('#detail .pd-zmark').count() == 1 and pg.locator('#detail .pd-zgrenzen span').count() == 2, f'{name}: Einordnung mit Punkt, MNW und MHW')
         d = pg.locator('#detail .gc-line').get_attribute('d')
         check(d.count('M') == 2, f'{name}: Messlücke unterbricht die Linie ({d.count("M")} Abschnitte)')
         check('#karte/pegel/' + KOELN in pg.url, f'{name}: Adresse #karte/pegel/…')
@@ -230,10 +230,10 @@ with sync_playwright() as p:
 
         # Weitere Zustände
         for uuid, expect in [(STATIONS[1]['uuid'], 'Niedrig'), (STATIONS[2]['uuid'], 'Hoch'),
-                             (STATIONS[3]['uuid'], 'über HSW'), (STATIONS[4]['uuid'], 'veraltet'), (STATIONS[5]['uuid'], 'ohne Kennwerte')]:
+                             (STATIONS[3]['uuid'], 'Über HSW'), (STATIONS[4]['uuid'], 'veraltet'), (STATIONS[5]['uuid'], 'ohne Kennwerte')]:
             pg.evaluate(f"window.__watermap.selectGauge({json.dumps(uuid)}, {{ fly: false, full: true }})"); pg.wait_for_timeout(200)
             check(expect in pg.inner_text('#detail .pd-kopf'), f'{name}: Zustand „{expect}“')
-        check(pg.locator('#detail .ps-track').count() == 0, f'{name}: ohne Kennwerte keine leere Skala')
+        check(pg.locator('#detail .pd-zonen').count() == 0, f'{name}: ohne Kennwerte kein leerer Balken')
         pg.evaluate(f"window.__watermap.selectGauge({json.dumps(STATIONS[3]['uuid'])}, {{ fly: false, full: true }})"); pg.wait_for_selector('#detail .gc-line')
         pg.screenshot(path=str(SHOTS / f'{name}_5_hsw.png'))
 

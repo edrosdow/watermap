@@ -235,7 +235,7 @@ def run(b, w, hh, mobile):
     pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pa .pk-pille'); pg.click('.pa-chip[data-liste=fav]'); pg.wait_for_selector('.pa-liste .pa-z')
     check('Cuxhaven' in pg.locator('.pa-liste .pa-z').first.inner_text(), f'{tag}: Favoriten-Liste mit dem Tidepegel')
     pg.locator('.pa-liste .pa-z-knopf').first.click(); pg.wait_for_selector('.pa-kurz .pa-kurve'); pg.wait_for_timeout(300)
-    check('Tide' in pg.inner_text('.pa-zahlen') and 'auflaufend' in pg.inner_text('.pa-zahlen'), f'{tag}: Tidepegel kompakt mit „auflaufend“ statt 2 h/24 h ({pg.inner_text(".pa-zahlen")!r})')
+    check('Tide' in pg.inner_text('.pa-trend') and 'auflaufend' in pg.inner_text('.pa-zahlen'), f'{tag}: Tidepegel kompakt mit „auflaufend“ statt 2 Std./24 Std. ({pg.inner_text(".pa-trend")!r})')
     pg.evaluate("localStorage.removeItem('watermap.meinePegel')")
 
     # Küste und Kanal: ohne Profil, nur Liste

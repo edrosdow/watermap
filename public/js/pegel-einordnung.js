@@ -91,3 +91,18 @@ const cm = (d) => `${d > 0 ? '+' : d < 0 ? '−' : '±'}${fmt(Math.abs(d))} cm`;
 export const tendenzText = (t) => (t ? `${PFEIL[t.richtung]} ${WORT[t.richtung]}, ${cm(t.d)}` : null);
 /** „+1 cm“ bzw. null */
 export const aenderungKurz = (d) => (d === null || d === undefined ? null : cm(d));
+
+/**
+ * Lage auf dem Balken „Niedrig · Normal · Hoch“ (feste Breiten 22 % · 56 % · 22 %; innerhalb eines Bereichs maßstäblich).
+ * Bereich „Niedrig“ reicht von MNW − 40 % der Spanne MNW–MHW bis MNW, „Hoch“ von MHW bis MHW + 40 %; außerhalb am Rand.
+ * Rückgabe { pos: 0–100, zone: 'low' | 'normal' | 'high' } oder null ohne MNW und MHW.
+ */
+export const ZONEN = [22, 56, 22];
+export function zonenLage(refs, wert) {
+  const mnw = refs?.MNW, mhw = refs?.MHW;
+  if (typeof mnw !== 'number' || typeof mhw !== 'number' || !(mhw > mnw) || !Number.isFinite(wert)) return null;
+  const d = (mhw - mnw) * 0.4, [a, b] = ZONEN, k = (x) => Math.min(1, Math.max(0, x));
+  if (wert < mnw) return { pos: a * k((wert - (mnw - d)) / d), zone: 'low' };
+  if (wert > mhw) return { pos: a + b + ZONEN[2] * k((wert - mhw) / d), zone: 'high' };
+  return { pos: a + b * (wert - mnw) / (mhw - mnw), zone: 'normal' };
+}

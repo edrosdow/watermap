@@ -84,3 +84,15 @@ assert.equal(kw.find(k => k.k === 'NNW').datum, '1953');
 assert.equal(kw.find(k => k.k === 'HSW').name, 'Höchster Schifffahrtswasserstand');
 assert.equal(kw.find(k => k.k === 'M I').name, 'Marke I');
 console.log('pegel_einordnung_test (Zusatzwerte): OK');
+
+// Balken „Niedrig · Normal · Hoch“
+import { zonenLage } from '../public/js/pegel-einordnung.js';
+const r = { MNW: 113, MW: 170, MHW: 440 };
+assert.equal(zonenLage(r, 109).zone, 'low'); assert.ok(zonenLage(r, 109).pos > 18 && zonenLage(r, 109).pos < 22, 'knapp unter MNW: rechts im Bereich Niedrig');
+assert.equal(zonenLage(r, 113).pos, 22); assert.equal(zonenLage(r, 440).pos, 78);
+assert.equal(zonenLage(r, 276.5).zone, 'normal'); assert.equal(zonenLage(r, 276.5).pos, 50);
+assert.equal(zonenLage(r, -100).pos, 0, 'weit darunter: linker Rand');
+assert.equal(zonenLage(r, 2000).pos, 100, 'weit darüber: rechter Rand');
+assert.equal(zonenLage(r, 500).zone, 'high');
+assert.equal(zonenLage({ MNW: 113 }, 109), null); assert.equal(zonenLage({ MNW: 200, MHW: 100 }, 150), null); assert.equal(zonenLage(r, NaN), null);
+console.log('pegel_einordnung_test (Balken): OK');

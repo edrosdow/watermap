@@ -1045,3 +1045,148 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
   .pa-panel .pd-zuliste { border: 1px solid #E6EDF1; box-shadow: none; }
   .pd-aktion { font-size: 13px; }
 }
+
+/* ---------------------------------------------------------------- Pegel im Stil einer Wetter-App (7.52.0)
+   Wasserblauer Verlauf, helle Schrift, Glaskarten. Gilt für Kompaktansicht, Details im Panel/Sheet, Pegel-Fenster und Kartenpanel. */
+:root { --pd-blau: linear-gradient(180deg, #0E3F5C 0%, #0F5F80 46%, #2A8DAF 100%); --pd-glas: rgba(255, 255, 255, .13); --pd-glas2: rgba(255, 255, 255, .18); --pd-linie: rgba(255, 255, 255, .14); --pd-matt: rgba(255, 255, 255, .72); }
+/* Panel/Sheet mit gewähltem Pegel: blau (Desktop und Handy) */
+.pa-panel.hat-auswahl { background: var(--pd-blau); border-left: 0; color: #fff; }
+.pa-panel.hat-auswahl .pa-griff span { background: rgba(255, 255, 255, .45); }
+/* Kompakt */
+.pa-kurz.pa-blau { background: transparent; box-shadow: none; color: #fff; padding: 2px 2px 4px; }
+.pa-blau .pa-k-kopf .pa-name { color: #fff; font-weight: 600; font-size: 22px; }
+.pa-blau .pa-name small { color: var(--pd-matt); font-weight: 500; }
+.pa-blau .pa-ico, .pa-blau .pm-stern.is-klein { width: 38px; height: 38px; background: var(--pd-glas2); color: #fff; }
+.pa-blau .pm-stern.is-klein.is-on { color: #FFD166; }
+.pa-blau .pa-ico:hover { background: rgba(255, 255, 255, .26); }
+.pa-blau .pa-wert { color: #fff; }
+.pa-blau .pa-wert strong { font-size: 64px; font-weight: 300; letter-spacing: -.03em; }
+.pa-blau .pa-wert span { font-size: 22px; font-weight: 400; }
+.pa-blau .pa-kurve-linie { stroke: #fff; stroke-width: 2.2; }
+.pa-blau .pa-kurve-flaeche { fill: #fff; opacity: .12; }
+.pa-blau .pa-kurve-punkt { fill: #fff; }
+.pa-blau .pa-trend { color: #fff; font-size: 15.5px; font-weight: 500; gap: 0; margin-top: 4px; }
+.pa-blau .pa-zustand { color: #fff; font-weight: 650; }
+.pa-blau .pa-zahlen { gap: 0; }
+.pa-blau .pa-zahlen b { color: #fff !important; font-weight: 500; }
+.pa-blau .pa-zeit.is-alt { background: rgba(255, 255, 255, .16); color: #fff; }
+.pa-kurz.pa-blau > .pa-verlauf { width: 100%; min-height: 46px; margin-top: 14px; border: 0; border-radius: 23px; background: var(--pd-glas2); color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+.pa-kurz.pa-blau > .pa-verlauf:hover { background: rgba(255, 255, 255, .26); }
+/* Zustandspunkt (wie in der Ampel der Pillen) */
+.pd-zdot, .pa-blau .pa-zustand i, .pd-zst i { width: 10px; height: 10px; border-radius: 50%; background: #B9C6CF; display: inline-block; flex: none; }
+.pz-low.pd-zdot, .pa-blau .pa-zustand.pz-low i, .pd-zst.pz-low i { background: #F7B733; }
+.pz-normal.pd-zdot, .pa-blau .pa-zustand.pz-normal i, .pd-zst.pz-normal i { background: #5BC0A0; }
+.pz-high.pd-zdot, .pa-blau .pa-zustand.pz-high i, .pd-zst.pz-high i { background: #F0763C; }
+.pz-hsw.pd-zdot, .pa-blau .pa-zustand.pz-hsw i, .pd-zst.pz-hsw i { background: #FF5A4E; }
+/* Details */
+.pd.pd-blau { background: var(--pd-blau); color: #fff; min-height: 100%; }
+.pa-panel .pd.pd-blau { background: transparent; }
+.wxd-pegel .wxd-body:has(.pd-blau), .detail.is-pegel:has(.pd-blau) { background: #0F5F80; }
+.pd.pd-blau .pd-kopf { background: transparent; color: #fff; text-align: center; padding: 4px 16px 6px; border-radius: 0; }
+.pd.pd-blau .pd-leiste { justify-content: flex-start; min-height: 40px; }
+.pd.pd-blau .pd-icon { width: 38px; height: 38px; background: var(--pd-glas2); color: #fff; }
+.pd.pd-blau .pd-name { margin: 0; font-size: 28px; font-weight: 500; color: #fff; letter-spacing: -.01em; }
+.pd.pd-blau .pd-ort { margin: 2px 0 0; color: var(--pd-matt); font-size: 14px; }
+.pd.pd-blau .pd-ort.is-alt { color: #FFD9A0; font-weight: 600; }
+.pd.pd-blau .pd-wert { margin: 6px 0 0; line-height: 1; display: block; }
+.pd.pd-blau .pd-wert strong, .pa-panel .pd.pd-blau .pd-wert strong, .pd.is-eingebettet.pd-blau .pd-wert strong { font-size: 84px; font-weight: 250; letter-spacing: -.04em; color: #fff; }
+.pd.pd-blau .pd-wert span { font-size: 26px; font-weight: 400; margin-left: 2px; color: #fff; }
+.pd-zeile-kopf { margin: 6px 0 0; font-size: 15.5px; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.pd-zeile-kopf b { font-weight: 650; }
+.pd-zeile-kopf .pd-tz { display: inline; margin: 0; font-weight: 500; color: #fff; }
+.pd-zeile-kopf .pd-tz b { font-weight: 500; color: #fff; }
+.pd-knoepfe { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 4px; text-align: center; }
+.pd-kb { min-height: 64px; border: 0; border-radius: 16px; background: var(--pd-glas2); color: #fff; font: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; padding: 6px; }
+.pd-kb:hover { background: rgba(255, 255, 255, .26); }
+.pd-kb-ico { display: grid; }
+.pd-kb-text { font-size: 13.5px; font-weight: 600; }
+.pd-kb.is-an { background: rgba(255, 255, 255, .32); }
+.pd-kb.pm-stern.is-on .pd-kb-ico { color: #FFD166; }
+.pd.pd-blau .pm-stern.pd-kb { width: auto; height: auto; }
+.pd.pd-blau .pd-body, .pa-panel .pd.pd-blau.is-eingebettet .pd-body, .pd.pd-blau.is-eingebettet .pd-body { margin: 0; padding: 4px 14px 18px; gap: 10px; background: transparent; }
+.pd.pd-blau .pd-karte { background: var(--pd-glas); color: #fff; border: 0; border-radius: 18px; padding: 12px 14px; box-shadow: none; }
+.pd-ct, .pd.pd-blau .pd-karte h2.pd-ct { margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--pd-matt); display: flex; align-items: center; gap: 6px; }
+.pd.pd-blau .pd-umschalter { display: flex; width: 100%; background: rgba(0, 0, 0, .18); border-radius: 10px; padding: 3px; margin-bottom: 6px; }
+.pd.pd-blau .pd-umschalter button { flex: 1; min-height: 32px; padding: 0 6px; color: rgba(255, 255, 255, .8); font-size: 13.5px; font-weight: 600; background: transparent; box-shadow: none; }
+.pd.pd-blau .pd-umschalter button[aria-pressed="true"] { background: rgba(255, 255, 255, .24); color: #fff; }
+.pd.pd-blau .gc-grid { stroke: rgba(255, 255, 255, .14); }
+.pd.pd-blau .gc-axis, .pd.pd-blau .gc-reflabel { fill: rgba(255, 255, 255, .72); }
+.pd.pd-blau .gc-ref { stroke: rgba(255, 255, 255, .45); }
+.pd.pd-blau .gc-ref.is-hsw { stroke: #FF8A80; }
+.pd.pd-blau .gc-line { stroke: #fff; stroke-width: 2.2; }
+.pd.pd-blau .gc-area { fill: #fff; opacity: .1; }
+.pd.pd-blau .gc-dot { fill: #fff; stroke: #0F5F80; }
+.pd.pd-blau .gc-vorh { stroke: #fff; }
+.pd.pd-blau .gc-vorh-bg { fill: rgba(255, 255, 255, .07); }
+.pd.pd-blau .gc-tief { fill: rgba(247, 183, 51, .14); }
+.pd.pd-blau .gc-jetzt { stroke: rgba(255, 255, 255, .5); }
+.pd.pd-blau .gc-jetzt-text { fill: rgba(255, 255, 255, .8); }
+.pd.pd-blau .gc-cross { stroke: rgba(255, 255, 255, .7); }
+.pd.pd-blau .gc-schraffur { stroke: rgba(255, 255, 255, .3); }
+.pd.pd-blau .gc-tip { background: #fff; color: var(--navy); }
+.pd.pd-blau .gc-table summary, .pd.pd-blau .gc-luecken-text, .pd.pd-blau .pd-vorh-info, .pd.pd-blau .pd-vorh-satz { color: var(--pd-matt); }
+.pd.pd-blau .gc-table table { color: #fff; }
+.pd.pd-blau .muted, .pd.pd-blau .unknown { color: var(--pd-matt); }
+/* Einordnung */
+.pd-zst { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 600; }
+.pd-zst i { width: 12px; height: 12px; }
+.pd-zonen { margin-top: 34px; }
+.pd-zbalken { position: relative; display: flex; height: 12px; }
+.pd-zbalken > span:not(.pd-zmark) { display: block; height: 12px; }
+.pd-z0 { background: #F7B733; border-radius: 6px 0 0 6px; } .pd-z1 { background: #5BC0A0; } .pd-z2 { background: #F0763C; border-radius: 0 6px 6px 0; }
+.pd-zmark { position: absolute; bottom: -4px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 2; }
+.pd-zmark b { font-size: 12.5px; font-weight: 700; white-space: nowrap; margin-bottom: 2px; }
+.pd-zmark i { display: block; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 4px solid #0F5F80; box-shadow: 0 1px 4px rgba(0, 0, 0, .3); }
+.pd-znamen { display: flex; margin-top: 8px; font-size: 13px; font-weight: 600; text-align: center; }
+.pd-znamen span { color: var(--pd-matt); } .pd-znamen span.is-an { color: #fff; }
+.pd-zgrenzen { position: relative; height: 16px; font-size: 11.5px; color: rgba(255, 255, 255, .6); }
+.pd-zgrenzen span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+/* Abfluss, Wasser */
+.pd.pd-blau .pd-zusatz { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; }
+.pd.pd-blau .pd-zusatz[hidden] { display: none; }
+.pd.pd-blau .pd-z { background: var(--pd-glas); border: 0; border-radius: 18px; padding: 12px 14px; box-shadow: none; color: #fff; }
+.pd.pd-blau .pd-z .pd-ct { margin-bottom: 4px; }
+.pd.pd-blau .pd-z-wert { margin: 0; color: #fff; }
+.pd.pd-blau .pd-z-wert strong { font-size: 30px; font-weight: 400; color: #fff; }
+.pd.pd-blau .pd-z-wert span { font-size: 15px; color: var(--pd-matt); }
+.pd.pd-blau .pd-z-sub { margin: 2px 0 0; font-size: 12.5px; color: var(--pd-matt); }
+.pd.pd-blau .pd-z-sub:empty { display: none; }
+/* Kennwerte */
+.pd-kwl { list-style: none; margin: 0; padding: 0; }
+.pd-kwl li { display: flex; align-items: baseline; gap: 10px; padding: 8px 0; border-top: 1px solid var(--pd-linie); }
+.pd-kwl li:first-child { border-top: 0; padding-top: 2px; }
+.pd-kwl b { font-weight: 500; font-size: 15.5px; min-width: 44px; }
+.pd-kwl span { flex: 1; min-width: 0; font-size: 13px; color: var(--pd-matt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pd-kwl strong { font-weight: 600; font-size: 15.5px; white-space: nowrap; }
+/* Liste unten */
+.pd.pd-blau .pd-liste { padding: 0 14px; }
+.pd-zeile { display: flex; align-items: center; gap: 10px; min-height: 50px; width: 100%; border: 0; border-top: 1px solid var(--pd-linie); background: none; color: #fff; font: inherit; font-size: 15.5px; font-weight: 500; text-decoration: none; text-align: left; cursor: pointer; padding: 0; }
+.pd-liste > .pd-zeile:first-child { border-top: 0; }
+.pd-zeile > span:first-child, .pd-zeile > summary > span:first-child { display: grid; color: var(--pd-matt); }
+.pd-chev { margin-left: auto; display: grid; color: var(--pd-matt); }
+details.pd-zeile { display: block; min-height: 0; }
+details.pd-zeile > summary { list-style: none; display: flex; align-items: center; gap: 10px; min-height: 50px; cursor: pointer; }
+details.pd-zeile > summary::-webkit-details-marker { display: none; }
+details.pd-zeile > summary::after { content: '›'; margin-left: auto; font-size: 20px; color: var(--pd-matt); transition: transform .15s; }
+details.pd-zeile[open] > summary::after { transform: rotate(90deg); }
+details.pd-zeile > summary em { font-style: normal; color: var(--pd-matt); margin-left: auto; }
+details.pd-zeile > summary em + ::after { margin-left: 8px; }
+details.pd-zeile[open] { padding-bottom: 10px; }
+.pd.pd-blau .pd-slips button { color: #fff; }
+.pd.pd-blau .pd-slip-name { color: #fff; } .pd.pd-blau .pd-slip-km { color: var(--pd-matt); }
+.pd.pd-blau .pd-slips li + li { border-top-color: var(--pd-linie); }
+.pd.pd-blau .pd-kw-liste dt { color: var(--pd-matt); } .pd.pd-blau .pd-kw-liste dd { color: #fff; }
+.pd.pd-blau .pd-hinweis, .pd.pd-blau .pd-leer { color: var(--pd-matt); font-size: 13px; margin: 8px 0 0; }
+.pd.pd-blau .pd-link { color: #fff; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; display: inline-block; padding-top: 8px; }
+/* Wetter (Kartenpanel) bleibt hell lesbar */
+.pd.pd-blau .pd-wetter { background: #fff; color: var(--ink); }
+.pd.pd-blau :focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+@media (max-width: 767px) {
+  .pa-panel.hat-auswahl .pd.pd-blau .pd-karte, .pa-panel .pd.pd-blau .pd-z { border: 0; }
+  .pd.pd-blau .pd-wert strong, .pa-panel .pd.pd-blau .pd-wert strong { font-size: 72px; }
+  .pa-blau .pa-wert strong { font-size: 56px; }
+}
+.pd.pd-blau .pd-kb.pm-stern, .pd.pd-blau .pd-kb.pm-stern.is-on { background: var(--pd-glas2); color: #fff; border-radius: 16px; }
+.pd.pd-blau .pd-kb.pm-stern.is-on .pd-kb-ico { color: #FFD166; }
+.pa-blau .pa-trend { gap: 0 6px; }
+.pa-blau .pa-zahlen { display: inline; }

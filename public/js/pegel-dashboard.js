@@ -201,7 +201,7 @@ export function pegelDashboard(root, ctx) {
   function kurz(g) {
     const z = zustand(g), alt = g.state === 'old';
     const tend = h('b', { class: 'pt-flat' }), aend = h('b', { class: 'pt-flat' });
-    const zahlen = alt ? null : h('span', { class: 'pa-zahlen' }, h('span', { title: 'Tendenz der letzten 2 Stunden' }, '2 h ', tend), h('span', { title: 'Änderung in 24 Stunden' }, '24 h ', aend));
+    const zahlen = alt ? null : h('span', { class: 'pa-zahlen' }, h('span', { title: 'Tendenz der letzten 2 Stunden' }, ' · 2 Std. ', tend), h('span', { title: 'Änderung in 24 Stunden' }, ' · 24 Std. ', aend));
     const kurveBox = h('div', { class: 'pa-kurve-box' });
     verlaufLaden(g.id).then((pts) => {
       if (!kurveBox.isConnected) return;
@@ -209,12 +209,12 @@ export function pegelDashboard(root, ctx) {
       if (k) kurveBox.replaceChildren(k);
       if (alt) return;
       const w = kurzWerte(g, pts);
-      if ('tide' in w) { zahlen.replaceChildren(h('span', {}, 'Tide ', h('b', { class: 'pt-flat', text: w.tide || '–' }))); return; }
+      if ('tide' in w) { zahlen.replaceChildren(h('span', {}, ' · ', h('b', { text: w.tide || '–' }))); return; }
       const t = tendenz(pts);
-      tend.textContent = t ? `${PFEIL[t.richtung]} ${aenderungKurz(t.d)}` : '–'; tend.className = richtungKlasse(t?.richtung);
-      aend.textContent = w.aend || '–'; aend.className = richtungKlasse(Math.sign(w.d || 0));
+      tend.textContent = t ? aenderungKurz(t.d) : '–'; tend.title = t ? `${PFEIL[t.richtung]} ${tendenzTextKurz(t)}` : 'Keine Tendenz verfügbar';
+      aend.textContent = w.aend || '–';
     }, () => { if (zahlen) { tend.textContent = '–'; aend.textContent = '–'; } });
-    return h('article', { class: `pa-kurz ${ZUSTAND[z].cls}` + (alt ? ' is-alt' : ''), 'aria-labelledby': 'pa-name' },
+    return h('article', { class: `pa-kurz pa-blau ${ZUSTAND[z].cls}` + (alt ? ' is-alt' : ''), 'aria-labelledby': 'pa-name' },
       h('div', { class: 'pa-k-kopf' },
         h('h2', { class: 'pa-name', id: 'pa-name', tabindex: '-1' }, g.name, g.water ? h('small', { text: ` · ${g.water}` }) : null),
         h('button', { type: 'button', class: 'pa-ico pa-alarm', 'aria-haspopup': 'dialog', 'aria-label': `Pegel-Alarm für ${g.name}`, html: icon('bell', 19), onclick: (e) => alarmFenster(g, { opener: e.currentTarget, toast: ctx.toast }) }),
@@ -225,9 +225,9 @@ export function pegelDashboard(root, ctx) {
         h('p', { class: 'pa-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: ` ${g.unit}` })),
         kurveBox),
       h('p', { class: 'pa-trend' },
-        !alt && EINORDNUNG[z] ? h('span', { class: `pa-zustand ${ZUSTAND[z].cls}`, title: EINORDNUNG[z] }, h('i', { 'aria-hidden': 'true' }), ZUSTAND[z].text.replace(/^ü/, 'Ü')) : null,
+        !alt ? h('span', { class: `pa-zustand ${ZUSTAND[z].cls}`, title: EINORDNUNG[z] || '' }, h('i', { 'aria-hidden': 'true' }), ZUSTAND[z].text.replace(/^ü/, 'Ü')) : null,
         zahlen),
-      h('button', { type: 'button', class: 'btn btn-primary pa-verlauf', 'aria-expanded': 'false', 'aria-controls': 'pa-panel', onclick: () => grossSetzen(true) }, 'Details'));
+      h('button', { type: 'button', class: 'pa-verlauf', 'aria-expanded': 'false', 'aria-controls': 'pa-panel', onclick: () => grossSetzen(true) }, 'Details'));
   }
 
   /** Cockpit: ausführliche Ansicht (Diagramm 24 h / 7 Tage / 30 Tage, Kennwerte, Vorhersage, Zusatzwerte). */
