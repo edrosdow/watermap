@@ -229,7 +229,7 @@ export function fenster({ inhalt, kopf = null, klasse = '', labelId, opener = nu
 /** Fenster „Wetter und Wind“ (Handy: von unten, sonst mittig): Warnungen, Wind jetzt, Vorhersage. */
 export function wetterFenster({ lat, lon, name = '', opener = null }) {
   const box = h('div', { class: 'wx', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Wetter wird geladen …' }));
-  const dlg = fenster({ inhalt: box, labelId: 'wxd-titel', opener, kopf: h('header', { class: 'wxd-kopf' },
+  const dlg = fenster({ inhalt: box, klasse: 'wxd-wetter', labelId: 'wxd-titel', opener, kopf: h('header', { class: 'wxd-kopf' },
     h('div', {}, h('h2', { id: 'wxd-titel', tabindex: '-1', text: 'Wetter und Wind' }), name ? h('p', { class: 'wxd-unter', text: name }) : null),
     h('button', { type: 'button', class: 'wxd-x', 'aria-label': 'Schließen', html: icon('close', 22), onclick: () => dlg.close() })) });
   loadWeather(lat, lon).then((d) => { box.removeAttribute('aria-busy'); box.replaceChildren(...renderWeather(d)); },

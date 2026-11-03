@@ -72,6 +72,7 @@ export function kurve24(pts, g, { breite = 300, hoehe = 60, klein = false } = {}
  * Rückgabe: { zeigen(force), waehlen(id, opts), abwaehlen(opts), vorbereiten(), stand, auswahl }
  */
 export function pegelDashboard(root, ctx) {
+  let kleinH = 0;   // zuletzt gemessene Höhe des kleinen Sheets (Handy)
   const ui = { liste: null, auswahl: null, gross: false, aktiv: -1, treffer: [] };   // Handy: klein ↔ gross (bis unter die Suche)
   let stand = null, ladeFehler = false, app = null, karte = null, panel = null, inhalt = null, griff = null, standZeile = null, feld = null, trefferBox = null, filterBox = null;
   let karteFertig = false;
@@ -114,7 +115,8 @@ export function pegelDashboard(root, ctx) {
     app = h('div', { class: 'pa' }, kopf, h('div', { class: 'pa-haupt' }, karte.el, panel));
     app.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || e.defaultPrevented || e.target === feld) return;
-      if (ui.gross) { e.preventDefault(); grossSetzen(false); } else if (ui.auswahl) { e.preventDefault(); abwaehlen(); } else if (ui.liste) { e.preventDefault(); listeSetzen(null); }   // Esc: kompakt, dann schließen
+      if (sheet.laeuft) sheet.abschliessen();
+      if (ui.gross) { e.preventDefault(); grossSetzen(false, { sofort: true }); } else if (ui.auswahl) { e.preventDefault(); abwaehlen(); } else if (ui.liste) { e.preventDefault(); listeSetzen(null); }   // Esc: kompakt, dann schließen
     });
     document.addEventListener('click', (e) => { if (!trefferBox.hidden && !e.target.closest?.('.pa-suchbox')) sucheZu(); });
     root.replaceChildren(app);
@@ -127,60 +129,132 @@ export function pegelDashboard(root, ctx) {
    * Gezogen wird am Griff oder überall, solange der Inhalt ganz oben steht (sonst gehört die Bewegung dem Scrollen).
    */
   function wischen(el) {
-    // Wie auf der Hauptkarte: beim Ziehen nur verschieben (transform, flüssig), Größe erst beim Einrasten ändern.
-    // Damit das Sheet beim Hochziehen wachsen kann, wird es zu Beginn auf volle Höhe gestellt und um den Rest nach unten verschoben.
-    let z = null;   // { y0, x0, top0, h0, basis, dy, t, v, aktiv }
-    const vh = () => window.visualViewport?.height || window.innerHeight;
-    const stufen = () => ({ voll: kopfUnten() + STREIFEN });   // groß: unter Suche und Chips bleibt ein Streifen Karte
-    const setze = (y, mitAnimation = false) => { el.style.transition = mitAnimation ? 'transform .26s cubic-bezier(.2, .8, .2, 1)' : 'none'; el.style.transform = `translate3d(0, ${y}px, 0)`; };
+    // Wie auf der Hauptkarte: beim Ziehen nur verschieben (transform, flüssig).
+    // Das Sheet steht beim Ziehen in seiner großen Form (oben = Stufe „groß“, volle Höhe) und wird um y nach unten verschoben:
+    //   y = 0 → groß · y = H − Höhe(klein) → klein · y = H → zu.  So rastet es genau dort ein, wo es danach steht – ohne Sprung.
+    // Beim Hochziehen aus „klein“ wird der Inhalt gleich zu Beginn gegen die Details getauscht (kein leeres weißes Blatt).
+    let z = null;   // { y0, x0, top0, h0, basis, dy, t, v, aktiv, warGross }
+    // Bewegung und Ende hängen am berührten Element: es kann beim Tausch des Inhalts aus dem Sheet verschwinden,
+    // seine Touch-Ereignisse kommen dann nicht mehr beim Sheet an (auch nicht auf dem iPhone).
+    let beruehrt = null;
+    const loesen = () => { if (!beruehrt) return; beruehrt.removeEventListener('touchmove', bewegen); beruehrt.removeEventListener('touchend', beenden); beruehrt.removeEventListener('touchcancel', abbrechen); beruehrt = null; };
     el.addEventListener('touchstart', (e) => {
-      z = null;
+      z = null; loesen();
       if (!isMobile() || e.touches.length !== 1 || e.target.closest('.gc-wrap, .pd-umschalter, input, select, .pt-kurve')) return;
+      const lage = sheet.laeuft ? el.getBoundingClientRect().top : null;   // mitten in einer Bewegung gegriffen: von dort weiter
+      if (sheet.laeuft) sheet.abschliessen();
       if (inhalt.scrollTop > 0 && !e.target.closest('.pa-griff')) return;
       const r = el.getBoundingClientRect();
-      z = { y0: e.touches[0].clientY, x0: e.touches[0].clientX, top0: r.top, h0: r.height, dy: 0, t: e.timeStamp, v: 0, aktiv: false };
+      z = { y0: e.touches[0].clientY, x0: e.touches[0].clientX, top0: lage ?? r.top, h0: r.height, dy: 0, t: e.timeStamp, v: 0, aktiv: false, warGross: ui.gross };
+      beruehrt = e.target;
+      beruehrt.addEventListener('touchmove', bewegen, { passive: false });
+      beruehrt.addEventListener('touchend', beenden, { passive: true });
+      beruehrt.addEventListener('touchcancel', abbrechen, { passive: true });
     }, { passive: true });
-    el.addEventListener('touchmove', (e) => {
+    function bewegen(e) {
       if (!z) return;
       const dy = e.touches[0].clientY - z.y0, dx = e.touches[0].clientX - z.x0;
       if (!z.aktiv) {
         if (Math.abs(dy) < 8 || Math.abs(dx) > Math.abs(dy)) return;
-        if (dy < 0 && ui.gross) { z = null; return; }                      // ganz offen: nach oben gehört dem Scrollen
+        if (dy < 0 && ui.gross) { z = null; return; }                      // groß: nach oben gehört dem Scrollen
         if (dy > 0 && inhalt.scrollTop > 0 && !e.target.closest('.pa-griff')) { z = null; return; }
         z.aktiv = true;
-        // einmalig: volle Höhe, um den Abstand nach unten verschoben – ab jetzt nur noch transform
-        z.basis = Math.max(0, z.top0 - stufen().voll);
-        el.style.willChange = 'transform';
-        el.style.maxHeight = 'none';
-        el.style.top = `${stufen().voll}px`;
-        setze(z.basis);
+        if (!ui.gross) kleinH = z.h0;
+        if (dy < 0 && ui.auswahl && !ui.gross) { ui.gross = true; zeichnen(); }   // Details schon beim Hochziehen zeigen
+        z.basis = sheet.grossForm() + (z.top0 - sheet.grossTopBild());
+        sheet.setze(z.basis);
       }
       if (e.cancelable) e.preventDefault();
       z.v = (dy - z.dy) / Math.max(1, e.timeStamp - z.t); z.dy = dy; z.t = e.timeStamp;
-      setze(Math.max(0, z.basis + dy));
-    }, { passive: false });
+      sheet.setze(Math.max(0, z.basis + dy));
+    }
+    function beenden() { ende(false); }
+    function abbrechen() { ende(true); }
     const ende = (abbruch) => {
-      const a = z; z = null;
+      const a = z; z = null; loesen();
       if (!a || !a.aktiv) return;
-      const top = a.top0 + a.dy, st = stufen(), schnell = Math.abs(a.v) > 0.5;
-      const kleinTop = vh() - Math.min(a.h0, vh() * 0.6);
-      const kTop = ui.gross ? vh() * 0.55 : kleinTop;
+      const H = el.offsetHeight, y = Math.max(0, a.basis + a.dy), schnell = Math.abs(a.v) > 0.5;
+      const stufen = { gross: 0, klein: Math.max(0, H - kleinHoehe(H)), zu: H };
+      if (!ui.auswahl) stufen.klein = Math.max(0, H - Math.min(a.h0, H));   // Liste: „klein“ ist ihre Höhe beim Start
       let ziel;
-      if (abbruch) ziel = ui.gross ? 'gross' : 'klein';
-      else if (schnell) ziel = a.v < 0 ? 'gross' : (ui.gross ? 'klein' : 'zu');
-      else ziel = [['gross', st.voll], ['klein', kTop], ['zu', vh() - 40]].reduce((b, k) => (Math.abs(k[1] - top) < Math.abs(b[1] - top) ? k : b))[0];
-      const zielTop = { gross: st.voll, klein: kTop, zu: vh() }[ziel];
-      setze(Math.max(0, zielTop - st.voll), true);
-      setTimeout(() => {
-        el.style.transition = ''; el.style.transform = ''; el.style.top = ''; el.style.maxHeight = ''; el.style.willChange = '';
-        if (ziel === 'gross') grossSetzen(true);
-        else if (ziel === 'klein') grossSetzen(false);
-        else if (ui.auswahl) abwaehlen(); else if (ui.liste) listeSetzen(null);
-      }, 260);
+      if (abbruch) ziel = a.warGross ? 'gross' : 'klein';
+      else if (schnell) ziel = a.v < 0 ? 'gross' : (a.warGross ? 'klein' : 'zu');
+      else ziel = Object.entries(stufen).reduce((b, k) => (Math.abs(k[1] - y) < Math.abs(b[1] - y) ? k : b))[0];
+      sheet.fahre(stufen[ziel], () => {
+        if (ziel === 'zu') { if (ui.auswahl) abwaehlen(); else if (ui.liste) listeSetzen(null); return; }
+        const gross = ziel === 'gross';
+        if (ui.gross !== gross) { ui.gross = gross; zeichnen({ fokus: gross ? null : (ui.auswahl ? '.pa-verlauf' : null) }); }
+        if (ui.auswahl && karteFertig) karte.hinzeigen(gewaehlt());
+      });
     };
-    el.addEventListener('touchend', () => ende(false), { passive: true });
-    el.addEventListener('touchcancel', () => ende(true), { passive: true });
   }
+
+  /** Höhe des kleinen Sheets (zuletzt gemessen; vorher eine Schätzung). */
+  function kleinHoehe(H) { return Math.min(kleinH || 300, H); }
+
+  /**
+   * Bewegungen des Sheets (Handy). Während einer Bewegung steht das Sheet in der großen Form (top = Stufe „groß“, volle Höhe)
+   * und wird nur per transform verschoben; erst am Ziel wird der echte Zustand gesetzt – an genau derselben Stelle.
+   */
+  const sheet = {
+    laeuft: false,
+    ruhig: () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+    grossTop: () => kopfUnten() + STREIFEN,                         // bezogen auf die Pegel-Ansicht (für style.top)
+    grossTopBild: () => (root.querySelector('.pa-haupt')?.getBoundingClientRect().top || 0) + kopfUnten() + STREIFEN,   // im Fenster
+    /** in die große Form stellen, ohne dass es sich sichtbar bewegt; Rückgabe: y für die bisherige Lage (0 = groß) */
+    grossForm() {
+      panel.style.willChange = 'transform'; panel.style.maxHeight = 'none'; panel.style.top = `${this.grossTop()}px`;
+      return 0;
+    },
+    setze(y, ms = 0) {
+      panel.style.transition = ms ? `transform ${ms}ms cubic-bezier(.2, .8, .2, 1)` : 'none';
+      panel.style.transform = `translate3d(0, ${y}px, 0)`;
+    },
+    aufraeumen() { for (const k of ['transition', 'transform', 'top', 'maxHeight', 'willChange']) panel.style[k] = ''; },
+    /** von der aktuellen Lage nach y fahren, dann fertig() (Zustand setzen) und Inline-Stile entfernen */
+    fahre(y, fertig) {
+      const ms = this.ruhig() ? 0 : 280;
+      this.laeuft = true; this.offen = fertig;
+      this.setze(y, ms);
+      this.uhr = setTimeout(() => this.abschliessen(), ms ? ms + 20 : 0);
+    },
+    /** laufende Bewegung sofort beenden (Zustand setzen) */
+    abschliessen() {
+      clearTimeout(this.uhr);
+      const f = this.offen; this.offen = null;
+      this.aufraeumen(); this.laeuft = false;
+      f?.();
+    },
+    /** Zustand per Knopf wechseln: weich von der jetzigen Lage in die neue (Handy), sonst sofort */
+    wechsel(gross, fertig, sofort = false) {
+      if (this.laeuft) this.abschliessen();
+      if (sofort || !isMobile() || panel.hidden || this.ruhig()) { fertig(); return; }
+      const r = panel.getBoundingClientRect();
+      if (!ui.gross) kleinH = r.height;
+      const H0 = (() => { this.grossForm(); return panel.offsetHeight; })();
+      const von = r.top - this.grossTopBild();
+      if (gross) {
+        // klein → groß: Details sofort zeigen, von unten hochfahren
+        this.setze(von); fertig(); this.grossForm(); this.setze(von);
+        void panel.offsetHeight;
+        this.fahre(0, () => {});
+      } else {
+        // groß → klein: in der großen Form bis zur Höhe des kleinen Sheets fahren, dann tauschen
+        this.setze(von);
+        void panel.offsetHeight;
+        this.fahre(Math.max(0, H0 - kleinHoehe(H0)), fertig);
+      }
+    },
+    /** schließen: nach unten hinausfahren */
+    weg(fertig) {
+      if (this.laeuft) this.abschliessen();
+      if (!isMobile() || panel.hidden || this.ruhig()) { fertig(); return; }
+      const r = panel.getBoundingClientRect();
+      this.grossForm(); const H = panel.offsetHeight; const von = r.top - this.grossTopBild();
+      this.setze(von); void panel.offsetHeight;
+      this.fahre(H, fertig);
+    },
+  };
 
   /** Unterkante von Suche und Chips (Handy), Bezug: Oberkante der Pegel-Ansicht. */
   function kopfUnten() {
@@ -235,6 +309,7 @@ export function pegelDashboard(root, ctx) {
     }
     inhalt.replaceChildren(g ? (ui.gross ? cockpit(g) : kurz(g)) : ui.liste ? liste() : '');
     inhalt.scrollTop = 0;
+    if (g && !ui.gross && isMobile() && !panel.style.top) kleinH = panel.offsetHeight;
     if (fokus) inhalt.querySelector(fokus)?.focus({ preventScroll: true });
   }
 
@@ -268,7 +343,7 @@ export function pegelDashboard(root, ctx) {
         h('h2', { class: 'pa-name', id: 'pa-name', tabindex: '-1' }, g.name, g.water ? h('small', { text: ` · ${g.water}` }) : null),
         h('button', { type: 'button', class: 'pa-ico pa-alarm', 'aria-haspopup': 'dialog', 'aria-label': `Pegel-Alarm für ${g.name}`, html: icon('bell', 19), onclick: (e) => alarmFenster(g, { opener: e.currentTarget, toast: ctx.toast }) }),
         sternKnopf(g, { klein: true, onChange: () => {} }),   // neu gezeichnet wird über das Ereignis „meine-pegel“
-        h('button', { type: 'button', class: 'pa-ico pa-schliessen', 'aria-label': 'Auswahl schließen', html: icon('close', 19), onclick: () => abwaehlen() })),
+        h('button', { type: 'button', class: 'pa-ico pa-schliessen', 'aria-label': 'Auswahl schließen', html: icon('close', 19), onclick: () => sheet.weg(() => abwaehlen()) })),
       alt ? h('p', { class: 'pa-zeit is-alt' }, h('span', { html: icon('clock', 15), 'aria-hidden': 'true' }), `Veraltet – ${formatTime(g.time)}`) : null,
       h('div', { class: 'pa-k-mitte' },
         h('p', { class: 'pa-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: ` ${g.unit}` })),
@@ -317,6 +392,7 @@ export function pegelDashboard(root, ctx) {
 
   // ---------------------------------------------------------------- Auswahl, Größe, Filter
   function waehlen(id, { fly = false, gross = false, quelle = null, still = false } = {}) {
+    if (sheet.laeuft) sheet.abschliessen();
     if (!stand) { ui.auswahl = id; return false; }
     const g = stand.byId.get(id);
     if (!g) { ctx.toast?.('Dieser Pegel wurde nicht gefunden.'); return false; }
@@ -328,6 +404,7 @@ export function pegelDashboard(root, ctx) {
     return true;
   }
   function abwaehlen({ still = false } = {}) {
+    if (sheet.laeuft) sheet.abschliessen();
     if (!ui.auswahl && !ui.gross) return;
     const war = ui.auswahl;
     ui.auswahl = null; ui.gross = false;
@@ -340,14 +417,18 @@ export function pegelDashboard(root, ctx) {
     griff.setAttribute('aria-expanded', String(ui.gross));
     griff.setAttribute('aria-label', ui.gross ? 'Fenster verkleinern' : 'Fenster ganz öffnen');
   }
-  function grossSetzen(gross) {
+  function grossSetzen(gross, { sofort = false } = {}) {
+    if (sheet.laeuft) sheet.abschliessen();
     if (gross === ui.gross) return;
-    ui.gross = gross;
-    zeichnen({ fokus: gross ? (ui.auswahl ? '#pd-name' : null) : (ui.auswahl ? '.pa-verlauf' : null) });
-    if (ui.auswahl && karteFertig) karte.hinzeigen(gewaehlt());   // groß: Pegel in den Kartenstreifen oben
+    sheet.wechsel(gross, () => {
+      ui.gross = gross;
+      zeichnen({ fokus: gross ? (ui.auswahl ? '#pd-name' : null) : (ui.auswahl ? '.pa-verlauf' : null) });
+      if (ui.auswahl && karteFertig) karte.hinzeigen(gewaehlt());   // groß: Pegel in den Kartenstreifen oben
+    }, sofort);
   }
   /** Liste „Favoriten“ bzw. „In der Nähe“ öffnen (null: schließen). Eine gewählte Auswahl wird dabei geschlossen. */
   function listeSetzen(l) {
+    if (sheet.laeuft) sheet.abschliessen();
     ui.liste = l; ui.gross = false;
     if (l && ui.auswahl) { ui.auswahl = null; if (karteFertig) karte.markieren(null); ctx.auswahl?.(null); }
     if (l === 'fav' && karteFertig) { const favs = meinePegel.alle().map(id => stand?.byId.get(id)).filter(Boolean); if (favs.length) karte.passend(favs); }

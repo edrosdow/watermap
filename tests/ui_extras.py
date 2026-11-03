@@ -164,7 +164,7 @@ with sync_playwright() as p:
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(HAFEN['id'])}, {{ full: true }})")
         pg.wait_for_selector('#detail .facts-block .hi-note', timeout=8000)
         fb = pg.locator('#detail .facts-block')
-        hi = fb.inner_text()
+        hi = fb.text_content()   # Überschrift in Großbuchstaben (CSS) – Text ohne Umwandlung
         check('Eigenschaften' in hi and 'Liegeplatzgebühr' in hi and '3,00 € pro lfd. Meter und Tag' in hi and 'Fäkalienabsaugung' in hi and 'WLAN' in hi,
               f'{name}: Website-Angaben als Zeilen der Eigenschaften')
         check(pg.locator('#detail .facts-block .facts').count() == 1 and pg.locator('#detail .hi-block').count() == 0, f'{name}: eine Tabelle, kein eigener Block')

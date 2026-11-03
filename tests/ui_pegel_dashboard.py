@@ -293,8 +293,35 @@ def run(b, w, hh, mobile):
         suche_waehlen(pg, 'trier', 'Trier')
         pg.click('.pa-griff'); pg.wait_for_timeout(200)
         check('is-gross' in pg.get_attribute('.pa-panel', 'class') and pg.locator('.pa-panel .pd').count() == 1 and pg.get_attribute('.pa-griff', 'aria-expanded') == 'true', f'{tag}: Griff antippen vergrößert das Sheet (Cockpit)')
-        touch_wisch(pg, '.pa-griff', 140)
+        PROBEN = """(() => { window.__proben = []; const p = document.querySelector('.pa-panel'), t0 = performance.now();
+          const f = () => { window.__proben.push([Math.round(p.getBoundingClientRect().top), p.classList.contains('is-gross'), !!p.querySelector('.pd')]); if (performance.now() - t0 < 700) requestAnimationFrame(f); }; f(); })()"""
+        def spruenge():
+            pr = pg.evaluate('window.__proben'); return max((abs(b[0] - a[0]) for a, b in zip(pr, pr[1:]) if a[1] != b[1] or a[2] != b[2]), default=0), pr
+        pg.evaluate(PROBEN); touch_wisch(pg, '.pa-griff', 140); pg.wait_for_timeout(350)
         check('is-gross' not in pg.get_attribute('.pa-panel', 'class') and pg.locator('.pa-kurz').count() == 1, f'{tag}: nach unten wischen verkleinert')
+        sp, pr = spruenge()
+        check(sp <= 3 and len(pr) > 5, f'{tag}: runterwischen: rastet ohne Sprung auf klein ein (Sprung {sp} px beim Umschalten)')
+        # Hochwischen: Details erscheinen schon während des Ziehens (kein leeres Blatt)
+        bb = pg.locator('.pa-griff').bounding_box(); x, y = bb['x'] + bb['width'] / 2, bb['y'] + bb['height'] / 2
+        cdp = pg.context.new_cdp_session(pg)
+        cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': x, 'y': y}]})
+        for i in range(1, 9): cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': x, 'y': y - 40 * i}]}); pg.wait_for_timeout(16)
+        check(pg.locator('.pa-panel .pd .pd-wert').count() == 1 and pg.locator('.pa-kurz').count() == 0, f'{tag}: hochziehen: Details schon während des Ziehens sichtbar')
+        pg.evaluate(PROBEN); cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); pg.wait_for_timeout(500)
+        sp, pr = spruenge(); top = pg.locator('.pa-panel').bounding_box()['y']
+        check('is-gross' in pg.get_attribute('.pa-panel', 'class') and sp <= 3 and abs(top - 166) <= 2, f'{tag}: hochziehen: rastet weich auf groß ein (oben {top:.0f} px, Sprung {sp} px)')
+        # Knopf/Griff: weich statt sprunghaft
+        pg.evaluate(PROBEN); pg.click('.pa-griff'); pg.wait_for_timeout(500)
+        sp, pr = spruenge(); tops = [a[0] for a in pr]
+        check('is-gross' not in pg.get_attribute('.pa-panel', 'class') and sp <= 3 and len(set(tops)) > 4 and tops == sorted(tops), f'{tag}: Griff: fährt weich auf klein ({len(set(tops))} Zwischenlagen, Sprung {sp} px)')
+        pg.evaluate(PROBEN); pg.click('.pa-verlauf'); pg.wait_for_timeout(500)
+        pr = pg.evaluate('window.__proben'); tops = [a[0] for a in pr]
+        check('is-gross' in pg.get_attribute('.pa-panel', 'class') and len(set(tops)) > 4 and tops == sorted(tops, reverse=True) and abs(tops[-1] - 166) <= 2, f'{tag}: „Details“: fährt weich hoch ({len(set(tops))} Zwischenlagen)')
+        pg.click('.pa-griff'); pg.wait_for_timeout(450)
+        pg.evaluate(PROBEN); pg.click('.pa-schliessen'); pg.wait_for_timeout(500)
+        pr = pg.evaluate('window.__proben'); tops = [a[0] for a in pr if a[0] != 0]
+        check(pg.locator('.pa-panel').is_hidden() and len(set(tops)) > 3 and tops == sorted(tops), f'{tag}: „×“: fährt nach unten hinaus ({len(set(tops))} Zwischenlagen)')
+        suche_waehlen(pg, 'trier', 'Trier'); pg.wait_for_timeout(300)
         # folgt dem Finger: mitten im Ziehen steht das Sheet schon weiter oben, erst danach rastet es ein
         bb = pg.locator('.pa-griff').bounding_box(); x, y = bb['x'] + bb['width'] / 2, bb['y'] + bb['height'] / 2
         top0 = pg.locator('.pa-panel').bounding_box()['y']
@@ -308,7 +335,7 @@ def run(b, w, hh, mobile):
         check(stil[0] == stil2[0] and 'translate3d' in stil[1] and stil[1] != stil2[1], f'{tag}: beim Ziehen nur verschoben (transform), Größe bleibt ({stil} → {stil2})')
         cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); pg.wait_for_timeout(450)
         check(abs((top0 - mitten) - 90) <= 12, f'{tag}: Sheet folgt beim Ziehen dem Finger ({top0 - mitten:.0f} px bei 90 px Weg)')
-        if 'is-gross' in pg.get_attribute('.pa-panel', 'class'): pg.click('.pa-griff'); pg.wait_for_timeout(300)   # zurück auf klein
+        if 'is-gross' in pg.get_attribute('.pa-panel', 'class'): pg.click('.pa-griff'); pg.wait_for_timeout(450)   # zurück auf klein
         anfragen = len(api['calls'])
         touch_wisch(pg, '.pa-k-kopf', -120)
         pb = pg.locator('.pa-panel').bounding_box()

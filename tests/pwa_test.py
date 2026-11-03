@@ -27,7 +27,7 @@ with sync_playwright() as p:
     check(pg.locator('.place').count() == online > 0, f'Offline: Standortliste weiterhin vorhanden ({online})')
     check(pg.locator('#offline').is_visible(), 'Offline: Hinweis sichtbar')
     pg.click('.place >> nth=0'); pg.wait_for_selector('#detail:not([hidden])')
-    check(any(t in pg.inner_text('#detail') for t in ('Eigenschaften', 'Wichtig für dein Boot')), 'Offline: Details öffnen')
+    check(any(t in pg.text_content('#detail') for t in ('Eigenschaften', 'Wichtig für dein Boot')), 'Offline: Details öffnen')   # Text ohne CSS-Großbuchstaben
     ctx.set_offline(False)
     check(not errs, f'Keine JS-Fehler {errs[:2]}')
     # Manifest

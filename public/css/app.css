@@ -1138,3 +1138,62 @@ input.hat-x { padding-right: calc(var(--x-rechts, 2px) + 44px) !important; }
   .wxd[open], .peek:not([hidden]), .detail:not([hidden]), .pa-panel:not([hidden]) { animation: sheet-ein .28s cubic-bezier(.2, .8, .2, 1); }
 }
 @media (prefers-reduced-motion: reduce) { .wxd[open], .peek:not([hidden]), .detail:not([hidden]), .pa-panel:not([hidden]) { animation: none; } }
+
+/* ------------------------------------------------------------------ 7.57.0 Zart blau auch für Standort-Details und das Fenster „Wetter und Wind“
+   Muster wie die Pegel-Ansicht: hellblauer Grund, weiße Karten, Name mittig, drei gleiche Knöpfe, Warnungen behalten ihre Farbe. */
+:root { --zb-grund: linear-gradient(180deg, #EAF5F9 0%, #F5FAFC 60%, #FFFFFF 100%); --zb-schatten: 0 1px 4px rgba(11, 48, 69, .09); --zb-matt: #5B6B77; --zb-petrol: #087F9C; }
+.detail:not(.is-pegel), .detail:not(.is-pegel) .detail-scroll { background: var(--zb-grund); }
+.detail:not(.is-pegel) .detail-head.dh { background: #EAF5F9; grid-template-columns: 44px 1fr 44px; text-align: center; padding: 14px 14px 4px; border: 0; }
+.detail:not(.is-pegel) .dh .detail-title { order: 2; grid-column: 2; }
+.detail:not(.is-pegel) .dh-close { order: 1; grid-column: 1; grid-row: 1; width: 38px; height: 38px; background: #fff; box-shadow: var(--zb-schatten); }
+.detail:not(.is-pegel) .dh-kicker { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; color: var(--zb-matt); }
+.detail:not(.is-pegel) .dh .detail-title h2 { font-size: 28px; font-weight: 500; letter-spacing: -.01em; margin: 4px 0 2px; }
+.detail:not(.is-pegel) .dh-meta { justify-content: center; color: var(--zb-matt); font-size: 14px; }
+.detail:not(.is-pegel) .detail-body { padding: 8px 14px max(24px, var(--bn-space, 0px)); gap: 10px; }
+.detail:not(.is-pegel) .dbtns { grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.detail:not(.is-pegel) .dbtn { flex-direction: column; min-height: 64px; gap: 4px; border: 0; border-radius: 16px; background: #fff; color: #0B3045; font-weight: 600; font-size: 13.5px; box-shadow: var(--zb-schatten); }
+.detail:not(.is-pegel) .dbtn-primary { color: var(--zb-petrol); }
+.detail:not(.is-pegel) .dbtn-primary svg { color: var(--zb-petrol); }
+.detail:not(.is-pegel) .ph-leer, .detail:not(.is-pegel) .vo-karte:not(.vo-warn):not(.vo-stop):not(.is-edit), .detail:not(.is-pegel) .wb, .detail:not(.is-pegel) .coords-row, .detail:not(.is-pegel) .wxz:not(.wxz-warn) { background: #fff; border: 0; border-radius: 18px; box-shadow: var(--zb-schatten); }
+.detail:not(.is-pegel) .wxz-warn, .detail:not(.is-pegel) .vo-karte { border-radius: 18px; }
+.detail:not(.is-pegel) .ph-leer { padding: 12px 14px; }
+.detail:not(.is-pegel) .ph-leer-ico { background: #EAF5F9; }
+.detail:not(.is-pegel) .ph-leer-btn { background: #fff; color: var(--zb-petrol); box-shadow: inset 0 0 0 1.5px var(--zb-petrol); }
+.detail:not(.is-pegel) .wb { margin: 0; }
+.detail:not(.is-pegel) .wb-kopf h3 { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--zb-matt); }
+.detail:not(.is-pegel) .wb-ico { display: none; }
+.detail:not(.is-pegel) .wb-p { background: #F3F7F9; }
+.detail:not(.is-pegel) .coords-row { padding: 10px 14px; }
+.detail:not(.is-pegel) .coords-row .btn { border: 0; background: #EAF5F9; color: var(--zb-petrol); }
+.detail:not(.is-pegel) .vo-schmal-btn { background: #EAF5F9; color: var(--zb-petrol); }
+.detail:not(.is-pegel) footer.source { text-align: center; color: var(--zb-matt); font-size: 13px; border: 0; }
+.detail:not(.is-pegel) .detail-links { justify-content: center; }
+
+.wxd.wxd-wetter { background: var(--zb-grund); }
+.wxd.wxd-wetter .wxd-kopf { display: grid; grid-template-columns: 44px 1fr 44px; text-align: center; padding: 6px 14px 4px; }
+.wxd.wxd-wetter .wxd-kopf > div { grid-column: 2; grid-row: 1; }
+.wxd.wxd-wetter .wxd-x { grid-column: 1; grid-row: 1; width: 38px; height: 38px; background: #fff; box-shadow: var(--zb-schatten); }
+.wxd.wxd-wetter .wxd-kopf h2 { font-size: 26px; font-weight: 500; }
+.wxd.wxd-wetter .wxd-unter { color: var(--zb-matt); }
+.wxd.wxd-wetter .wxd-body { padding: 4px 14px 24px; }
+.wxd.wxd-wetter .wx { display: flex; flex-direction: column; gap: 10px; }
+.wxd.wxd-wetter .wx-alerts { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+.wxd.wxd-wetter .wx-alert { border-radius: 18px; margin: 0; }
+.wxd.wxd-wetter .wx-now { flex-direction: column; gap: 4px; background: transparent; padding: 6px 0 4px; text-align: center; }
+.wxd.wxd-wetter .wx-now-wind { flex-direction: column; gap: 2px; }
+.wxd.wxd-wetter .wx-now-arrow { width: 38px; height: 38px; background: #fff; color: var(--zb-petrol); box-shadow: var(--zb-schatten); }
+.wxd.wxd-wetter .wx-big strong { font-size: 72px; font-weight: 250; letter-spacing: -.04em; color: #0B3045; }
+.wxd.wxd-wetter .wx-big span { font-size: 22px; font-weight: 400; color: #0B3045; }
+.wxd.wxd-wetter .wx-sub { color: var(--zb-matt); margin: 0; }
+.wxd.wxd-wetter .wx-now-temp { flex-direction: row; gap: 8px; margin-top: 6px; padding: 8px 16px; background: #fff; border-radius: 999px; box-shadow: var(--zb-schatten); }
+.wxd.wxd-wetter .wx-meta { text-align: center; font-size: 12.5px; color: var(--zb-matt); margin: 0; }
+.wxd.wxd-wetter .note-warn { border-radius: 18px; margin: 0; }
+.wxd.wxd-wetter .wx-h4 { margin: 4px 0 0; box-shadow: 0 -2px 4px -2px rgba(11, 48, 69, .09); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--zb-matt); background: #fff; border-radius: 18px 18px 0 0; padding: 12px 14px 0; }
+.wxd.wxd-wetter .wx-legend { background: #fff; margin: 0; padding: 6px 14px 0; }
+.wxd.wxd-wetter .gc-wrap { background: #fff; margin: 0; padding: 0 0 6px; }
+.wxd.wxd-wetter details.gc-table { background: #fff; margin: 0; padding: 0 14px 12px; border-radius: 0 0 18px 18px; box-shadow: 0 3px 4px -2px rgba(11, 48, 69, .09); }
+.wxd.wxd-wetter .wx-strip { background: #fff; border-radius: 18px; padding: 10px; box-shadow: var(--zb-schatten); }
+.wxd.wxd-wetter .wx-strip li { background: #F3F7F9; border-radius: 12px; }
+.detail:not(.is-pegel) .wx-block, .detail:not(.is-pegel) .detail-body > .block:not(.wb):not(.vo-karte) { background: #fff; border: 0; border-radius: 18px; padding: 12px 14px; box-shadow: var(--zb-schatten); }
+.detail:not(.is-pegel) .detail-body > .block > h3 { margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--zb-matt); }
+.detail:not(.is-pegel) .wx-block .wx-alert { border-radius: 14px; }

@@ -152,12 +152,12 @@ def run(b, w, hh, mobile):
     check('Hamburg St. Pauli' in pg.inner_text('#pf-tide-start'), f'{tag}: Namen schön geschrieben („St. Pauli“)')
     texte = [t for t in pg.locator('.pf-zeile').all_inner_texts()]
     check(len(texte) == 13 and 'Tide' in texte[10] and 'km 623,1 · Tide' in texte[10] and texte[12].startswith('Elbe Ohne Km'), f'{tag}: alle Pegel, Tide markiert, ohne km am Ende')
-    pg.wait_for_function("[...document.querySelectorAll('.pf-zeile')].some(z => / HW \\d\\d:\\d\\d/.test(z.textContent))", timeout=5000)
+    next((True for _ in range(100) if pg.evaluate("[...document.querySelectorAll('.pf-zeile')].some(z => / HW (morgen )?\\d\\d:\\d\\d/.test(z.textContent))") or pg.wait_for_timeout(50)), None)   # selbst abfragen: die CSP verbietet wait_for_function mit Text
     texte = [t for t in pg.locator('.pf-zeile').all_inner_texts()]
-    check(re.search(r'km 727 · HW \d\d:\d\d', texte[11]) and 'km 623,1 · Tide' in texte[10], f'{tag}: Tidepegel mit BSH-Ort „HW 14:32“ statt „Tide“ ({texte[11]!r})')
+    check(re.search(r'km 727 · HW (morgen )?\d\d:\d\d', texte[11]) and 'km 623,1 · Tide' in texte[10], f'{tag}: Tidepegel mit BSH-Ort „HW 14:32“ statt „Tide“ ({texte[11]!r})')
     check(len([c for c in calls if '/api/gezeiten' in c and 'pegel=' in c and U(20) in c]) == 0, f'{tag}: nur Pegel mit BSH-Ort werden abgefragt')
     pg.wait_for_function("document.querySelector('.pf-tide-hw')", timeout=5000)
-    check(re.search(r'· HW Cuxhaven \d\d:\d\d', pg.inner_text('.pf-tidezeile')), f'{tag}: Tide-Zeile mit nächstem HW ({pg.inner_text(".pf-tidezeile")!r})')
+    check(re.search(r'· HW Cuxhaven (morgen )?\d\d:\d\d', pg.inner_text('.pf-tidezeile')), f'{tag}: Tide-Zeile mit nächstem HW ({pg.inner_text(".pf-tidezeile")!r})')
     neu = [c for c in calls[len(calls) - 50:] if 'measurements' in c]
     check(len([c for c in calls if 'measurements' in c]) - n_mess <= 1, f'{tag}: höchstens eine Abfrage (Tide-Zeile) für die Flussseite')
     if not mobile and w >= 1024:
