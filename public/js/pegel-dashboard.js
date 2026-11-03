@@ -71,7 +71,7 @@ export function kurve24(pts, g, { breite = 300, hoehe = 60, klein = false } = {}
  * Rückgabe: { zeigen(force), waehlen(id, opts), abwaehlen(opts), vorbereiten(), stand, auswahl }
  */
 export function pegelDashboard(root, ctx) {
-  const ui = { liste: null, auswahl: null, gross: false, voll: false, wechsel: 0, aktiv: -1, treffer: [] };   // Handy: klein → gross (ca. 80 %) → voll
+  const ui = { liste: null, auswahl: null, gross: false, aktiv: -1, treffer: [] };   // Handy: klein ↔ gross (ganz offen)
   let stand = null, ladeFehler = false, app = null, karte = null, panel = null, inhalt = null, griff = null, standZeile = null, feld = null, trefferBox = null, filterBox = null;
   let karteFertig = false;
 
@@ -106,10 +106,8 @@ export function pegelDashboard(root, ctx) {
       h('div', { class: 'pa-suchbox' }, h('span', { class: 'pa-suche-ico', html: icon('search', 19), 'aria-hidden': 'true' }), feld, trefferBox),
       filterBox);
     inhalt = h('div', { class: 'pa-inhalt' });
-    griff = h('button', { type: 'button', class: 'pa-griff', 'aria-controls': 'pa-panel', onclick: () => (!ui.gross ? grossSetzen(true) : !ui.voll ? vollSetzen(true) : grossSetzen(false)) }, h('span', { 'aria-hidden': 'true' }));
+    griff = h('button', { type: 'button', class: 'pa-griff', 'aria-controls': 'pa-panel', onclick: () => grossSetzen(!ui.gross) }, h('span', { 'aria-hidden': 'true' }));
     panel = h('aside', { class: 'pa-panel', id: 'pa-panel', 'aria-label': 'Pegel-Details', hidden: true }, griff, inhalt);
-    // Handy, Stufe „gross“: wer im Sheet nach unten scrollt, bekommt es ganz (Stufe „voll“) – Ziehen und Scrollen stören sich nicht
-    inhalt.addEventListener('scroll', () => { if (isMobile() && ui.gross && !ui.voll && inhalt.scrollTop > 8 && Date.now() - ui.wechsel > 500) vollSetzen(true); }, { passive: true });   // nicht das Nachlaufen der Wischgeste
     wischen(panel);
     app = h('div', { class: 'pa' }, kopf, h('div', { class: 'pa-haupt' }, karte.el, panel));
     app.addEventListener('keydown', (e) => {
@@ -131,7 +129,7 @@ export function pegelDashboard(root, ctx) {
     // Damit das Sheet beim Hochziehen wachsen kann, wird es zu Beginn auf volle Höhe gestellt und um den Rest nach unten verschoben.
     let z = null;   // { y0, x0, top0, h0, basis, dy, t, v, aktiv }
     const vh = () => window.visualViewport?.height || window.innerHeight;
-    const stufen = () => ({ voll: 8, gross: vh() * 0.18 });
+    const stufen = () => ({ voll: 8 });
     const setze = (y, mitAnimation = false) => { el.style.transition = mitAnimation ? 'transform .26s cubic-bezier(.2, .8, .2, 1)' : 'none'; el.style.transform = `translate3d(0, ${y}px, 0)`; };
     el.addEventListener('touchstart', (e) => {
       z = null;
@@ -145,7 +143,7 @@ export function pegelDashboard(root, ctx) {
       const dy = e.touches[0].clientY - z.y0, dx = e.touches[0].clientX - z.x0;
       if (!z.aktiv) {
         if (Math.abs(dy) < 8 || Math.abs(dx) > Math.abs(dy)) return;
-        if (dy < 0 && ui.voll) { z = null; return; }                       // ganz offen: nach oben gehört dem Scrollen
+        if (dy < 0 && ui.gross) { z = null; return; }                      // ganz offen: nach oben gehört dem Scrollen
         if (dy > 0 && inhalt.scrollTop > 0 && !e.target.closest('.pa-griff')) { z = null; return; }
         z.aktiv = true;
         // einmalig: volle Höhe, um den Abstand nach unten verschoben – ab jetzt nur noch transform
@@ -166,16 +164,15 @@ export function pegelDashboard(root, ctx) {
       const kleinTop = vh() - Math.min(a.h0, vh() * 0.6);
       const kTop = ui.gross ? vh() * 0.55 : kleinTop;
       let ziel;
-      if (abbruch) ziel = ui.voll ? 'voll' : ui.gross ? 'gross' : 'klein';
-      else if (schnell) ziel = a.v < 0 ? (ui.gross ? 'voll' : 'gross') : (ui.voll ? 'gross' : ui.gross ? 'klein' : 'zu');
-      else ziel = [['voll', st.voll], ['gross', st.gross], ['klein', kTop], ['zu', vh() - 40]].reduce((b, k) => (Math.abs(k[1] - top) < Math.abs(b[1] - top) ? k : b))[0];
-      const zielTop = { voll: st.voll, gross: st.gross, klein: kTop, zu: vh() }[ziel];
+      if (abbruch) ziel = ui.gross ? 'gross' : 'klein';
+      else if (schnell) ziel = a.v < 0 ? 'gross' : (ui.gross ? 'klein' : 'zu');
+      else ziel = [['gross', st.voll], ['klein', kTop], ['zu', vh() - 40]].reduce((b, k) => (Math.abs(k[1] - top) < Math.abs(b[1] - top) ? k : b))[0];
+      const zielTop = { gross: st.voll, klein: kTop, zu: vh() }[ziel];
       setze(Math.max(0, zielTop - st.voll), true);
       setTimeout(() => {
         el.style.transition = ''; el.style.transform = ''; el.style.top = ''; el.style.maxHeight = ''; el.style.willChange = '';
-        if (ziel === 'voll') { if (!ui.gross) grossSetzen(true); vollSetzen(true); }
-        else if (ziel === 'gross') { if (!ui.gross) grossSetzen(true); else vollSetzen(false); }
-        else if (ziel === 'klein') { if (ui.gross) grossSetzen(false); }
+        if (ziel === 'gross') grossSetzen(true);
+        else if (ziel === 'klein') grossSetzen(false);
         else if (ui.auswahl) abwaehlen(); else if (ui.liste) listeSetzen(null);
       }, 260);
     };
@@ -191,7 +188,7 @@ export function pegelDashboard(root, ctx) {
     if (neu) stand = neu;
     standZeile.textContent = stand ? standText(stand) : 'Pegeldaten sind gerade nicht erreichbar.';
     standZeile.classList.toggle('is-offline', !!stand?.offline || !stand);
-    if (ui.auswahl && stand && !stand.byId.has(ui.auswahl)) { ui.auswahl = null; ui.gross = false; ui.voll = false; }
+    if (ui.auswahl && stand && !stand.byId.has(ui.auswahl)) { ui.auswahl = null; ui.gross = false; }
     if (anders && karteFertig) karte.aktualisieren();
     if (anders || !inhalt.childElementCount || ladeFehler) zeichnen({ cockpitBehalten: true });
   }
@@ -216,7 +213,6 @@ export function pegelDashboard(root, ctx) {
     for (const b of filterBox.children) b.setAttribute('aria-pressed', String(b.dataset.liste === ui.liste && !g));
     panel.classList.toggle('hat-auswahl', !!g);
     panel.classList.toggle('is-gross', ui.gross);
-    panel.classList.toggle('is-voll', ui.gross && ui.voll);
     app.classList.toggle('pa-gross', ui.gross);
     griffStellen();
     const zahl = filterBox.querySelector('.pa-chip-zahl'); const n = meinePegel.alle().length; zahl.textContent = n ? String(n) : '';
@@ -315,7 +311,7 @@ export function pegelDashboard(root, ctx) {
     if (!stand) { ui.auswahl = id; return false; }
     const g = stand.byId.get(id);
     if (!g) { ctx.toast?.('Dieser Pegel wurde nicht gefunden.'); return false; }
-    ui.auswahl = id; ui.gross = gross; ui.voll = false; ui.liste = null;
+    ui.auswahl = id; ui.gross = gross; ui.liste = null;
     zeichnen({ fokus: quelle === 'karte' && isMobile() ? null : gross ? '#pd-name' : '#pa-name' });   // erst das Sheet, damit seine Höhe beim Hinrücken zählt
     if (karteFertig) { karte.markieren(id); karte.hinzeigen(g, fly ? { zoom: ZOOM_AUSWAHL, immer: true } : {}); }
     if (!still) ctx.auswahl?.(id);
@@ -325,7 +321,7 @@ export function pegelDashboard(root, ctx) {
   function abwaehlen({ still = false } = {}) {
     if (!ui.auswahl && !ui.gross) return;
     const war = ui.auswahl;
-    ui.auswahl = null; ui.gross = false; ui.voll = false;
+    ui.auswahl = null; ui.gross = false;
     if (karteFertig) karte.markieren(null);
     zeichnen();
     if (!still) ctx.auswahl?.(null);
@@ -333,25 +329,17 @@ export function pegelDashboard(root, ctx) {
   }
   function griffStellen() {
     griff.setAttribute('aria-expanded', String(ui.gross));
-    griff.setAttribute('aria-label', !ui.gross ? 'Fenster vergrößern' : !ui.voll ? 'Fenster ganz öffnen' : 'Fenster verkleinern');
-  }
-  /** Stufe 2 ↔ 3: nur die Höhe ändert sich – nichts wird neu gezeichnet oder geladen. */
-  function vollSetzen(voll) {
-    if (!ui.gross || voll === ui.voll) return;
-    ui.voll = voll;
-    panel.classList.toggle('is-voll', voll);
-    griffStellen();
-    if (!voll) inhalt.scrollTop = 0;
+    griff.setAttribute('aria-label', ui.gross ? 'Fenster verkleinern' : 'Fenster ganz öffnen');
   }
   function grossSetzen(gross) {
     if (gross === ui.gross) return;
-    ui.gross = gross; ui.voll = false; ui.wechsel = Date.now();
+    ui.gross = gross;
     zeichnen({ fokus: gross ? (ui.auswahl ? '#pd-name' : null) : (ui.auswahl ? '.pa-verlauf' : null) });
     if (!gross && ui.auswahl && karteFertig) karte.hinzeigen(gewaehlt());
   }
   /** Liste „Favoriten“ bzw. „In der Nähe“ öffnen (null: schließen). Eine gewählte Auswahl wird dabei geschlossen. */
   function listeSetzen(l) {
-    ui.liste = l; ui.gross = false; ui.voll = false;
+    ui.liste = l; ui.gross = false;
     if (l && ui.auswahl) { ui.auswahl = null; if (karteFertig) karte.markieren(null); ctx.auswahl?.(null); }
     if (l === 'fav' && karteFertig) { const favs = meinePegel.alle().map(id => stand?.byId.get(id)).filter(Boolean); if (favs.length) karte.passend(favs); }
     zeichnen({ fokus: l ? '#pa-liste-t' : null });

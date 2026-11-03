@@ -308,30 +308,21 @@ def run(b, w, hh, mobile):
         check(stil[0] == stil2[0] and 'translate3d' in stil[1] and stil[1] != stil2[1], f'{tag}: beim Ziehen nur verschoben (transform), Größe bleibt ({stil} → {stil2})')
         cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); pg.wait_for_timeout(450)
         check(abs((top0 - mitten) - 90) <= 12, f'{tag}: Sheet folgt beim Ziehen dem Finger ({top0 - mitten:.0f} px bei 90 px Weg)')
-        if 'is-gross' in pg.get_attribute('.pa-panel', 'class'): pg.click('.pa-griff'); pg.click('.pa-griff'); pg.wait_for_timeout(300)   # zurück auf klein
+        if 'is-gross' in pg.get_attribute('.pa-panel', 'class'): pg.click('.pa-griff'); pg.wait_for_timeout(300)   # zurück auf klein
+        anfragen = len(api['calls'])
         touch_wisch(pg, '.pa-k-kopf', -120)
         pb = pg.locator('.pa-panel').bounding_box()
-        check('is-gross' in pg.get_attribute('.pa-panel', 'class') and 'is-voll' not in pg.get_attribute('.pa-panel', 'class') and 0.12 * hh < pb['y'] < 0.25 * hh,
-              f'{tag}: nach oben wischen: Stufe 2 (ca. 80 %, oben bei {pb["y"]:.0f} px)')
-        check(abs(pb['y'] + pb['height'] - hh) <= 1, f'{tag}: Stufe 2 reicht bis unten')
-        anfragen = len(api['calls'])
-        touch_wisch(pg, '.pa-griff', -120)
-        pb = pg.locator('.pa-panel').bounding_box()
-        check('is-voll' in pg.get_attribute('.pa-panel', 'class') and pb['y'] < 60 and pg.evaluate("document.querySelector('.pa-inhalt').scrollHeight > document.querySelector('.pa-inhalt').clientHeight"), f'{tag}: weiter hochwischen: Stufe 3 (ganz, scrollbar)')
-        check(len(api['calls']) == anfragen, f'{tag}: Stufenwechsel ohne neue Anfragen')
-        pb = pg.locator('.pa-panel').bounding_box()
-        check(abs(pb['y'] + pb['height'] - hh) <= 1, f'{tag}: Stufe 3 reicht bis unten ({pb["y"] + pb["height"]:.0f} von {hh})')
+        check('is-gross' in pg.get_attribute('.pa-panel', 'class') and pb['y'] < 60 and abs(pb['y'] + pb['height'] - hh) <= 1
+              and pg.evaluate("document.querySelector('.pa-inhalt').scrollHeight > document.querySelector('.pa-inhalt').clientHeight"), f'{tag}: hochwischen: direkt ganz offen, ohne Zwischenstufe (oben bei {pb["y"]:.0f} px)')
+        check(len(api['calls']) == anfragen, f'{tag}: Wechsel ohne neue Anfragen')
         pg.evaluate("document.querySelector('.pa-inhalt').scrollTop = 1e6"); pg.wait_for_timeout(500)
         letzte = pg.evaluate("(() => { const i = document.querySelector('.pa-inhalt'); i.scrollTop = i.scrollHeight; return Math.max(...[...i.querySelectorAll('*')].filter(e => !e.closest('details:not([open])') || e.closest('summary')).map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.bottom)); })()")   # Inhalt eingeklappter Bereiche zählt nicht
         nav_y = pg.locator('#bottomnav').bounding_box()['y']
-        check(letzte <= nav_y + 1, f'{tag}: Stufe 3: letzter Inhalt über der Navigation ({letzte:.0f} ≤ {nav_y:.0f})')
+        check(letzte <= nav_y + 1, f'{tag}: ganz offen: letzter Inhalt über der Navigation ({letzte:.0f} ≤ {nav_y:.0f})')
         pg.evaluate("document.querySelector('.pa-inhalt').scrollTop = 0"); pg.wait_for_timeout(100)
         touch_wisch(pg, '.pa-griff', 140)
-        check('is-voll' not in pg.get_attribute('.pa-panel', 'class') and 'is-gross' in pg.get_attribute('.pa-panel', 'class'), f'{tag}: runterwischen: zurück auf Stufe 2')
-        pg.evaluate("document.querySelector('.pa-inhalt').scrollTop = 200"); pg.wait_for_timeout(150)
-        check('is-voll' in pg.get_attribute('.pa-panel', 'class'), f'{tag}: Scrollen in Stufe 2 öffnet Stufe 3')
-        pg.evaluate("document.querySelector('.pa-inhalt').scrollTop = 0"); pg.wait_for_timeout(100)
-        touch_wisch(pg, '.pa-griff', 140); touch_wisch(pg, '.pa-griff', 140); touch_wisch(pg, '.pa-griff', 140)
+        check('is-gross' not in pg.get_attribute('.pa-panel', 'class') and pg.locator('.pa-kurz').count() == 1, f'{tag}: runterwischen: zurück auf klein')
+        touch_wisch(pg, '.pa-griff', 140)
         check(pg.locator('.pa-kurz').count() == 0 and pg.url.endswith('#pegel') and pg.locator('.pa-panel').is_hidden(), f'{tag}: weiter nach unten wischen schließt die Auswahl')
         pg.click('.pa-chip[data-liste=fav]'); pg.wait_for_selector('.pa-liste')
         touch_wisch(pg, '.pa-griff', 140)
