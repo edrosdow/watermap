@@ -24,6 +24,7 @@ const EINORDNUNG = { low: 'Unter MNW', normal: 'Zwischen MNW und MHW', high: 'Ü
 const PFEIL = { 1: '↗', 0: '→', '-1': '↘' };
 const LISTEN = [['fav', 'Favoriten'], ['naehe', 'In der Nähe']];   // Listen auf Wunsch (Chip antippen)
 const MAX_NAEHE = 30;
+const STREIFEN = 60;   // Handy, groß: so viel Karte bleibt unter Suche und Chips sichtbar (wie auf der Hauptkarte)
 
 /** Nächste Slipanlagen am selben Gewässer (für das Cockpit). */
 export function slipsAmPegel(g, places, max = 5, radius = 30000) {
@@ -71,7 +72,7 @@ export function kurve24(pts, g, { breite = 300, hoehe = 60, klein = false } = {}
  * Rückgabe: { zeigen(force), waehlen(id, opts), abwaehlen(opts), vorbereiten(), stand, auswahl }
  */
 export function pegelDashboard(root, ctx) {
-  const ui = { liste: null, auswahl: null, gross: false, aktiv: -1, treffer: [] };   // Handy: klein ↔ gross (ganz offen)
+  const ui = { liste: null, auswahl: null, gross: false, aktiv: -1, treffer: [] };   // Handy: klein ↔ gross (bis unter die Suche)
   let stand = null, ladeFehler = false, app = null, karte = null, panel = null, inhalt = null, griff = null, standZeile = null, feld = null, trefferBox = null, filterBox = null;
   let karteFertig = false;
 
@@ -87,6 +88,7 @@ export function pegelDashboard(root, ctx) {
       abwaehlen: () => abwaehlen(),
       bewegt: () => { if (ui.liste === 'naehe' && !ui.auswahl) listeNeu(); },
       unten: () => (isMobile() && panel ? panel.offsetHeight : 0),
+      oben: () => (isMobile() ? kopfUnten() : 0),
     });
     standZeile = h('p', { class: 'pa-stand', 'aria-live': 'polite', text: 'Pegel werden geladen …' });
     feld = h('input', { type: 'search', id: 'pa-suche', class: 'pa-suche', placeholder: 'Pegel, Gewässer oder Ort suchen', autocomplete: 'off', enterkeyhint: 'search',
@@ -121,7 +123,7 @@ export function pegelDashboard(root, ctx) {
   }
 
   /**
-   * Bottom Sheet (Handy): folgt beim Ziehen dem Finger und rastet weich ein – klein, ca. 80 % (gross), ganz (voll) oder zu.
+   * Bottom Sheet (Handy): folgt beim Ziehen dem Finger und rastet weich ein – klein, groß (bis unter Suche und Chips) oder zu.
    * Gezogen wird am Griff oder überall, solange der Inhalt ganz oben steht (sonst gehört die Bewegung dem Scrollen).
    */
   function wischen(el) {
@@ -129,7 +131,7 @@ export function pegelDashboard(root, ctx) {
     // Damit das Sheet beim Hochziehen wachsen kann, wird es zu Beginn auf volle Höhe gestellt und um den Rest nach unten verschoben.
     let z = null;   // { y0, x0, top0, h0, basis, dy, t, v, aktiv }
     const vh = () => window.visualViewport?.height || window.innerHeight;
-    const stufen = () => ({ voll: 8 });
+    const stufen = () => ({ voll: kopfUnten() + STREIFEN });   // groß: unter Suche und Chips bleibt ein Streifen Karte
     const setze = (y, mitAnimation = false) => { el.style.transition = mitAnimation ? 'transform .26s cubic-bezier(.2, .8, .2, 1)' : 'none'; el.style.transform = `translate3d(0, ${y}px, 0)`; };
     el.addEventListener('touchstart', (e) => {
       z = null;
@@ -178,6 +180,13 @@ export function pegelDashboard(root, ctx) {
     };
     el.addEventListener('touchend', () => ende(false), { passive: true });
     el.addEventListener('touchcancel', () => ende(true), { passive: true });
+  }
+
+  /** Unterkante von Suche und Chips (Handy), Bezug: Oberkante der Pegel-Ansicht. */
+  function kopfUnten() {
+    const k = root.querySelector('.pa-kopf'), o = root.querySelector('.pa-haupt');
+    if (!k) return 0;
+    return Math.round(k.getBoundingClientRect().bottom - (o ? o.getBoundingClientRect().top : 0));
   }
 
   // ---------------------------------------------------------------- Laden
@@ -335,7 +344,7 @@ export function pegelDashboard(root, ctx) {
     if (gross === ui.gross) return;
     ui.gross = gross;
     zeichnen({ fokus: gross ? (ui.auswahl ? '#pd-name' : null) : (ui.auswahl ? '.pa-verlauf' : null) });
-    if (!gross && ui.auswahl && karteFertig) karte.hinzeigen(gewaehlt());
+    if (ui.auswahl && karteFertig) karte.hinzeigen(gewaehlt());   // groß: Pegel in den Kartenstreifen oben
   }
   /** Liste „Favoriten“ bzw. „In der Nähe“ öffnen (null: schließen). Eine gewählte Auswahl wird dabei geschlossen. */
   function listeSetzen(l) {

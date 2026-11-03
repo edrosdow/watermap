@@ -79,13 +79,13 @@ export function pegelKarteAnsicht(ctx) {
   /** Pegel sichtbar machen: in den freien Teil der Karte rücken (über dem Bottom Sheet), bei Bedarf hineinzoomen. */
   function hinzeigen(g, { zoom = null, immer = false } = {}) {
     if (!map) return;
-    const s = map.getSize(), unten = Math.min(ctx.unten?.() || 0, s.y * 0.7);
+    const s = map.getSize(), oben = ctx.oben?.() || 0, unten = Math.max(0, Math.min(ctx.unten?.() || 0, s.y - oben - 30));
     const z = zoom !== null ? Math.max(map.getZoom(), zoom) : map.getZoom();
-    const p = punkt(g.lat, g.lon), rand = 40;
-    const sichtbar = p.x > rand && p.x < s.x - rand && p.y > rand + 60 && p.y < s.y - unten - rand;
+    const p = punkt(g.lat, g.lon), frei = s.y - oben - unten, rand = Math.min(40, frei / 3);
+    const sichtbar = p.x > 40 && p.x < s.x - 40 && p.y > Math.max(oben, 60) + rand && p.y < s.y - unten - rand;
     if (!immer && sichtbar && z === map.getZoom()) return;
-    // Mitte so setzen, dass der Pegel in der Mitte des freien Bereichs liegt
-    const ziel = map.project([g.lat, g.lon], z).add([0, unten / 2]);
+    // Mitte so setzen, dass der Pegel in der Mitte des freien Bereichs (zwischen Kopf und Sheet) liegt
+    const ziel = map.project([g.lat, g.lon], z).add([0, (unten - oben) / 2]);
     map.setView(map.unproject(ziel, z), z, { animate: true });
   }
 

@@ -312,13 +312,20 @@ def run(b, w, hh, mobile):
         anfragen = len(api['calls'])
         touch_wisch(pg, '.pa-k-kopf', -120)
         pb = pg.locator('.pa-panel').bounding_box()
-        check('is-gross' in pg.get_attribute('.pa-panel', 'class') and pb['y'] < 60 and abs(pb['y'] + pb['height'] - hh) <= 1
-              and pg.evaluate("document.querySelector('.pa-inhalt').scrollHeight > document.querySelector('.pa-inhalt').clientHeight"), f'{tag}: hochwischen: direkt ganz offen, ohne Zwischenstufe (oben bei {pb["y"]:.0f} px)')
+        kb = pg.locator('.pa-kopf').bounding_box(); cb = pg.locator('.pa-chip[data-liste=naehe]').bounding_box()
+        check('is-gross' in pg.get_attribute('.pa-panel', 'class') and abs(pb['y'] - (kb['y'] + kb['height'] + 60)) <= 2 and abs(pb['y'] + pb['height'] - hh) <= 1
+              and pg.evaluate("document.querySelector('.pa-inhalt').scrollHeight > document.querySelector('.pa-inhalt').clientHeight"), f'{tag}: hochwischen: direkt groß, ohne Zwischenstufe (oben bei {pb["y"]:.0f} px)')
+        check(pg.locator('#pa-suche').is_visible() and cb['y'] + cb['height'] < pb['y'] - 40, f'{tag}: groß: Suche und Chips sichtbar, darunter ein Streifen Karte')
+        pg.wait_for_timeout(400)
+        mk = pg.locator('.pk-pille.is-gewaehlt').first
+        if mk.count():
+            mb = mk.bounding_box(); my = mb['y'] + mb['height'] / 2
+            check(kb['y'] + kb['height'] - 4 <= my <= pb['y'] + 4, f'{tag}: groß: gewählter Pegel im Kartenstreifen ({my:.0f} px zwischen {kb["y"] + kb["height"]:.0f} und {pb["y"]:.0f})')
         check(len(api['calls']) == anfragen, f'{tag}: Wechsel ohne neue Anfragen')
         pg.evaluate("document.querySelector('.pa-inhalt').scrollTop = 1e6"); pg.wait_for_timeout(500)
         letzte = pg.evaluate("(() => { const i = document.querySelector('.pa-inhalt'); i.scrollTop = i.scrollHeight; return Math.max(...[...i.querySelectorAll('*')].filter(e => !e.closest('details:not([open])') || e.closest('summary')).map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.bottom)); })()")   # Inhalt eingeklappter Bereiche zählt nicht
         nav_y = pg.locator('#bottomnav').bounding_box()['y']
-        check(letzte <= nav_y + 1, f'{tag}: ganz offen: letzter Inhalt über der Navigation ({letzte:.0f} ≤ {nav_y:.0f})')
+        check(letzte <= nav_y + 1, f'{tag}: groß: letzter Inhalt über der Navigation ({letzte:.0f} ≤ {nav_y:.0f})')
         pg.evaluate("document.querySelector('.pa-inhalt').scrollTop = 0"); pg.wait_for_timeout(100)
         touch_wisch(pg, '.pa-griff', 140)
         check('is-gross' not in pg.get_attribute('.pa-panel', 'class') and pg.locator('.pa-kurz').count() == 1, f'{tag}: runterwischen: zurück auf klein')
