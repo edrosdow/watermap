@@ -230,11 +230,12 @@ def run(b, w, hh, mobile):
     pg.locator('.pd-kachel', has_text='alle Pegel').click(); pg.wait_for_selector('dialog.wxd-fluss[open] .pf-titel')
     check(f'#pegel/{U(21)}' in pg.url and 'Elbe' in pg.inner_text('dialog.wxd-fluss .pf-kopf'), f'{tag}: Kachel „Elbe – alle Pegel“ öffnet das Fluss-Fenster')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
-    # Meine Pegel: Tidepegel mit auf-/ablaufend statt Änderung in 24 h
+    # Favoriten: Tidepegel mit auf-/ablaufend statt 2 h/24 h
     pg.evaluate(f"localStorage.setItem('watermap.meinePegel', JSON.stringify(['{U(21)}']))")
-    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pa-liste .pa-z .pa-kurve'); pg.wait_for_timeout(300)
-    zeile = pg.locator('.pa-liste .pa-z').first
-    check('Cuxhaven' in zeile.inner_text() and 'auflaufend' in zeile.inner_text(), f'{tag}: „Meine Pegel“: Tidepegel mit „auflaufend“ ({zeile.inner_text()!r})')
+    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pa .pk-pille'); pg.click('.pa-chip[data-liste=fav]'); pg.wait_for_selector('.pa-liste .pa-z')
+    check('Cuxhaven' in pg.locator('.pa-liste .pa-z').first.inner_text(), f'{tag}: Favoriten-Liste mit dem Tidepegel')
+    pg.locator('.pa-liste .pa-z-knopf').first.click(); pg.wait_for_selector('.pa-kurz .pa-kurve'); pg.wait_for_timeout(300)
+    check('Tide' in pg.inner_text('.pa-zahlen') and 'auflaufend' in pg.inner_text('.pa-zahlen'), f'{tag}: Tidepegel kompakt mit „auflaufend“ statt 2 h/24 h ({pg.inner_text(".pa-zahlen")!r})')
     pg.evaluate("localStorage.removeItem('watermap.meinePegel')")
 
     # Küste und Kanal: ohne Profil, nur Liste

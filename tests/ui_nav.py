@@ -178,9 +178,11 @@ def run(b, w, hh):
 
     # ---- Nichts verdeckt
     bar = rect(pg, '#bottomnav')
-    # Pegel: die Karte reicht wie die Hauptkarte bis unten; frei liegen muss der Inhalt des Bottom Sheets
+    # Pegel: die Karte reicht wie die Hauptkarte bis unten; frei liegen muss der Inhalt des Bottom Sheets (hier: Liste „Favoriten“)
     for adr, sel in [('#pegel', '#pegelseite .pa-inhalt'), ('#meldungen', '#meldungsseite'), ('#mehr', '#mehrseite')]:
-        pg.goto(uf.BASE + adr); pg.reload(); pg.wait_for_selector(f'{sel}:not([hidden])'); pg.wait_for_timeout(700)
+        pg.goto(uf.BASE + adr); pg.reload()
+        if adr == '#pegel': pg.wait_for_selector('.pa-chip[data-liste=fav]'); pg.wait_for_timeout(300); pg.click('.pa-chip[data-liste=fav]')
+        pg.wait_for_selector(f'{sel}:not([hidden])'); pg.wait_for_timeout(700)
         if adr == '#pegel':
             ib = rect(pg, sel)
             check(ib['y'] + ib['h'] <= bar['y'] + 1, f'{tag}: pegel: Bottom Sheet endet über der Leiste ({ib["y"] + ib["h"]:.0f} ≤ {bar["y"]:.0f})')

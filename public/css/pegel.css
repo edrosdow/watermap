@@ -982,3 +982,66 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
   .pa-k-knoepfe .pa-alarm { font-size: 0; gap: 0; padding: 0 14px; }   /* nur Glocke; Name steht im aria-label */
   .pa-wert strong { font-size: 44px; }
 }
+
+/* ---------------------------------------------------------------- Pegel aufgeräumt (7.51.0): kein Dauer-Sheet, weniger Text */
+.pa-panel[hidden] { display: none; }
+.pa-haupt { grid-template-columns: minmax(0, 1fr); }
+.pa.hat-panel .pa-haupt { grid-template-columns: minmax(0, 65fr) minmax(340px, 35fr); }
+.pa-ico { width: 40px; height: 40px; border: 0; border-radius: 50%; background: #EEF3F5; color: var(--navy); display: grid; place-items: center; flex: none; cursor: pointer; }
+.pa-ico:hover { background: #E1EAEE; }
+.pa-kurz .pm-stern.is-klein { width: 40px; height: 40px; }
+.pa-k-kopf { align-items: center; gap: 6px; }
+.pa-k-kopf .pa-name { flex: 1; min-width: 0; font-size: 21px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pa-name small { font-size: 15px; font-weight: 600; color: #3F5262; }
+.pa-schliessen { margin: 0; }
+.pa-k-mitte { margin-top: 4px; }
+.pa-trend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 6px 0 0; font-size: 14.5px; font-weight: 700; color: #3F5262; }
+.pa-zustand { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; color: var(--navy); }
+.pa-zustand i { width: 10px; height: 10px; border-radius: 50%; background: #8E9EAA; display: block; }
+.pa-zustand.pz-low i { background: #E59A00; } .pa-zustand.pz-normal i { background: #2E9E5B; } .pa-zustand.pz-high i { background: #D9381E; } .pa-zustand.pz-hsw i { background: #B42318; }
+.pa-zahlen { display: inline-flex; gap: 14px; }
+.pa-zahlen b { font-weight: 800; }
+.pa-zahlen b.pt-up { color: #0B5F7A; } .pa-zahlen b.pt-down { color: #9A3B0C; } .pa-zahlen b.pt-flat { color: var(--navy); }
+.pa-kurz > .pa-verlauf { width: 100%; min-height: 48px; margin-top: 12px; font-size: 16px; font-weight: 800; }
+.pa-liste { margin: 0; }
+.pa-liste-kopf { align-items: center; margin: 0 0 4px; }
+.pa-liste .pa-h2 { font-size: 17px; letter-spacing: 0; text-transform: none; color: var(--navy); }
+.pa-liste .pa-h2:focus { outline: none; }
+.pa-z-knopf { min-height: 52px; }
+.pa-z-wert { flex-direction: row; align-items: baseline; gap: 2px; font-weight: 800; color: var(--navy); font-size: 15.5px; white-space: nowrap; }
+.pa-z-wert em { font-style: normal; font-weight: 900; }
+.pa-z-wert.is-alt { color: var(--muted); }
+/* Details: kurze Zeilen statt Kästen */
+.pd-tz { display: flex; flex-direction: column; gap: 0; margin: 2px 0 0; }
+.pd-tz p { margin: 0; font-size: 14px; font-weight: 700; color: #C5D8E1; }
+.pd-tz p span { color: inherit; font-size: inherit; }
+.pd-tz strong { font-size: 14.5px; font-weight: 800; color: #fff; }
+.pa-panel .pd-tz p { color: #3F5262; }
+.pa-panel .pd-tz strong { color: var(--navy); }
+.pd-verlauf > .pd-umschalter { display: flex; width: 100%; margin-bottom: 4px; }
+.pd-verlauf > .pd-umschalter button { flex: 1; }
+.pd-einordnung h2 { margin: 0 0 4px; }
+.pd-ein-kurz { margin: 6px 0 0; font-size: 15px; font-weight: 800; color: var(--navy); }
+.pd-aktionen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pd-aktion { min-height: 48px; padding: 0 8px; border: 0; border-radius: 12px; background: #fff; color: var(--navy); font: inherit; font-size: 13.5px; font-weight: 800; text-decoration: none;
+  display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center; line-height: 1.15; cursor: pointer; box-shadow: 0 1px 3px rgba(11, 48, 69, .08); }
+.pd-aktion:hover { background: #F6F9FA; }
+.pd-aktion.is-an { background: #E3F2F7; color: var(--slip); }
+.pd-aktion span { display: grid; flex: none; }
+.pd-zuliste { background: #fff; border-radius: 18px; padding: 0 16px; box-shadow: 0 1px 3px rgba(11, 48, 69, .08); }
+.pd-zu { border: 0; margin: 0; padding: 0; background: none; box-shadow: none; border-radius: 0; }
+.pd-zu + .pd-zu { border-top: 1px solid #EEF3F5; }
+.pd-zu > summary { list-style: none; display: flex; justify-content: space-between; align-items: center; min-height: 52px; cursor: pointer; font-weight: 800; font-size: 16px; color: var(--navy); }
+.pd-zu > summary::-webkit-details-marker { display: none; }
+.pd-zu > summary::after { content: '›'; font-size: 22px; color: var(--muted); transition: transform .15s; }
+.pd-zu[open] > summary::after { transform: rotate(90deg); }
+.pd-zu[open] { padding-bottom: 12px; }
+.pd-kw.pd-zu { margin-top: 0; padding-top: 0; border-top: 0; }
+.pd-zu .pd-klartext { margin: 0 0 8px; font-size: 14.5px; }
+.pd-link { border: 0; background: none; padding: 8px 0 0; color: var(--slip); font: inherit; font-weight: 800; cursor: pointer; }
+.pa-panel .pd-aktion { background: var(--bg); box-shadow: none; }
+@media (max-width: 767px) {
+  .pa-panel.hat-auswahl:not(.is-gross) { max-height: 60%; }
+  .pa-panel .pd-zuliste { border: 1px solid #E6EDF1; box-shadow: none; }
+  .pd-aktion { font-size: 13px; }
+}

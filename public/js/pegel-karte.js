@@ -128,6 +128,8 @@ export function pegelKarteAnsicht(ctx) {
     aktualisieren() { if (map && layer) { markerSetzen(); kompakt(); } },
     filtern(fn) { filter = fn || (() => true); if (map && layer) markerSetzen(); },
     markieren, hinzeigen,
+    /** Größe neu bestimmen (Panel ein-/ausgeblendet). */
+    groesse() { map?.invalidateSize(); },
     /** Pegel im sichtbaren Kartenausschnitt (über dem Sheet), nach Abstand zur Mitte. */
     imAusschnitt() {
       if (!map) return [];

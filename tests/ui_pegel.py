@@ -168,12 +168,12 @@ with sync_playwright() as p:
         check('Köln' in txt and 'Rhein' in txt.title(), f'{name}: Name und Gewässer lesbar')
         pg.wait_for_selector('#detail .pd-tz strong:not(:text("…"))')
         tz = pg.inner_text('#detail .pd-tz')
-        check('312' in txt and 'Normal' in txt and 'Änderung 24 h' in tz and re.search(r'Tendenz \(letzte 2 h\)\s*(↗ steigend|↘ fallend|→ gleichbleibend)', tz), f'{name}: Wert, Zustand, Änderung 24 h und Tendenz (2 h) als Text ({tz!r})')
+        check('312' in txt and 'Normal' in txt and re.search(r'2 h (↗ steigend|↘ fallend|→ gleichbleibend), [+−±]\d+ cm\s*24 h [+−±]\d+ cm', tz), f'{name}: Wert, Zustand, Tendenz (2 h) und Änderung 24 h als Text ({tz!r})')
         check(pg.locator('#detail .ps-mark').count() == 1 and pg.locator('#detail .ps-labels > span').count() == 4, f'{name}: Einordnung MNW/MW/MHW/HSW')
         d = pg.locator('#detail .gc-line').get_attribute('d')
         check(d.count('M') == 2, f'{name}: Messlücke unterbricht die Linie ({d.count("M")} Abschnitte)')
         check('#karte/pegel/' + KOELN in pg.url, f'{name}: Adresse #karte/pegel/…')
-        link = pg.locator('#detail a.pd-kachel')
+        link = pg.locator('#detail a.pd-aktion')
         check(link.count() == 1 and 'Passt mein Boot?' in link.inner_text() and link.get_attribute('href') == './pegel-ampel?pegel=' + KOELN,
               f'{name}: Kachel „Passt mein Boot?“')
         check(pg.locator('.wm-gauge-pill.is-selected').count() == 1, f'{name}: gewählter Pegel hervorgehoben')
@@ -213,7 +213,7 @@ with sync_playwright() as p:
         check(pg.inner_text('dialog.wxd-pegel .pd-name') == 'Köln' and '#pegel/' not in pg.url and pg.locator('#pegelseite').is_hidden() and pg.locator('#detail:not([hidden])').count() == 1,
               f'{name}: Klick öffnet die Pegel-Details im Fenster, keine neue Seite ({pg.url[-30:]})')
         pg.wait_for_selector('dialog.wxd-pegel .gc-line', timeout=8000)
-        check(pg.locator('dialog.wxd-pegel .pd-karte').count() >= 2 and pg.locator('dialog.wxd-pegel .pd-kachel', has_text='Passt mein Boot?').count() == 1 and pg.locator('dialog.wxd-pegel .pd-slips').count() == 1,
+        check(pg.locator('dialog.wxd-pegel .pd-karte').count() >= 2 and pg.locator('dialog.wxd-pegel .pd-aktion', has_text='Passt mein Boot?').count() == 1 and pg.locator('dialog.wxd-pegel .pd-slips').count() == 1,
               f'{name}: Fenster zeigt Skala, Verlauf, „Passt mein Boot?“ und Slipanlagen am Pegel')
         r = pg.locator('dialog.wxd-pegel').bounding_box(); vp = pg.viewport_size
         if mobile: check(abs(r['y'] + r['height'] - vp['height']) <= 1 and r['width'] >= vp['width'] - 1, f'{name}: Fenster sitzt unten, volle Breite')

@@ -57,9 +57,10 @@ export function kennwerteListe(g) {
   const zeile = (k, name, v, zusatz) => [h('dt', {}, h('b', { text: k }), ' ', h('span', { class: 'pd-kw-name', text: name + (zusatz ? ` (${zusatz})` : '') })),
     h('dd', { text: `${fmt(v)} ${g.unit}` })];
   const liste = h('dl', { class: 'pd-kw-liste' }, keys.map(k => ({ k, v: g.refs[k] })).sort((a, b) => a.v - b.v).flatMap(({ k, v }) => zeile(k, KW_NAME[k], v)));
-  const box = h('details', { class: 'pd-kw' },
-    h('summary', { text: 'Alle Kennwerte anzeigen' }), liste,
-    h('p', { class: 'pd-kw-hinweis', text: 'Kennwerte und Marken laut PEGELONLINE. Statistische Werte (z. B. MNW, MW, MHW) sind Mittelwerte über eine Zeitspanne – keine Warnstufen.' }));
+  const box = h('details', { class: 'pd-kw pd-zu' },
+    h('summary', { text: 'Alle Kennwerte' }),
+    h('p', { class: 'pd-klartext', text: klartext(g) }), liste,
+    h('p', { class: 'pd-kw-hinweis', text: `Laut PEGELONLINE. MNW, MW, MHW sind Mittelwerte – keine Warnstufen.${g.refs.HSW !== undefined ? ' HSW ⚓ = höchster Schifffahrtswasserstand.' : ''}` }));
   zusatzLaden(g.id).then((z) => {
     if (!z?.kennwerte?.length) return;
     liste.replaceChildren(...z.kennwerte.flatMap(c => zeile(c.k, c.name === c.k && KW_NAME[c.k] ? KW_NAME[c.k] : c.name, c.v, c.zeitraum || c.datum)));
@@ -71,10 +72,10 @@ export function kennwerteListe(g) {
 function stammdaten(g) {
   const zeilen = [['Gewässer', g.water], ['Flusskilometer', g.km !== null && g.km !== undefined ? g.km.toLocaleString('de-DE', { maximumFractionDigits: 3 }) : null],
     ['Pegelnummer', g.number], ['Zuständig', g.agency], ['Letzte Messung', g.time ? formatTime(g.time) : null]].filter(([, v]) => v);
-  return h('section', { class: 'pd-karte pd-stamm' }, h('h2', { text: 'Messstation und Quelle' }),
+  return h('details', { class: 'pd-zu pd-stamm' }, h('summary', { text: 'Station und Quelle' }),
     h('dl', { class: 'pd-kw-liste' }, zeilen.flatMap(([k, v]) => [h('dt', { text: k }), h('dd', { text: String(v) })])),
     g.number ? h('p', { class: 'pd-kw-hinweis' }, h('a', { href: `https://www.pegelonline.wsv.de/gast/stammdaten?pegelnr=${encodeURIComponent(g.number)}`, target: '_blank', rel: 'noopener noreferrer', text: 'Pegel bei PEGELONLINE ansehen ↗' })) : null,
-    h('p', { class: 'pd-hinweis', text: 'Daten: WSV/PEGELONLINE, soweit der Pegel sie liefert. Normal/Niedrig/Hoch beziehen sich auf die statistischen Kennwerte dieses Pegels, nicht auf dein Boot. Der Pegel ist nicht die Wassertiefe – aus einem Pegelstand folgt keine Aussage zur Befahrbarkeit.' }));
+    h('p', { class: 'pd-hinweis', text: 'Daten: WSV/PEGELONLINE. Der Pegel ist nicht die Wassertiefe; Normal/Niedrig/Hoch beziehen sich auf die Kennwerte dieses Pegels, nicht auf dein Boot.' }));
 }
 
 /**
@@ -97,16 +98,13 @@ export function skala(g) {
       h('span', { text: p.k }), h('b', { text: fmt(p.v) })))));
 }
 
-/** Pegel-Einordnung kompakt: aktueller Wert und Abstand, Skala, Erklärsatz, „Alle Kennwerte anzeigen“. */
+/** Pegel-Einordnung kurz: Skala und eine Zeile („2 cm unter MNW“). Erklärung und alle Werte unter „Alle Kennwerte“. */
 export function einordnungKarte(g) {
   const kurz = einordnungKurz(g);
   return h('section', { class: 'pd-karte pd-einordnung' },
-    h('div', { class: 'pd-karte-kopf' }, h('h2', { text: 'Pegel-Einordnung' }), etikett(g)),
-    kurz ? h('p', { class: 'pd-ein-kurz' }, h('strong', { text: `${fmt(g.value)} ${g.unit}` }), ` · ${kurz}`) : null,
+    h('h2', { text: 'Einordnung' }),
     skala(g),
-    h('p', { class: 'pd-klartext', text: klartext(g) }),
-    g.refs.HSW !== undefined ? h('p', { class: 'pd-kw-hinweis', text: '⚓ HSW = höchster Schifffahrtswasserstand: Bezugswert der Schifffahrt, keine Hochwasser-Warnstufe.' }) : null,
-    kennwerteListe(g));
+    h('p', { class: 'pd-ein-kurz', text: kurz || (g.state === 'old' ? 'Messwert veraltet – keine Einordnung.' : 'Keine Kennwerte – keine Einordnung möglich.') }));
 }
 
 export function sternKnopf(g, { klein = false, onChange } = {}) {
@@ -145,30 +143,27 @@ export function zusatzKacheln(g) {
   return box;
 }
 
-/** Zeile „Pegel-Alarm“ mit Status („Push, wenn unter 100 cm · aktiv“ bzw. „Benachrichtigen lassen“); öffnet das Alarm-Fenster. */
-function alarmZeile(g) {
-  const sub = h('small', {});
-  const stellen = () => { sub.textContent = alarmStatus(g.id) || 'Benachrichtigen lassen'; };
+/** Knopf „Alarm“ (aktiv hervorgehoben, Status im Titel); öffnet das Alarm-Fenster. */
+function alarmKnopf(g) {
+  const knopf = h('button', { type: 'button', class: 'pd-aktion pd-alarm', 'aria-haspopup': 'dialog', onclick: (e) => alarmFenster(g, { opener: e.currentTarget }) },
+    h('span', { html: icon('bell', 18), 'aria-hidden': 'true' }), 'Alarm');
+  const stellen = () => { const st = alarmStatus(g.id); knopf.classList.toggle('is-an', !!st); knopf.title = st || 'Benachrichtigen lassen'; knopf.setAttribute('aria-label', st ? `Pegel-Alarm: ${st}` : 'Pegel-Alarm einrichten'); };
   stellen();
-  const knopf = h('button', { type: 'button', class: 'pd-alarm', 'aria-haspopup': 'dialog', onclick: (e) => alarmFenster(g, { opener: e.currentTarget }) },
-    h('span', { class: 'pd-alarm-ico', html: icon('bell', 20), 'aria-hidden': 'true' }),
-    h('span', { class: 'pd-alarm-text' }, h('strong', { text: 'Pegel-Alarm' }), sub),
-    h('span', { class: 'pd-alarm-pfeil', text: alarmStatus(g.id) ? 'Ändern' : '', 'aria-hidden': 'true' }), h('span', { class: 'pd-alarm-chev', html: icon('chevron', 18), 'aria-hidden': 'true' }));
-  const neu = () => { if (!knopf.isConnected) { document.removeEventListener('pegel-alarme', neu); return; } stellen(); knopf.querySelector('.pd-alarm-pfeil').textContent = alarmStatus(g.id) ? 'Ändern' : ''; };
+  const neu = () => { if (!knopf.isConnected) { document.removeEventListener('pegel-alarme', neu); return; } stellen(); };
   document.addEventListener('pegel-alarme', neu);
   return knopf;
 }
 
-/** Knopf „Als Bild teilen“: Bild mit Wert, Zustand und Kurve erzeugen und teilen bzw. herunterladen. */
-function bildKachel(g, daten) {
-  return h('button', { type: 'button', class: 'pd-kachel pd-bild', onclick: async (e) => {
+/** Knopf „Als Bild“: Bild mit Wert, Zustand und Kurve erzeugen und teilen bzw. herunterladen. */
+function bildKnopf(g, daten) {
+  return h('button', { type: 'button', class: 'pd-aktion pd-bild', onclick: async (e) => {
     const btn = e.currentTarget; btn.disabled = true;
     try {
       const { pts, wv } = await daten();
       const cv = pegelBild({ g, zustand: zustand(g), trend: trendText(g), pts: (pts || []).filter(p => p.t >= (pts?.[pts.length - 1]?.t ?? 0) - 7 * 864e5), wv: wv || [] });
       await bildTeilen(cv, `Pegel-${g.name.replace(/[^\p{L}\p{N}]+/gu, '-')}.png`, `Pegel ${g.name}`);
     } catch { /* ohne Bild bleibt alles, wie es war */ } finally { btn.disabled = false; }
-  } }, h('strong', { text: 'Als Bild teilen' }), h('span', { text: 'z. B. in die Vereinsgruppe ›' }));
+  } }, h('span', { html: icon('image', 18), 'aria-hidden': 'true' }), 'Als Bild');
 }
 
 /** Zeile „Weser · KM 201,4“ in der Kopfleiste; die Art („Pegel“/„Tidepegel“) nur für Screenreader (Etikett zeigt sie sichtbar). */
@@ -188,8 +183,8 @@ export function pegelDetail(g, opts) {
   // Änderung in 24 h und kurzfristige Tendenz (2 h) getrennt – beides aus derselben Messreihe wie das Diagramm
   const aend24 = h('strong', { class: 'pt-flat', text: '…' }), tend = h('strong', { class: 'pt-flat', text: '…' });
   const felder = g.state === 'old' ? null : h('div', { class: 'pd-tz' },
-    h('div', {}, h('span', { text: 'Änderung 24 h' }), aend24),
-    h('div', {}, h('span', { text: 'Tendenz (letzte 2 h)' }), tend));
+    h('p', {}, h('span', { text: '2 h ', title: 'Tendenz der letzten 2 Stunden' }), tend),
+    h('p', {}, h('span', { text: '24 h ', title: 'Änderung in 24 Stunden' }), aend24));
   const kopf = h('header', { class: 'pd-kopf' },
     h('div', { class: 'pd-leiste' },
       h('button', { type: 'button', class: 'pd-icon', 'aria-label': opts.backLabel || 'Zurück', html: icon(opts.eingebettet ? 'close' : 'back', 24), onclick: opts.onBack }),
@@ -199,47 +194,39 @@ export function pegelDetail(g, opts) {
     titel,
     h('div', { class: 'pd-wertzeile' },
       h('p', { class: 'pd-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: g.unit })),
-      h('div', { class: 'pd-wertinfo' }, etikett(g),
+      h('div', { class: 'pd-wertinfo' }, etikett(g), felder,
         h('p', { class: 'pd-zeit' + (g.state === 'old' ? ' is-alt' : '') },
           g.state === 'old' ? h('span', { html: icon('clock', 15) }) : null,
-          g.state === 'old' ? `Veraltet – gemessen ${formatTime(g.time)}` : `Gemessen ${formatTime(g.time)}`))),
-    felder);
+          g.state === 'old' ? `Veraltet – gemessen ${formatTime(g.time)}` : `Messung ${formatTime(g.time)}`))));
 
   const body = h('div', { class: 'pd-body' });
 
   // Verlauf 24 h / 7 Tage / 30 Tage (30 Tage erst auf Wunsch laden); Vorhersage gestrichelt, wenn PEGELONLINE eine liefert
   const chart = h('div', { class: 'gauge-chart', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Verlauf wird geladen …' }));
-  const stats = h('div', { class: 'pd-stats' });
   let bereich = opts.bereich === '24h' || opts.bereich === '30d' ? opts.bereich : '7d', alle = null, alle30 = null, wv = null, wvFertig = false, fehler30 = false;
   const vorhSatz = h('p', { class: 'pd-vorh-satz', hidden: true });
   const vorhInfo = h('p', { class: 'pd-vorh-info', hidden: true });
-  const titelV = h('h2', { text: 'Verlauf' });
   const zeitpunkt = (t) => new Date(t).toLocaleString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   const zeichnen = () => {
     const basis = bereich === '30d' ? alle30 : alle;
     if (!basis) {
-      if (bereich === '30d' && fehler30) { chart.removeAttribute('aria-busy'); chart.replaceChildren(h('p', { class: 'unknown', text: '30-Tage-Verlauf konnte nicht geladen werden.' })); stats.replaceChildren(); }
+      if (bereich === '30d' && fehler30) { chart.removeAttribute('aria-busy'); chart.replaceChildren(h('p', { class: 'unknown', text: '30-Tage-Verlauf konnte nicht geladen werden.' })); }
       else if (bereich === '30d') { chart.setAttribute('aria-busy', 'true'); chart.replaceChildren(h('p', { class: 'muted small', text: '30 Tage werden geladen …' })); }
       return;
     }
     const mitV = !!wv?.length;
-    titelV.textContent = mitV ? 'Verlauf und Vorhersage' : 'Verlauf';
     const cut = bereich === '24h' ? basis[basis.length - 1].t - 24 * 3600e3 : -Infinity;
     const pts = basis.filter(p => p.t >= cut);
     chart.removeAttribute('aria-busy');
-    if (pts.length < 2) { chart.replaceChildren(h('p', { class: 'unknown', text: 'Keine Messreihe verfügbar.' })); stats.replaceChildren(); return; }
+    if (pts.length < 2) { chart.replaceChildren(h('p', { class: 'unknown', text: 'Keine Messreihe verfügbar.' })); return; }
     chart.replaceChildren(...historyChart(pts, g, { vorhersage: mitV ? wv : null }));
     const satz = mitV ? vorhersageSatz(g, wv) : null;
     vorhSatz.hidden = !satz; vorhSatz.textContent = satz || '';
     if (mitV) {
       const bis = wv[wv.length - 1].t;
-      vorhInfo.textContent = `Gestrichelt: Vorhersage der WSV bis ${zeitpunkt(bis)} Uhr – berechnet, keine Messung${wv.some(p => p.art === 'estimate') ? ', zum Ende hin nur Abschätzung' : ''}.`;
+      vorhInfo.textContent = `Gestrichelt: Vorhersage der WSV bis ${zeitpunkt(bis)} Uhr${wv.some(p => p.art === 'estimate') ? ' (zum Ende nur Abschätzung)' : ''}.`;
       vorhInfo.hidden = false;
-    } else if (wvFertig) { vorhInfo.textContent = 'Für diesen Pegel liefert PEGELONLINE keine Vorhersage.'; vorhInfo.hidden = false; }
-    const vs = pts.map(p => p.v); const d = pts[pts.length - 1].v - pts[0].v;
-    const kachel = (l, v, cls = '') => h('div', { class: 'pd-stat' }, h('span', { text: l }), h('strong', { class: cls, text: v }));
-    stats.replaceChildren(kachel('Höchster', `${fmt(Math.max(...vs))} ${g.unit}`), kachel('Tiefster', `${fmt(Math.min(...vs))} ${g.unit}`),
-      kachel('Änderung', `${d > 0 ? '+' : d < 0 ? '−' : '±'}${fmt(Math.abs(d))} ${g.unit}`, d < 0 ? 'is-minus' : d > 0 ? 'is-plus' : ''));
+    }
   };
   const BEREICHE = { '24h': '24 h', '7d': '7 Tage', '30d': '30 Tage' };
   const umschalter = h('div', { class: 'pd-umschalter', role: 'group', 'aria-label': 'Zeitraum' },
@@ -252,7 +239,7 @@ export function pegelDetail(g, opts) {
         }
         zeichnen();
       } })));
-  body.append(h('section', { class: 'pd-karte pd-verlauf' }, h('div', { class: 'pd-karte-kopf' }, titelV, umschalter), chart, vorhInfo, vorhSatz, stats));
+  body.append(h('section', { class: 'pd-karte pd-verlauf', 'aria-label': 'Verlauf' }, umschalter, chart, vorhInfo, vorhSatz));
   const vorhersage = vorhersageWLaden(g.id);
   vorhersage.then((v) => { wv = v; wvFertig = true; zeichnen(); });
   if (bereich === '30d') verlauf30Laden(g.id).then((pts) => { alle30 = pts; zeichnen(); }, () => { fehler30 = true; zeichnen(); });
@@ -270,26 +257,26 @@ export function pegelDetail(g, opts) {
   body.append(einordnungKarte(g), zusatzKacheln(g));
 
   // Pegel-Alarm und Kacheln
-  body.append(alarmZeile(g));
-  body.append(h('div', { class: 'pd-kacheln' },
-    h('a', { class: 'pd-kachel is-dunkel', href: `./pegel-ampel?pegel=${encodeURIComponent(g.id)}`, onclick: opts.onAmpel },
-      h('strong', { text: 'Passt mein Boot?' }), h('span', { text: 'In Pegel-Ampel prüfen ›' })),
-    opts.onKarte ? h('button', { type: 'button', class: 'pd-kachel', onclick: opts.onKarte },
-      h('strong', { text: 'Auf der Karte' }), h('span', { text: 'mit Slipanlagen in der Nähe ›' })) : null,
-    bildKachel(g, async () => ({ pts: await opts.verlauf.catch(() => []), wv: await vorhersage }))));
+  // Aktionen in einer Zeile
+  body.append(h('div', { class: 'pd-aktionen' },
+    alarmKnopf(g),
+    bildKnopf(g, async () => ({ pts: await opts.verlauf.catch(() => []), wv: await vorhersage })),
+    h('a', { class: 'pd-aktion', href: `./pegel-ampel?pegel=${encodeURIComponent(g.id)}`, onclick: opts.onAmpel }, h('span', { html: icon('boat', 18), 'aria-hidden': 'true' }), 'Passt mein Boot?')));
 
   // Wetter am Pegel (nur im Kartenpanel)
   if (opts.wetter) { opts.wetter.classList.add('pd-karte', 'pd-wetter'); body.append(opts.wetter); }
 
-  // Slipanlagen an diesem Pegel
-  if (opts.slips) {
-    body.append(h('section', { class: 'pd-karte' }, h('h2', { text: 'Slipanlagen an diesem Pegel' }),
-      opts.slips.length
+  // Eingeklappt: alle Kennwerte, Slipanlagen, Station und Quelle
+  const zu = [kennwerteListe(g)];
+  if (opts.slips || opts.onKarte) {
+    zu.push(h('details', { class: 'pd-zu pd-slipbox' }, h('summary', { text: 'Slipanlagen in der Nähe' }),
+      opts.slips?.length
         ? h('ul', { class: 'pd-slips' }, opts.slips.map(({ p, d, name }) => h('li', {}, h('button', { type: 'button', onclick: () => opts.onSlip?.(p) },
           h('span', { class: 'pd-slip-name', text: name }), h('span', { class: 'pd-slip-km', text: d < 1000 ? `${Math.round(d / 10) * 10} m` : `${(d / 1000).toLocaleString('de-DE', { maximumFractionDigits: 1 })} km` })))))
-        : h('p', { class: 'muted', text: 'Keine Slipanlage am selben Gewässer in der Nähe bekannt.' })));
+        : h('p', { class: 'muted', text: 'Keine Slipanlage am selben Gewässer in der Nähe bekannt.' }),
+      opts.onKarte ? h('button', { type: 'button', class: 'pd-link', onclick: opts.onKarte, text: 'Auf der Hauptkarte zeigen ›' }) : null));
   }
-  body.append(stammdaten(g));
-  body.append(h('p', { class: 'pd-hinweis', text: 'Kennwerte, Messungen, Wassertemperatur, Abfluss und Vorhersage: WSV/PEGELONLINE, soweit der Pegel sie liefert. Normal/Niedrig/Hoch beziehen sich auf die amtlichen Kennwerte dieses Pegels, nicht auf dein Boot. Der Pegel ist nicht die Wassertiefe.' }));
+  zu.push(stammdaten(g));
+  body.append(h('div', { class: 'pd-zuliste' }, zu));
   return h('article', { class: `pd ${ZUSTAND[z].cls}` + (opts.eingebettet ? ' is-eingebettet' : ''), 'aria-labelledby': 'pd-name' }, kopf, body);
 }
