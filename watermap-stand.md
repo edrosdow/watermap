@@ -248,6 +248,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.55.0 | Pegel-Sheet ohne Zwischenstufe: nur noch **klein** und **ganz offen** (vorher zusätzlich ca. 80 %). Hochwischen oder „Details“ öffnet ganz, Runterwischen verkleinert, noch einmal schließt |
 | 7.56.0 | Pegel-Sheet „groß“ wie auf der Hauptkarte: endet unter Suche und Chips, darüber bleibt ein Streifen Karte (60 px), der gewählte Pegel wird in diesen Streifen geschoben. |
 | 7.57.0 | Pegel-Sheet flüssig: beim Hochziehen erscheinen die Details sofort (kein leeres Blatt), Einrasten ohne Sprung (Sheet fährt in großer Form genau bis zur Höhe des kleinen Sheets, erst dann Inhaltstausch); „Details“, Griff und „×“ fahren weich (0,28 s); Touch-Ereignisse hängen am berührten Element. Zart blau auch für Standort-Details (alle Arten) und das Fenster „Wetter und Wind“ |
+| 7.57.1 | Pegel-Sheet groß → klein: Details blenden beim Runtergleiten weich aus, der kleine Inhalt blendet danach weich ein (kein harter Tausch); beim Hochziehen blenden die Details ebenso ein |
 | 7.54.1 | Pegel-Sheet wischt so flüssig wie auf der Hauptkarte: beim Ziehen nur noch verschoben (`transform`), nicht mehr in der Höhe neu berechnet; zu Beginn einmal auf volle Höhe gestellt und nach unten versetzt, die Größe ändert sich erst beim Einrasten |
 | 7.54.0 | **Fenster von unten wischbar und flüssig:** Das Pegel-Sheet folgt beim Ziehen dem Finger (vorher sprang es erst beim Loslassen) und rastet weich ein (klein · ca. 80 % · ganz · zu; Schwung nimmt die nächste Stufe in Bewegungsrichtung). Alle Fenster von unten (Dialoge, Standort-Vorschau und -Details, Pegel-Sheet) fahren auf dem Handy weich hoch statt plötzlich zu erscheinen (`sheet-ein`, bei „Bewegung reduzieren“ aus). Die übrigen Fenster folgten schon dem Finger (`wischen.js`) |
 | 7.53.0 | **Zart blau** (Rückmeldung: das kräftige Blau passt nicht zur App): gleicher Aufbau wie 7.52.0, aber ganz helles Wasserblau oben, weiße Karten und Knöpfe mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. **Tidepegel** im selben Muster (Name mittig, große Zahl, „● Tide · ↗ auflaufend“, drei Knöpfe Alarm · Merken · Teilen, Karten Gezeiten/Tidekurve/letztes HW·NW, Liste Häfen in der Nähe · Gewässer – alle Pegel · Station und Quelle) |
@@ -303,7 +304,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.57.0): alle Tests grün** (zusätzlich Pegelkarte mit echtem Leaflet und Markercluster bei 1440 und 390 px geprüft).
+**Letzter Lauf (7.57.1): alle Tests grün** (7.57.1: Pegel-, Navigations-, Wisch-, Bereichs-, Smoke- und PWA-Tests) (zusätzlich Pegelkarte mit echtem Leaflet und Markercluster bei 1440 und 390 px geprüft).
 
 ## 6. Offene Aufgaben
 

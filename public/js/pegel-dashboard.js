@@ -160,7 +160,7 @@ export function pegelDashboard(root, ctx) {
         if (dy > 0 && inhalt.scrollTop > 0 && !e.target.closest('.pa-griff')) { z = null; return; }
         z.aktiv = true;
         if (!ui.gross) kleinH = z.h0;
-        if (dy < 0 && ui.auswahl && !ui.gross) { ui.gross = true; zeichnen(); }   // Details schon beim Hochziehen zeigen
+        if (dy < 0 && ui.auswahl && !ui.gross) { ui.gross = true; zeichnen(); sheet.einblenden(); }   // Details schon beim Hochziehen zeigen
         z.basis = sheet.grossForm() + (z.top0 - sheet.grossTopBild());
         sheet.setze(z.basis);
       }
@@ -180,10 +180,12 @@ export function pegelDashboard(root, ctx) {
       if (abbruch) ziel = a.warGross ? 'gross' : 'klein';
       else if (schnell) ziel = a.v < 0 ? 'gross' : (a.warGross ? 'klein' : 'zu');
       else ziel = Object.entries(stufen).reduce((b, k) => (Math.abs(k[1] - y) < Math.abs(b[1] - y) ? k : b))[0];
+      if (ziel === 'klein' && ui.gross && ui.auswahl) sheet.ausblenden();   // Details beim Runtergleiten weich ausblenden
       sheet.fahre(stufen[ziel], () => {
         if (ziel === 'zu') { if (ui.auswahl) abwaehlen(); else if (ui.liste) listeSetzen(null); return; }
         const gross = ziel === 'gross';
-        if (ui.gross !== gross) { ui.gross = gross; zeichnen({ fokus: gross ? null : (ui.auswahl ? '.pa-verlauf' : null) }); }
+        if (ui.gross !== gross) { ui.gross = gross; zeichnen({ fokus: gross ? null : (ui.auswahl ? '.pa-verlauf' : null) }); if (!gross) sheet.einblenden(); }
+        else sheet.einblenden(true);
         if (ui.auswahl && karteFertig) karte.hinzeigen(gewaehlt());
       });
     };
@@ -210,6 +212,20 @@ export function pegelDashboard(root, ctx) {
       panel.style.transition = ms ? `transform ${ms}ms cubic-bezier(.2, .8, .2, 1)` : 'none';
       panel.style.transform = `translate3d(0, ${y}px, 0)`;
     },
+    /** Inhalt beim Verkleinern ausblenden (erst ab gut einem Drittel des Wegs) */
+    ausblenden() {
+      if (this.ruhig() || !inhalt.animate) return;
+      this.blende?.cancel();
+      this.blende = inhalt.animate([{ opacity: 1 }, { opacity: 1, offset: 0.3 }, { opacity: 0 }], { duration: 260, easing: 'ease-in', fill: 'forwards' });
+    },
+    /** neuen Inhalt weich einblenden (leicht von unten); nur=true: nur eine laufende Ausblendung zurücknehmen */
+    einblenden(nur = false) {
+      const alt = this.blende; this.blende = null;
+      if (nur) { if (alt) inhalt.animate([{ opacity: 0.4 }, { opacity: 1 }], { duration: 160, easing: 'ease-out' }); alt?.cancel(); return; }
+      alt?.cancel();
+      if (this.ruhig() || !inhalt.animate) return;
+      inhalt.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+    },
     aufraeumen() { for (const k of ['transition', 'transform', 'top', 'maxHeight', 'willChange']) panel.style[k] = ''; },
     /** von der aktuellen Lage nach y fahren, dann fertig() (Zustand setzen) und Inline-Stile entfernen */
     fahre(y, fertig) {
@@ -235,14 +251,15 @@ export function pegelDashboard(root, ctx) {
       const von = r.top - this.grossTopBild();
       if (gross) {
         // klein → groß: Details sofort zeigen, von unten hochfahren
-        this.setze(von); fertig(); this.grossForm(); this.setze(von);
+        this.setze(von); fertig(); this.einblenden(); this.grossForm(); this.setze(von);
         void panel.offsetHeight;
         this.fahre(0, () => {});
       } else {
         // groß → klein: in der großen Form bis zur Höhe des kleinen Sheets fahren, dann tauschen
         this.setze(von);
         void panel.offsetHeight;
-        this.fahre(Math.max(0, H0 - kleinHoehe(H0)), fertig);
+        this.ausblenden();
+        this.fahre(Math.max(0, H0 - kleinHoehe(H0)), () => { fertig(); this.einblenden(); });
       }
     },
     /** schließen: nach unten hinausfahren */

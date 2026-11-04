@@ -311,7 +311,10 @@ def run(b, w, hh, mobile):
         sp, pr = spruenge(); top = pg.locator('.pa-panel').bounding_box()['y']
         check('is-gross' in pg.get_attribute('.pa-panel', 'class') and sp <= 3 and abs(top - 166) <= 2, f'{tag}: hochziehen: rastet weich auf groß ein (oben {top:.0f} px, Sprung {sp} px)')
         # Knopf/Griff: weich statt sprunghaft
-        pg.evaluate(PROBEN); pg.click('.pa-griff'); pg.wait_for_timeout(500)
+        pg.evaluate("(() => { window.__deck = []; const i = document.querySelector('.pa-inhalt'), t0 = performance.now(); const f = () => { window.__deck.push(+getComputedStyle(i).opacity); if (performance.now() - t0 < 700) requestAnimationFrame(f); }; f(); })()")
+        pg.evaluate(PROBEN); pg.click('.pa-griff'); pg.wait_for_timeout(750)
+        deck = pg.evaluate('window.__deck')
+        check(min(deck) < 0.5 and deck[-1] == 1 and pg.evaluate("getComputedStyle(document.querySelector('.pa-inhalt')).opacity") == '1', f'{tag}: groß → klein: Inhalt blendet weich aus und wieder ein (min. Deckkraft {min(deck):.2f})')
         sp, pr = spruenge(); tops = [a[0] for a in pr]
         check('is-gross' not in pg.get_attribute('.pa-panel', 'class') and sp <= 3 and len(set(tops)) > 4 and tops == sorted(tops), f'{tag}: Griff: fährt weich auf klein ({len(set(tops))} Zwischenlagen, Sprung {sp} px)')
         pg.evaluate(PROBEN); pg.click('.pa-verlauf'); pg.wait_for_timeout(500)
@@ -337,7 +340,7 @@ def run(b, w, hh, mobile):
         check(abs((top0 - mitten) - 90) <= 12, f'{tag}: Sheet folgt beim Ziehen dem Finger ({top0 - mitten:.0f} px bei 90 px Weg)')
         if 'is-gross' in pg.get_attribute('.pa-panel', 'class'): pg.click('.pa-griff'); pg.wait_for_timeout(450)   # zurück auf klein
         anfragen = len(api['calls'])
-        touch_wisch(pg, '.pa-k-kopf', -120)
+        touch_wisch(pg, '.pa-k-kopf', -300)   # weit genug, unabhängig von der gemessenen Geschwindigkeit
         pb = pg.locator('.pa-panel').bounding_box()
         kb = pg.locator('.pa-kopf').bounding_box(); cb = pg.locator('.pa-chip[data-liste=naehe]').bounding_box()
         check('is-gross' in pg.get_attribute('.pa-panel', 'class') and abs(pb['y'] - (kb['y'] + kb['height'] + 60)) <= 2 and abs(pb['y'] + pb['height'] - hh) <= 1
