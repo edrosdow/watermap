@@ -1082,6 +1082,7 @@ function setView(view, { push = true, spaeter = false, sofort = false } = {}) {
   if (view !== 'pegel') { state.pegelId = null; state.pegelFluss = null; }
   if (view !== 'mehr') state.mehrSeite = null;
   document.body.classList.toggle('list-open', view === 'naehe' || view === 'favoriten');
+  document.body.classList.toggle('view-karte', view === 'karte');   // Handy: Suche und Chips schweben über der Karte
   document.body.classList.toggle('view-naehe', view === 'naehe');
   document.body.classList.toggle('view-pegel', view === 'pegel');
   document.body.classList.toggle('view-meldungen', view === 'meldungen');

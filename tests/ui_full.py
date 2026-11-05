@@ -525,7 +525,7 @@ def mobile(b):
     cats = pg.locator('#cats .cat')
     check(cats.count() == 3 and [cats.nth(i).inner_text().strip() for i in range(3)] == ['Slip', 'Häfen', 'Tanken'], 'Kategorie-Chips: Slip · Häfen · Tanken')
     pg.click('.cat-slip'); pg.click('.cat-marina'); pg.wait_for_timeout(200)   # nur Tankstellen
-    check(pg.evaluate("getComputedStyle(document.querySelector('.cat-fuel')).backgroundColor") == 'rgb(255, 255, 255)', 'Aktive Kategorie weiß gefüllt')
+    check(pg.evaluate("getComputedStyle(document.querySelector('.cat-fuel')).backgroundColor") == 'rgb(14, 46, 66)', 'Aktive Kategorie dunkel gefüllt (Designsystem: Chip aktiv = Tinte)')
     bn = pg.locator('#bottomnav').bounding_box()
     check(abs(bn['y'] + bn['height'] - (844 - 10)) <= 1 and pg.locator('#bottomnav .bn-item').count() == 5, 'Navigation unten: schwebende Leiste mit fünf Zielen')
     plus = pg.locator('#bottomnav .bn-plus').bounding_box()

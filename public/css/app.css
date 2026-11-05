@@ -1197,3 +1197,51 @@ input.hat-x { padding-right: calc(var(--x-rechts, 2px) + 44px) !important; }
 .detail:not(.is-pegel) .wx-block, .detail:not(.is-pegel) .detail-body > .block:not(.wb):not(.vo-karte) { background: #fff; border: 0; border-radius: 18px; padding: 12px 14px; box-shadow: var(--zb-schatten); }
 .detail:not(.is-pegel) .detail-body > .block > h3 { margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--zb-matt); }
 .detail:not(.is-pegel) .wx-block .wx-alert { border-radius: 14px; }
+
+/* ------------------------------------------------------------------ 7.59.0 Designsystem Schritt 3: Karte und Standort (DESIGN_SYSTEM.md)
+   Handy: auf der Karte keine dunkle Leiste mehr – Suche und Chips schweben über der Karte (Meldungen/Mehr folgen in ihrem Schritt).
+   Standort-Sheet: Kopf und Abschnittstitel nach den Bausteinen (Titel 24/700, keine Großbuchstaben-Etiketten). */
+@media (max-width: 767px) {
+  .app-header .search input { min-height: 48px; border-radius: var(--wm-r-rund); padding-left: var(--wm-5); box-shadow: var(--wm-schatten); }
+  .app-header .search input::placeholder { color: var(--wm-matt); }
+  .app-header .search-btn { top: 4px; right: 4px; color: var(--wm-tinte); border-radius: var(--wm-r-rund); }
+  .brand-logo svg { display: block; border-radius: 50%; box-shadow: var(--wm-schatten); }
+  .app-header :focus-visible, .toolbar :focus-visible { outline-color: var(--wm-fokus); }
+
+  body.view-karte .app-header { position: absolute; top: 0; left: 0; right: 0; background: transparent; pointer-events: none; }
+  body.view-karte .toolbar { position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top) + 64px); background: transparent; pointer-events: none; padding: 0 12px; }
+  body.view-karte .app-header > *, body.view-karte .toolbar > * { pointer-events: auto; }
+  body.view-karte .leaflet-top { top: calc(env(safe-area-inset-top) + 112px); }
+
+  .toolbar .cat { min-height: 40px; border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-weight: 700; }
+  .toolbar .cat:hover { color: var(--wm-tinte); }
+  .toolbar .cat[aria-pressed="true"] { background: var(--wm-tinte); color: #fff; }
+  .toolbar .filter-btn { min-height: 40px; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); }
+  .toolbar .filter-btn:hover { background: var(--wm-flaeche-2); }
+  .toolbar .filter-n { background: var(--wm-petrol); color: #fff; }
+
+  .peek-card { border-radius: var(--wm-r-l); box-shadow: var(--wm-schatten-hoch); }
+  .peek-name { font-size: var(--wm-t-l); font-weight: 700; }
+  .peek-sub { font-size: var(--wm-t-s); color: var(--wm-matt); }
+  .detail:not(.is-pegel) { border-radius: var(--wm-r-l) var(--wm-r-l) 0 0; box-shadow: var(--wm-schatten-hoch); }
+}
+.detail:not(.is-pegel) .detail-head.dh { background: var(--wm-wasser); }
+.detail:not(.is-pegel) .dh-kicker { font-size: var(--wm-t-s); font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--wm-petrol-tief); }
+.detail:not(.is-pegel) .dh-kicker.k-marina { color: var(--wm-hafen); } .detail:not(.is-pegel) .dh-kicker.k-fuel { color: var(--wm-tanke-text); }
+.detail:not(.is-pegel) .dh .detail-title h2 { font-size: var(--wm-t-xl); font-weight: 700; line-height: 1.15; }
+.detail:not(.is-pegel) .dh-meta { font-size: var(--wm-t-s); color: var(--wm-matt); }
+.detail:not(.is-pegel) .detail-body { padding-left: var(--wm-4); padding-right: var(--wm-4); gap: var(--wm-3); }
+.detail:not(.is-pegel) .dbtns { gap: var(--wm-3); }
+.detail:not(.is-pegel) .dbtn { min-height: 62px; border-radius: var(--wm-r-m); font-size: var(--wm-t-s); font-weight: 700; box-shadow: var(--wm-schatten); }
+.detail:not(.is-pegel) .dbtn-primary { background: var(--wm-petrol); color: #fff; }
+.detail:not(.is-pegel) .dbtn-primary svg { color: #fff; }
+.detail:not(.is-pegel) .dbtn[aria-pressed="true"] { background: var(--wm-flaeche); color: var(--wm-tinte); }
+.detail:not(.is-pegel) .dbtn[aria-pressed="true"] svg { fill: var(--wm-sonne); color: var(--wm-tinte); }
+.detail:not(.is-pegel) .ph-leer, .detail:not(.is-pegel) .vo-karte:not(.vo-warn):not(.vo-stop):not(.is-edit), .detail:not(.is-pegel) .wb,
+.detail:not(.is-pegel) .coords-row, .detail:not(.is-pegel) .wxz:not(.wxz-warn), .detail:not(.is-pegel) .wx-block,
+.detail:not(.is-pegel) .detail-body > .block:not(.wb):not(.vo-karte) { border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
+.detail:not(.is-pegel) .wb-kopf h3, .detail:not(.is-pegel) .detail-body > .block > h3 { font-size: var(--wm-t-m); font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--wm-tinte); }
+.detail:not(.is-pegel) .wb-p { background: var(--wm-flaeche-2); border-radius: var(--wm-r-s); }
+.detail:not(.is-pegel) .wb-p small { font-size: var(--wm-t-xs); font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }
+.detail:not(.is-pegel) .ph-leer-btn { border-radius: var(--wm-r-rund); }
+.detail:not(.is-pegel) .coords-row .btn { border-radius: var(--wm-r-rund); }

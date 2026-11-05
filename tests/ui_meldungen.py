@@ -73,8 +73,8 @@ def run(b, mobile):
     pg.click('.cat-slip'); pg.wait_for_timeout(150)
     check(pg.get_attribute('.cat-slip', 'aria-pressed') == 'true' and 'Mindestens eine' in pg.inner_text('#toast'), f'{tag}: letzte Kategorie lässt sich nicht abwählen')
     pg.click('.cat-fuel'); pg.wait_for_timeout(150)
-    check(pg.locator('.cat[aria-pressed=true] .cat-check').count() == 2 and pg.evaluate("getComputedStyle(document.querySelector('.cat-fuel')).backgroundColor") == 'rgb(255, 255, 255)', f'{tag}: aktive Chips weiß mit Haken')
-    check(pg.evaluate("getComputedStyle(document.querySelector('.cat-marina')).backgroundColor") == 'rgba(0, 0, 0, 0)', f'{tag}: inaktiver Chip transparent')
+    check(pg.locator('.cat[aria-pressed=true] .cat-check').count() == 2 and pg.evaluate("getComputedStyle(document.querySelector('.cat-fuel')).backgroundColor") == ('rgb(14, 46, 66)' if mobile else 'rgb(255, 255, 255)'), f'{tag}: aktive Chips mit Haken (Handy dunkel, Desktop weiß)')
+    check(pg.evaluate("getComputedStyle(document.querySelector('.cat-marina')).backgroundColor") == ('rgb(255, 255, 255)' if mobile else 'rgba(0, 0, 0, 0)'), f'{tag}: inaktiver Chip (Handy weiß über der Karte, Desktop transparent)')
     pg.click('.cat-fuel'); pg.wait_for_timeout(150)
     # Marker-Abzeichen
     pg.evaluate("window.__watermap.state.map.raw.setView([window.__watermap.state.byId.get('node/1').lat, window.__watermap.state.byId.get('node/1').lon], 14, { animate: false })"); pg.wait_for_timeout(300)

@@ -269,7 +269,8 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 - Bestehende Klassen (`pd-*`, `pa-*`, `bs-*`, `detail-*`) werden schrittweise auf Tokens umgestellt; Geschäftslogik und Backend bleiben unverändert.
 - **Schritt 1 erledigt (7.58.0):** `public/css/tokens.css` (alle Tokens + `@font-face`), Schrift in `public/fonts/` (variabel 200–800, latin + latin-ext, Lizenz `OFL.txt`), in allen HTML-Seiten vor den übrigen Stylesheets eingebunden, im Service Worker vorgehalten. Alte Variablen (`--navy`, `--ink`, `--muted`, `--slip`, `--marina`, `--fuel`, `--info-bg`, `--pd-*`, `--zb-*`) verweisen jetzt auf Tokens. Das Teilen-Bild (`pegel-bild.js`) nutzt dieselbe Schrift.
 - **Schritt 2 begonnen (7.58.1):** `public/css/bausteine.css` mit allen gemeinsamen Bausteinen (`.wm-kopf`, `.wm-rund`, `.wm-karte`, `.wm-btn`, `.wm-aktionen`, `.wm-zeile`, `.wm-kacheln`, `.wm-marke`, `.wm-punkt`, `.wm-chip`, `.wm-seg`, `.wm-feld`/`.wm-eingabe`, `.wm-hinweis`, `.wm-leer`) eingebunden; noch von keinem Bereich benutzt (Musterblatt dem Nutzer gezeigt, Freigabe ausstehend).
-- Nächste Schritte: Bausteine in die Bereiche einbauen (zuerst Karte/Standort).
+- **Schritt 3 erledigt (7.59.0): Karte und Standort.** Handy: auf der Karte schweben Suche (weiße Pille) und Kategorie-Chips (weiß, aktiv Tinte) über der Karte statt der dunklen Leiste (`body.view-karte`); Leaflet-Knöpfe rücken darunter. Vorschaukarte und Standort-Sheet mit Radius l und `schatten-hoch`; Standort-Kopf Titel 24/700, Art als Text in Petrol-tief (keine Großbuchstaben), Abschnittstitel 16/700, Fakten-Kacheln `flaeche-2`, Route gefüllt Petrol, Gemerkt mit Sonnen-Stern. Standort-Knopf und „In der Nähe“ behalten den Glas-Stil. Meldungen/Mehr behalten die dunkle Leiste bis zu ihrem Schritt.
+- Nächste Schritte: Pegel (Feinschliff auf Bausteine), Meldungen, Mehr, Melden-Menü/Formulare (ohne „Lage melden“).
 
 ## Entscheidungen des Nutzers (Ausnahmen)
 

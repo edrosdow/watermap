@@ -254,6 +254,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.58.1 | Designsystem Schritt 2 vorbereitet: `bausteine.css` (gemeinsame `.wm-*`-Bausteine) eingebunden, noch ohne Verwendung – keine sichtbare Änderung |
 | (Doku) | Nutzer: „Lage melden“ (dunkle Karte im Melden-Fenster + Formular mit Schnellknöpfen) bleibt wie bisher – Ausnahme vom Umbau, in `DESIGN_SYSTEM.md` festgehalten |
 | 7.58.2 | Null ohne Schrägstrich (Schriftdatei angepasst, `public/fonts/LIESMICH.txt`) |
+| 7.59.0 | Designsystem Schritt 3 – Karte und Standort: Handy-Karte ohne dunkle Leiste (Suche und Chips schweben), Standort-Sheet/Vorschau nach den Bausteinen (Titel 24/700, keine Großbuchstaben-Etiketten, Route gefüllt) |
 | 7.54.1 | Pegel-Sheet wischt so flüssig wie auf der Hauptkarte: beim Ziehen nur noch verschoben (`transform`), nicht mehr in der Höhe neu berechnet; zu Beginn einmal auf volle Höhe gestellt und nach unten versetzt, die Größe ändert sich erst beim Einrasten |
 | 7.54.0 | **Fenster von unten wischbar und flüssig:** Das Pegel-Sheet folgt beim Ziehen dem Finger (vorher sprang es erst beim Loslassen) und rastet weich ein (klein · ca. 80 % · ganz · zu; Schwung nimmt die nächste Stufe in Bewegungsrichtung). Alle Fenster von unten (Dialoge, Standort-Vorschau und -Details, Pegel-Sheet) fahren auf dem Handy weich hoch statt plötzlich zu erscheinen (`sheet-ein`, bei „Bewegung reduzieren“ aus). Die übrigen Fenster folgten schon dem Finger (`wischen.js`) |
 | 7.53.0 | **Zart blau** (Rückmeldung: das kräftige Blau passt nicht zur App): gleicher Aufbau wie 7.52.0, aber ganz helles Wasserblau oben, weiße Karten und Knöpfe mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. **Tidepegel** im selben Muster (Name mittig, große Zahl, „● Tide · ↗ auflaufend“, drei Knöpfe Alarm · Merken · Teilen, Karten Gezeiten/Tidekurve/letztes HW·NW, Liste Häfen in der Nähe · Gewässer – alle Pegel · Station und Quelle) |
@@ -309,7 +310,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.58.0): alle Tests grün** (zusätzlich Pegelkarte mit echtem Leaflet und Markercluster bei 1440 und 390 px geprüft).
+**Letzter Lauf (7.59.0): alle Tests grün** (zusätzlich Pegelkarte mit echtem Leaflet und Markercluster bei 1440 und 390 px geprüft).
 
 ## 6. Offene Aufgaben
 
