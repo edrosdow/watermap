@@ -270,3 +270,7 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 - **Schritt 1 erledigt (7.58.0):** `public/css/tokens.css` (alle Tokens + `@font-face`), Schrift in `public/fonts/` (variabel 200–800, latin + latin-ext, Lizenz `OFL.txt`), in allen HTML-Seiten vor den übrigen Stylesheets eingebunden, im Service Worker vorgehalten. Alte Variablen (`--navy`, `--ink`, `--muted`, `--slip`, `--marina`, `--fuel`, `--info-bg`, `--pd-*`, `--zb-*`) verweisen jetzt auf Tokens. Das Teilen-Bild (`pegel-bild.js`) nutzt dieselbe Schrift.
 - **Schritt 2 begonnen (7.58.1):** `public/css/bausteine.css` mit allen gemeinsamen Bausteinen (`.wm-kopf`, `.wm-rund`, `.wm-karte`, `.wm-btn`, `.wm-aktionen`, `.wm-zeile`, `.wm-kacheln`, `.wm-marke`, `.wm-punkt`, `.wm-chip`, `.wm-seg`, `.wm-feld`/`.wm-eingabe`, `.wm-hinweis`, `.wm-leer`) eingebunden; noch von keinem Bereich benutzt (Musterblatt dem Nutzer gezeigt, Freigabe ausstehend).
 - Nächste Schritte: Bausteine in die Bereiche einbauen (zuerst Karte/Standort).
+
+## Entscheidungen des Nutzers (Ausnahmen)
+
+- **„Lage melden“ bleibt wie bisher** (Entscheidung nach dem Musterblatt zu Schritt 2): die dunkle Karte „Lage vor Ort melden“ im Melden-Fenster und das Formular „Lage melden“ mit den Schnellknöpfen (Alles frei, Parkplatz voll, Warteschlange, …) werden **nicht** auf die Bausteine umgestellt. Sie übernehmen nur Schrift und Farb-Tokens aus Schritt 1. Änderungen daran nur auf ausdrücklichen Wunsch.
