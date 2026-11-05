@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 26.10.2026 · App-Version **7.32.1**
+Stand: 05.11.2026 · App-Version **7.59.0**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.32.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.59.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -313,6 +313,20 @@ Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.
 **Letzter Lauf (7.59.0): alle Tests grün** (zusätzlich Pegelkarte mit echtem Leaflet und Markercluster bei 1440 und 390 px geprüft).
 
 ## 6. Offene Aufgaben
+
+**▶ Hier weitermachen (Stand 05.11.2026, 7.59.0): Umbau auf das Designsystem „Wasser“ – Phase 4**
+Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Disziplin von A, vom Nutzer gewählt) – vor jeder Oberflächenarbeit lesen.
+- [x] Schritt 1 – Tokens und Schrift (7.58.0): `public/css/tokens.css`, Atkinson Hyperlegible Next selbst gehostet (`public/fonts/`).
+- [x] Null ohne Schrägstrich (7.58.2, Wunsch des Nutzers; Schriftdatei angepasst, `public/fonts/LIESMICH.txt`).
+- [x] Schritt 2 – gemeinsame Bausteine `public/css/bausteine.css` (`.wm-*`), Musterblatt vom Nutzer freigegeben („Rest passt“).
+- [x] Schritt 3 – Karte und Standort (7.59.0): Handy-Karte ohne dunkle Leiste (Suche/Chips schweben, `body.view-karte`), Standort-Sheet/Vorschau nach Bausteinen.
+- [ ] Schritt 4 – Pegel: Feinschliff auf Bausteine/Tokens (Kopf, Kacheln, Marken, keine Großbuchstaben-Etiketten wie „VERLAUF“/„EINORDNUNG“).
+- [ ] Schritt 5 – Meldungen (`bs-*`, `mu-*`): heller Kopf statt dunklem Band, dann auch die globale Kopfleiste dort hell.
+- [ ] Schritt 6 – Mehr, Merkliste, Einstellungen (`bs-*`, `ei-*`).
+- [ ] Schritt 7 – Melden-Menü und Formulare (Foto, Korrektur, Ergänzen …). **Ausnahme: „Lage melden“ bleibt wie bisher** (dunkle Karte + Formular mit Schnellknöpfen, Entscheidung des Nutzers).
+- [ ] Schritt 8 – Desktop (≥ 768 px) prüfen, Reste aufräumen (alte Einzelwerte → Tokens, `!important` raus), Wetter-Fenster und Seiten Datenschutz/Impressum/Über.
+- Arbeitsweise: je Schritt Vorschaubild (vorher/nachher, 390 px) zeigen, Version erhöhen, alle Tests, pushen. Tests, die altes Aussehen festschreiben, auf das Designsystem anpassen (nicht die App verbiegen).
+- Plugin „frontend-design“ war nur in der Cloud-Sitzung installiert (`claude plugin install frontend-design@anthropic-plugin-directory`).
 
 **Pegel – vorgemerkt:** Chip „Pegel“ in der Kategorie-Leiste der Hauptkarte (Vorschaubild 02.11., vom Nutzer zurückgestellt).
 
