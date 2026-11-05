@@ -1199,3 +1199,32 @@ details.pd-zeile[open] { padding-bottom: 10px; }
 .pd.pd-blau .pd-karte-kopf .pd-ct { margin: 0; }
 .pd.pd-blau .pd-hinweis { margin: 4px 4px 0; }
 .pd.pd-blau .pd-zeile-kopf .pd-tz, .pd.pd-blau .pd-zeile-kopf .pt-tendenz { color: var(--navy); font-weight: 500; }
+
+/* ------------------------------------------------------------------ 7.60.0 Designsystem Schritt 4: Pegel (DESIGN_SYSTEM.md)
+   Nur Tokens: Titel 24/700, ein großer Wert (held 72/300), Knöpfe/Karten Radius m, Abschnittstitel ohne Großbuchstaben. */
+.pd-ct, .pd.pd-blau .pd-karte h2.pd-ct, .pa-h2, .pd-kicker { font-size: var(--wm-t-s); font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }
+.pd.pd-blau .pd-name { font-size: var(--wm-t-xl); font-weight: 700; line-height: 1.15; color: var(--wm-tinte); }
+.pd.pd-blau .pd-ort { font-size: var(--wm-t-s); color: var(--wm-matt); }
+.pd.pd-blau .pd-wert strong, .pa-panel .pd.pd-blau .pd-wert strong, .pd.is-eingebettet.pd-blau .pd-wert strong { font-size: var(--wm-t-held); font-weight: 300; color: var(--wm-tinte); }
+.pd.pd-blau .pd-wert span { font-size: var(--wm-t-xl); font-weight: 400; }
+.pd-kb { min-height: 62px; border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); color: var(--wm-tinte); }
+.pd-kb-text { font-size: var(--wm-t-s); font-weight: 700; }
+.pd-kb.is-an { background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
+.pd-kb.pm-stern.is-on .pd-kb-ico svg, .pd.pd-blau .pd-kb.pm-stern.is-on .pd-kb-ico svg { fill: var(--wm-sonne); color: var(--wm-tinte); }
+.pd.pd-blau .pd-kb.pm-stern, .pd.pd-blau .pd-kb.pm-stern.is-on { border-radius: var(--wm-r-m); }
+.pd.pd-blau .pd-karte { border-radius: var(--wm-r-m); padding: var(--wm-3) var(--wm-4); box-shadow: var(--wm-schatten); }
+.pd.pd-blau .pd-umschalter { background: var(--wm-linie); border-radius: var(--wm-r-s); }
+.pd.pd-blau .pd-umschalter button { border-radius: calc(var(--wm-r-s) - 3px); font-size: var(--wm-t-s); font-weight: 700; }
+.pd.pd-blau .pd-umschalter button[aria-pressed="true"] { color: var(--wm-tinte); box-shadow: var(--wm-schatten); }
+.pa-chip { border: 0; border-radius: var(--wm-r-rund); box-shadow: var(--wm-schatten); color: var(--wm-tinte); }
+.pa-chip:hover { background: var(--wm-flaeche-2); }
+.pa-chip[aria-pressed="true"] { background: var(--wm-tinte); color: #fff; }
+.pa-chip-zahl { background: var(--wm-flaeche-2); color: var(--wm-tinte); }
+.pa-suche { height: 48px; border: 0; border-radius: var(--wm-r-rund); box-shadow: var(--wm-schatten); }
+.pa-name { font-size: var(--wm-t-l); font-weight: 700; color: var(--wm-tinte); }
+.pa-name small { font-size: var(--wm-t-s); font-weight: 400; color: var(--wm-matt); }
+.pa-wert strong { font-weight: 700; }
+.pa-kurz.pa-blau > .pa-verlauf { min-height: 48px; border-radius: var(--wm-r-m); background: var(--wm-petrol); font-weight: 700; }
+.pa-kurz.pa-blau > .pa-verlauf:hover { background: var(--wm-petrol-tief); }
+.pa-panel.hat-auswahl, .pa-panel { border-radius: var(--wm-r-l) var(--wm-r-l) 0 0; }
+@media (min-width: 768px) { .pa-panel { border-radius: 0; } }
