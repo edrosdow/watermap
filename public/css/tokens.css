@@ -1,0 +1,78 @@
+/* WaterMap – Design-Tokens „Wasser“. Einzige Quelle für Farben, Schrift, Abstände, Radien, Schatten.
+   Regeln und Verwendung: DESIGN_SYSTEM.md. Neue Werte erst dort ergänzen, dann hier. */
+
+/* Schrift: Atkinson Hyperlegible Next (SIL Open Font License, siehe ../fonts/OFL.txt), selbst gehostet, variabel 200–800 */
+@font-face {
+  font-family: 'Atkinson Hyperlegible Next';
+  font-style: normal; font-weight: 200 800; font-display: swap;
+  src: url(../fonts/atkinson-next-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Atkinson Hyperlegible Next';
+  font-style: normal; font-weight: 200 800; font-display: swap;
+  src: url(../fonts/atkinson-next-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  /* Grund und Flächen */
+  --wm-wasser: #E4F2F8;
+  --wm-wasser-2: #F6FAFC;
+  --wm-verlauf: linear-gradient(180deg, var(--wm-wasser), var(--wm-wasser-2) 45%);
+  --wm-flaeche: #FFFFFF;
+  --wm-flaeche-2: #F1F6F8;
+  --wm-linie: #E3EBEF;
+
+  /* Text */
+  --wm-tinte: #0E2E42;
+  --wm-matt: #526676;
+  --wm-leise: #7C8F9C;
+
+  /* Akzent */
+  --wm-petrol: #0B7C93;
+  --wm-petrol-tief: #075F72;
+  --wm-petrol-hell: #DDF0F5;
+  --wm-sonne: #F2B33D;
+  --wm-fokus: #1C8FB8;
+
+  /* Zustände: Punkt · Text · Grund */
+  --wm-gut: #1E9E5A;   --wm-gut-text: #17703F;   --wm-gut-hell: #E3F5EA;
+  --wm-warn: #C27A00;  --wm-warn-text: #8A5300;  --wm-warn-hell: #FFF1D6;
+  --wm-hoch: #D23B21;
+  --wm-stop: #B42318;  --wm-stop-text: #A33A1C;  --wm-stop-hell: #FDECEA;
+
+  /* Kategorien und App-Leiste */
+  --wm-slip: #087F9C;
+  --wm-hafen: #16619B;
+  --wm-tanke: #D78B23;  --wm-tanke-text: #8A4F00;
+  --wm-navy: #0B3045;
+
+  /* Schrift */
+  --wm-schrift: 'Atkinson Hyperlegible Next', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --wm-t-held: 72px;
+  --wm-t-xxl: 32px;
+  --wm-t-xl: 24px;
+  --wm-t-l: 20px;
+  --wm-t-m: 16px;
+  --wm-t-s: 14px;
+  --wm-t-xs: 13px;
+
+  /* Abstände (4-px-Raster) */
+  --wm-1: 4px; --wm-2: 8px; --wm-3: 12px; --wm-4: 16px; --wm-5: 20px; --wm-6: 24px; --wm-8: 32px; --wm-12: 48px;
+
+  /* Radien und Schatten */
+  --wm-r-s: 12px;
+  --wm-r-m: 18px;
+  --wm-r-l: 26px;
+  --wm-r-rund: 999px;
+  --wm-schatten: 0 1px 2px rgba(14, 46, 66, .06), 0 4px 14px rgba(14, 46, 66, .07);
+  --wm-schatten-hoch: 0 -6px 24px rgba(14, 46, 66, .14);
+
+  /* Bewegung */
+  --wm-kurve: cubic-bezier(.2, .8, .2, 1);
+  --wm-dauer: 280ms;
+
+  font-family: var(--wm-schrift);
+  font-variant-numeric: tabular-nums;
+}

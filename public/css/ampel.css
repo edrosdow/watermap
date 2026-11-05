@@ -2,7 +2,7 @@
 :root {
   --navy: #0E2433; --ink: #0E2433; --muted: #5B6B73; --bg: #F2F5F4; --line: #DCE4E2; --petrol: #0B5E6B; --petrol-dark: #08505B;
   --gruen: #15803D; --gelb: #B45309; --rot: #B91C1C; --tile: #F2F5F4;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--ink); line-height: 1.45;
+  font-family: var(--wm-schrift); color: var(--ink); line-height: 1.45;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); }

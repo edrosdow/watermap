@@ -1,5 +1,5 @@
 /* Textseiten (Über, Datenschutz, Impressum) */
-:root{--navy:#0B3045;--slip:#087F9C;--bg:#F3F6F8;--ink:#263746;--muted:#566878;--line:#DCE5EA;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);line-height:1.6}
+:root{--navy:#0B3045;--slip:#087F9C;--bg:#F3F6F8;--ink:#263746;--muted:#566878;--line:#DCE5EA;font-family:var(--wm-schrift);color:var(--ink);line-height:1.6}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg)}
 header{background:var(--navy);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:14px}

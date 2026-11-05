@@ -13,7 +13,7 @@ function rundRechteck(c, x, y, w, h, r) {
 export function pegelBild({ g, zustand, trend = '', pts = [], wv = [], jetzt = Date.now() }) {
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const c = cv.getContext('2d');
-  const font = (px, w = 700) => `${w} ${px}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  const font = (px, w = 700) => `${w} ${px}px 'Atkinson Hyperlegible Next', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
   c.fillStyle = '#F3F6F8'; c.fillRect(0, 0, W, H);
   c.fillStyle = '#0B3045'; c.fillRect(0, 0, W, 420);
   c.fillStyle = '#9CCEE3'; c.font = font(38, 800); c.fillText(`PEGEL · ${(g.water || '').toUpperCase()}`, 80, 130);

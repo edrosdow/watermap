@@ -1,26 +1,26 @@
-/* WaterMap V7 – Oberfläche. Farben laut Master-Prompt; Systemschriften (keine externen Schriftdateien, datenschutzfreundlich). */
+/* WaterMap V7 – Oberfläche. Grundwerte kommen aus tokens.css (Designsystem „Wasser“, DESIGN_SYSTEM.md); die alten Namen hier sind Verweise darauf. */
 :root {
   --detail-w: 420px;
-  --navy: #0B3045;
-  --slip: #087F9C;
-  --marina: #16619B;
-  --fuel: #D78B23;
-  --fuel-ink: #8A4F00;
+  --navy: var(--wm-navy);
+  --slip: var(--wm-slip);
+  --marina: var(--wm-hafen);
+  --fuel: var(--wm-tanke);
+  --fuel-ink: var(--wm-tanke-text);
   --sky: #9CCEE3;
   --bg: #F3F6F8;
-  --ink: #263746;
-  --muted: #566878;
+  --ink: var(--wm-tinte);
+  --muted: var(--wm-matt);
   --line: #DCE5EA;
   --white: #fff;
   --warn-bg: #FFF6E3;
   --warn-line: #EBC77A;
-  --info-bg: #EAF5F9;
+  --info-bg: var(--wm-wasser);
   --danger: #A32A1C;
   --radius: 14px;
   --shadow: 0 2px 12px rgba(11, 48, 69, .16);
   --shadow-lg: 0 10px 40px rgba(11, 48, 69, .28);
   --header-h: 60px;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--wm-schrift);
   color: var(--ink);
   line-height: 1.45;
   -webkit-text-size-adjust: 100%;
@@ -1141,7 +1141,7 @@ input.hat-x { padding-right: calc(var(--x-rechts, 2px) + 44px) !important; }
 
 /* ------------------------------------------------------------------ 7.57.0 Zart blau auch für Standort-Details und das Fenster „Wetter und Wind“
    Muster wie die Pegel-Ansicht: hellblauer Grund, weiße Karten, Name mittig, drei gleiche Knöpfe, Warnungen behalten ihre Farbe. */
-:root { --zb-grund: linear-gradient(180deg, #EAF5F9 0%, #F5FAFC 60%, #FFFFFF 100%); --zb-schatten: 0 1px 4px rgba(11, 48, 69, .09); --zb-matt: #5B6B77; --zb-petrol: #087F9C; }
+:root { --zb-grund: var(--wm-verlauf); --zb-schatten: var(--wm-schatten); --zb-matt: var(--wm-matt); --zb-petrol: var(--wm-petrol); }
 .detail:not(.is-pegel), .detail:not(.is-pegel) .detail-scroll { background: var(--zb-grund); }
 .detail:not(.is-pegel) .detail-head.dh { background: #EAF5F9; grid-template-columns: 44px 1fr 44px; text-align: center; padding: 14px 14px 4px; border: 0; }
 .detail:not(.is-pegel) .dh .detail-title { order: 2; grid-column: 2; }

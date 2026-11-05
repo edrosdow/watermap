@@ -1047,7 +1047,7 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 
 /* ---------------------------------------------------------------- Pegel im Stil einer Wetter-App (7.52.0)
    Zart blau (7.53.0): ganz helles Wasserblau, weiße Karten mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. Gilt für Kompaktansicht, Details im Panel/Sheet, Pegel-Fenster und Kartenpanel. */
-:root { --pd-blau: linear-gradient(180deg, #EAF5F9 0%, #F5FAFC 55%, #FFFFFF 100%); --pd-glas: #FFFFFF; --pd-glas2: #FFFFFF; --pd-linie: #E6EDF1; --pd-matt: #5B6B77; --pd-schatten: 0 1px 4px rgba(11, 48, 69, .09); }
+:root { --pd-blau: var(--wm-verlauf); --pd-glas: var(--wm-flaeche); --pd-glas2: var(--wm-flaeche); --pd-linie: var(--wm-linie); --pd-matt: var(--wm-matt); --pd-schatten: var(--wm-schatten); }   /* Verweise auf tokens.css */
 /* Panel/Sheet mit gewähltem Pegel: blau (Desktop und Handy) */
 .pa-panel.hat-auswahl { background: var(--pd-blau); color: var(--navy); }
 .pa-panel.hat-auswahl .pa-griff span { background: #C9D4DA; }

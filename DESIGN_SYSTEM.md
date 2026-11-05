@@ -267,3 +267,5 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 - Entschieden: Richtung C mit Disziplin von A (Phase 2).
 - Phase 4 (Umsetzung) beginnt erst nach ausdrücklicher Freigabe durch den Nutzer – schrittweise: Tokens + Schrift → gemeinsame Bausteine → Bereiche (Karte/Standort, Pegel, Meldungen, Mehr, Melden/Formulare).
 - Bestehende Klassen (`pd-*`, `pa-*`, `bs-*`, `detail-*`) werden schrittweise auf Tokens umgestellt; Geschäftslogik und Backend bleiben unverändert.
+- **Schritt 1 erledigt (7.58.0):** `public/css/tokens.css` (alle Tokens + `@font-face`), Schrift in `public/fonts/` (variabel 200–800, latin + latin-ext, Lizenz `OFL.txt`), in allen HTML-Seiten vor den übrigen Stylesheets eingebunden, im Service Worker vorgehalten. Alte Variablen (`--navy`, `--ink`, `--muted`, `--slip`, `--marina`, `--fuel`, `--info-bg`, `--pd-*`, `--zb-*`) verweisen jetzt auf Tokens. Das Teilen-Bild (`pegel-bild.js`) nutzt dieselbe Schrift.
+- Nächste Schritte: gemeinsame Bausteine (`.wm-*`), dann Bereiche.
