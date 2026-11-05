@@ -21,3 +21,8 @@ Projektstand, Architektur, Entscheidungen und offene Aufgaben: **`watermap-stand
 - Achtung: `pkill -f "http.server 876…"` trifft auch die eigene Shell, wenn das Muster im selben Befehl steht – in ein Skript auslagern.
 - JS-Syntax prüfen: Datei als `.mjs` kopieren, `node --check`.
 - Leaflet-Ersatz für Tests: `tests/stub/leaflet-stub.js` (fehlende Methoden dort ergänzen, nicht die App verbiegen).
+
+## Designsystem (verbindlich)
+- Bei **jeder** Arbeit an der Oberfläche (`public/css`, `public/js` mit DOM/Markup, neue Ansichten) zuerst **`DESIGN_SYSTEM.md`** lesen und einhalten: Farb-, Schrift-, Abstands-, Radius- und Schatten-Tokens, Komponentenstandards, Breakpoints, Zustände, Barrierefreiheit.
+- Keine Werte außerhalb der Tokens; fehlt etwas, erst `DESIGN_SYSTEM.md` ergänzen (mit Begründung), dann verwenden.
+- Abweichungen nur nach Rückfrage beim Nutzer. Die Projektregeln oben gelten weiter (Vorschau zuerst, Version, Tests, 375/390/1024/1440 px).
