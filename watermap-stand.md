@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 05.11.2026 · App-Version **7.61.0**
+Stand: 05.11.2026 · App-Version **7.61.1**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.61.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.61.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -258,6 +258,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.60.0 | Designsystem Schritt 4 – Pegel: Titel/Wert/Knöpfe/Karten auf Tokens, Abschnittstitel in Satzschreibung, Chips und Suche wie auf der Karte |
 | 7.60.1 | Pegel-Suche wie auf der Hauptkarte: Logo links, Pille 48 px, Lupe rechts, Chips 40 px; Oberkante des großen Sheets aus der Kopfhöhe berechnet (`--pa-gross-top`) |
 | 7.61.0 | Designsystem Schritt 5–7: Meldungen, Mehr, Merkliste, Einstellungen, „In der Nähe“, Melden-Menü und Formulare in derselben Sprache wie Karte/Pegel (heller Kopf, Logo + Such-Pille, Titel mittig, runde Knöpfe, Chips 40 px, Karten ohne Rahmen); „Lage melden“ unverändert |
+| 7.61.1 | Kein blauer Fokusrahmen mehr um Überschriften/Bereiche, die nur per Skript den Fokus bekommen (`tabindex="-1"`, z. B. Pegelname „Vlotho“); Fokusring an Knöpfen/Links/Feldern bleibt |
 | 7.54.1 | Pegel-Sheet wischt so flüssig wie auf der Hauptkarte: beim Ziehen nur noch verschoben (`transform`), nicht mehr in der Höhe neu berechnet; zu Beginn einmal auf volle Höhe gestellt und nach unten versetzt, die Größe ändert sich erst beim Einrasten |
 | 7.54.0 | **Fenster von unten wischbar und flüssig:** Das Pegel-Sheet folgt beim Ziehen dem Finger (vorher sprang es erst beim Loslassen) und rastet weich ein (klein · ca. 80 % · ganz · zu; Schwung nimmt die nächste Stufe in Bewegungsrichtung). Alle Fenster von unten (Dialoge, Standort-Vorschau und -Details, Pegel-Sheet) fahren auf dem Handy weich hoch statt plötzlich zu erscheinen (`sheet-ein`, bei „Bewegung reduzieren“ aus). Die übrigen Fenster folgten schon dem Finger (`wischen.js`) |
 | 7.53.0 | **Zart blau** (Rückmeldung: das kräftige Blau passt nicht zur App): gleicher Aufbau wie 7.52.0, aber ganz helles Wasserblau oben, weiße Karten und Knöpfe mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. **Tidepegel** im selben Muster (Name mittig, große Zahl, „● Tide · ↗ auflaufend“, drei Knöpfe Alarm · Merken · Teilen, Karten Gezeiten/Tidekurve/letztes HW·NW, Liste Häfen in der Nähe · Gewässer – alle Pegel · Station und Quelle) |
@@ -325,6 +326,7 @@ Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Dis
 - [x] Schritt 3 – Karte und Standort (7.59.0): Handy-Karte ohne dunkle Leiste (Suche/Chips schweben, `body.view-karte`), Standort-Sheet/Vorschau nach Bausteinen.
 - [x] Schritt 4 – Pegel (7.60.0): Feinschliff auf Tokens, Abschnittstitel ohne Großbuchstaben, Wert 72/300, Chips/Suche wie Karte.
 - [x] Schritt 5–7 (7.61.0): Meldungen, Mehr, Merkliste, Einstellungen, „In der Nähe“, Melden-Menü, Formulare – eine Sprache wie Karte/Pegel. **Ausnahme: „Lage melden“ bleibt wie bisher.**
+- **Pausiert auf Wunsch des Nutzers (05.11.2026)** – offen bleibt nur Schritt 8:
 - [ ] Schritt 8 – Desktop (≥ 768 px) prüfen, Reste aufräumen (alte Einzelwerte → Tokens, `!important` raus), Wetter-Fenster und Seiten Datenschutz/Impressum/Über.
 - Arbeitsweise: je Schritt Vorschaubild (vorher/nachher, 390 px) zeigen, Version erhöhen, alle Tests, pushen. Tests, die altes Aussehen festschreiben, auf das Designsystem anpassen (nicht die App verbiegen).
 - Plugin „frontend-design“ war nur in der Cloud-Sitzung installiert (`claude plugin install frontend-design@anthropic-plugin-directory`).

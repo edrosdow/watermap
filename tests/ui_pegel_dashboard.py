@@ -195,6 +195,7 @@ def run(b, w, hh, mobile):
     um = pg.locator('.pd-umschalter button')
     check(um.all_inner_texts() == ['24 Std.', '7 Tage', '30 Tage'] and um.nth(1).get_attribute('aria-pressed') == 'true', f'{tag}: Cockpit: Zeitraum 24 h | 7 Tage | 30 Tage')
     check(pg.locator('.pa-panel').get_attribute('class').count('is-gross') == 1 and pg.inner_text('#pd-name') == 'Minden', f'{tag}: Cockpit im Panel (groß)')
+    check(pg.evaluate("(() => { const n = document.querySelector('#pd-name'); n.focus(); return getComputedStyle(n).outlineStyle; })()") == 'none', f'{tag}: kein Fokusrahmen um den Namen (Fokus nur für Screenreader)')
     zeilen = [pg.evaluate("(e) => e.querySelector(':scope > summary')?.textContent.trim() ?? e.textContent.trim()", e) for e in pg.locator('.pd-liste > *').element_handles()]
     check(zeilen == ['Passt mein Boot?', 'Als Bild teilen', 'Slipanlagen in der Nähe', 'Station und Quelle'] and pg.locator('.pd-liste details[open]').count() == 0, f'{tag}: Liste unten: {zeilen}')
     kw = pg.inner_text('.pd-kennwerte')

@@ -125,3 +125,8 @@ textarea.wm-eingabe { min-height: 104px; padding: var(--wm-3) var(--wm-4); resiz
 }
 .wm-btn:active, .wm-rund:active, .wm-chip:active { transform: scale(.98); }
 @media (prefers-reduced-motion: reduce) { .wm-btn, .wm-rund, .wm-chip { transition: none; } .wm-btn:active, .wm-rund:active, .wm-chip:active { transform: none; } }
+
+/* ---------------------------------------------------------------- Fokus nur für Bedienelemente
+   Überschriften und Bereiche mit tabindex="-1" bekommen den Fokus nur per Skript (für Screenreader beim Öffnen) –
+   sie zeigen keinen Rahmen (Wunsch des Nutzers: kein blauer Rahmen um „Vlotho“ u. ä.). Knöpfe/Links/Felder behalten ihren Fokusring. */
+html body [tabindex="-1"]:focus, html body [tabindex="-1"]:focus-visible { outline: none; }
