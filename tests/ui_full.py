@@ -457,8 +457,8 @@ def photo_form(b, mobile):
     check('was das Foto zeigt' in pg.inner_text('#dlg .pf-status'), f'{tag}: Hinweis „Bitte wähle, was das Foto zeigt“')
     pg.click('#dlg .pf-kat[data-kat=rampe]'); pg.click('#dlg .pf-kat[data-kat=parkplatz]')
     check(pg.locator('#dlg .pf-kat[aria-pressed=true]').count() == 1 and pg.locator('#dlg input[name=kategorie]').input_value() == 'parkplatz'
-          and pg.evaluate("getComputedStyle(document.querySelector('.pf-kat[aria-pressed=true]')).backgroundColor") == 'rgb(14, 36, 51)', f'{tag}: genau eine Kategorie, aria-pressed, Navy')
-    check(send.get_attribute('aria-disabled') == 'false' and pg.evaluate("getComputedStyle(document.querySelector('.pf-send')).backgroundColor") == 'rgb(11, 94, 107)', f'{tag}: Knopf Petrol, wenn bereit')
+          and pg.evaluate("getComputedStyle(document.querySelector('.pf-kat[aria-pressed=true]')).backgroundColor") == 'rgb(14, 46, 66)', f'{tag}: genau eine Kategorie, aria-pressed, Tinte (Designsystem)')
+    check(send.get_attribute('aria-disabled') == 'false' and pg.evaluate("getComputedStyle(document.querySelector('.pf-send')).backgroundColor") == 'rgb(11, 124, 147)', f'{tag}: Knopf Petrol, wenn bereit')
     check(pg.locator('#pf-note').get_attribute('maxlength') == '140', f'{tag}: Notiz max. 140 Zeichen')
     pg.fill('#pf-note', 'bei Niedrigwasser, Mai 2026')
     foot = pg.locator('#dlg .pf-foot').bounding_box()

@@ -152,3 +152,138 @@
 @media (max-width: 767px) {
   .ei-profil { margin: 16px 16px 0; }
 }
+
+/* ------------------------------------------------------------------ 7.61.0 Designsystem Schritt 5–7: Meldungen, Mehr, Merkliste, Einstellungen, Melden-Menü, Formulare
+   Eine Sprache wie Karte und Pegel: heller Wassergrund, Kopf mittig (Titel 24/700, runder Zurück-Knopf), weiße Karten mit Radius m und Schatten,
+   Abschnittstitel in Satzschreibung, Chips/Umschalter/Knöpfe wie überall. Ausnahme: „Lage melden“ (dunkle Karte + Formular) bleibt. */
+.seite, .pegelseite.seite { background: var(--wm-verlauf); }
+@media (max-width: 767px) {
+  /* oberste Leiste auf allen Seiten wie auf der Karte: Logo + weiße Such-Pille auf Wassergrund */
+  .app-header { background: var(--wm-wasser); color: var(--wm-tinte); }
+  .bs-seite { padding: 0 0 28px; }
+  .bs-kopf { background: transparent; color: var(--wm-tinte); padding: var(--wm-2) var(--wm-4) var(--wm-1); display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px;
+    column-gap: var(--wm-1); align-items: start; text-align: center; }
+  .bs-kopf > div { grid-column: 2; grid-row: 1; min-width: 0; }
+  .bs-kopf > .bs-zurueck { grid-column: 1; grid-row: 1; margin: 0; }
+  .bs-kopf > .mu-neu { grid-column: 3; grid-row: 1; }
+  .bs-titel { color: var(--wm-tinte); font-size: var(--wm-t-xl); font-weight: 700; line-height: 1.15; }
+  .bs-unter { color: var(--wm-matt); font-size: var(--wm-t-s); }
+  .bs-zurueck { color: var(--wm-tinte); }
+  .bs-abschnitt { margin: var(--wm-6) var(--wm-4) 0; }
+  .mu-chips, .mu-steuer { padding-left: var(--wm-4); padding-right: var(--wm-4); }
+}
+.bs-titel { color: var(--wm-tinte); font-weight: 700; }
+/* runder Knopf: sichtbar 38 px (wie überall), Tippfläche 44 px */
+.bs-zurueck, .mu-neu { width: 44px; height: 44px; border: 0; border-radius: var(--wm-r-rund); background: transparent; color: var(--wm-tinte); box-shadow: none; position: relative; isolation: isolate; }
+.bs-zurueck::before, .mu-neu::before { content: ""; position: absolute; inset: 3px; z-index: -1; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
+.bs-zurueck:hover, .mu-neu:hover { background: transparent; }
+.bs-zurueck:hover::before, .mu-neu:hover::before { background: var(--wm-flaeche-2); }
+.bs-abschnitt h2, .bs-abschnitt-kopf h2 { font-size: var(--wm-t-s); font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }
+.bs-link { color: var(--wm-petrol-tief); font-weight: 700; }
+.bs-gruppe, .mu-umkreis { background: var(--wm-flaeche); border: 0; border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
+.bs-zeile, .ei-zeile, .ei-sw, .ei-reihe { border-top-color: var(--wm-linie); }
+.bs-zeile:hover { background: var(--wm-wasser-2); }
+.bs-ico, .bs-ico.is-dunkel { border-radius: var(--wm-r-s); background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
+.bs-ico.is-typ { color: #fff; }
+.bs-text strong { color: var(--wm-tinte); font-weight: 700; }
+.bs-text small, .bs-leer, .bs-fuss { color: var(--wm-matt); }
+.bs-pfeil { color: var(--wm-leise); }
+.bs-wert { color: var(--wm-tinte); font-weight: 700; }
+.bs-leer a { color: var(--wm-petrol-tief); }
+.bs-hinweis { border-radius: var(--wm-r-s); background: var(--wm-warn-hell); color: var(--wm-warn-text); }
+
+/* Mehr: Profil-Karte hell wie alle Karten */
+.ei-profil { background: var(--wm-flaeche); color: var(--wm-tinte); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
+.ei-profil:hover { background: var(--wm-wasser-2); }
+.ei-av { background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
+.ei-profil-text strong { font-weight: 700; }
+.ei-profil-text small, .ei-pf { color: var(--wm-matt); }
+@media (max-width: 767px) { .ei-profil { margin: var(--wm-3) var(--wm-4) 0; } }
+
+/* Einstellungen */
+.ei-label { color: var(--wm-tinte); }
+.ei-hilfe, .ei-opt, .ei-einheit { color: var(--wm-matt); }
+.ei-seg, .mu-seg { background: var(--wm-linie); border-radius: var(--wm-r-s); padding: 3px; gap: 0; }
+.ei-seg button, .mu-seg button { border-radius: calc(var(--wm-r-s) - 3px); color: var(--wm-matt); font-weight: 700; font-size: var(--wm-t-s); }
+.ei-seg button[aria-pressed="true"], .mu-seg button.is-an { background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-weight: 700; }
+.ei-zahl { border: 1.5px solid var(--wm-linie); border-radius: var(--wm-r-s); }
+.ei-zahl:focus { border-color: var(--wm-petrol); outline: none; box-shadow: 0 0 0 3px var(--wm-petrol-hell); }
+.ei-zahl[aria-invalid="true"] { border-color: var(--wm-stop); }
+.ei-fehler { color: var(--wm-stop-text); }
+.ei-sw[aria-checked="true"] .ei-tr { background: var(--wm-petrol); }
+.ei-knopf { border: 0; border-radius: var(--wm-r-rund); background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); font-weight: 700; }
+.ei-status.is-ok { color: var(--wm-gut-text); } .ei-status.is-stop { color: var(--wm-stop-text); } .ei-status.is-offen { color: var(--wm-matt); }
+
+/* Meldungen: Chips wie auf der Karte, Karten ohne Rahmen (Zustandsfarbe bleibt oben) */
+.mu-zahl { background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-weight: 700; }
+.mu-chip { min-height: 40px; border: 0; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-weight: 700; }
+.mu-chip.is-an { background: var(--wm-tinte); color: #fff; }
+.mu-chips { padding-bottom: var(--wm-2); }
+.mu-sort { color: var(--wm-petrol-tief); font-weight: 700; }
+.mu-umkreis-kopf b { color: var(--wm-petrol-tief); }
+.mu-range { accent-color: var(--wm-petrol); }
+.mu-karte, .mu-karte.vo-warn, .mu-karte.vo-stop, .mu-karte.vo-gut { border: 0; border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
+.mu-karte.vo-warn .mu-oben { background: var(--wm-warn-hell); } .mu-karte.vo-stop .mu-oben { background: var(--wm-stop-hell); } .mu-karte.vo-gut .mu-oben { background: var(--wm-gut-hell); }
+.mu-ort { color: var(--wm-tinte); font-weight: 700; }
+.mu-knopf { border: 0; border-radius: var(--wm-r-m); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); color: var(--wm-tinte); }
+
+/* Melden-Menü (ohne „Lage vor Ort melden“ – die dunkle Karte bleibt) */
+#report-menu { background: var(--wm-verlauf); }
+#report-title { font-size: var(--wm-t-xl); font-weight: 700; text-align: center; color: var(--wm-tinte); }
+.rm-abschnitt { font-size: var(--wm-t-s); font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }
+.rmenu { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); overflow: hidden; }
+.rmenu > li + li .rm-item { border-top: 1px solid var(--wm-linie); }
+.rm-item { padding-left: var(--wm-4); padding-right: var(--wm-4); }
+.rm-ico, .rm-ico.rm-slip, .rm-ico.rm-fuel, .rm-ico.rm-foto, .rm-ico.rm-fehler, .rm-ico.rm-ergaenzen { border-radius: var(--wm-r-s); background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
+.rmenu-links { border-top: 0; justify-content: center; }
+
+/* Menüs und Formulare: Grund, Knöpfe, Felder nach den Bausteinen */
+.pop { background: var(--wm-verlauf); }
+.pop.is-sheet { border-radius: var(--wm-r-l) var(--wm-r-l) 0 0; }
+.pop-foot { background: var(--wm-flaeche); border-top-color: var(--wm-linie); }
+.dialog-form:not(.dialog-photo) { border-radius: var(--wm-r-l); background: var(--wm-verlauf); }
+.btn { border-radius: var(--wm-r-m); font-weight: 700; }
+.btn-primary { background: var(--wm-petrol); }
+.btn-primary:hover { background: var(--wm-petrol-tief); }
+.btn-outline { border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); }
+.btn-outline:hover { background: var(--wm-flaeche-2); }
+.field-label { color: var(--wm-tinte); font-weight: 700; }
+.field input[type=text], .field input[type=email], .field input[type=number], .field input[type=date], .field select, .field textarea {
+  border: 1.5px solid var(--wm-linie); border-radius: var(--wm-r-s); background: var(--wm-flaeche); }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--wm-petrol); outline: none; box-shadow: 0 0 0 3px var(--wm-petrol-hell); }
+/* Foto-Formular: eigene Variablen auf Tokens (nicht „Lage melden“) */
+.dialog-photo:not(.dialog-lage) { --pf-navy: var(--wm-tinte); --pf-bg: var(--wm-wasser-2); --pf-petrol: var(--wm-petrol); --pf-line: var(--wm-linie); --pf-muted: var(--wm-matt); }
+
+/* 7.61.0 Abgleich: „In der Nähe“-Kopf am Handy hell wie alle Köpfe; Formular-Köpfe wie alle Sheets (Titel mittig, rundes × links) */
+@media (max-width: 767px) {
+  .nh-kopf-m, body.view-naehe .nh-kopf-m { background: var(--wm-wasser); color: var(--wm-tinte); gap: 6px; padding-bottom: 10px; }
+  body.view-naehe .nh-kopf-m::before { background: var(--wm-leise); opacity: .5; }
+  .nh-kopf-m .nh-titel { color: var(--wm-tinte); font-size: var(--wm-t-xl); font-weight: 700; }
+  .nh-kopf-m :focus-visible { outline-color: var(--wm-fokus); }
+  .nh-sym { border-radius: var(--wm-r-rund); background: transparent; color: var(--wm-tinte); isolation: isolate; }
+  .nh-sym::before { content: ""; position: absolute; inset: 3px; z-index: -1; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
+  .nh-sym:hover { background: transparent; }
+  .nh-sym .filter-n { background: var(--wm-petrol); color: #fff; }
+  .nh-pille { height: 36px; border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); }
+  .nh-pille .nh-bezug-ico { color: var(--wm-petrol-tief); }
+  .nh-pille-pfeil { color: var(--wm-matt); }
+  .nh-kopf-m .cat { min-height: 40px; height: 40px; border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-weight: 700; }
+  .nh-kopf-m .cat:hover { color: var(--wm-tinte); }
+  .nh-kopf-m .cat[aria-pressed="true"] { background: var(--wm-tinte); color: #fff; }
+  .nh-zeile1 { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); color: var(--wm-tinte); }
+}
+.dialog-form:not(.dialog-photo) #dlg-title { text-align: center; padding: 0 44px; font-size: var(--wm-t-xl); font-weight: 700; color: var(--wm-tinte); }
+.dialog-form:not(.dialog-photo) > .dlg-x, .dialog:not(.dialog-photo) > .dlg-x { right: auto; left: 10px; }
+.dialog-photo:not(.dialog-lage) .pf-head { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; column-gap: var(--wm-1); text-align: center; }
+.dialog-photo:not(.dialog-lage) .pf-title { grid-column: 2; grid-row: 1; font-size: var(--wm-t-xl); font-weight: 700; color: var(--wm-tinte); }
+.dialog-photo:not(.dialog-lage) .pf-x { grid-column: 1; grid-row: 1; background: transparent; position: relative; isolation: isolate; }
+.dialog-photo:not(.dialog-lage) .pf-x::before { content: ""; position: absolute; inset: 3px; z-index: -1; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
+.dlg-x { border-radius: var(--wm-r-rund); }
+.dialog:not(.dialog-photo) > .dlg-x { isolation: isolate; background: transparent; color: var(--wm-tinte); }
+.dialog:not(.dialog-photo) > .dlg-x::before { content: ""; position: absolute; inset: 3px; z-index: -1; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
+@media (max-width: 767px) {
+  .nh-kopf-m > .nh-zeile:first-child { display: grid; grid-template-columns: 88px minmax(0, 1fr) 88px; align-items: center; }
+  .nh-kopf-m > .nh-zeile:first-child > .nh-titel { grid-column: 2; grid-row: 1; text-align: center; }
+  .nh-kopf-m > .nh-zeile:first-child > .nh-symbole { grid-column: 3; grid-row: 1; justify-content: flex-end; }
+  .nh-kopf-m > .nh-pille { align-self: center; }
+}
