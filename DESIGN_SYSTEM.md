@@ -69,7 +69,7 @@ Bleiben wie bisher, nur als Tokens: `--wm-slip #087F9C`, `--wm-hafen #16619B`, `
 
 **Schrift:** *Atkinson Hyperlegible Next* (SIL Open Font License, kostenlos), selbst gehostet als `woff2` in `public/fonts/` – kein Abruf bei Google, datenschutzfreundlich. Datei in `SHELL_FILES` aufnehmen.
 Fallback: `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`. `font-display: swap`.
-Zahlen immer mit `font-variant-numeric: tabular-nums` (Werte springen nicht).
+Zahlen immer mit `font-variant-numeric: tabular-nums` (Werte springen nicht). Die Null wird **ohne Schrägstrich** gezeigt (Wunsch des Nutzers; Glyphe in `public/fonts/atkinson-next-latin.woff2` angepasst, siehe `public/fonts/LIESMICH.txt`).
 
 | Token | Größe / Zeilenhöhe | Gewicht | Verwendung |
 |---|---|---|---|
