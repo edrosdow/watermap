@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 05.11.2026 · App-Version **7.60.0**
+Stand: 05.11.2026 · App-Version **7.60.1**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.60.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.60.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -256,6 +256,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.58.2 | Null ohne Schrägstrich (Schriftdatei angepasst, `public/fonts/LIESMICH.txt`) |
 | 7.59.0 | Designsystem Schritt 3 – Karte und Standort: Handy-Karte ohne dunkle Leiste (Suche und Chips schweben), Standort-Sheet/Vorschau nach den Bausteinen (Titel 24/700, keine Großbuchstaben-Etiketten, Route gefüllt) |
 | 7.60.0 | Designsystem Schritt 4 – Pegel: Titel/Wert/Knöpfe/Karten auf Tokens, Abschnittstitel in Satzschreibung, Chips und Suche wie auf der Karte |
+| 7.60.1 | Pegel-Suche wie auf der Hauptkarte: Logo links, Pille 48 px, Lupe rechts, Chips 40 px; Oberkante des großen Sheets aus der Kopfhöhe berechnet (`--pa-gross-top`) |
 | 7.54.1 | Pegel-Sheet wischt so flüssig wie auf der Hauptkarte: beim Ziehen nur noch verschoben (`transform`), nicht mehr in der Höhe neu berechnet; zu Beginn einmal auf volle Höhe gestellt und nach unten versetzt, die Größe ändert sich erst beim Einrasten |
 | 7.54.0 | **Fenster von unten wischbar und flüssig:** Das Pegel-Sheet folgt beim Ziehen dem Finger (vorher sprang es erst beim Loslassen) und rastet weich ein (klein · ca. 80 % · ganz · zu; Schwung nimmt die nächste Stufe in Bewegungsrichtung). Alle Fenster von unten (Dialoge, Standort-Vorschau und -Details, Pegel-Sheet) fahren auf dem Handy weich hoch statt plötzlich zu erscheinen (`sheet-ein`, bei „Bewegung reduzieren“ aus). Die übrigen Fenster folgten schon dem Finger (`wischen.js`) |
 | 7.53.0 | **Zart blau** (Rückmeldung: das kräftige Blau passt nicht zur App): gleicher Aufbau wie 7.52.0, aber ganz helles Wasserblau oben, weiße Karten und Knöpfe mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. **Tidepegel** im selben Muster (Name mittig, große Zahl, „● Tide · ↗ auflaufend“, drei Knöpfe Alarm · Merken · Teilen, Karten Gezeiten/Tidekurve/letztes HW·NW, Liste Häfen in der Nähe · Gewässer – alle Pegel · Station und Quelle) |

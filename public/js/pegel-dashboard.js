@@ -4,7 +4,7 @@
 //  Pegel gewählt: Panel rechts (Desktop) bzw. Bottom Sheet (Handy) kompakt → „Details“ öffnet das Cockpit (pegelDetail).
 // Daten: eine Stationsliste (pegel-daten.js); Verläufe nur für den gewählten Pegel und die Favoriten (zwischengespeichert).
 import { h, announce } from './dom.js';
-import { icon } from './icons.js';
+import { icon, logoSvg } from './icons.js';
 import { haversine, displayName } from './model.js';
 import { s } from './chart.js';
 import { pegelLaden, verlaufLaden, meinePegel, aenderung24h } from './pegel-daten.js';
@@ -92,7 +92,7 @@ export function pegelDashboard(root, ctx) {
       oben: () => (isMobile() ? kopfUnten() : 0),
     });
     standZeile = h('p', { class: 'pa-stand', 'aria-live': 'polite', text: 'Pegel werden geladen …' });
-    feld = h('input', { type: 'search', id: 'pa-suche', class: 'pa-suche', placeholder: 'Pegel, Gewässer oder Ort suchen', autocomplete: 'off', enterkeyhint: 'search',
+    feld = h('input', { type: 'search', id: 'pa-suche', class: 'pa-suche', placeholder: 'Pegel, Gewässer oder Ort', autocomplete: 'off', enterkeyhint: 'search',
       role: 'combobox', 'aria-label': 'Pegel, Gewässer oder Ort suchen', 'aria-autocomplete': 'list', 'aria-expanded': 'false', 'aria-controls': 'pa-treffer',
       oninput: () => sucheZeichnen(), onkeydown: sucheTaste, onfocus: () => { if (feld.value.trim()) sucheZeichnen(); } });
     trefferBox = h('ul', { class: 'pa-treffer', id: 'pa-treffer', role: 'listbox', 'aria-label': 'Suchtreffer', hidden: true });
@@ -106,7 +106,9 @@ export function pegelDashboard(root, ctx) {
             const b = e.currentTarget; b.classList.add('is-busy'); await laden(true); b.classList.remove('is-busy');
             ctx.toast?.(stand?.offline ? 'Keine Verbindung – letzter Stand wird angezeigt.' : stand ? 'Pegel aktualisiert.' : 'Pegeldaten sind gerade nicht erreichbar.'); } })),
         standZeile),
-      h('div', { class: 'pa-suchbox' }, h('span', { class: 'pa-suche-ico', html: icon('search', 19), 'aria-hidden': 'true' }), feld, trefferBox),
+      h('div', { class: 'pa-suchzeile' },   // Handy: wie auf der Hauptkarte – Logo links, Suche als Pille, Lupe rechts
+        h('a', { class: 'pa-logo', href: './', 'aria-label': 'WaterMap – Startseite', html: logoSvg(38) }),
+        h('div', { class: 'pa-suchbox' }, h('span', { class: 'pa-suche-ico', html: icon('search', 20), 'aria-hidden': 'true' }), feld, trefferBox)),
       filterBox);
     inhalt = h('div', { class: 'pa-inhalt' });
     griff = h('button', { type: 'button', class: 'pa-griff', 'aria-controls': 'pa-panel', onclick: () => grossSetzen(!ui.gross) }, h('span', { 'aria-hidden': 'true' }));
@@ -122,6 +124,7 @@ export function pegelDashboard(root, ctx) {
     root.replaceChildren(app);
     root.classList.add('pa-modus');
     new ResizeObserver(() => app.style.setProperty('--pa-unten', `${isMobile() ? panel.offsetHeight : 0}px`)).observe(panel);
+    new ResizeObserver(() => app.style.setProperty('--pa-gross-top', `${kopfUnten() + STREIFEN}px`)).observe(kopf);   // Sheet „groß“ endet genau unter Suche und Chips
   }
 
   /**

@@ -142,7 +142,7 @@ def run(b, w, hh, mobile):
     texte = [pg.evaluate('(e) => e.textContent.trim()', chips.nth(i).element_handle()) for i in range(chips.count())]
     check(texte == ['Favoriten1', 'In der Nähe'] and all(chips.nth(i).get_attribute('aria-pressed') == 'false' for i in range(2)), f'{tag}: Chips Favoriten (1) | In der Nähe, nichts offen ({texte})')
     check(pg.locator('.pa-panel').is_hidden(), f'{tag}: Start: kein Panel bzw. Sheet – nur die Karte')
-    check(pg.locator('#pa-suche').get_attribute('placeholder') == 'Pegel, Gewässer oder Ort suchen' and pg.locator('#pa-suche').is_visible(), f'{tag}: Suchfeld sichtbar')
+    check(pg.locator('#pa-suche').get_attribute('placeholder') == 'Pegel, Gewässer oder Ort' and pg.locator('#pa-suche').is_visible(), f'{tag}: Suchfeld sichtbar')
     if mobile:
         check(pg.locator('.app-header').is_hidden() and pg.locator('.pa-titelblock').bounding_box()['width'] <= 1, f'{tag}: Handy: kein globaler Kopf, Titel nur für Screenreader')
         kb = pg.locator('.pk-ansicht').bounding_box()
@@ -293,6 +293,7 @@ def run(b, w, hh, mobile):
         suche_waehlen(pg, 'trier', 'Trier')
         pg.click('.pa-griff'); pg.wait_for_timeout(200)
         check('is-gross' in pg.get_attribute('.pa-panel', 'class') and pg.locator('.pa-panel .pd').count() == 1 and pg.get_attribute('.pa-griff', 'aria-expanded') == 'true', f'{tag}: Griff antippen vergrößert das Sheet (Cockpit)')
+        GROSS_TOP = lambda: round(pg.evaluate("document.querySelector('.pa-kopf').getBoundingClientRect().bottom") + 60)   # groß: 60 px Karte unter Suche und Chips
         PROBEN = """(() => { window.__proben = []; const p = document.querySelector('.pa-panel'), t0 = performance.now();
           const f = () => { window.__proben.push([Math.round(p.getBoundingClientRect().top), p.classList.contains('is-gross'), !!p.querySelector('.pd')]); if (performance.now() - t0 < 700) requestAnimationFrame(f); }; f(); })()"""
         def spruenge():
@@ -309,7 +310,7 @@ def run(b, w, hh, mobile):
         check(pg.locator('.pa-panel .pd .pd-wert').count() == 1 and pg.locator('.pa-kurz').count() == 0, f'{tag}: hochziehen: Details schon während des Ziehens sichtbar')
         pg.evaluate(PROBEN); cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); pg.wait_for_timeout(500)
         sp, pr = spruenge(); top = pg.locator('.pa-panel').bounding_box()['y']
-        check('is-gross' in pg.get_attribute('.pa-panel', 'class') and sp <= 3 and abs(top - 166) <= 2, f'{tag}: hochziehen: rastet weich auf groß ein (oben {top:.0f} px, Sprung {sp} px)')
+        check('is-gross' in pg.get_attribute('.pa-panel', 'class') and sp <= 3 and abs(top - GROSS_TOP()) <= 2, f'{tag}: hochziehen: rastet weich auf groß ein (oben {top:.0f} px, Sprung {sp} px)')
         # Knopf/Griff: weich statt sprunghaft
         pg.evaluate("(() => { window.__deck = []; const i = document.querySelector('.pa-inhalt'), t0 = performance.now(); const f = () => { window.__deck.push(+getComputedStyle(i).opacity); if (performance.now() - t0 < 700) requestAnimationFrame(f); }; f(); })()")
         pg.evaluate(PROBEN); pg.click('.pa-griff'); pg.wait_for_timeout(750)
@@ -319,7 +320,7 @@ def run(b, w, hh, mobile):
         check('is-gross' not in pg.get_attribute('.pa-panel', 'class') and sp <= 3 and len(set(tops)) > 4 and tops == sorted(tops), f'{tag}: Griff: fährt weich auf klein ({len(set(tops))} Zwischenlagen, Sprung {sp} px)')
         pg.evaluate(PROBEN); pg.click('.pa-verlauf'); pg.wait_for_timeout(500)
         pr = pg.evaluate('window.__proben'); tops = [a[0] for a in pr]
-        check('is-gross' in pg.get_attribute('.pa-panel', 'class') and len(set(tops)) > 4 and tops == sorted(tops, reverse=True) and abs(tops[-1] - 166) <= 2, f'{tag}: „Details“: fährt weich hoch ({len(set(tops))} Zwischenlagen)')
+        check('is-gross' in pg.get_attribute('.pa-panel', 'class') and len(set(tops)) > 4 and tops == sorted(tops, reverse=True) and abs(tops[-1] - GROSS_TOP()) <= 2, f'{tag}: „Details“: fährt weich hoch ({len(set(tops))} Zwischenlagen)')
         pg.click('.pa-griff'); pg.wait_for_timeout(450)
         pg.evaluate(PROBEN); pg.click('.pa-schliessen'); pg.wait_for_timeout(500)
         pr = pg.evaluate('window.__proben'); tops = [a[0] for a in pr if a[0] != 0]
