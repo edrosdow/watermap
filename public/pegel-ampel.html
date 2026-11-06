@@ -7,27 +7,33 @@
 <meta property="og:title" content="Pegel-Ampel – Passt mein Boot heute aufs Wasser?">
 <meta property="og:description" content="Aktueller Pegel, Trend und Verlauf – mit deinem Mindestpegel als Ampel. Kostenloser E-Mail-Alarm.">
 <meta property="og:type" content="website">
-<meta name="theme-color" content="#0E2433">
+<meta name="theme-color" content="#0B3045">
 <link rel="icon" href="./icons/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./css/tokens.css"><link rel="stylesheet" href="./css/ampel.css">
+<link rel="stylesheet" href="./css/tokens.css"><link rel="stylesheet" href="./css/bausteine.css"><link rel="stylesheet" href="./css/ampel.css">
 <link rel="stylesheet" href="./css/nav.css">
 </head>
 <body>
-<header class="am-hero">
-  <div class="am-bar">
-    <a class="am-logo" href="./"><span id="am-logo" aria-hidden="true"></span><span>WaterMap</span></a>
-    <nav id="topnav" class="topnav am-topnav" aria-label="Hauptnavigation"></nav>
-  </div>
-  <h1>Pegel-Ampel</h1>
-  <p>Passt mein Boot heute aufs Wasser? Pegel wählen, Mindestpegel eingeben, fertig.</p>
+<header class="wm-leiste">
+  <a class="wm-leiste-logo" href="./"><span id="am-logo" aria-hidden="true"></span><span><strong>WaterMap</strong><small>Dein Revier. Deine Karte.</small></span></a>
+  <nav id="topnav" class="topnav wm-leiste-nav am-topnav" aria-label="Hauptnavigation"></nav>
 </header>
+<div class="wm-seitenkopf">
+  <div class="wm-kopf">
+    <a class="wm-rund wm-kopf-links am-zurueck" href="./" aria-label="Zur Karte"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
+    <div class="wm-kopf-mitte">
+      <p class="wm-kopf-art">Pegel-Ampel</p>
+      <h1 class="wm-kopf-titel">Passt mein Boot heute aufs Wasser?</h1>
+      <p class="wm-kopf-unter">Pegel wählen, Mindestpegel eingeben, fertig.</p>
+    </div>
+  </div>
+</div>
 
-<main id="main">
+<main id="main" class="wm-seiteninhalt">
   <section class="am-input" aria-label="Eingaben">
     <div class="am-field am-search">
       <label for="am-q">Gewässer / Pegel</label>
       <div class="am-searchbox">
-        <input id="am-q" type="search" autocomplete="off" placeholder="z. B. Rhein, Kaub, Mosel" role="combobox" aria-expanded="false" aria-controls="am-list" aria-autocomplete="list">
+        <input id="am-q" class="wm-eingabe" type="search" autocomplete="off" placeholder="z. B. Rhein, Kaub, Mosel" role="combobox" aria-expanded="false" aria-controls="am-list" aria-autocomplete="list">
         <span class="am-searchico" id="am-searchico" aria-hidden="true"></span>
       </div>
       <ul id="am-list" class="am-list" role="listbox" hidden></ul>
@@ -35,11 +41,11 @@
     <div class="am-row">
       <div class="am-field">
         <label for="am-min">Mindestpegel</label>
-        <div class="am-unit"><input id="am-min" type="number" inputmode="numeric" min="-500" max="2000" step="1" placeholder="z. B. 120" aria-describedby="am-help"><span>cm</span></div>
+        <div class="am-unit"><input id="am-min" class="wm-eingabe" type="number" inputmode="numeric" min="-500" max="2000" step="1" placeholder="z. B. 120" aria-describedby="am-help"><span>cm</span></div>
       </div>
       <div class="am-field">
         <label for="am-hoehe">Höhe über Wasser</label>
-        <div class="am-unit"><input id="am-hoehe" type="text" inputmode="decimal" placeholder="optional" aria-describedby="am-hoehe-help"><span>m</span></div>
+        <div class="am-unit"><input id="am-hoehe" class="wm-eingabe" type="text" inputmode="decimal" placeholder="optional" aria-describedby="am-hoehe-help"><span>m</span></div>
       </div>
     </div>
     <fieldset class="am-boat">
@@ -73,7 +79,7 @@
     </div>
     <ul class="am-checks" id="am-hints"></ul>
     <p class="am-meta" id="am-where"></p>
-    <button type="button" class="am-btn am-btn-ghost" id="am-share">Ergebnis teilen</button>
+    <button type="button" class="wm-btn am-btn" id="am-share">Ergebnis teilen</button>
   </section>
 
   <section class="am-card" id="am-chart-card" hidden>
@@ -91,9 +97,9 @@
     </div>
     <form id="am-alarm-form" novalidate>
       <label for="am-mail">E-Mail-Adresse</label>
-      <input id="am-mail" type="email" autocomplete="email" placeholder="name@beispiel.de" required>
+      <input id="am-mail" class="wm-eingabe" type="email" autocomplete="email" placeholder="name@beispiel.de" required>
       <div class="am-hp" aria-hidden="true"><label for="am-website">Website</label><input id="am-website" name="website" tabindex="-1" autocomplete="off"></div>
-      <button type="submit" class="am-btn am-btn-light" id="am-alarm-btn">Alarm aktivieren</button>
+      <button type="submit" class="wm-btn am-btn am-btn-light" id="am-alarm-btn">Alarm aktivieren</button>
       <p class="am-alarm-msg" id="am-alarm-msg" role="status"></p>
       <p class="am-alarm-note">Du bekommst zuerst eine Mail zum Bestätigen. Jede Benachrichtigung enthält einen Link zum Abbestellen. <a href="./datenschutz.html#pegel-alarm">Datenschutz</a></p>
     </form>
