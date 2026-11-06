@@ -287,3 +287,63 @@
   .nh-kopf-m > .nh-zeile:first-child > .nh-symbole { grid-column: 3; grid-row: 1; justify-content: flex-end; }
   .nh-kopf-m > .nh-pille { align-self: center; }
 }
+
+/* ------------------------------------------------------------------ 7.62.0 Designsystem Schritt 8, Teil 1: Desktop (≥ 768 px)
+   Gleiche Sprache wie am Handy: die dunkle Kopfleiste bleibt (DESIGN_SYSTEM.md, Abschnitt 5), alles darunter liegt auf dem Wassergrund.
+   Suche als Pille mit Lupe rechts, Chips weiß mit Schatten (aktiv Tinte), Knöpfe in Leisten als Chips, Köpfe mit Titel 24/700. */
+@media (min-width: 768px) {
+  .app-header .search input { border-radius: var(--wm-r-rund); padding-left: var(--wm-5); }
+  .app-header .search input::placeholder { color: var(--wm-matt); }
+  .app-header .search-btn { border-radius: var(--wm-r-rund); color: var(--wm-tinte); }
+
+  .toolbar { background: var(--wm-wasser); border-bottom: 0; }
+  .toolbar .cat { min-height: 40px; border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-size: var(--wm-t-s); font-weight: 700; }
+  .toolbar .cat:hover { background: var(--wm-flaeche-2); color: var(--wm-tinte); }
+  .toolbar .cat-n { font-size: var(--wm-t-xs); font-weight: 400; color: var(--wm-matt); }
+  .toolbar .cat[aria-pressed="true"] { background: var(--wm-tinte); color: #fff; box-shadow: var(--wm-schatten); }
+  .toolbar .cat[aria-pressed="true"] .cat-check, .toolbar .cat[aria-pressed="true"] .cat-n { color: #fff; }
+  .toolbar .filter-btn, .toolbar-naehe { min-height: 40px; border: 0; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); color: var(--wm-tinte);
+    box-shadow: var(--wm-schatten); font-size: var(--wm-t-s); font-weight: 700; }
+  .toolbar .filter-btn:hover, .toolbar-naehe:hover { background: var(--wm-flaeche-2); }
+  .toolbar .filter-n { background: var(--wm-petrol); color: #fff; }
+  .toolbar .inview { font-size: var(--wm-t-s); color: var(--wm-matt); }
+
+  /* Pegel: Kopf auf Wassergrund, Suche wie oben, Chip-Symbole in Tinte (gemerkter Stern Sonne) */
+  .pa-kopf { background: var(--wm-wasser); border-bottom: 0; }
+  .pa-h1 { font-size: var(--wm-t-xl); font-weight: 700; color: var(--wm-tinte); }
+  .pa-neu { color: var(--wm-matt); }
+  .pa-neu:hover { background: var(--wm-flaeche); color: var(--wm-tinte); }
+  .pa-stand { font-size: var(--wm-t-xs); color: var(--wm-matt); }
+  .pa-suche { padding: 0 48px 0 var(--wm-5); }
+  .pa-suche::placeholder { color: var(--wm-matt); }
+  .pa-suche-ico { left: auto; right: 14px; top: 24px; color: var(--wm-tinte); }
+  .pa-chip svg { color: var(--wm-tinte); }
+  .pa-chip[data-liste="fav"] svg { color: var(--wm-sonne); }
+  .pa-chip[aria-pressed="true"] svg { color: #fff; }
+  .pa-chip[data-liste="fav"][aria-pressed="true"] svg { color: var(--wm-sonne); }
+
+  /* In der Nähe (Seitenleiste): Kopf auf Wassergrund, Knöpfe als Chips */
+  .nh-kopf { background: var(--wm-wasser); border-bottom: 0; }
+  .nh-titel { font-size: var(--wm-t-xl); font-weight: 700; color: var(--wm-tinte); }
+  .nh-bezug { font-size: var(--wm-t-s); color: var(--wm-matt); }
+  .nh-bezug-ico { color: var(--wm-petrol-tief); }
+  .nh-knopf, .nh-aendern { min-height: 44px; border: 0; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); color: var(--wm-tinte);
+    box-shadow: var(--wm-schatten); font-size: var(--wm-t-s); font-weight: 700; }
+  .nh-knopf:hover, .nh-aendern:hover { background: var(--wm-flaeche-2); }
+
+  /* Seitenleiste (Standortliste, In der Nähe): Wassergrund, Karten weiß mit Schatten */
+  .sidebar, body.list-open .sidebar { background: var(--wm-wasser-2); border-right-color: var(--wm-linie); }
+  .datainfo { background: transparent; border-bottom: 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+  .sidebar-foot { border-top-color: var(--wm-linie); font-size: var(--wm-t-xs); color: var(--wm-matt); }
+  .nh-erklaer { border: 0; border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
+  .nh-erklaer-ico { background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
+  .nh-erklaer-knoepfe { flex-wrap: wrap; }
+  .nh-erklaer-knoepfe .btn { flex: 1 1 auto; white-space: nowrap; border-radius: var(--wm-r-m); }
+  .list .place.nk { border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
+  .list .place.nk:hover { background: var(--wm-flaeche-2); box-shadow: var(--wm-schatten); }
+  .nk-ico { border-radius: var(--wm-r-s); }
+  .nk-name { font-size: var(--wm-t-m); font-weight: 700; color: var(--wm-tinte); }
+  .nk-dist { font-size: var(--wm-t-l); font-weight: 700; color: var(--wm-tinte); }
+  .nh-sort { color: var(--wm-petrol-tief); font-size: var(--wm-t-s); font-weight: 700; }
+  .nh-sort-box::after { color: var(--wm-petrol-tief); }
+}

@@ -274,7 +274,8 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 - **7.60.1:** Pegel-Suche wie auf der Karte (Logo links, Pille, Lupe rechts, Chips 40 px).
 - **Schritt 5–7 erledigt (7.61.0): Meldungen, Mehr, Merkliste, Einstellungen, „In der Nähe“, Melden-Menü, Formulare.** Handy: oberste Leiste überall hell (Wassergrund, Logo + Such-Pille wie Karte); alle Seiten- und Sheet-Köpfe mittig mit Titel 24/700 und rundem Knopf links (sichtbar 38 px, Tippfläche 44 px); Gruppen/Karten weiß, Radius m, Schatten; Abschnittstitel in Satzschreibung; Chips überall 40 px, weiß, aktiv Tinte; Umschalter mit Spur `linie`; Symbol-Kacheln `petrol-hell`; „Mein WaterMap“ hell; Meldungskarten ohne Rahmen (Zustandsfarbe oben bleibt); Formularfelder Radius s, Fokus Petrol; Knöpfe Radius m; Foto-Formular auf Tokens. „Lage melden“ unverändert.
 - **Regel:** Gleiche Elemente überall gleich – nach jeder Änderung alle Bereiche nebeneinander prüfen (siehe CLAUDE.md).
-- Nächste Schritte: Desktop (≥ 768 px) prüfen und angleichen (dunkle Leiste dort bleibt), Wetter-Fenster, Seiten Datenschutz/Impressum/Über, Reste aufräumen (Einzelwerte → Tokens, `!important`).
+- **Schritt 8, Teil 1 erledigt (7.62.0): Desktop.** Dunkle Kopfleiste bleibt; darunter Wassergrund, Chips/Filter/„In der Nähe“ als weiße Chips (aktiv Tinte), Suche als Pille mit Lupe rechts, Pegel-Kopf und Seitenleiste „In der Nähe“ nach Tokens.
+- Nächste Schritte: Wetter-Fenster, Seiten Datenschutz/Impressum/Über, Reste aufräumen (Einzelwerte → Tokens, `!important`).
 
 ## Entscheidungen des Nutzers (Ausnahmen)
 
