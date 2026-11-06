@@ -1,6 +1,7 @@
 # WaterMap – Designsystem „Wasser“
 
 Verbindlich für jede Arbeit an der Oberfläche (`public/`). Richtung: **C „Contemporary Product“ mit der Disziplin von A** (Entscheidung des Nutzers, Version 7.57.1).
+Angleichung aller Seiten: **Variante A „Navy-Leiste überall“** (Entscheidung des Nutzers, 06.11.2026, Stand 7.61.1) – siehe Abschnitt 11.
 Kurz: freundlich, hell, draußen lesbar – aber mit festen Tokens statt Einzelwerten.
 
 ---
@@ -62,6 +63,14 @@ Bleiben wie bisher, nur als Tokens: `--wm-slip #087F9C`, `--wm-hafen #16619B`, `
 
 ### App-Leiste
 `--wm-navy #0B3045` bleibt **nur** für das Logo und die oberste Leiste mit der Suche (Desktop). Seiten und Sheets nutzen keinen dunklen Grund mehr.
+Ab 768 px tragen **alle** Seiten dieselbe Leiste (Variante A, Abschnitt 11): Karte, Pegel, Meldungen, Mehr, Pegel-Ampel, Über/Datenschutz/Impressum, Verwaltung, Prüfung.
+
+Neue Tokens nur für die Leiste (bisher Einzelwerte in `nav.css` und `app.css`):
+| Token | Wert | Verwendung | Kontrast auf `--wm-navy` |
+|---|---|---|---|
+| `--wm-navy-aktiv` | `#163F57` | Fläche des aktiven Navigationsziels | – |
+| `--wm-navy-text` | `#D8E6EC` | Navigationstext in Ruhe | 10,8 : 1 |
+| `--wm-himmel` | `#9CCEE3` | Unterzeile am Logo, Zähler-Marke, Fokusring auf Navy | 8,1 : 1 |
 
 ---
 
@@ -137,7 +146,11 @@ Nie tiefer verschachteln. Keine Karte in einer Karte mit Schatten.
 | **Eingabefeld** | Höhe 48, weiß, Rahmen 1,5 px `--wm-linie`, Radius s, Text `m`. Fokus: Rahmen Petrol + Fokusring. Fehler: Rahmen `--wm-stop`, Text darunter `s stop-text`. Beschriftung immer sichtbar über dem Feld. |
 | **Hinweis / Warnung** | Karte mit Grund `*-hell`, Rahmen 1,5 px in Punktfarbe, Icon links. Amtliche Warnungen zusätzlich linker Streifen 4 px. |
 | **Navigation unten** (Handy) | schwebende Pille, 5 Ziele, aktives Ziel `petrol-hell` / `petrol`. Melden mittig als runder Petrol-Knopf. |
-| **Kopfleiste** (Desktop ≥ 768) | `--wm-navy` mit Logo, Suche, Navigation – einzige dunkle Fläche. |
+| **Kopfleiste** `.wm-leiste` (Desktop ≥ 768) | `--wm-navy`, Höhe 64 px, auf **jeder** Seite gleich: Logo + „WaterMap“ (`l 700`, weiß) mit Unterzeile `xs himmel`, Such-Pille (weiß, Radius rund, Höhe 48, max. 460 px), Navigation rechts (Karte · Pegel · Meldungen · Mehr; `s 700`, Text `navy-text`, Höhe 44, Radius s; aktiv `navy-aktiv` + weiß, `aria-current="page"`), ganz rechts „Melden“ (weißer Knopf, Text navy, Plus-Icon). Seiten ohne Suche (Textseiten, Verwaltung) zeigen statt der Pille nur die Navigation. Einzige dunkle Fläche. |
+| **Seitenkopf** `.wm-seitenkopf` | Kopf unter der Leiste für eigenständige Seiten (Pegel-Ampel, Textseiten, Verwaltung): wie **Kopf** (mittig, Art `s 700 petrol-tief`, Titel `xl`), Grund `--wm-wasser`, Inhalt darunter max. 760 px breit. Ersetzt `.am-hero` und den Navy-`header` aus `page.css`. |
+| **Tabelle** `.wm-tabelle` | in einer **Karte** (`is-liste`, ohne Innenabstand). Kopfzeile `s 700 matt` auf `flaeche-2`, Zellen `m`, Innenabstand 12 / 16 px, Trennlinie `--wm-linie`, Zahlen rechtsbündig und tabular, Zustand als **Zustandsmarke**. Am Handy in einem Rahmen mit `overflow-x: auto`. Ersetzt `.gc-table`, `.am-table`, die Tabellen der Verwaltung; `.facts` (Eigenschaften) bleibt Listenzeile. |
+| **Reiter** `.wm-reiter` | für Bereiche innerhalb einer Seite (Verwaltung: Fotos, Gemeldete Fotos, Slipanlagen …). Text `s 700 matt`, Höhe 44, unten 3 px Linie; aktiv Text `tinte` + Linie `petrol`, `aria-selected="true"`. Zähler als **Zustandsmarke** (`is-stop` bei Handlungsbedarf). Für Umschalten zwischen zwei, drei Ansichten weiter **Segment-Umschalter**. |
+| **Gefahr-Knopf** `.wm-btn.is-stop` | nur für endgültige Handlungen (Foto entfernen, Ablehnen). Weiß, Text `stop-text`, Rahmen 1,5 px `--wm-stop`, **ohne** Schatten (nie Rahmen und Schatten zugleich). Immer neben einer sicheren Alternative. |
 | **Leerer Zustand** | Satz, was fehlt, + eine Handlung („Noch keine Fotos – Foto einreichen“). |
 | **Fehler** | Was ist passiert + was tun, im Ton der App, ohne Entschuldigung („Pegeldaten sind gerade nicht erreichbar. Erneut versuchen“). |
 | **Icons** | Linien-Icons aus `public/js/icons.js` (`icon(name, px)`), 24er-Raster, Strich 2 px, runde Enden. Größen 16 / 20 / 24. Farbe = Textfarbe. Keine gefüllten Icons außer gemerktem Stern und Kartenmarkern. |
@@ -274,7 +287,37 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 - **7.60.1:** Pegel-Suche wie auf der Karte (Logo links, Pille, Lupe rechts, Chips 40 px).
 - **Schritt 5–7 erledigt (7.61.0): Meldungen, Mehr, Merkliste, Einstellungen, „In der Nähe“, Melden-Menü, Formulare.** Handy: oberste Leiste überall hell (Wassergrund, Logo + Such-Pille wie Karte); alle Seiten- und Sheet-Köpfe mittig mit Titel 24/700 und rundem Knopf links (sichtbar 38 px, Tippfläche 44 px); Gruppen/Karten weiß, Radius m, Schatten; Abschnittstitel in Satzschreibung; Chips überall 40 px, weiß, aktiv Tinte; Umschalter mit Spur `linie`; Symbol-Kacheln `petrol-hell`; „Mein WaterMap“ hell; Meldungskarten ohne Rahmen (Zustandsfarbe oben bleibt); Formularfelder Radius s, Fokus Petrol; Knöpfe Radius m; Foto-Formular auf Tokens. „Lage melden“ unverändert.
 - **Regel:** Gleiche Elemente überall gleich – nach jeder Änderung alle Bereiche nebeneinander prüfen (siehe CLAUDE.md).
-- Nächste Schritte: Desktop (≥ 768 px) prüfen und angleichen (dunkle Leiste dort bleibt), Wetter-Fenster, Seiten Datenschutz/Impressum/Über, Reste aufräumen (Einzelwerte → Tokens, `!important`).
+- **Entschieden (06.11.2026, Stand 7.61.1): Variante A „Navy-Leiste überall“** für die Angleichung der übrigen Seiten (Abschnitt 11). Verglichen mit B „Ganz hell“ (kein Navy mehr am Desktop) und C „Werkbank“ (senkrechte Leiste links, dichtere Desktop-Tokens). Entwürfe: Design-Canvas „WaterMap – Designsystem-Varianten“.
+- Nächste Schritte (Umsetzung erst nach Freigabe, siehe Abschnitt 11): Schritt 8–12.
+
+## 11. Angleichung aller Seiten – Variante A „Navy-Leiste überall“
+
+**Ziel:** Jede Seite der App sieht aus wie Karte und Pegel in 7.61 – eine Leiste, ein Kopf, dieselben Bausteine.
+
+**Grundsatz:** Am Handy (< 768 px) bleibt alles wie in 7.61.1: helle Leiste oben, schwebende Navigation unten. Ab 768 px tragen alle Seiten die Navy-Kopfleiste `.wm-leiste`, darunter Wassergrund (`--wm-verlauf`) und weiße Karten. Keine weiteren dunklen Flächen.
+
+**Warum A:** entspricht der Entscheidung aus 7.57.1 (dunkle Leiste nur oben am Desktop), nutzt `tokens.css` und `bausteine.css` unverändert weiter und braucht nur fünf neue Bausteine (Kopfleiste als gemeinsame Klasse, Seitenkopf, Tabelle, Reiter, Gefahr-Knopf) und drei Tokens (`navy-aktiv`, `navy-text`, `himmel`). Kleinstes Risiko für bestehende Funktionen.
+
+**Bestand 7.61.1 (Messung 06.11.2026), Ausgangspunkt für das Aufräumen:**
+| Bereich | Befund |
+|---|---|
+| Einzelwerte statt Tokens | rund 1.080 Hex-Werte, vor allem `app.css` (435) und `pegel.css` (351); daneben `bereiche.css` 77, `ampel.css` 54, `admin/fotos.html` 43, `naehe.css` 26, `nav.css` 22, `chart.css` 18, `page.css` 16 |
+| Schriftgrößen / Radien | 38 bzw. 25 verschiedene Werte (erlaubt: 7 bzw. 3 + rund) |
+| Pegel-Ampel | eigene Palette und dunkler Kopf `.am-hero`, `ampel.css` nutzt Tokens nur 1× |
+| Textseiten | `page.css` mit alten Werten (`--ink #263746` statt `--wm-tinte`), Navy-Kopf |
+| Verwaltung, `pruefung.html` | binden `tokens.css` nicht ein, Stile inline im `<style>` |
+| `!important` | 23× (erlaubt nur bei `[hidden]`) |
+
+**Schritte (je eigene Version, Vorschau zuerst, Prüfbreiten 375/390/1024/1440 px):**
+| Schritt | Inhalt | Funktionen |
+|---|---|---|
+| 8 | Tokens `navy-aktiv`, `navy-text`, `himmel` in `tokens.css`; Bausteine `.wm-leiste`, `.wm-seitenkopf`, `.wm-tabelle`, `.wm-reiter`, `.wm-btn.is-stop` in `bausteine.css`; `nav.css` auf Tokens | keine Änderung, Navigation (`nav.js`) bleibt |
+| 9 | Pegel-Ampel: `.am-hero` → `.wm-leiste` + `.wm-seitenkopf`, Felder/Knöpfe/Karten auf Bausteine, Handy mit Navigation unten | Rechnung (`ampel-logik.js`), Pegel-Alarm, Diagramm unverändert |
+| 10 | Textseiten Über, Datenschutz, Impressum, 404: `page.css` auf Tokens, Leiste + Seitenkopf, Inhalt in Karten | Texte unverändert |
+| 11 | Verwaltung (`admin/fotos.html`) und `pruefung.html`: `tokens.css` + `bausteine.css` einbinden, Reiter, Tabelle, Gefahr-Knopf; Inline-`<style>` auflösen | Anmeldung, Freigeben/Ablehnen/Entfernen, Verlauf unverändert |
+| 12 | Aufräumen: Einzelwerte in `app.css`, `pegel.css`, `naehe.css`, `chart.css`, `bereiche.css` → Tokens; Schriftgrößen/Radien auf die Skala; `!important` entfernen; `.gc-table`/`.am-table` → `.wm-tabelle` | nur Darstellung |
+
+**Unverändert:** Geschäftslogik, Daten, Netlify-Funktionen und -Formulare (Feldnamen!), Service Worker (nur neue Dateien in `SHELL_FILES`), Kartenmarker und Kategorienfarben, „Lage melden“ (Ausnahme unten).
 
 ## Entscheidungen des Nutzers (Ausnahmen)
 
