@@ -1,17 +1,34 @@
-/* Textseiten (Über, Datenschutz, Impressum) */
-:root{--navy:#0B3045;--slip:#087F9C;--bg:#F3F6F8;--ink:#263746;--muted:#566878;--line:#DCE5EA;font-family:var(--wm-schrift);color:var(--ink);line-height:1.6}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg)}
-header{background:var(--navy);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:14px}
-header a{color:#fff;text-decoration:none;font-weight:700;font-size:20px;letter-spacing:-.02em}
-header small{color:#9CCEE3}
-main{max-width:760px;margin:0 auto;padding:28px 20px 56px;background:#fff;min-height:calc(100dvh - 60px)}
-h1{font-size:28px;line-height:1.2;margin:0 0 8px;letter-spacing:-.01em}
-h2{font-size:19px;margin:30px 0 6px;color:var(--navy)}
-p,li{max-width:68ch}
-a{color:#06667E}
-.todo{background:#FFF6E3;border:1px solid #EBC77A;border-radius:12px;padding:12px 16px;color:#5A3E00;margin:16px 0}
-.ph{background:#FFE9A8;padding:0 4px;border-radius:4px;font-weight:600}
-ul{padding-left:22px}
-footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
-:focus-visible{outline:3px solid #1C8FB8;outline-offset:2px}
+/* Textseiten (Über, Datenschutz, Impressum, 404) – Designsystem „Wasser“ (DESIGN_SYSTEM.md), nur Tokens.
+   Wasserverlauf als Grund, Text in einer weißen Karte. Kopf am Handy hell, ab 768 px dunkel wie die Kopfleiste der App. */
+:root { color: var(--wm-tinte); line-height: 1.6; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100dvh; background: var(--wm-verlauf); background-attachment: fixed; font-size: var(--wm-t-m); }
+
+header { display: flex; align-items: baseline; gap: var(--wm-3); padding: var(--wm-4); padding-top: calc(var(--wm-4) + env(safe-area-inset-top)); }
+header a { color: var(--wm-tinte); text-decoration: none; font-weight: 700; font-size: var(--wm-t-l); }
+header small { color: var(--wm-matt); font-size: var(--wm-t-s); }
+
+main { max-width: 760px; margin: 0 auto var(--wm-12); padding: var(--wm-6) var(--wm-4) var(--wm-8); background: var(--wm-flaeche);
+  border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
+@media (max-width: 767px) { main { margin: 0 var(--wm-3) var(--wm-8); } }
+@media (min-width: 768px) {
+  header { background: var(--wm-navy); padding: var(--wm-4) var(--wm-5); }
+  header a { color: #fff; }
+  header small { color: var(--wm-petrol-hell); }
+  main { margin-top: var(--wm-8); padding: var(--wm-8) var(--wm-8) var(--wm-8); }
+}
+
+h1 { margin: 0 0 var(--wm-2); font-size: var(--wm-t-xl); line-height: 1.15; font-weight: 700; color: var(--wm-tinte); }
+h2 { margin: var(--wm-6) 0 var(--wm-2); font-size: var(--wm-t-l); line-height: 1.25; font-weight: 700; color: var(--wm-tinte); }
+h3 { margin: var(--wm-5) 0 var(--wm-1); font-size: var(--wm-t-m); font-weight: 700; color: var(--wm-tinte); }
+p, li { max-width: 70ch; }
+ul, ol { padding-left: var(--wm-6); }
+a { color: var(--wm-petrol); text-underline-offset: 2px; }
+a:hover { color: var(--wm-petrol-tief); }
+code { font-size: var(--wm-t-s); background: var(--wm-flaeche-2); border-radius: var(--wm-r-s); padding: 0 var(--wm-1); }
+
+.todo { margin: var(--wm-4) 0; padding: var(--wm-3) var(--wm-4); background: var(--wm-warn-hell); border: 1.5px solid var(--wm-warn); border-radius: var(--wm-r-s); color: var(--wm-warn-text); }
+.ph { background: var(--wm-warn-hell); color: var(--wm-warn-text); padding: 0 var(--wm-1); border-radius: var(--wm-r-s); font-weight: 700; }
+
+footer { margin-top: var(--wm-8); padding-top: var(--wm-4); border-top: 1px solid var(--wm-linie); font-size: var(--wm-t-s); color: var(--wm-matt); }
+:focus-visible { outline: 3px solid var(--wm-fokus); outline-offset: 2px; }

@@ -347,3 +347,39 @@
   .nh-sort { color: var(--wm-petrol-tief); font-size: var(--wm-t-s); font-weight: 700; }
   .nh-sort-box::after { color: var(--wm-petrol-tief); }
 }
+
+/* ------------------------------------------------------------------ 7.63.0 Designsystem Schritt 8, Teil 2: Wetter-Fenster
+   Kopf wie alle Sheets (Titel 24/700), großer Wert 72/300, Diagramm als eine weiße Karte (.wx-diagramm),
+   Abschnittstitel in Satzschreibung, Wind-Linie Petrol (Diagramm-Standard), Böen in der Zustandsfarbe „hoch“. */
+.wx-key-wind::before { border-color: var(--wm-petrol); }
+.wx-key-gust::before { border-color: var(--wm-hoch); }
+.wx-wind { stroke: var(--wm-petrol); stroke-width: 2.2; }
+.wx-gust { stroke: var(--wm-hoch); }
+.wx-area { fill: var(--wm-petrol); opacity: .08; }
+.wx-dot-wind { fill: var(--wm-petrol); stroke: var(--wm-flaeche); }
+.wx-dot-gust { fill: var(--wm-hoch); stroke: var(--wm-flaeche); }
+.wx-dir path { stroke: var(--wm-matt); }
+.wx .gc-tip { background: var(--wm-tinte); font-size: var(--wm-t-xs); font-weight: 400; border-radius: var(--wm-r-s); }
+
+.wxd.wxd-wetter .wxd-kopf h2 { font-size: var(--wm-t-xl); font-weight: 700; line-height: 1.15; color: var(--wm-tinte); }
+.wxd.wxd-wetter .wxd-unter { font-size: var(--wm-t-s); }
+.wxd.wxd-wetter .wxd-body { padding: var(--wm-1) var(--wm-4) var(--wm-6); }
+.wxd.wxd-wetter .wx { gap: var(--wm-3); }
+.wxd.wxd-wetter .wx-alert, .wxd.wxd-wetter .note-warn { border-radius: var(--wm-r-m); }
+.wxd.wxd-wetter .wx-now-arrow { background: var(--wm-flaeche); color: var(--wm-petrol); box-shadow: var(--wm-schatten); }
+.wxd.wxd-wetter .wx-big strong { font-size: var(--wm-t-held); font-weight: 300; letter-spacing: 0; color: var(--wm-tinte); }
+.wxd.wxd-wetter .wx-big span { font-size: var(--wm-t-xl); font-weight: 400; color: var(--wm-tinte); }
+.wxd.wxd-wetter .wx-sub { font-size: var(--wm-t-s); color: var(--wm-matt); }
+.wxd.wxd-wetter .wx-now-temp { background: var(--wm-flaeche); border-radius: var(--wm-r-rund); box-shadow: var(--wm-schatten); }
+.wxd.wxd-wetter .wx-meta { font-size: var(--wm-t-xs); color: var(--wm-matt); }
+
+/* Diagramm: eine Karte statt vier Streifen */
+.wx-diagramm { display: flex; flex-direction: column; gap: var(--wm-2); }
+.wxd.wxd-wetter .wx-diagramm { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); padding: var(--wm-3) var(--wm-4); }
+.wxd.wxd-wetter .wx-diagramm > .wx-h4, .wxd.wxd-wetter .wx-diagramm > .wx-legend, .wxd.wxd-wetter .wx-diagramm > .gc-wrap,
+.wxd.wxd-wetter .wx-diagramm > details.gc-table { margin: 0; padding: 0; background: none; border-radius: 0; box-shadow: none; }
+.wx-h4, .wxd.wxd-wetter .wx-h4 { font-size: var(--wm-t-s); font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }
+.wx-legend { font-size: var(--wm-t-xs); color: var(--wm-matt); }
+.wxd.wxd-wetter .wx-strip { background: var(--wm-flaeche); border-radius: var(--wm-r-m); padding: var(--wm-2); box-shadow: var(--wm-schatten); }
+.wxd.wxd-wetter .wx-strip li { background: var(--wm-flaeche-2); border-radius: var(--wm-r-s); }
+.wxd.wxd-wetter .wx-diagramm > .gc-wrap { margin: 0 calc(-1 * var(--wm-4)); }

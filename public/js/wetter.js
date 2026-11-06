@@ -284,9 +284,10 @@ export function renderWeather({ current, hours, alerts }) {
       out.push(h('div', { class: 'note note-warn', html: icon('alert', 18) },
         h('span', { text: `In den nächsten 12 Stunden Böen bis ${fmtNum(maxGust)} km/h (${beaufort(maxGust)} Bft) erwartet.` })));
     }
-    out.push(h('p', { class: 'wx-h4', text: `Wind in den nächsten ${CONFIG.WETTER_HOURS} Stunden` }),
+    out.push(h('div', { class: 'wx-diagramm' },
+      h('p', { class: 'wx-h4', text: `Wind in den nächsten ${CONFIG.WETTER_HOURS} Stunden` }),
       h('div', { class: 'wx-legend' }, h('span', { class: 'wx-key wx-key-wind' }, 'Wind'), h('span', { class: 'wx-key wx-key-gust' }, 'Böen')),
-      ...windChart(hours), hourStrip(hours));
+      ...windChart(hours)), hourStrip(hours));
   }
 
   if (!out.length) out.push(h('p', { class: 'unknown', text: 'Für diesen Ort liegen keine Wetterdaten vor.' }));
