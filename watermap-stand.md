@@ -322,6 +322,13 @@ Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.
 
 **▶ Hier weitermachen (Stand 06.11.2026, 7.63.0): Umbau auf das Designsystem „Wasser“ – Phase 4**
 Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Disziplin von A, vom Nutzer gewählt) – vor jeder Oberflächenarbeit lesen.
+
+> **Übergabe 06.11.2026 (Sitzung am Windows-Rechner, Arbeit):**
+> - Schritte 8 und 9 (7.62.0, 7.63.0) sind gebaut, aber **ungetestet und nicht angesehen** (dort kein Python/Node, Playwright nicht verbunden). Zuerst: alle Tests laufen lassen, v. a. `ui_nav` (Farben auf Tokens angepasst) und `ui_ampel`; Pegel-Ampel bei 375/390/1024/1440 px fotografieren und dem Nutzer zeigen.
+> - Zu prüfen: Lampen der Ampel leuchten jetzt in voller Zustandsfarbe (vorher 60 %), evtl. abschwächen. Navigation oben nutzt noch `.tn-item` aus `nav.css` statt `.wm-leiste-ziel` (Angleich in Schritt 12).
+> - **Nicht veröffentlichen** ohne ausdrückliches OK des Nutzers („pushen“ = Vorschau-Branch; zusammenführen nur bei „PR übernehmen“).
+> - Entwürfe (Varianten A/B/C, Handy-Ansichten): Design-Canvas „WaterMap – Designsystem-Varianten“, https://claude.ai/artifact/THfkoK6Pw7MMvK5LCwNPTr
+> - Danach mit Schritt 10 (Textseiten) weitermachen – Plan steht in `DESIGN_SYSTEM.md` Abschnitt 11; vor dem Umbau kurz zeigen, was sich ändert.
 - [x] Schritt 1 – Tokens und Schrift (7.58.0): `public/css/tokens.css`, Atkinson Hyperlegible Next selbst gehostet (`public/fonts/`).
 - [x] Null ohne Schrägstrich (7.58.2, Wunsch des Nutzers; Schriftdatei angepasst, `public/fonts/LIESMICH.txt`).
 - [x] Schritt 2 – gemeinsame Bausteine `public/css/bausteine.css` (`.wm-*`), Musterblatt vom Nutzer freigegeben („Rest passt“).
