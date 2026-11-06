@@ -1,6 +1,6 @@
 # WaterMap – aktueller Stand
 
-Stand: 05.11.2026 · App-Version **7.61.1**
+Stand: 06.11.2026 · App-Version **7.62.0** (lokal committet, noch nicht gepusht)
 
 | | |
 |---|---|
@@ -259,6 +259,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.60.1 | Pegel-Suche wie auf der Hauptkarte: Logo links, Pille 48 px, Lupe rechts, Chips 40 px; Oberkante des großen Sheets aus der Kopfhöhe berechnet (`--pa-gross-top`) |
 | 7.61.0 | Designsystem Schritt 5–7: Meldungen, Mehr, Merkliste, Einstellungen, „In der Nähe“, Melden-Menü und Formulare in derselben Sprache wie Karte/Pegel (heller Kopf, Logo + Such-Pille, Titel mittig, runde Knöpfe, Chips 40 px, Karten ohne Rahmen); „Lage melden“ unverändert |
 | 7.61.1 | Kein blauer Fokusrahmen mehr um Überschriften/Bereiche, die nur per Skript den Fokus bekommen (`tabindex="-1"`, z. B. Pegelname „Vlotho“); Fokusring an Knöpfen/Links/Feldern bleibt |
+| 7.62.0 | Designsystem Schritt 8 (Variante A „Navy-Leiste überall“, Entscheidung 06.11.2026): Tokens `navy-aktiv`, `navy-text`, `himmel`; neue Bausteine `.wm-leiste`, `.wm-seitenkopf`, `.wm-tabelle`, `.wm-reiter`, `.wm-btn.is-stop` (noch unbenutzt); `nav.css` auf Tokens (Petrol #0B7C93, Matt #526676) |
 | 7.54.1 | Pegel-Sheet wischt so flüssig wie auf der Hauptkarte: beim Ziehen nur noch verschoben (`transform`), nicht mehr in der Höhe neu berechnet; zu Beginn einmal auf volle Höhe gestellt und nach unten versetzt, die Größe ändert sich erst beim Einrasten |
 | 7.54.0 | **Fenster von unten wischbar und flüssig:** Das Pegel-Sheet folgt beim Ziehen dem Finger (vorher sprang es erst beim Loslassen) und rastet weich ein (klein · ca. 80 % · ganz · zu; Schwung nimmt die nächste Stufe in Bewegungsrichtung). Alle Fenster von unten (Dialoge, Standort-Vorschau und -Details, Pegel-Sheet) fahren auf dem Handy weich hoch statt plötzlich zu erscheinen (`sheet-ein`, bei „Bewegung reduzieren“ aus). Die übrigen Fenster folgten schon dem Finger (`wischen.js`) |
 | 7.53.0 | **Zart blau** (Rückmeldung: das kräftige Blau passt nicht zur App): gleicher Aufbau wie 7.52.0, aber ganz helles Wasserblau oben, weiße Karten und Knöpfe mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. **Tidepegel** im selben Muster (Name mittig, große Zahl, „● Tide · ↗ auflaufend“, drei Knöpfe Alarm · Merken · Teilen, Karten Gezeiten/Tidekurve/letztes HW·NW, Liste Häfen in der Nähe · Gewässer – alle Pegel · Station und Quelle) |
@@ -318,7 +319,7 @@ Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.
 
 ## 6. Offene Aufgaben
 
-**▶ Hier weitermachen (Stand 05.11.2026, 7.61.0): Umbau auf das Designsystem „Wasser“ – Phase 4**
+**▶ Hier weitermachen (Stand 06.11.2026, 7.62.0): Umbau auf das Designsystem „Wasser“ – Phase 4**
 Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Disziplin von A, vom Nutzer gewählt) – vor jeder Oberflächenarbeit lesen.
 - [x] Schritt 1 – Tokens und Schrift (7.58.0): `public/css/tokens.css`, Atkinson Hyperlegible Next selbst gehostet (`public/fonts/`).
 - [x] Null ohne Schrägstrich (7.58.2, Wunsch des Nutzers; Schriftdatei angepasst, `public/fonts/LIESMICH.txt`).
@@ -326,8 +327,12 @@ Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Dis
 - [x] Schritt 3 – Karte und Standort (7.59.0): Handy-Karte ohne dunkle Leiste (Suche/Chips schweben, `body.view-karte`), Standort-Sheet/Vorschau nach Bausteinen.
 - [x] Schritt 4 – Pegel (7.60.0): Feinschliff auf Tokens, Abschnittstitel ohne Großbuchstaben, Wert 72/300, Chips/Suche wie Karte.
 - [x] Schritt 5–7 (7.61.0): Meldungen, Mehr, Merkliste, Einstellungen, „In der Nähe“, Melden-Menü, Formulare – eine Sprache wie Karte/Pegel. **Ausnahme: „Lage melden“ bleibt wie bisher.**
-- **Pausiert auf Wunsch des Nutzers (05.11.2026)** – offen bleibt nur Schritt 8:
-- [ ] Schritt 8 – Desktop (≥ 768 px) prüfen, Reste aufräumen (alte Einzelwerte → Tokens, `!important` raus), Wetter-Fenster und Seiten Datenschutz/Impressum/Über.
+- **Entschieden (06.11.2026): Variante A „Navy-Leiste überall“** für alle übrigen Seiten (Vergleich mit B „Ganz hell“ und C „Werkbank“ auf dem Design-Canvas). Ablauf: `DESIGN_SYSTEM.md` Abschnitt 11, Schritte 8–12 (ersetzen den früheren Sammel-Schritt 8).
+- [x] Schritt 8 (7.62.0): Tokens und neue Bausteine für Leiste, Seitenkopf, Tabelle, Reiter, Gefahr-Knopf; `nav.css` auf Tokens. **Tests noch nicht gelaufen** (lokal unter Windows ohne Python/Node) – vor dem Push nachholen.
+- [ ] Schritt 9 – Pegel-Ampel auf Leiste, Seitenkopf und Bausteine.
+- [ ] Schritt 10 – Textseiten Über, Datenschutz, Impressum, 404.
+- [ ] Schritt 11 – Verwaltung und `pruefung.html`.
+- [ ] Schritt 12 – Aufräumen: Einzelwerte → Tokens, Schriftgrößen/Radien auf die Skala, `!important` raus, Tabellen → `.wm-tabelle`; Wetter-Fenster.
 - Arbeitsweise: je Schritt Vorschaubild (vorher/nachher, 390 px) zeigen, Version erhöhen, alle Tests, pushen. Tests, die altes Aussehen festschreiben, auf das Designsystem anpassen (nicht die App verbiegen).
 - Plugin „frontend-design“ war nur in der Cloud-Sitzung installiert (`claude plugin install frontend-design@anthropic-plugin-directory`).
 

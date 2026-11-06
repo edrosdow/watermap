@@ -74,10 +74,10 @@ def run(b, w, hh):
     sizes = pg.evaluate("['karte', 'pegel', 'meldungen', 'mehr'].map(n => document.querySelector(`#bottomnav [data-nav=${n}] svg`).getBoundingClientRect().width)")
     check(sizes == [26, 26, 26, 26], f'{tag}: Symbole 26 px ({sizes})')
     plus = rect(pg, '#bottomnav .bn-plus')
-    check(abs(plus['w'] - 54) <= 0.5 and abs(plus['h'] - 54) <= 0.5 and plus['y'] >= bar['y'] and plus['y'] + plus['h'] <= bar['y'] + bar['h'] and css(pg, '#bottomnav .bn-plus', 'backgroundColor') == 'rgb(8, 127, 156)'
+    check(abs(plus['w'] - 54) <= 0.5 and abs(plus['h'] - 54) <= 0.5 and plus['y'] >= bar['y'] and plus['y'] + plus['h'] <= bar['y'] + bar['h'] and css(pg, '#bottomnav .bn-plus', 'backgroundColor') == 'rgb(11, 124, 147)'
           and abs(rect(pg, '#bottomnav .bn-center svg')['w'] - 28) <= 0.5, f'{tag}: „Melden“ 54 px Petrol mit Plus 28 px, innerhalb der Leiste')
-    check(css(pg, item('karte'), 'color') == 'rgb(8, 127, 156)' and css(pg, item('pegel'), 'color') == 'rgb(86, 104, 120)', f'{tag}: aktiv Petrol, inaktiv #566878')
-    check(pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('#bottomnav [data-nav=karte] svg')); return s.fill + ' ' + s.fillOpacity; })()") == 'rgb(8, 127, 156) 0.3', f'{tag}: aktive Karte mit 30 % Füllung')
+    check(css(pg, item('karte'), 'color') == 'rgb(11, 124, 147)' and css(pg, item('pegel'), 'color') == 'rgb(82, 102, 118)', f'{tag}: aktiv Petrol, inaktiv Matt')
+    check(pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('#bottomnav [data-nav=karte] svg')); return s.fill + ' ' + s.fillOpacity; })()") == 'rgb(11, 124, 147) 0.3', f'{tag}: aktive Karte mit 30 % Füllung')
     ind = rect(pg, '#bottomnav .bn-ind'); k = rect(pg, item('karte'))
     ci = pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('#bottomnav .bn-ind')); return { bg: s.backgroundColor, r: s.borderTopLeftRadius, sh: s.boxShadow, pe: s.pointerEvents }; })()")
     check(abs(cx(ind) - cx(k)) <= 1 and abs(ind['h'] - 56) <= 1 and abs(ind['w'] - (k['w'] - 6)) <= 1 and ci['r'] == '28px' and ci['bg'] == 'rgba(8, 127, 156, 0.14)' and 'rgba(8, 127, 156, 0.12)' in ci['sh'] and ci['pe'] == 'none',
@@ -133,7 +133,7 @@ def run(b, w, hh):
     warte(pg, "document.querySelector('#bottomnav [data-nav=meldungen] .nav-badge').textContent === '3'", 5000)
     bs = pg.evaluate("(() => { const b = document.querySelector('#bottomnav [data-nav=meldungen] .nav-badge'), s = getComputedStyle(b), i = document.querySelector('#bottomnav [data-nav=meldungen] .bn-ico').getBoundingClientRect(), r = b.getBoundingClientRect();"
                      " return { bg: s.backgroundColor, col: s.color, bw: s.borderTopWidth, bc: s.borderTopColor, rechts: r.x + r.width / 2 > i.x + i.width / 2, oben: r.y + r.height / 2 < i.y + i.height / 2, label: b.parentElement.getAttribute('aria-label') }; })()")
-    check(bs['bg'] == 'rgb(8, 127, 156)' and bs['col'] == 'rgb(255, 255, 255)' and bs['bw'] == '2px' and bs['bc'] == 'rgb(255, 255, 255)' and bs['rechts'] and bs['oben'], f'{tag}: Abzeichen Petrol, weißer Rand 2 px, oben rechts am Symbol ({bs})')
+    check(bs['bg'] == 'rgb(11, 124, 147)' and bs['col'] == 'rgb(255, 255, 255)' and bs['bw'] == '2px' and bs['bc'] == 'rgb(255, 255, 255)' and bs['rechts'] and bs['oben'], f'{tag}: Abzeichen Petrol, weißer Rand 2 px, oben rechts am Symbol ({bs})')
     check(bs['label'] == 'Meldungen, 3 neu', f'{tag}: aria-label „Meldungen, 3 neu“ ({bs["label"]})')
     pg.screenshot(path=str(SHOTS / f'nav_{w}_3abzeichen.png'))
     pg.click(item('meldungen')); pg.wait_for_timeout(500)

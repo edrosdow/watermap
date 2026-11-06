@@ -47,6 +47,9 @@
   --wm-hafen: #16619B;
   --wm-tanke: #D78B23;  --wm-tanke-text: #8A4F00;
   --wm-navy: #0B3045;
+  --wm-navy-aktiv: #163F57;   /* aktives Ziel in der Kopfleiste */
+  --wm-navy-text: #D8E6EC;    /* Navigationstext auf Navy (10,8 : 1) */
+  --wm-himmel: #9CCEE3;       /* Unterzeile, Zähler, Fokusring auf Navy (8,1 : 1) */
 
   /* Schrift */
   --wm-schrift: 'Atkinson Hyperlegible Next', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

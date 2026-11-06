@@ -130,3 +130,55 @@ textarea.wm-eingabe { min-height: 104px; padding: var(--wm-3) var(--wm-4); resiz
    Überschriften und Bereiche mit tabindex="-1" bekommen den Fokus nur per Skript (für Screenreader beim Öffnen) –
    sie zeigen keinen Rahmen (Wunsch des Nutzers: kein blauer Rahmen um „Vlotho“ u. ä.). Knöpfe/Links/Felder behalten ihren Fokusring. */
 html body [tabindex="-1"]:focus, html body [tabindex="-1"]:focus-visible { outline: none; }
+
+/* ================================================================ 7.62.0 Variante A „Navy-Leiste überall“ (DESIGN_SYSTEM.md Abschnitt 5 und 11)
+   Neue Bausteine, noch von keinem Bereich benutzt – Einbau ab Schritt 9. */
+
+/* ---------------------------------------------------------------- Kopfleiste (Desktop ab 768 px, auf allen Seiten gleich) */
+.wm-leiste { display: flex; align-items: center; gap: var(--wm-4); min-height: 64px; padding: var(--wm-2) var(--wm-4); padding-top: calc(var(--wm-2) + env(safe-area-inset-top));
+  background: var(--wm-navy); color: #fff; }
+.wm-leiste-logo { flex: none; display: inline-flex; align-items: center; gap: var(--wm-3); min-height: 44px; color: #fff; text-decoration: none; }
+.wm-leiste-logo strong { display: block; font-size: var(--wm-t-l); line-height: 1.1; font-weight: 700; letter-spacing: -.02em; }
+.wm-leiste-logo small { display: block; margin-top: 2px; font-size: var(--wm-t-xs); color: var(--wm-himmel); }
+.wm-leiste-suche { flex: 1; min-width: 0; max-width: 460px; }
+.wm-leiste-nav { display: flex; align-items: center; gap: var(--wm-1); margin-left: auto; }
+.wm-leiste-ziel { display: inline-flex; align-items: center; gap: var(--wm-2); min-height: 44px; padding: 0 var(--wm-3); border-radius: var(--wm-r-s);
+  color: var(--wm-navy-text); font-size: var(--wm-t-s); font-weight: 700; text-decoration: none; white-space: nowrap; }
+.wm-leiste-ziel[aria-current="page"] { background: var(--wm-navy-aktiv); color: #fff; }
+.wm-leiste-melden { flex: none; display: inline-flex; align-items: center; gap: var(--wm-2); min-height: 44px; padding: 0 var(--wm-4) 0 var(--wm-3); border: 0; border-radius: var(--wm-r-s);
+  background: var(--wm-flaeche); color: var(--wm-navy); font: inherit; font-size: var(--wm-t-s); font-weight: 700; text-decoration: none; cursor: pointer; }
+.wm-leiste :focus-visible { outline: 3px solid var(--wm-himmel); outline-offset: 2px; }
+@media (hover: hover) {
+  .wm-leiste-ziel:not([aria-current="page"]):hover { color: #fff; text-decoration: underline; text-underline-offset: 4px; }
+  .wm-leiste-melden:hover { background: var(--wm-flaeche-2); }
+}
+@media (max-width: 767px) { .wm-leiste { display: none; } }   /* Handy: heller Kopf + Navigation unten (nav.css) */
+
+/* ---------------------------------------------------------------- Seitenkopf und Inhalt eigenständiger Seiten (Pegel-Ampel, Textseiten, Verwaltung) */
+.wm-seitenkopf { background: var(--wm-wasser); padding: var(--wm-4) var(--wm-4) var(--wm-2); padding-top: calc(var(--wm-4) + env(safe-area-inset-top)); }
+.wm-seitenkopf > .wm-kopf { max-width: 760px; margin: 0 auto; padding: 0; background: none; }
+@media (min-width: 768px) { .wm-seitenkopf { padding-top: var(--wm-6); } }
+.wm-seiteninhalt { max-width: 760px; margin: 0 auto; padding: var(--wm-3) var(--wm-4) var(--wm-12); }
+@media (max-width: 767px) { .wm-seiteninhalt { padding-bottom: var(--bn-space, var(--wm-12)); } }
+
+/* ---------------------------------------------------------------- Tabelle (immer in .wm-karte.is-liste) */
+.wm-tabelle-rahmen { overflow-x: auto; }
+.wm-tabelle { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.wm-tabelle caption { padding: var(--wm-3) var(--wm-4) var(--wm-2); text-align: left; font-size: var(--wm-t-l); font-weight: 700; color: var(--wm-tinte); }
+.wm-tabelle th { padding: var(--wm-3) var(--wm-4); background: var(--wm-flaeche-2); text-align: left; font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-matt); white-space: nowrap; }
+.wm-tabelle td { padding: var(--wm-3) var(--wm-4); border-top: 1px solid var(--wm-linie); font-size: var(--wm-t-m); color: var(--wm-tinte); vertical-align: middle; }
+.wm-tabelle .is-zahl { text-align: right; }
+
+/* ---------------------------------------------------------------- Reiter (Bereiche einer Seite) */
+.wm-reiter { display: flex; gap: var(--wm-1); overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--wm-linie); }
+.wm-reiter::-webkit-scrollbar { display: none; }
+.wm-reiter button { flex: none; display: inline-flex; align-items: center; gap: var(--wm-2); min-height: 44px; padding: 0 var(--wm-3); margin-bottom: -1px;
+  border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: none; color: var(--wm-matt); font: inherit; font-size: var(--wm-t-s); font-weight: 700; cursor: pointer; }
+.wm-reiter button[aria-selected="true"] { color: var(--wm-tinte); border-bottom-color: var(--wm-petrol); }
+.wm-reiter .wm-marke { padding: 0 var(--wm-2); font-size: var(--wm-t-xs); }
+.wm-reiter button:focus-visible { outline: 3px solid var(--wm-fokus); outline-offset: -3px; }
+@media (hover: hover) { .wm-reiter button:not([aria-selected="true"]):hover { color: var(--wm-tinte); } }
+
+/* ---------------------------------------------------------------- Gefahr-Knopf (endgültige Handlungen, nur neben sicherer Alternative) */
+.wm-btn.is-stop { background: var(--wm-flaeche); color: var(--wm-stop-text); box-shadow: inset 0 0 0 1.5px var(--wm-stop); }
+@media (hover: hover) { .wm-btn.is-stop:hover { background: var(--wm-stop-hell); } }
