@@ -129,4 +129,5 @@ textarea.wm-eingabe { min-height: 104px; padding: var(--wm-3) var(--wm-4); resiz
 /* ---------------------------------------------------------------- Fokus nur für Bedienelemente
    Überschriften und Bereiche mit tabindex="-1" bekommen den Fokus nur per Skript (für Screenreader beim Öffnen) –
    sie zeigen keinen Rahmen (Wunsch des Nutzers: kein blauer Rahmen um „Vlotho“ u. ä.). Knöpfe/Links/Felder behalten ihren Fokusring. */
-html body [tabindex="-1"]:focus, html body [tabindex="-1"]:focus-visible { outline: none; }
+/* bewusst hohe Spezifität (fünf Attribut-Teile): schlägt bereichseigene Fokusregeln wie „.pa-panel .pd-kopf :focus-visible“ ohne !important */
+[tabindex="-1"][tabindex="-1"][tabindex="-1"][tabindex="-1"]:focus, [tabindex="-1"][tabindex="-1"][tabindex="-1"][tabindex="-1"]:focus-visible { outline: none; }
