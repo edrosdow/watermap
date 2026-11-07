@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 07.11.2026 · App-Version **7.65.0**
+Stand: 07.11.2026 · App-Version **7.66.0**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.65.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.66.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -264,6 +264,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.63.0 | Designsystem Schritt 8, Teil 2: Seiten Über/Datenschutz/Impressum/404 nach Tokens (Wassergrund, Text in weißer Karte, Kopf am Handy hell, ab 768 px dunkel; nur `page.css`); Wetter-Fenster: Diagramm als eine Karte (`.wx-diagramm`), Titel in Satzschreibung, Wind-Linie Petrol, Böen `--wm-hoch`, Titel/Wert/Abstände nach Tokens |
 | 7.64.0 | Designsystem Schritt 8, Teil 3 – Reste aufgeräumt: 366 Farbwerte mit ΔE ≤ 6 auf Tokens, `!important` bis auf begründete Ausnahmen entfernt (DESIGN_SYSTEM.md Abschnitt 9), 67 Schriftgrößen unter 13 px auf `--wm-t-xs`; Fotoverwaltung lädt wieder `tokens.css` (seit 7.63.0 ohne Gestaltung); Tests mit festen alten Farbwerten auf Tokens angepasst |
 | 7.65.0 | Designsystem, Farbgruppe Blau: 55 Blauwerte in CSS und das Teilen-Bild auf Tokens (Pegel-Blau → Petrol, Hover → Petrol-tief, dunkle Pillen auf Navy per `color-mix`, Ampelgehäuse → Tinte); Diagrammfläche 8 % |
+| 7.66.0 | Designsystem, alle übrigen Farben (Rot, Gold, Grün, Grau/Rahmen) auf Tokens, in CSS und JS (Pegel-Zonen, Kartenpillen, Fluss-Diagramm, Meldungstypen, Teilen-Bild); neue Tokens `--wm-rand` und `--wm-gut/warn/hoch/stop-rand` (Einordnungsbalken hell); Meldungstypen mit getrennter Punkt- und Textfarbe; „Lage melden“, Logo und Kartendaten-Farben bleiben |
 | 7.54.1 | Pegel-Sheet wischt so flüssig wie auf der Hauptkarte: beim Ziehen nur noch verschoben (`transform`), nicht mehr in der Höhe neu berechnet; zu Beginn einmal auf volle Höhe gestellt und nach unten versetzt, die Größe ändert sich erst beim Einrasten |
 | 7.54.0 | **Fenster von unten wischbar und flüssig:** Das Pegel-Sheet folgt beim Ziehen dem Finger (vorher sprang es erst beim Loslassen) und rastet weich ein (klein · ca. 80 % · ganz · zu; Schwung nimmt die nächste Stufe in Bewegungsrichtung). Alle Fenster von unten (Dialoge, Standort-Vorschau und -Details, Pegel-Sheet) fahren auf dem Handy weich hoch statt plötzlich zu erscheinen (`sheet-ein`, bei „Bewegung reduzieren“ aus). Die übrigen Fenster folgten schon dem Finger (`wischen.js`) |
 | 7.53.0 | **Zart blau** (Rückmeldung: das kräftige Blau passt nicht zur App): gleicher Aufbau wie 7.52.0, aber ganz helles Wasserblau oben, weiße Karten und Knöpfe mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. **Tidepegel** im selben Muster (Name mittig, große Zahl, „● Tide · ↗ auflaufend“, drei Knöpfe Alarm · Merken · Teilen, Karten Gezeiten/Tidekurve/letztes HW·NW, Liste Häfen in der Nähe · Gewässer – alle Pegel · Station und Quelle) |
@@ -319,7 +320,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
 
-**Letzter Lauf (7.65.0, lokal Windows): alle Oberflächen- und Node-Tests grün.** Unter Windows scheitern 10 Import-Unit-Tests (`test_import.CliTests`) an der Zeichenkodierung der Unterprozesse – Umgebung, nicht Code. `ui_naehe`, `ui_pegel`, `ui_bereiche` (Neuladen offline) und `ui_extras` brechen unter Windows gelegentlich mit Zeitüberschreitung ab – auch mit unverändertem Code (geprüft mit 7.63.0), einzeln wiederholen.
+**Letzter Lauf (7.66.0, lokal Windows): alle Oberflächen- und Node-Tests grün.** Unter Windows scheitern 10 Import-Unit-Tests (`test_import.CliTests`) an der Zeichenkodierung der Unterprozesse – Umgebung, nicht Code. `ui_naehe`, `ui_pegel`, `ui_bereiche` (Neuladen offline) und `ui_extras` brechen unter Windows gelegentlich mit Zeitüberschreitung ab – auch mit unverändertem Code (geprüft mit 7.63.0), einzeln wiederholen.
 
 ## 6. Offene Aufgaben
 
@@ -332,7 +333,7 @@ Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Dis
 - [x] Schritt 4 – Pegel (7.60.0): Feinschliff auf Tokens, Abschnittstitel ohne Großbuchstaben, Wert 72/300, Chips/Suche wie Karte.
 - [x] Schritt 5–7 (7.61.0): Meldungen, Mehr, Merkliste, Einstellungen, „In der Nähe“, Melden-Menü, Formulare – eine Sprache wie Karte/Pegel. **Ausnahme: „Lage melden“ bleibt wie bisher.**
 - **Pausiert auf Wunsch des Nutzers (05.11.2026)** – offen bleibt nur Schritt 8:
-- [ ] Schritt 8 (wieder aufgenommen 07.11.2026, lokal unter Windows) – Teil 1 Desktop (7.62.0), Teil 2 Wetter-Fenster + Textseiten (7.63.0), Teil 3 Reste aufräumen (7.64.0) erledigt. Farben mit ΔE > 6 werden gruppenweise angeglichen (Nutzer 07.11.): Blau erledigt (7.65.0); **offen: Rot, Rahmen/Grau, Gold**, jeweils mit Vorher-Nachher-Bildern. Bericht: `python3 -I scripts/farben_tokens.py public/css` (nächster Token in Lab). **Offen: Entscheidung des Nutzers** zu Schrift unter 13 px in Plaketten/SVG-Diagrammen/Leaflet-Quellenangabe.
+- [ ] Schritt 8 (wieder aufgenommen 07.11.2026, lokal unter Windows) – Teil 1 Desktop (7.62.0), Teil 2 Wetter-Fenster + Textseiten (7.63.0), Teil 3 Reste aufräumen (7.64.0) erledigt. Farben mit ΔE > 6 werden gruppenweise angeglichen (Nutzer 07.11.): Blau (7.65.0) und alle übrigen Farben (7.66.0) erledigt. Bericht: `python3 -I scripts/farben_tokens.py public/css` (nächster Token in Lab). **Offen: Entscheidung des Nutzers** zu Schrift unter 13 px in Plaketten/SVG-Diagrammen/Leaflet-Quellenangabe.
 - Arbeitsweise: je Schritt Vorschaubild (vorher/nachher, 390 px) zeigen, Version erhöhen, alle Tests, pushen. Tests, die altes Aussehen festschreiben, auf das Designsystem anpassen (nicht die App verbiegen).
 - Plugin „frontend-design“ war nur in der Cloud-Sitzung installiert (`claude plugin install frontend-design@anthropic-plugin-directory`).
 

@@ -33,9 +33,9 @@ body.list-open .sidebar { background: var(--bg); }
 .nk-dist { font-size: 20px; font-weight: 800; color: var(--navy); align-self: center; }
 .nh-meld { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; padding: 3px 10px; border-radius: 99px; font-size: 13px; font-weight: 750; }
 .nh-meld i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
-.nh-meld.ton-warn { background: var(--wm-warn-hell); color: #B45309; }
+.nh-meld.ton-warn { background: var(--wm-warn-hell); color: var(--wm-warn-text); }
 .nh-meld.ton-stop { background: var(--wm-stop-hell); color: var(--wm-stop); }
-.nh-meld.ton-gut { background: var(--wm-gut-hell); color: #15803D; }
+.nh-meld.ton-gut { background: var(--wm-gut-hell); color: var(--wm-gut-text); }
 .nh-meld.ton-gut i { display: none; }
 .nh-leer { padding: 24px 20px; }
 .nh-leer .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
@@ -49,10 +49,10 @@ body.list-open .sidebar { background: var(--bg); }
 .nh-erklaer-knoepfe { grid-column: 1 / -1; display: flex; gap: 10px; margin-top: 10px; }
 .nh-erklaer-knoepfe .btn { flex: 1; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .nh-erklaer-knoepfe .btn-primary { flex: 1.3; }
-.nh-blockiert { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 14px; color: #5B4A1E; font-size: 14px; margin-bottom: 4px; }
+.nh-blockiert { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 14px; color: var(--wm-warn-text); font-size: 14px; margin-bottom: 4px; }
 .nh-blockiert-ico { display: grid; flex: none; }
 .nh-blockiert-text { flex: 1; min-width: 0; }
-.nh-link { flex: none; border: 0; background: none; color: #5B4A1E; font-weight: 800; font-size: 14px; min-height: 44px; padding: 0 2px; }
+.nh-link { flex: none; border: 0; background: none; color: var(--wm-warn-text); font-weight: 800; font-size: 14px; min-height: 44px; padding: 0 2px; }
 .nh-link:hover { text-decoration: underline; }
 
 /* Anleitung im Dialog */
@@ -112,7 +112,7 @@ body.list-open .sidebar { background: var(--bg); }
   .nh-pille:hover { border-color: rgba(197, 216, 225, .85); }
   .nh-pille .nh-bezug-ico { color: var(--sky); }
   .nh-pille-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .nh-pille-pfeil { display: grid; flex: none; transform: rotate(90deg); color: #C5D8E1; }
+  .nh-pille-pfeil { display: grid; flex: none; transform: rotate(90deg); color: var(--wm-linie); }
   .nh-kat { display: flex; align-items: center; }
   .nh-cats { display: flex; gap: 6px; min-width: 0; flex: 1; }
   .nh-kopf-m .cat { min-height: 36px; height: 36px; padding: 0 12px; font-size: 14.5px; }
@@ -120,9 +120,9 @@ body.list-open .sidebar { background: var(--bg); }
 
   /* schmale Hinweiszeile */
   .nh-zeile1 { width: 100%; display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; background: var(--info-bg); border-radius: 14px; color: var(--navy); font-size: 13.5px; line-height: 1.3; }
-  .nh-zeile1.is-blockiert { background: var(--warn-bg); border: 1px solid var(--warn-line); color: #5B4A1E; padding: 2px 8px 2px 12px; }
+  .nh-zeile1.is-blockiert { background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--wm-warn-text); padding: 2px 8px 2px 12px; }
   .nh-zeile1-ico { display: grid; flex: none; color: var(--slip); }
-  .nh-zeile1.is-blockiert .nh-zeile1-ico { color: #5B4A1E; }
+  .nh-zeile1.is-blockiert .nh-zeile1-ico { color: var(--wm-warn-text); }
   .nh-zeile1-text { flex: 1; min-width: 0; }
   .nh-erlauben { flex: none; min-height: 40px; padding: 0 12px; border-radius: 10px; font-size: 14.5px; }
   .nh-x { flex: none; width: 40px; height: 40px; border: 0; background: none; color: var(--muted); display: grid; place-items: center; border-radius: 10px; }

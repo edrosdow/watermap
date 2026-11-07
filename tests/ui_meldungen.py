@@ -81,7 +81,7 @@ def run(b, mobile):
     pg.evaluate("window.__watermap.applyFilters()"); pg.wait_for_timeout(200)   # Stub: setIcon zeichnet gruppierte Marker nicht neu
     b1 = pg.locator('.wm-pin .wm-mbadge:not(.is-stop)')
     check(b1.count() >= 1 and b1.first.inner_text() == '2', f'{tag}: Abzeichen mit Anzahl am Pin')
-    check(pg.evaluate("getComputedStyle(document.querySelector('.wm-mbadge:not(.is-stop)')).backgroundColor") == 'rgb(180, 83, 9)', f'{tag}: Abzeichen orange #B45309')
+    check(pg.evaluate("getComputedStyle(document.querySelector('.wm-mbadge:not(.is-stop)')).backgroundColor") == 'rgb(138, 83, 0)', f'{tag}: Abzeichen --wm-warn-text')
     pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_1karte.png'))
     pg.evaluate("window.__watermap.state.map.raw.setView([window.__watermap.state.byId.get('node/2').lat, window.__watermap.state.byId.get('node/2').lon], 14, { animate: false })"); pg.wait_for_timeout(300)
     pg.evaluate("window.__watermap.applyFilters()"); pg.wait_for_timeout(200)
@@ -105,7 +105,7 @@ def run(b, mobile):
     check('vo-warn' in karte.get_attribute('class') and pg.inner_text('#detail .vo-status') == 'Parkplatz voll'
           and 'vor 40 Min. · 3× bestätigt' in pg.inner_text('#detail .vo-kopf'), f'{tag}: b – wichtigste Meldung mit Alter und Bestätigungen')
     check(pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-oben')).backgroundColor") == 'rgb(255, 241, 214)'
-          and pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-karte')).borderTopColor") == 'rgb(235, 199, 122)', f'{tag}: b – getönt (warn-hell), Rand #EBC77A')
+          and pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-karte')).borderTopColor") == pg.evaluate("(() => { const e = document.createElement('i'); e.style.color = 'var(--wm-warn-rand)'; document.body.append(e); const c = getComputedStyle(e).color; e.remove(); return c; })()"), f'{tag}: b – getönt (warn-hell), Rand --wm-warn-rand')
     check(karte.locator('.vo-pille').count() == 0 and karte.locator('.vo-chip').count() == 0 and karte.locator('button.vo-melden').count() == 1, f'{tag}: d – weit weg: keine Knöpfe/Chips, Zeile „Lage melden“')
     mz = karte.locator('.vo-melden').bounding_box()
     check(mz['height'] >= 60 and 'Warst du heute dort? Hilf anderen.' in pg.inner_text('#detail .vo-melden'), f'{tag}: d – „Lage melden“ ≥ 60 px mit Unterzeile')

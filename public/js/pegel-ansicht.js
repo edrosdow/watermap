@@ -23,14 +23,14 @@ export function zustand(g) {
   return g.state;
 }
 export const ZUSTAND = {
-  hsw:     { text: 'über HSW',       farbe: '#D03B3B', cls: 'pz-hsw' },
-  high:    { text: 'Hoch',           farbe: '#EC835A', cls: 'pz-high' },
-  normal:  { text: 'Normal',         farbe: '#6CBF84', cls: 'pz-normal' },
-  low:     { text: 'Niedrig',        farbe: '#FAB219', cls: 'pz-low' },
-  tide:    { text: 'Tide',           farbe: '#9CCEE3', cls: 'pz-tide' },
-  none:    { text: 'ohne Kennwerte', farbe: '#DCE5EA', cls: 'pz-none' },
-  unknown: { text: 'ohne Einordnung', farbe: '#DCE5EA', cls: 'pz-none' },
-  old:     { text: 'veraltet',       farbe: '#DCE5EA', cls: 'pz-old' },
+  hsw:     { text: 'über HSW',       farbe: 'var(--wm-stop)', cls: 'pz-hsw' },
+  high:    { text: 'Hoch',           farbe: 'var(--wm-hoch)', cls: 'pz-high' },
+  normal:  { text: 'Normal',         farbe: 'var(--wm-gut)', cls: 'pz-normal' },
+  low:     { text: 'Niedrig',        farbe: 'var(--wm-warn)', cls: 'pz-low' },
+  tide:    { text: 'Tide',           farbe: 'var(--wm-fokus)', cls: 'pz-tide' },
+  none:    { text: 'ohne Kennwerte', farbe: 'var(--wm-leise)', cls: 'pz-none' },
+  unknown: { text: 'ohne Einordnung', farbe: 'var(--wm-leise)', cls: 'pz-none' },
+  old:     { text: 'veraltet',       farbe: 'var(--wm-leise)', cls: 'pz-old' },
 };
 export const etikett = (g) => { const z = ZUSTAND[zustand(g)]; return h('span', { class: `pz-tag ${z.cls}`, text: z.text }); };
 

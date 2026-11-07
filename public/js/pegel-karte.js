@@ -8,7 +8,7 @@ import { fmt, zustand } from './pegel-ansicht.js';
 import { meinePegel } from './pegel-daten.js';
 
 // Ampel nach den Kennwerten DIESES Pegels: normal grün, unter MNW gelb-orange, über MHW rot, über HSW dunkelrot (gefüllt), ohne Kennwerte grau
-export const FARBE = { low: '#E59A00', normal: '#2E9E5B', high: '#D9381E', hsw: '#B42318', neutral: '#8E9EAA' };
+export const FARBE = { low: 'var(--wm-warn)', normal: 'var(--wm-gut)', high: 'var(--wm-hoch)', hsw: 'var(--wm-stop)', neutral: 'var(--wm-leise)' };
 const PFEIL = { 1: '↗', 0: '→', '-1': '↘' }, PFEIL_WORT = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' };
 const MIT_FARBE = new Set(['low', 'normal', 'high', 'hsw']);
 const WELLE = '<svg class="pk-welle" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M2 9c3-3 5 3 8 0s5 3 8 0 3 2 4 1M2 16c3-3 5 3 8 0s5 3 8 0 3 2 4 1"/></svg>';

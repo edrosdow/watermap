@@ -9,7 +9,9 @@ import { CONFIG } from './config.js';
 
 const PFEIL = { 1: '↗', 0: '→', '-1': '↘' };
 const TREND = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' };
-const PUNKT_FARBE = { hsw: '#D03B3B', high: '#EC835A', low: '#FAB219', normal: '#6CBF84' };
+// Werte = tokens.css (SVG-Attribute kennen keine CSS-Variablen): stop, hoch, warn, gut, Gründe, tinte
+const FT = { stop: '#B42318', hoch: '#D23B21', warn: '#C27A00', gut: '#1E9E5A', stopHell: '#FDECEA', gutHell: '#E3F5EA', warnHell: '#FFF1D6', tinte: '#0E2E42' };
+const PUNKT_FARBE = { hsw: FT.stop, high: FT.hoch, low: FT.warn, normal: FT.gut };
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const kmZahl = (km) => km.toLocaleString('de-DE', { maximumFractionDigits: 1 });
 const zeitText = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -47,19 +49,19 @@ function profilZeichnen(box, pr, opts) {
   const y0 = pr.mnw ? ys(0) : H - B, y1 = pr.mhw ? ys(1) : T;
   const s = svg('svg', { class: 'pf-svg', viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'group', 'aria-label': box.dataset.label });
   // Flächen: über MHW hellorange, normal hellgrün, unter MNW leicht gelb
-  if (pr.mhw) s.append(svg('rect', { x: L, y: T, width: W - L - R, height: Math.max(0, y1 - T), fill: '#FDEBDD' }));
-  s.append(svg('rect', { x: L, y: y1, width: W - L - R, height: Math.max(0, y0 - y1), fill: '#E4F4E8' }));
-  if (pr.mnw) s.append(svg('rect', { x: L, y: y0, width: W - L - R, height: Math.max(0, H - B - y0), fill: '#FFF8E6' }));
-  if (pr.mhw) s.append(svg('line', { x1: L, x2: W - R, y1, y2: y1, stroke: '#EC835A', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }),
+  if (pr.mhw) s.append(svg('rect', { x: L, y: T, width: W - L - R, height: Math.max(0, y1 - T), fill: FT.stopHell }));
+  s.append(svg('rect', { x: L, y: y1, width: W - L - R, height: Math.max(0, y0 - y1), fill: FT.gutHell }));
+  if (pr.mnw) s.append(svg('rect', { x: L, y: y0, width: W - L - R, height: Math.max(0, H - B - y0), fill: FT.warnHell }));
+  if (pr.mhw) s.append(svg('line', { x1: L, x2: W - R, y1, y2: y1, stroke: FT.hoch, 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }),
     svg('text', { x: W - R - 4, y: y1 - 5, 'text-anchor': 'end', class: 'pf-ax is-mhw' }, 'MHW'));
-  if (pr.mnw) s.append(svg('line', { x1: L, x2: W - R, y1: y0, y2: y0, stroke: '#C98A00', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }),
+  if (pr.mnw) s.append(svg('line', { x1: L, x2: W - R, y1: y0, y2: y0, stroke: FT.warn, 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }),
     svg('text', { x: W - R - 4, y: y0 - 5, 'text-anchor': 'end', class: 'pf-ax is-mnw' }, 'MNW'));
   // Beschriftung der Flächen; liegt eine Linie außerhalb, ein Hinweis
   s.append(svg('text', { x: L + 4, y: T - 7, class: 'pf-ax is-normal' }, pr.mhw ? 'normal' : 'normal · MHW liegt weiter oben ↑'));
   if (pr.mnw) s.append(svg('text', { x: W - R - 4, y: H - B - 5, 'text-anchor': 'end', class: 'pf-ax is-niedrig' }, 'niedrig'));
   else s.append(svg('text', { x: W - R - 4, y: H - B - 5, 'text-anchor': 'end', class: 'pf-ax is-niedrig' }, 'MNW liegt weiter unten ↓'));
   const pts = pr.punkte;
-  if (pts.length > 1) s.append(svg('polyline', { points: pts.map(p => `${xs(p.pos).toFixed(1)},${ys(p.y).toFixed(1)}`).join(' '), fill: 'none', stroke: '#0B3045', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+  if (pts.length > 1) s.append(svg('polyline', { points: pts.map(p => `${xs(p.pos).toFixed(1)},${ys(p.y).toFixed(1)}`).join(' '), fill: 'none', stroke: FT.tinte, 'stroke-width': 2, 'stroke-linejoin': 'round' }));
   const blase = h('div', { class: 'pf-blase', hidden: true, role: 'status' });
   const zeigeBlase = (p, mitKnopf) => {
     const g = p.g;
@@ -74,7 +76,7 @@ function profilZeichnen(box, pr, opts) {
   };
   for (const p of pts) {
     const ist = p.g.id === opts.hervorId;
-    const kreis = svg('circle', { cx: xs(p.pos), cy: ys(p.y), r: ist ? 6.5 : handy ? 4 : 5, fill: PUNKT_FARBE[p.g.state], stroke: ist ? '#0B3045' : '#fff', 'stroke-width': ist ? 2.5 : 1.5, class: 'pf-punkt' + (ist ? ' is-hervor' : '') });
+    const kreis = svg('circle', { cx: xs(p.pos), cy: ys(p.y), r: ist ? 6.5 : handy ? 4 : 5, fill: PUNKT_FARBE[p.g.state], stroke: ist ? FT.tinte : '#fff', 'stroke-width': ist ? 2.5 : 1.5, class: 'pf-punkt' + (ist ? ' is-hervor' : '') });
     const ziel = svg('circle', { cx: xs(p.pos), cy: ys(p.y), r: 16, fill: 'transparent', class: 'pf-ziel', tabindex: 0, role: 'button',
       'aria-label': `${p.g.name}: ${fmt(p.g.value)} ${p.g.unit}, ${pegelEtikett(p.g).textContent}. Details öffnen` });
     ziel.addEventListener('mouseenter', () => { if (!opts.isMobile()) zeigeBlase(p, false); });
@@ -135,7 +137,7 @@ function profilKarte(gr, z, opts) {
     hervorZeile,
     box,
     h('p', { class: 'pf-enden' }, h('span', { text: `← ${pr.von.name}` }), h('span', { text: `${pr.bis.name} →` })),
-    h('p', { class: 'pf-legende' }, [['#FAB219', 'unter MNW'], ['#6CBF84', 'normal'], ['#EC835A', 'über MHW'], ['#D03B3B', 'über HSW']]
+    h('p', { class: 'pf-legende' }, [[FT.warn, 'unter MNW'], [FT.gut, 'normal'], [FT.hoch, 'über MHW'], [FT.stop, 'über HSW']]
       .map(([f, t]) => h('span', {}, h('i', { style: `background:${f}` }), t))),
     tideZeile,
     h('p', { class: 'pf-tipp', text: 'Tippe auf einen Punkt für Details.' }));

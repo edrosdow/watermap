@@ -260,7 +260,7 @@ def run(b, w, hh, mobile):
     # ohne Kennwerte: neutral
     suche_waehlen(pg, 'testpegel', 'Testpegel'); pg.wait_for_timeout(300)
     farbe = pg.evaluate("getComputedStyle(document.querySelector('.pk-pille.is-gewaehlt')).getPropertyValue('--pk').trim()")
-    check(pg.inner_text('.pa-zustand') == 'ohne Kennwerte' and farbe.lower() == '#8e9eaa', f'{tag}: Pegel ohne Kennwerte: neutraler Marker, Zustand „ohne Kennwerte“ ({farbe})')
+    check(pg.inner_text('.pa-zustand') == 'ohne Kennwerte' and farbe.lower() == '#7c8f9c', f'{tag}: Pegel ohne Kennwerte: neutraler Marker, Zustand „ohne Kennwerte“ ({farbe})')
     pg.click('.pa-verlauf'); pg.wait_for_selector('.pd .gc-svg')
     check(pg.locator('.pd-kennwerte').count() == 0 and pg.locator('.pd-zonen').count() == 0, f'{tag}: ohne Kennwerte keine Kennwerte-Karte und kein Balken')
     pg.keyboard.press('Escape'); pg.keyboard.press('Escape'); pg.wait_for_timeout(150)

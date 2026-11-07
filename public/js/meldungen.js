@@ -11,14 +11,14 @@ const LS_GERAET = 'watermap.geraet';
 const LS_BEWERTET = 'watermap.meldungen.bewertet';
 const LS_AUSGEBLENDET = 'watermap.meldungen.ausgeblendet';
 
-/** Typen in der Reihenfolge der Kacheln; `ton`: Farbton der Kachel/Zeile. */
+/** Typen in der Reihenfolge der Kacheln; `ton`: Farbton der Kachel/Zeile; `farbe`: Punkt (Token), `textFarbe`: Text (Token). */
 export const TYPEN = {
-  alles_frei:     { text: 'Alles frei',     zeile: 'Alles frei',            ico: 'check',    farbe: '#15803D', ton: 'gut',   rang: 1 },
-  parkplatz_voll: { text: 'Parkplatz voll', zeile: 'Parkplatz voll',        ico: 'car',      farbe: '#B45309', ton: 'warn',  rang: 3 },
-  warteschlange:  { text: 'Warteschlange',  zeile: 'Warteschlange am Slip', ico: 'clock',    farbe: '#B45309', ton: 'warn',  rang: 2 },
-  rampe_rutschig: { text: 'Rampe rutschig', zeile: 'Rampe rutschig',        ico: 'slippery', farbe: '#B45309', ton: 'warn',  rang: 4 },
-  hindernis:      { text: 'Hindernis',      zeile: 'Hindernis gemeldet',    ico: 'alert',    farbe: '#B45309', ton: 'warn',  rang: 5 },
-  gesperrt:       { text: 'Gesperrt',       zeile: 'Gesperrt',              ico: 'blocked',  farbe: '#B91C1C', ton: 'stop',  rang: 6 },
+  alles_frei:     { text: 'Alles frei',     zeile: 'Alles frei',            ico: 'check',    farbe: 'var(--wm-gut)', textFarbe: 'var(--wm-gut-text)', ton: 'gut',   rang: 1 },
+  parkplatz_voll: { text: 'Parkplatz voll', zeile: 'Parkplatz voll',        ico: 'car',      farbe: 'var(--wm-warn)', textFarbe: 'var(--wm-warn-text)', ton: 'warn',  rang: 3 },
+  warteschlange:  { text: 'Warteschlange',  zeile: 'Warteschlange am Slip', ico: 'clock',    farbe: 'var(--wm-warn)', textFarbe: 'var(--wm-warn-text)', ton: 'warn',  rang: 2 },
+  rampe_rutschig: { text: 'Rampe rutschig', zeile: 'Rampe rutschig',        ico: 'slippery', farbe: 'var(--wm-warn)', textFarbe: 'var(--wm-warn-text)', ton: 'warn',  rang: 4 },
+  hindernis:      { text: 'Hindernis',      zeile: 'Hindernis gemeldet',    ico: 'alert',    farbe: 'var(--wm-warn)', textFarbe: 'var(--wm-warn-text)', ton: 'warn',  rang: 5 },
+  gesperrt:       { text: 'Gesperrt',       zeile: 'Gesperrt',              ico: 'blocked',  farbe: 'var(--wm-stop)', textFarbe: 'var(--wm-stop)', ton: 'stop',  rang: 6 },
 };
 
 // ------------------------------------------------------------------ Gerät (zufällige ID, nur für den Missbrauchsschutz)

@@ -1,7 +1,7 @@
 /* Pegel-Ampel (pegel-ampel.html) – eigenständige Seite im WaterMap-Stil. */
 :root {
   --navy: var(--wm-tinte); --ink: var(--wm-tinte); --muted: var(--wm-matt); --bg: var(--wm-flaeche-2); --line: var(--wm-linie); --petrol: var(--wm-petrol-tief); --petrol-dark: var(--wm-petrol-tief);
-  --gruen: #15803D; --gelb: #B45309; --rot: var(--wm-stop); --tile: var(--wm-flaeche-2);
+  --gruen: var(--wm-gut-text); --gelb: var(--wm-warn-text); --rot: var(--wm-stop); --tile: var(--wm-flaeche-2);
   font-family: var(--wm-schrift); color: var(--ink); line-height: 1.45;
 }
 * { box-sizing: border-box; }
@@ -26,7 +26,7 @@ main { max-width: 720px; margin: 0 auto; padding: 18px 16px 40px; }
 .am-field { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; min-width: 0; }
 .am-field label { font-weight: 650; font-size: 14px; color: var(--navy); }
 .am-searchbox, .am-unit { position: relative; }
-.am-input input { width: 100%; min-height: 52px; padding: 12px 14px; font: inherit; font-size: 17px; font-weight: 600; border: 1px solid #C9D6D3; border-radius: 14px; background: #fff; color: var(--ink); }
+.am-input input { width: 100%; min-height: 52px; padding: 12px 14px; font: inherit; font-size: 17px; font-weight: 600; border: 1px solid var(--wm-linie); border-radius: 14px; background: #fff; color: var(--ink); }
 .am-input input::placeholder { font-weight: 400; color: var(--wm-leise); }
 .am-input input:focus { outline: 3px solid var(--wm-fokus); outline-offset: 1px; border-color: transparent; }
 .am-searchbox input { padding-right: 48px; }
@@ -38,7 +38,7 @@ main { max-width: 720px; margin: 0 auto; padding: 18px 16px 40px; }
 .am-seg { display: grid; grid-template-columns: repeat(3, auto); justify-content: start; gap: 8px; }
 .am-seg label { position: relative; }
 .am-seg input { position: absolute; opacity: 0; inset: 0; margin: 0; }
-.am-seg span { display: flex; align-items: center; justify-content: center; white-space: nowrap; min-height: 44px; padding: 0 18px; border: 1px solid #C9D6D3; border-radius: 99px; font-size: 15px; font-weight: 650; color: var(--ink); background: #fff; cursor: pointer; transition: background .15s, color .15s; }
+.am-seg span { display: flex; align-items: center; justify-content: center; white-space: nowrap; min-height: 44px; padding: 0 18px; border: 1px solid var(--wm-linie); border-radius: 99px; font-size: 15px; font-weight: 650; color: var(--ink); background: #fff; cursor: pointer; transition: background .15s, color .15s; }
 .am-seg input:checked + span { background: var(--navy); border-color: var(--navy); color: #fff; }
 .am-seg input:focus-visible + span { outline: 3px solid var(--wm-fokus); outline-offset: 2px; }
 .am-help { margin: 0 0 6px; font-size: 13px; color: var(--muted); }
@@ -61,7 +61,7 @@ main { max-width: 720px; margin: 0 auto; padding: 18px 16px 40px; }
 .am-top { display: flex; gap: 18px; align-items: center; margin-bottom: 16px; }
 .am-light { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 18px; background: var(--wm-tinte); }
 .am-light span { width: 34px; height: 34px; border-radius: 50%; opacity: .22; transition: opacity .35s, box-shadow .35s; }
-.l-rot { background: #DC2626; } .l-gelb { background: #D97706; } .l-gruen { background: #22C55E; }
+.l-rot { background: var(--wm-stop); } .l-gelb { background: var(--wm-warn); } .l-gruen { background: var(--wm-gut); }
 .is-rot .l-rot { opacity: 1; box-shadow: 0 0 18px 3px rgba(220, 38, 38, .6); }
 .is-gelb .l-gelb { opacity: 1; box-shadow: 0 0 18px 3px rgba(217, 119, 6, .6); }
 .is-gruen .l-gruen { opacity: 1; box-shadow: 0 0 18px 3px rgba(34, 197, 94, .6); }
@@ -76,8 +76,8 @@ main { max-width: 720px; margin: 0 auto; padding: 18px 16px 40px; }
 .am-checks { list-style: none; margin: 16px 0 8px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .am-checks li { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; }
 .am-checks i { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 13px; font-weight: 800; margin-top: 0; }
-.c-ok i { background: #DCFCE7; color: var(--gruen); }
-.c-warn i { background: #FEF3C7; color: var(--gelb); }
+.c-ok i { background: var(--wm-gut-hell); color: var(--gruen); }
+.c-warn i { background: var(--wm-warn-hell); color: var(--gelb); }
 .c-bad i { background: var(--wm-stop-hell); color: var(--rot); }
 .c-info i { background: var(--wm-petrol-hell); color: var(--petrol); }
 .am-meta { margin: 8px 0 12px; font-size: 13px; color: var(--muted); }
@@ -87,8 +87,8 @@ main { max-width: 720px; margin: 0 auto; padding: 18px 16px 40px; }
 
 /* Balkendiagramm */
 .am-bars { display: block; width: 100%; height: auto; }
-.am-bars .b { fill: #93CCC4; } .am-bars .b-now { fill: var(--petrol); }
-.am-bars .b-low { fill: #F3B4A9; } .am-bars .b-now.b-low { fill: var(--rot); }
+.am-bars .b { fill: var(--wm-gut-rand); } .am-bars .b-now { fill: var(--petrol); }
+.am-bars .b-low { fill: var(--wm-stop-rand); } .am-bars .b-now.b-low { fill: var(--rot); }
 .am-bars .min { stroke: var(--rot); stroke-width: 1.5; stroke-dasharray: 5 4; }
 .am-bars .min-l { fill: var(--rot); font-size: 11px; font-weight: 700; stroke: #fff; stroke-width: 3px; paint-order: stroke; stroke-linejoin: round; }
 .am-axis { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; margin-top: 6px; }

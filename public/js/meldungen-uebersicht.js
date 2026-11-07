@@ -138,7 +138,7 @@ export function meldungenSeite(root, ctx) {
     const fokus = root.contains(document.activeElement) ? document.activeElement.dataset?.fokus : null;
     const { liste, bezug, d } = auswahl();
     const chips = h('div', { class: 'mu-chips', role: 'group', 'aria-label': 'Nach Art filtern' }, FILTER.map(([k, text, typen]) => {
-      const farbe = typen ? TYPEN[typen[0]]?.farbe : null;
+      const farbe = typen ? TYPEN[typen[0]]?.textFarbe : null;
       return h('button', { type: 'button', class: 'mu-chip' + (ui.filter === k ? ' is-an' : ''), 'aria-pressed': String(ui.filter === k), dataset: { fokus: `f-${k}` },
         style: farbe && ui.filter !== k ? `color:${farbe}` : null, onclick: () => { ui.filter = k; zeichnen(); } },
         farbe ? h('i', { 'aria-hidden': 'true' }) : null, text);

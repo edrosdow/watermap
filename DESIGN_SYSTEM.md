@@ -29,6 +29,7 @@ Alle Farben als CSS-Variablen auf `:root` mit Präfix `--wm-`. Neue Hex-Werte im
 | `--wm-flaeche` | `#FFFFFF` | Karten, Gruppen, Knöpfe, Felder |
 | `--wm-flaeche-2` | `#F1F6F8` | Felder in Karten (Fakten-Kacheln, Segment-Spur, Eingabefelder) |
 | `--wm-linie` | `#E3EBEF` | Trennlinien in Listen, Feldrahmen |
+| `--wm-rand` | `leise` 50 % auf Weiß (≈ `#BEC7CE`) | kräftigere Linie: Sheet-Griffe, Hover-Rahmen, gestrichelte Ablageflächen, Schraffur (ergänzt 7.66.0, weil `linie` auf Wassergrund nicht sichtbar ist) |
 
 ### Text
 | Token | Wert | Kontrast auf Weiß |
@@ -56,6 +57,8 @@ Jeder Zustand hat **Punkt** (Kreis/Marker, ≥ 3 : 1), **Text** (≥ 4,5 : 1) un
 | hoch | `--wm-hoch` `#D23B21` | `--wm-stop-text` `#A33A1C` | `--wm-stop-hell` `#FDECEA` | Pegel über MHW |
 | Sperre / über HSW | `--wm-stop` `#B42318` | `--wm-stop-text` `#A33A1C` | `--wm-stop-hell` `#FDECEA` | gesperrt, über HSW, Unwetter |
 | ohne Wert / veraltet | `--wm-leise` `#7C8F9C` | `--wm-matt` | `--wm-flaeche-2` | keine Kennwerte, Messwert alt |
+
+**Rahmen im Zustand** (ergänzt 7.66.0): `--wm-gut-rand`, `--wm-warn-rand`, `--wm-hoch-rand`, `--wm-stop-rand` = Punkt 35 % auf Weiß (`color-mix`), für Rahmen von Hinweisen, Meldungskarten und Chips auf dem Zustandsgrund sowie für die Abschnitte des Einordnungsbalkens (mit Punkt-Farben wirkte er zu schwer). Punkte, Kartenpillen und Marker nutzen die **Punkt**-Farbe: niedrig `warn`, normal `gut`, hoch `hoch`, über HSW `stop`, ohne Kennwerte `leise`.
 
 ### Kategorien (Karte)
 Bleiben wie bisher, nur als Tokens: `--wm-slip #087F9C`, `--wm-hafen #16619B`, `--wm-tanke #D78B23` (Text: `--wm-tanke-text #8A4F00`).
@@ -279,7 +282,7 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 - **Schritt 8, Teil 3 (7.64.0): Reste aufgeräumt.** 366 Farbwerte mit ΔE ≤ 6 auf Tokens (Skript, nächster Token in Lab), `!important` bis auf die Ausnahmen in Abschnitt 9 entfernt, 67 Schriftgrößen unter 13 px auf `--wm-t-xs`.
 - **Farbgruppen (Entscheidung Nutzer 07.11.2026: gruppenweise angleichen):**
   - **Blau erledigt (7.65.0):** Pegel-Blau `#1F6FB2` in Diagrammen, Wind, Pegel-Chip und Teilen-Bild → `--wm-petrol` (Fläche 8 %); Hover-Töne → `--wm-petrol-tief`; Trend „steigt“ → `--wm-petrol-tief`; dunkle Pillen auf Navy → `color-mix(in srgb, var(--wm-flaeche) 10%, var(--wm-navy))`; Ampelgehäuse/Bildbetrachter → `--wm-tinte`; Fokus auf Navy → `--wm-fokus`; Hinweis-Rahmen → `--wm-linie`. Das Teilen-Bild (`pegel-bild.js`) liest die Tokens per `getComputedStyle`. Bleibt: „Lage melden“ (`--sky`, `#163F57`), Logo.
-  - Offen: Rot, Rahmen/Grau, Gold sowie die Zustandsfarben in `pegel-ansicht.js`/`pegel-bild.js`.
+  - **Alle übrigen Farben erledigt (7.66.0):** Rot, Gold, Grün, Grau/Rahmen in CSS und JS (`pegel-karte.js`, `pegel-ansicht.js`, `pegel-fluss.js`, `pegel-fluss-ansicht.js`, `meldungen.js`, `pegel-bild.js`) nach Rolle: Text → `*-text`, Fläche → `*-hell`, Punkt/Zone → Punkt-Farbe, Rahmen → `*-rand`/`rand`/`linie`, Nebentext → `matt`, Pfeile/Referenzlinien → `leise`. SVG-Attribute in `pegel-fluss-ansicht.js` tragen die Token-Werte direkt (kennen keine CSS-Variablen). Ausgenommen bleiben „Lage melden“ (`lage-*`, `lf-*`), Logo (`icons.js`), Kartendaten-Farben (`map.js`, `extras.js`, Maske in `config.js`).
 
 ## Entscheidungen des Nutzers (Ausnahmen)
 

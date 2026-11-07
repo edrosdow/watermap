@@ -132,15 +132,15 @@ export function gruppeZu(gr, s) {
 
 // Zustand eines Flusses ------------------------------------------------------------------------------
 export const FLUSS_ZUSTAND = {
-  hsw:            { text: 'über HSW',      farbe: '#D03B3B', cls: 'pz-hsw',    rang: 0 },
-  hoch:           { text: 'hoch',          farbe: '#EC835A', cls: 'pz-high',   rang: 1 },
-  niedrig:        { text: 'niedrig',       farbe: '#FAB219', cls: 'pz-low',    rang: 2 },
-  'teils-hoch':   { text: 'teils hoch',    farbe: '#EC835A', cls: 'pz-high',   rang: 3 },
-  'teils-niedrig': { text: 'teils niedrig', farbe: '#FAB219', cls: 'pz-low',   rang: 4 },
-  normal:         { text: 'normal',        farbe: '#6CBF84', cls: 'pz-normal', rang: 5 },
-  keine:          { text: 'keine Daten',   farbe: '#9AAAB5', cls: 'pz-none',   rang: 6 },
-  kueste:         { text: 'Tide',          farbe: '#9AAAB5', cls: 'pz-none',   rang: 7 },
-  ohne:           { text: 'ohne Kennwerte', farbe: '#9AAAB5', cls: 'pz-none',  rang: 8 },
+  hsw:            { text: 'über HSW',      farbe: 'var(--wm-stop)', cls: 'pz-hsw',    rang: 0 },
+  hoch:           { text: 'hoch',          farbe: 'var(--wm-hoch)', cls: 'pz-high',   rang: 1 },
+  niedrig:        { text: 'niedrig',       farbe: 'var(--wm-warn)', cls: 'pz-low',    rang: 2 },
+  'teils-hoch':   { text: 'teils hoch',    farbe: 'var(--wm-hoch)', cls: 'pz-high',   rang: 3 },
+  'teils-niedrig': { text: 'teils niedrig', farbe: 'var(--wm-warn)', cls: 'pz-low',   rang: 4 },
+  normal:         { text: 'normal',        farbe: 'var(--wm-gut)', cls: 'pz-normal', rang: 5 },
+  keine:          { text: 'keine Daten',   farbe: 'var(--wm-leise)', cls: 'pz-none',   rang: 6 },
+  kueste:         { text: 'Tide',          farbe: 'var(--wm-leise)', cls: 'pz-none',   rang: 7 },
+  ohne:           { text: 'ohne Kennwerte', farbe: 'var(--wm-leise)', cls: 'pz-none',  rang: 8 },
 };
 
 /**

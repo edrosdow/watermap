@@ -23,6 +23,7 @@
   --wm-flaeche: #FFFFFF;
   --wm-flaeche-2: #F1F6F8;
   --wm-linie: #E3EBEF;
+  --wm-rand: color-mix(in srgb, var(--wm-leise) 50%, var(--wm-flaeche));   /* ≈ #BEC7CE: Griffe, Hover-Rahmen, gestrichelte Flächen */
 
   /* Text */
   --wm-tinte: #0E2E42;
@@ -41,6 +42,11 @@
   --wm-warn: #C27A00;  --wm-warn-text: #8A5300;  --wm-warn-hell: #FFF1D6;
   --wm-hoch: #D23B21;
   --wm-stop: #B42318;  --wm-stop-text: #A33A1C;  --wm-stop-hell: #FDECEA;
+  /* Rahmen im Zustand (Hinweise, Meldungskarten): Punkt 35 % auf Weiß */
+  --wm-gut-rand: color-mix(in srgb, var(--wm-gut) 35%, var(--wm-flaeche));
+  --wm-warn-rand: color-mix(in srgb, var(--wm-warn) 35%, var(--wm-flaeche));
+  --wm-hoch-rand: color-mix(in srgb, var(--wm-hoch) 35%, var(--wm-flaeche));
+  --wm-stop-rand: color-mix(in srgb, var(--wm-stop) 35%, var(--wm-flaeche));
 
   /* Kategorien und App-Leiste */
   --wm-slip: #087F9C;
