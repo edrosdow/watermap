@@ -277,7 +277,9 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 - **Schritt 8, Teil 1 erledigt (7.62.0): Desktop.** Dunkle Kopfleiste bleibt; darunter Wassergrund, Chips/Filter/„In der Nähe“ als weiße Chips (aktiv Tinte), Suche als Pille mit Lupe rechts, Pegel-Kopf und Seitenleiste „In der Nähe“ nach Tokens.
 - **Schritt 8, Teil 2 erledigt (7.63.0):** Textseiten (`page.css`) und Wetter-Fenster nach Tokens; Diagramm als eine Karte, Wind Petrol, Böen `--wm-hoch`.
 - **Schritt 8, Teil 3 (7.64.0): Reste aufgeräumt.** 366 Farbwerte mit ΔE ≤ 6 auf Tokens (Skript, nächster Token in Lab), `!important` bis auf die Ausnahmen in Abschnitt 9 entfernt, 67 Schriftgrößen unter 13 px auf `--wm-t-xs`.
-- Offen: rund 315 Farbwerte mit ΔE > 6 (sichtbar anders, z. B. Pegel-Blau `#1F6FB2`, alte Rottöne, helle Rahmen) – Entscheidung des Nutzers steht aus.
+- **Farbgruppen (Entscheidung Nutzer 07.11.2026: gruppenweise angleichen):**
+  - **Blau erledigt (7.65.0):** Pegel-Blau `#1F6FB2` in Diagrammen, Wind, Pegel-Chip und Teilen-Bild → `--wm-petrol` (Fläche 8 %); Hover-Töne → `--wm-petrol-tief`; Trend „steigt“ → `--wm-petrol-tief`; dunkle Pillen auf Navy → `color-mix(in srgb, var(--wm-flaeche) 10%, var(--wm-navy))`; Ampelgehäuse/Bildbetrachter → `--wm-tinte`; Fokus auf Navy → `--wm-fokus`; Hinweis-Rahmen → `--wm-linie`. Das Teilen-Bild (`pegel-bild.js`) liest die Tokens per `getComputedStyle`. Bleibt: „Lage melden“ (`--sky`, `#163F57`), Logo.
+  - Offen: Rot, Rahmen/Grau, Gold sowie die Zustandsfarben in `pegel-ansicht.js`/`pegel-bild.js`.
 
 ## Entscheidungen des Nutzers (Ausnahmen)
 

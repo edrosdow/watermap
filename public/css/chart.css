@@ -6,9 +6,9 @@
 .gc-reflabel { font-weight: 700; }
 .gc-ref { stroke: #9DB0BC; stroke-width: 1; vector-effect: non-scaling-stroke; }
 .gc-ref.is-hsw { stroke: #D03B3B; }
-.gc-line { fill: none; stroke: #1F6FB2; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-.gc-area { fill: #1F6FB2; opacity: .1; }
-.gc-dot { fill: #1F6FB2; stroke: #fff; stroke-width: 2; }
+.gc-line { fill: none; stroke: var(--wm-petrol); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.gc-area { fill: var(--wm-petrol); opacity: .08; }
+.gc-dot { fill: var(--wm-petrol); stroke: #fff; stroke-width: 2; }
 .gc-cross { stroke: var(--muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .gc-tip { position: absolute; top: 0; transform: translateX(-50%); background: var(--navy); color: #fff; font-size: var(--wm-t-xs); font-weight: 600; padding: 5px 9px; border-radius: 8px; max-width: 100%; width: max-content; text-align: center; pointer-events: none; font-variant-numeric: tabular-nums; }
 .gc-table { font-size: 13px; margin-top: 6px; }
@@ -22,7 +22,7 @@
 /* Wasserstandsvorhersage im Pegel-Verlauf */
 .gc-vorh-bg { fill: var(--wm-flaeche-2); }
 .gc-tief { fill: var(--wm-warn-hell); opacity: .75; }
-.gc-vorh { fill: none; stroke: #1F6FB2; stroke-width: 2; stroke-dasharray: 5 4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.gc-vorh { fill: none; stroke: var(--wm-petrol); stroke-width: 2; stroke-dasharray: 5 4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .gc-jetzt { stroke: var(--navy, var(--wm-navy)); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .gc-jetzt-text { font-size: 10px; font-weight: 800; fill: var(--navy, var(--wm-navy)); }
 /* Messlücken (7.49.0) */

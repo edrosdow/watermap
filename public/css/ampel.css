@@ -1,6 +1,6 @@
 /* Pegel-Ampel (pegel-ampel.html) – eigenständige Seite im WaterMap-Stil. */
 :root {
-  --navy: var(--wm-tinte); --ink: var(--wm-tinte); --muted: var(--wm-matt); --bg: var(--wm-flaeche-2); --line: var(--wm-linie); --petrol: var(--wm-petrol-tief); --petrol-dark: #08505B;
+  --navy: var(--wm-tinte); --ink: var(--wm-tinte); --muted: var(--wm-matt); --bg: var(--wm-flaeche-2); --line: var(--wm-linie); --petrol: var(--wm-petrol-tief); --petrol-dark: var(--wm-petrol-tief);
   --gruen: #15803D; --gelb: #B45309; --rot: var(--wm-stop); --tile: var(--wm-flaeche-2);
   font-family: var(--wm-schrift); color: var(--ink); line-height: 1.45;
 }
@@ -59,7 +59,7 @@ main { max-width: 720px; margin: 0 auto; padding: 18px 16px 40px; }
 
 /* Ergebnis */
 .am-top { display: flex; gap: 18px; align-items: center; margin-bottom: 16px; }
-.am-light { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 18px; background: #12232E; }
+.am-light { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 18px; background: var(--wm-tinte); }
 .am-light span { width: 34px; height: 34px; border-radius: 50%; opacity: .22; transition: opacity .35s, box-shadow .35s; }
 .l-rot { background: #DC2626; } .l-gelb { background: #D97706; } .l-gruen { background: #22C55E; }
 .is-rot .l-rot { opacity: 1; box-shadow: 0 0 18px 3px rgba(220, 38, 38, .6); }

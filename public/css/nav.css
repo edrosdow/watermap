@@ -4,19 +4,19 @@
 .tn-item { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 10px;
   color: var(--wm-linie); text-decoration: none; font-weight: 600; font-size: 15px; white-space: nowrap; }
 .tn-item:hover { background: rgba(255, 255, 255, .08); color: #fff; }
-.tn-item.is-active { background: #163F57; color: #fff; font-weight: 750; }
+.tn-item.is-active { background: color-mix(in srgb, var(--wm-flaeche) 10%, var(--wm-navy)); color: #fff; font-weight: 750; }
 .tn-ico { display: grid; }
 .tn-ico svg { display: block; }
-.nav-badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #9CCEE3; color: var(--wm-navy); font-size: 12px; font-weight: 800;
+.nav-badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--wm-petrol-hell); color: var(--wm-navy); font-size: 12px; font-weight: 800;
   display: inline-grid; place-items: center; font-variant-numeric: tabular-nums; line-height: 1; }
 .nav-badge[hidden] { display: none; }
-.tn-item :focus-visible, .tn-item:focus-visible { outline: 3px solid #9CCEE3; outline-offset: 2px; }
+.tn-item :focus-visible, .tn-item:focus-visible { outline: 3px solid var(--wm-fokus); outline-offset: 2px; }
 
 .report-btn { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px 0 14px; border: 0; border-radius: 12px;
   background: #fff; color: var(--wm-navy); font-weight: 750; font-size: 15px; text-decoration: none; }
 .report-btn:hover { background: var(--wm-linie); }
 .report-btn svg { display: block; }
-.report-btn:focus-visible { outline: 3px solid #9CCEE3; outline-offset: 2px; }
+.report-btn:focus-visible { outline: 3px solid var(--wm-fokus); outline-offset: 2px; }
 
 .bottomnav { display: none; }
 

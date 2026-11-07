@@ -56,7 +56,7 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pz-high.pz-tag { background: #FCE3D8; color: #8A3412; }
 .pz-hsw.pz-tag { background: #D03B3B; color: #fff; }
 .pz-none.pz-tag, .pz-old.pz-tag { background: var(--wm-linie); color: #3D5160; }
-.pz-tide.pz-tag { background: #9CCEE3; color: var(--navy); }
+.pz-tide.pz-tag { background: var(--wm-petrol-hell); color: var(--navy); }
 
 /* Meine Pegel */
 .pg-karten { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
@@ -76,7 +76,7 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pm-wert strong { font-size: 40px; font-weight: 800; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
 .pm-wert span { font-size: 18px; font-weight: 700; }
 .pm-trend { margin: -4px 0 0; font-size: 14px; font-weight: 700; }
-.pt-down { color: var(--wm-stop-text); } .pt-up { color: #1F5FAD; } .pt-flat { color: #3D5160; }
+.pt-down { color: var(--wm-stop-text); } .pt-up { color: var(--wm-petrol-tief); } .pt-flat { color: #3D5160; }
 .pm-spark-box { flex: 0 1 150px; min-width: 90px; }
 .pm-spark { display: block; width: 100%; height: auto; }
 .pm-spark-line { fill: none; stroke: var(--wm-slip); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
@@ -145,7 +145,7 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pg-wz-text strong { font-size: 17px; }
 .pg-wz-text small { font-size: 14px; opacity: .85; }
 .pg-wz-pfeil { display: grid; }
-.pg-ampel-ico { width: 44px; height: 52px; border-radius: 12px; background: #163F57; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; flex: none; }
+.pg-ampel-ico { width: 44px; height: 52px; border-radius: 12px; background: var(--wm-tinte); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; flex: none; }
 .pg-ampel-ico i { width: 10px; height: 10px; border-radius: 50%; }
 .pg-ampel-ico i:nth-child(1) { background: #E5484D; } .pg-ampel-ico i:nth-child(2) { background: #F5B521; } .pg-ampel-ico i:nth-child(3) { background: #6CBF84; }
 .pg-alarm-ico { width: 44px; height: 44px; border-radius: 12px; background: var(--wm-wasser); color: var(--slip); display: grid; place-items: center; flex: none; }
@@ -169,7 +169,7 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pd-wert span { font-size: 22px; font-weight: 750; margin-left: 4px; }
 .pd-wertinfo { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
 .pd-aend { font-size: 15px; font-weight: 750; }
-.pd-kopf .pt-down { color: #FFB59A; } .pd-kopf .pt-up { color: #A9D4FF; } .pd-kopf .pt-flat { color: var(--wm-linie); }
+.pd-kopf .pt-down { color: #FFB59A; } .pd-kopf .pt-up { color: var(--wm-petrol-hell); } .pd-kopf .pt-flat { color: var(--wm-linie); }
 .pd-zeit { margin: 0; color: #C5D8E1; font-size: 14px; display: flex; align-items: center; gap: 6px; }
 .pd-zeit.is-alt { color: #1A1300; background: #FAB219; padding: 4px 8px; border-radius: 10px; font-weight: 750; display: inline-flex; }
 .pd-body { margin-top: -22px; padding: 0 16px 8px; display: flex; flex-direction: column; gap: 16px; position: relative; }
@@ -185,7 +185,7 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pd-stat { background: var(--bg); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; }
 .pd-stat span { font-size: 13px; color: var(--muted); }
 .pd-stat strong { font-size: 20px; color: var(--navy); font-variant-numeric: tabular-nums; }
-.pd-stat strong.is-minus { color: var(--wm-stop-text); } .pd-stat strong.is-plus { color: #1F5FAD; }
+.pd-stat strong.is-minus { color: var(--wm-stop-text); } .pd-stat strong.is-plus { color: var(--wm-petrol-tief); }
 .pd-kacheln { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .pd-kacheln > :only-child { grid-column: 1 / -1; }
 .pd-kachel { display: flex; flex-direction: column; gap: 4px; min-height: 84px; padding: 16px 18px; border-radius: 18px; border: 0; background: #fff; color: var(--navy); text-decoration: none; text-align: left;
@@ -210,7 +210,7 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pd.is-eingebettet .pd-body { padding: 0 12px 16px; }
 
 /* Pegel-Vorschau (Handy) */
-.gpeek-ico { background: #1F6FB2; color: #fff; }
+.gpeek-ico { background: var(--wm-petrol); color: #fff; }
 .gpeek-wert { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; color: var(--navy); }
 .gpeek-wert strong { font-size: 28px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 .gpeek-wert > span:nth-child(2) { font-weight: 700; margin-left: -4px; }
@@ -227,7 +227,7 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
   .pg-kopf-zeile { justify-content: space-between; }
   .pg-titel { color: #fff; font-size: 28px; }
   .pg-stand { color: #C5D8E1; font-size: 13.5px; }
-  .pg-neu { background: #163F57; border: 0; color: #fff; }
+  .pg-neu { background: color-mix(in srgb, var(--wm-flaeche) 10%, var(--wm-navy)); border: 0; color: #fff; }
   .pg-alle-suche { padding: 12px 12px 4px; }
   .pg-raster { padding: 16px 16px 0; gap: 22px; }
   /* Handy: erst „Meine Pegel“, dann „Flüsse im Überblick“ */
@@ -449,7 +449,7 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pt-gz-quelle a { color: inherit; }
 @media (max-width: 400px) { .pt-gz-zeit { font-size: 24px; } .pt-gz-kachel { padding: 10px 12px; } }
 .pm-tide { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
-.pm-karte.pz-tide { --z: #9CCEE3; }
+.pm-karte.pz-tide { --z: var(--wm-fokus); }
 
 
 /* ---------------------------------------------------------------- Pegel-Tab neu (7.45.0): Kopf mit Umschalter, Suche, Liste | Karte */
@@ -570,7 +570,7 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pk-v-wert strong { font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
 .pk-v-einheit { font-size: 18px; font-weight: 700; margin-left: -8px; }
 .pk-v-trend { font-weight: 750; font-size: 16px; }
-.pk-v-trend.pt-down { color: var(--wm-stop-text); } .pk-v-trend.pt-up { color: #0B6B8A; } .pk-v-trend.pt-flat { color: #3D5160; }
+.pk-v-trend.pt-down { color: var(--wm-stop-text); } .pk-v-trend.pt-up { color: var(--wm-petrol-tief); } .pk-v-trend.pt-flat { color: #3D5160; }
 .pk-v-extra { color: var(--muted); font-size: 16px; }
 .pk-v-knoepfe { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
 .pk-details { min-height: 48px; }
@@ -682,7 +682,7 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .al-mail { width: 100%; min-height: 50px; border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; font-size: 16px; }
 .al-honig { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .al-klein { margin: 6px 2px 0; font-size: 13px; color: var(--muted); }
-.al-meldung { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--wm-wasser); color: #0B4F63; font-size: 14.5px; }
+.al-meldung { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--wm-wasser); color: var(--wm-petrol-tief); font-size: 14.5px; }
 .al-meldung.is-fehler { background: var(--wm-stop-hell); color: #8E2318; }
 .al-meldung[hidden] { display: none; }
 .al-los { min-height: 52px; font-size: 17px; }
@@ -763,7 +763,7 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pa-wert span { font-size: 20px; font-weight: 750; }
 .pa-kurz.is-alt .pa-wert { color: var(--wm-matt); }
 .pa-trend { margin: 6px 0 0; font-size: 16px; font-weight: 750; min-height: 1.3em; }
-.pa-trend.pt-up, .pa-z-aend.pt-up { color: #0B6B8A; }
+.pa-trend.pt-up, .pa-z-aend.pt-up { color: var(--wm-petrol-tief); }
 .pa-trend.pt-down, .pa-z-aend.pt-down { color: #9A4A12; }
 .pa-trend.pt-flat, .pa-z-aend.pt-flat { color: var(--muted); }
 .pa-kurve { display: block; width: 100%; height: 64px; overflow: visible; }
@@ -820,7 +820,7 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pa-panel .pd-icon { color: var(--navy); }
 .pa-panel .pd-icon:hover { background: var(--bg); }
 .pa-panel .pd-kicker { color: var(--muted); }
-.pa-panel .pd-kopf .pt-down { color: #9A4A12; } .pa-panel .pd-kopf .pt-up { color: #0B6B8A; } .pa-panel .pd-kopf .pt-flat { color: var(--muted); }
+.pa-panel .pd-kopf .pt-down { color: #9A4A12; } .pa-panel .pd-kopf .pt-up { color: var(--wm-petrol-tief); } .pa-panel .pd-kopf .pt-flat { color: var(--muted); }
 .pa-panel .pd-zeit { color: var(--muted); }
 .pa-panel .pd-kopf .pm-stern:not(.is-on) { color: var(--muted); }
 .pa-panel .pd-kopf :focus-visible { outline-color: var(--slip); }
@@ -942,7 +942,7 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pd-tz > div { padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, .1); display: flex; flex-direction: column; min-width: 0; }
 .pd-tz span { font-size: var(--wm-t-xs); font-weight: 700; color: #C5D8E1; }
 .pd-tz strong { font-size: 17px; font-weight: 800; color: #fff; }
-.pd-kopf .pd-tz strong.pt-up { color: #A9D4FF; } .pd-kopf .pd-tz strong.pt-down { color: #FFB59A; }
+.pd-kopf .pd-tz strong.pt-up { color: var(--wm-petrol-hell); } .pd-kopf .pd-tz strong.pt-down { color: #FFB59A; }
 .pa-panel .pd-tz > div { background: var(--bg); }
 .pa-panel .pd-tz span { color: #3F5262; }
 .pa-panel .pd-tz strong { color: var(--navy); }
@@ -1072,7 +1072,7 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pa-blau .pa-zahlen b, .pa-blau .pa-zahlen b.pt-up, .pa-blau .pa-zahlen b.pt-down, .pa-blau .pa-zahlen b.pt-flat { color: var(--navy); font-weight: 500; }
 .pa-blau .pa-zeit.is-alt { background: var(--warn-bg); color: var(--fuel-ink); }
 .pa-kurz.pa-blau > .pa-verlauf { width: 100%; min-height: 46px; margin-top: 14px; border: 0; border-radius: 23px; background: var(--slip); color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
-.pa-kurz.pa-blau > .pa-verlauf:hover { background: #066C85; }
+.pa-kurz.pa-blau > .pa-verlauf:hover { background: var(--wm-petrol-tief); }
 /* Zustandspunkt (wie in der Ampel der Pillen) */
 .pd-zdot, .pa-blau .pa-zustand i, .pd-zst i { width: 10px; height: 10px; border-radius: 50%; background: #B9C6CF; display: inline-block; flex: none; }
 .pz-low.pd-zdot, .pa-blau .pa-zustand.pz-low i, .pd-zst.pz-low i { background: var(--wm-sonne); }
@@ -1196,7 +1196,7 @@ details.pd-zeile[open] { padding-bottom: 10px; }
 .pd.pd-blau .pd-karte, .pd.pd-blau .pd-z, .pd-kb, .pa-blau .pa-ico, .pa-blau .pm-stern.is-klein, .pd.pd-blau .pd-icon { box-shadow: var(--pd-schatten); }
 .pd.pd-blau .pd-kb.pm-stern, .pd.pd-blau .pd-kb.pm-stern.is-on { color: var(--navy); }
 .pd.pd-blau .pd-wetter { box-shadow: var(--pd-schatten); }
-.pa-blau .pa-zustand.pz-tide i, .pd-zdot.pz-tide { background: #4A90B8; }
+.pa-blau .pa-zustand.pz-tide i, .pd-zdot.pz-tide { background: var(--wm-fokus); }
 .pd.pd-blau .pd-karte-kopf { margin-bottom: 8px; }
 .pd.pd-blau .pd-karte-kopf .pd-ct { margin: 0; }
 .pd.pd-blau .pd-hinweis { margin: 4px 4px 0; }

@@ -1,6 +1,8 @@
 // „Als Bild teilen“: ein Bild (1080 × 1350) mit Name, Gewässer, Wert, Zustand, Mini-Kurve (7 Tage, Vorhersage gestrichelt),
 // Datum/Uhrzeit, „WaterMap“ und Quellenangabe. Teilen über die Web Share API (Datei), sonst Herunterladen.
 const W = 1080, H = 1350;
+// Farben aus tokens.css (Canvas kennt keine CSS-Variablen); Ersatzwerte = Token-Werte
+const tok = (name, ersatz) => (typeof document !== 'undefined' && getComputedStyle(document.documentElement).getPropertyValue(name).trim()) || ersatz;
 const FARBE = { low: '#FAB219', normal: '#6CBF84', high: '#EC835A', hsw: '#D03B3B' };
 const TEXT = { low: 'Niedrig', normal: 'Normal', high: 'Hoch', hsw: 'Über HSW', tide: 'Tide', old: 'Veraltet' };
 
@@ -16,7 +18,7 @@ export function pegelBild({ g, zustand, trend = '', pts = [], wv = [], jetzt = D
   const font = (px, w = 700) => `${w} ${px}px 'Atkinson Hyperlegible Next', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
   c.fillStyle = '#F3F6F8'; c.fillRect(0, 0, W, H);
   c.fillStyle = '#0B3045'; c.fillRect(0, 0, W, 420);
-  c.fillStyle = '#9CCEE3'; c.font = font(38, 800); c.fillText(`PEGEL · ${(g.water || '').toUpperCase()}`, 80, 130);
+  c.fillStyle = tok('--wm-petrol-hell', '#DDF0F5'); c.font = font(38, 800); c.fillText(`PEGEL · ${(g.water || '').toUpperCase()}`, 80, 130);
   c.fillStyle = '#fff'; c.font = font(92, 800); c.fillText(g.name, 80, 240, W - 160);
   c.fillStyle = '#C5D8E1'; c.font = font(36, 500);
   c.fillText(`Stand ${new Date(g.time || jetzt).toLocaleString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr`, 80, 320);
@@ -39,14 +41,14 @@ export function pegelBild({ g, zustand, trend = '', pts = [], wv = [], jetzt = D
     const t0 = alle[0].t, t1 = alle[alle.length - 1].t;
     const x = (t) => x0 + (t - t0) / Math.max(t1 - t0, 1) * (x1 - x0), y = (v) => y1 - (v - lo) / sp * (y1 - y0);
     rundRechteck(c, 50, 860, W - 100, 330, 32); c.fillStyle = '#fff'; c.fill();
-    c.lineWidth = 7; c.lineJoin = 'round'; c.lineCap = 'round'; c.strokeStyle = '#1F6FB2';
+    c.lineWidth = 7; c.lineJoin = 'round'; c.lineCap = 'round'; c.strokeStyle = tok('--wm-petrol', '#0B7C93');
     c.beginPath(); pts.forEach((p, i) => (i ? c.lineTo(x(p.t), y(p.v)) : c.moveTo(x(p.t), y(p.v)))); c.stroke();
     if (wv.length && pts.length) {
       c.setLineDash([18, 14]); c.beginPath(); const l = pts[pts.length - 1]; c.moveTo(x(l.t), y(l.v));
       wv.filter(p => p.t > l.t).forEach(p => c.lineTo(x(p.t), y(p.v))); c.stroke(); c.setLineDash([]);
     }
     const l = pts[pts.length - 1];
-    if (l) { c.fillStyle = '#1F6FB2'; c.beginPath(); c.arc(x(l.t), y(l.v), 12, 0, 2 * Math.PI); c.fill(); }
+    if (l) { c.fillStyle = tok('--wm-petrol', '#0B7C93'); c.beginPath(); c.arc(x(l.t), y(l.v), 12, 0, 2 * Math.PI); c.fill(); }
     c.fillStyle = '#5A6B77'; c.font = font(30, 600);
     c.fillText(wv.length ? '7 Tage gemessen · Vorhersage gestrichelt' : '7 Tage gemessen', 80, 1180);
   }

@@ -94,8 +94,8 @@
 
 @media (max-width: 767px) {
   .mu-kopf { padding-right: 12px; }
-  .mu-zahl { background: #163F57; color: #fff; }
-  .mu-neu { background: #163F57; border: 0; color: #fff; }
+  .mu-zahl { background: color-mix(in srgb, var(--wm-flaeche) 10%, var(--wm-navy)); color: #fff; }
+  .mu-neu { background: color-mix(in srgb, var(--wm-flaeche) 10%, var(--wm-navy)); border: 0; color: #fff; }
   .mu-chips, .mu-steuer, .mu-offline, .mu-liste, .mu-leer { margin-left: 16px; margin-right: 16px; }
   .mu-chips { margin-right: 0; padding-right: 16px; }
   .mu-knoepfe { grid-template-columns: 1fr 1fr; }
@@ -108,8 +108,8 @@
 
 /* „Mein WaterMap“: Karte in „Mehr“ und Einstellungen (#mehr/einstellungen) */
 .ei-profil { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 16px; border-radius: 20px; background: var(--navy); color: #fff; text-decoration: none; }
-.ei-profil:hover { background: #12405A; }
-.ei-av { width: 52px; height: 52px; border-radius: 50%; background: #163F57; color: var(--sky); display: grid; place-items: center; flex: none; }
+.ei-profil:hover { background: var(--wm-petrol-tief); }
+.ei-av { width: 52px; height: 52px; border-radius: 50%; background: color-mix(in srgb, var(--wm-flaeche) 10%, var(--wm-navy)); color: var(--sky); display: grid; place-items: center; flex: none; }
 .ei-profil-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .ei-profil-text strong { font-size: 18px; }
 .ei-profil-text small { color: #C5D8E1; font-size: 14px; }
