@@ -159,7 +159,7 @@ def run(b, w, hh, mobile):
           f'{tag}: abgelehnt → schmaler Hinweis statt Erklär-Karte')
     if mobile: check(pg.locator(BLOCK).bounding_box()['height'] <= 60, f'{tag}: Hinweis „blockiert“ einzeilig')
     farbe = pg.evaluate(f"getComputedStyle(document.querySelector('{BLOCK}')).backgroundColor")
-    check(farbe == 'rgb(255, 246, 227)', f'{tag}: Hinweis gelb getönt ({farbe})')
+    check(farbe == 'rgb(255, 241, 214)', f'{tag}: Hinweis gelb getönt ({farbe})')
     check('um Kartenmitte' in kopf(pg, mobile), f'{tag}: ohne Position gilt die Kartenmitte')
     pg.click(f'{BLOCK} .nh-link'); pg.wait_for_selector('#dlg[open] .nh-anleitung')
     t = pg.inner_text('#dlg')

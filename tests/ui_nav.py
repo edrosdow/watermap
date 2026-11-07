@@ -76,7 +76,7 @@ def run(b, w, hh):
     plus = rect(pg, '#bottomnav .bn-plus')
     check(abs(plus['w'] - 54) <= 0.5 and abs(plus['h'] - 54) <= 0.5 and plus['y'] >= bar['y'] and plus['y'] + plus['h'] <= bar['y'] + bar['h'] and css(pg, '#bottomnav .bn-plus', 'backgroundColor') == 'rgb(8, 127, 156)'
           and abs(rect(pg, '#bottomnav .bn-center svg')['w'] - 28) <= 0.5, f'{tag}: „Melden“ 54 px Petrol mit Plus 28 px, innerhalb der Leiste')
-    check(css(pg, item('karte'), 'color') == 'rgb(8, 127, 156)' and css(pg, item('pegel'), 'color') == 'rgb(86, 104, 120)', f'{tag}: aktiv Petrol, inaktiv #566878')
+    check(css(pg, item('karte'), 'color') == 'rgb(8, 127, 156)' and css(pg, item('pegel'), 'color') == 'rgb(82, 102, 118)', f'{tag}: aktiv Petrol, inaktiv matt')
     check(pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('#bottomnav [data-nav=karte] svg')); return s.fill + ' ' + s.fillOpacity; })()") == 'rgb(8, 127, 156) 0.3', f'{tag}: aktive Karte mit 30 % Füllung')
     ind = rect(pg, '#bottomnav .bn-ind'); k = rect(pg, item('karte'))
     ci = pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('#bottomnav .bn-ind')); return { bg: s.backgroundColor, r: s.borderTopLeftRadius, sh: s.boxShadow, pe: s.pointerEvents }; })()")

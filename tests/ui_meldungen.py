@@ -92,7 +92,7 @@ def run(b, mobile):
         pg.wait_for_selector('#peek .meld-zeile')
         z = pg.inner_text('#peek .meld-zeile')
         check('Parkplatz voll' in z and 'vor 40 Min.' in z and '3× bestätigt' in z and '+1 weitere' in z, f'{tag}: Statuszeile in der Vorschau ({z!r})')
-        check(pg.evaluate("getComputedStyle(document.querySelector('#peek .meld-zeile')).backgroundColor") == 'rgb(255, 246, 227)', f'{tag}: Statuszeile getönt #FFF6E3')
+        check(pg.evaluate("getComputedStyle(document.querySelector('#peek .meld-zeile')).backgroundColor") == 'rgb(255, 241, 214)', f'{tag}: Statuszeile getönt (warn-hell)')
         pg.screenshot(path=str(SHOTS / 'meld_m_2vorschau.png'))
         pg.click('#peek .meld-zeile'); pg.wait_for_selector('#detail:not([hidden]) .vo-kopf')
         pg.wait_for_timeout(300)
@@ -104,8 +104,8 @@ def run(b, mobile):
     # Zustand b, weiter weg (ohne Position): Status ohne Knöpfe/Chips, unten „Lage melden“
     check('vo-warn' in karte.get_attribute('class') and pg.inner_text('#detail .vo-status') == 'Parkplatz voll'
           and 'vor 40 Min. · 3× bestätigt' in pg.inner_text('#detail .vo-kopf'), f'{tag}: b – wichtigste Meldung mit Alter und Bestätigungen')
-    check(pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-oben')).backgroundColor") == 'rgb(255, 246, 227)'
-          and pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-karte')).borderTopColor") == 'rgb(235, 199, 122)', f'{tag}: b – getönt #FFF6E3, Rand #EBC77A')
+    check(pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-oben')).backgroundColor") == 'rgb(255, 241, 214)'
+          and pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-karte')).borderTopColor") == 'rgb(235, 199, 122)', f'{tag}: b – getönt (warn-hell), Rand #EBC77A')
     check(karte.locator('.vo-pille').count() == 0 and karte.locator('.vo-chip').count() == 0 and karte.locator('button.vo-melden').count() == 1, f'{tag}: d – weit weg: keine Knöpfe/Chips, Zeile „Lage melden“')
     mz = karte.locator('.vo-melden').bounding_box()
     check(mz['height'] >= 60 and 'Warst du heute dort? Hilf anderen.' in pg.inner_text('#detail .vo-melden'), f'{tag}: d – „Lage melden“ ≥ 60 px mit Unterzeile')
@@ -141,7 +141,7 @@ def run(b, mobile):
     # Gesperrt: rot getönt
     pg.evaluate("(() => { const p = window.__watermap.state.byId.get('node/2'); window.__watermap.state.user = null; })()")
     pg.evaluate("window.__watermap.selectPlace('node/2', { full: true })"); pg.wait_for_selector('#detail .vo-karte.vo-stop')
-    check(pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-oben')).backgroundColor") == 'rgb(254, 242, 242)' and pg.inner_text('#detail .vo-status') == 'Gesperrt', f'{tag}: b gesperrt – rot getönt #FEF2F2')
+    check(pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-oben')).backgroundColor") == 'rgb(253, 236, 234)' and pg.inner_text('#detail .vo-status') == 'Gesperrt', f'{tag}: b gesperrt – rot getönt (stop-hell)')
     pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_5b_rot.png'))
     # Zustand e: keine Meldungen und weit weg → schmale Zeile statt großem Kasten
     pg.evaluate("window.__watermap.state.user = null")

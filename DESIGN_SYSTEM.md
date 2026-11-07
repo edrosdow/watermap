@@ -182,7 +182,7 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 - Trefferflächen ≥ 44 × 44 px, Abstand zwischen Trefferflächen ≥ 8 px.
 - Jede Seite/jedes Sheet hat eine Überschrift, auf die beim Öffnen der Fokus geht; Dialoge sind `<dialog>` mit `aria-labelledby`.
 - Icons ohne Text bekommen `aria-label`; Schmuck-Icons `aria-hidden="true"`.
-- Schriftgröße nie unter 13 px; Zoom bis 200 % ohne abgeschnittene Inhalte.
+- Schriftgröße nie unter 13 px; Zoom bis 200 % ohne abgeschnittene Inhalte. Vorläufig ausgenommen (Stand 7.64.0, Entscheidung offen): Zahlen in Plaketten mit fester Größe (18–22 px), Beschriftungen in SVG-Diagrammen, Leaflet-Quellenangabe.
 - Gesten haben immer eine Knopf-Alternative (Griff antippen, ×, Esc).
 - Statusänderungen über `aria-live="polite"` ansagen.
 - Reihenfolge im DOM = Lesereihenfolge (kein `order`-Trick für Inhalte).
@@ -204,7 +204,7 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 - Keine Ketten aus mehr als zwei Angaben mit „ · “ – lieber zwei Zeilen.
 - Kein dunkler Seitenkopf, keine Verläufe als Schmuck (einziger Verlauf: Wasser).
 - Keine Karten in Karten, keine Rahmen **und** Schatten zugleich (außer Warnungen).
-- Kein `!important` (Ausnahme: `[hidden]`).
+- Kein `!important`. Ausnahmen (7.64.0, weil sonst nicht lösbar): `[hidden]`, die Hilfsklassen `.nur-handy`/`.nur-desktop` und `input.hat-x` (Zustand muss jede Komponenten-Regel schlagen), `prefers-reduced-motion` (Animationen überall aus), Leaflet-Überschreibungen (`.wm-pin.is-selected`, Kachelgröße, `pointer-events` beim Auswählen) – Leaflet setzt diese Werte im `style`-Attribut.
 - Keine Einblende-Animation beim Laden einzelner Abschnitte, kein Hover-Hüpfen.
 - Keine externen Schriften/CSS-Bibliotheken, keine neuen Abhängigkeiten.
 
@@ -276,7 +276,8 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 - **Regel:** Gleiche Elemente überall gleich – nach jeder Änderung alle Bereiche nebeneinander prüfen (siehe CLAUDE.md).
 - **Schritt 8, Teil 1 erledigt (7.62.0): Desktop.** Dunkle Kopfleiste bleibt; darunter Wassergrund, Chips/Filter/„In der Nähe“ als weiße Chips (aktiv Tinte), Suche als Pille mit Lupe rechts, Pegel-Kopf und Seitenleiste „In der Nähe“ nach Tokens.
 - **Schritt 8, Teil 2 erledigt (7.63.0):** Textseiten (`page.css`) und Wetter-Fenster nach Tokens; Diagramm als eine Karte, Wind Petrol, Böen `--wm-hoch`.
-- Nächste Schritte: Reste aufräumen; Wetter-Fenster, Seiten Datenschutz/Impressum/Über, Reste aufräumen (Einzelwerte → Tokens, `!important`).
+- **Schritt 8, Teil 3 (7.64.0): Reste aufgeräumt.** 366 Farbwerte mit ΔE ≤ 6 auf Tokens (Skript, nächster Token in Lab), `!important` bis auf die Ausnahmen in Abschnitt 9 entfernt, 67 Schriftgrößen unter 13 px auf `--wm-t-xs`.
+- Offen: rund 315 Farbwerte mit ΔE > 6 (sichtbar anders, z. B. Pegel-Blau `#1F6FB2`, alte Rottöne, helle Rahmen) – Entscheidung des Nutzers steht aus.
 
 ## Entscheidungen des Nutzers (Ausnahmen)
 

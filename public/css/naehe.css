@@ -19,8 +19,8 @@ body.list-open .sidebar { background: var(--bg); }
 .nh-zahl { margin: 0; font-size: 15px; color: var(--muted); }
 .nh-zahl strong { color: var(--navy); font-size: 16px; }
 .nh-sort-box { position: relative; flex: none; }
-.nh-sort { appearance: none; -webkit-appearance: none; border: 0; background: transparent; color: #06667E; font-weight: 750; font-size: 15px; min-height: 44px; padding: 0 20px 0 6px; cursor: pointer; }
-.nh-sort-box::after { content: '▾'; position: absolute; right: 2px; top: 50%; transform: translateY(-50%); color: #06667E; font-size: 12px; pointer-events: none; }
+.nh-sort { appearance: none; -webkit-appearance: none; border: 0; background: transparent; color: var(--wm-petrol-tief); font-weight: 750; font-size: 15px; min-height: 44px; padding: 0 20px 0 6px; cursor: pointer; }
+.nh-sort-box::after { content: '▾'; position: absolute; right: 2px; top: 50%; transform: translateY(-50%); color: var(--wm-petrol-tief); font-size: var(--wm-t-xs); pointer-events: none; }
 .nh-limit { margin: 0; font-size: 13px; }
 
 .list .place.nk { width: calc(100% - 32px); margin: 0 16px 10px; padding: 14px 16px; min-height: 76px; gap: 14px; background: #fff; border: 0; border-radius: 16px; box-shadow: 0 1px 3px rgba(11, 48, 69, .07); align-items: center; }
@@ -33,16 +33,16 @@ body.list-open .sidebar { background: var(--bg); }
 .nk-dist { font-size: 20px; font-weight: 800; color: var(--navy); align-self: center; }
 .nh-meld { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; padding: 3px 10px; border-radius: 99px; font-size: 13px; font-weight: 750; }
 .nh-meld i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
-.nh-meld.ton-warn { background: #FFF6E3; color: #B45309; }
-.nh-meld.ton-stop { background: #FDECEC; color: #B91C1C; }
-.nh-meld.ton-gut { background: #E3F4E8; color: #15803D; }
+.nh-meld.ton-warn { background: var(--wm-warn-hell); color: #B45309; }
+.nh-meld.ton-stop { background: var(--wm-stop-hell); color: var(--wm-stop); }
+.nh-meld.ton-gut { background: var(--wm-gut-hell); color: #15803D; }
 .nh-meld.ton-gut i { display: none; }
 .nh-leer { padding: 24px 20px; }
 .nh-leer .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
 .list.nh-zieht::before { content: 'Loslassen zum Aktualisieren'; display: block; text-align: center; padding: 10px; color: var(--muted); font-size: 13px; }
 
 /* Erklär-Karte und Hinweis „blockiert“ */
-.nh-erklaer { width: 100%; display: grid; grid-template-columns: 56px 1fr; gap: 6px 14px; padding: 18px; background: #fff; border: 1px solid #CFE3EA; border-radius: 18px; margin-bottom: 4px; }
+.nh-erklaer { width: 100%; display: grid; grid-template-columns: 56px 1fr; gap: 6px 14px; padding: 18px; background: #fff; border: 1px solid var(--wm-petrol-hell); border-radius: 18px; margin-bottom: 4px; }
 .nh-erklaer-ico { width: 56px; height: 56px; border-radius: 50%; background: var(--info-bg); color: var(--slip); display: grid; place-items: center; }
 .nh-erklaer-text h3 { margin: 4px 0 4px; font-size: 17px; color: var(--navy); }
 .nh-erklaer-text p { margin: 0; font-size: 14.5px; color: var(--muted); line-height: 1.45; }
@@ -79,7 +79,7 @@ body.list-open .sidebar { background: var(--bg); }
 .nb-msg { padding: 10px 4px; color: var(--muted); font-size: 14px; }
 .nb-zeile { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 8px 4px; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; color: var(--ink); }
 .nb-liste li:last-child .nb-zeile { border-bottom: 0; }
-.nb-zeile:hover { background: #F7FAFB; }
+.nb-zeile:hover { background: var(--wm-wasser-2); }
 .nb-zeile[aria-disabled="true"] { cursor: not-allowed; }
 .nb-zeile[aria-disabled="true"] .nb-text, .nb-zeile[aria-disabled="true"] .nb-ico { opacity: .5; }
 .nb-ico { width: 44px; height: 44px; border-radius: 12px; background: var(--bg); color: var(--navy); display: grid; place-items: center; flex: none; }

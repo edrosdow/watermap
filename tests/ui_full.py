@@ -425,7 +425,7 @@ def photo_form(b, mobile):
     check(pg.locator('#dlg input[type=file]').evaluate_all("l => l.every(e => e.getBoundingClientRect().width <= 1)"), f'{tag}: kein sichtbares Datei-Feld')
     check(pg.locator('#dlg input[capture=environment]').count() == 1, f'{tag}: Kamera-Knopf öffnet die Kamera (capture)')
     send = pg.locator('#dlg .pf-send')
-    check(send.get_attribute('aria-disabled') == 'true' and pg.evaluate("getComputedStyle(document.querySelector('.pf-send')).backgroundColor") == 'rgb(225, 232, 231)', f'{tag}: Knopf grau, solange nichts gewählt')
+    check(send.get_attribute('aria-disabled') == 'true' and pg.evaluate("getComputedStyle(document.querySelector('.pf-send')).backgroundColor") == 'rgb(227, 235, 239)', f'{tag}: Knopf grau (Token linie), solange nichts gewählt')
     small = pg.evaluate("""[...document.querySelectorAll('#dlg button, #dlg input:not([type=hidden]):not([type=file]), #dlg label.pf-check')].filter(e => e.offsetParent !== null && !e.closest('.hp'))
         .map(e => { const r = e.getBoundingClientRect(); return [e.className || e.type, Math.round(r.width), Math.round(r.height)]; })
         .filter(x => x[0] !== 'checkbox' && (x[2] < 44 || x[1] < 44))""")
