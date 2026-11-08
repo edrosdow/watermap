@@ -185,7 +185,7 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 - Trefferflächen ≥ 44 × 44 px, Abstand zwischen Trefferflächen ≥ 8 px.
 - Jede Seite/jedes Sheet hat eine Überschrift, auf die beim Öffnen der Fokus geht; Dialoge sind `<dialog>` mit `aria-labelledby`.
 - Icons ohne Text bekommen `aria-label`; Schmuck-Icons `aria-hidden="true"`.
-- Schriftgröße nie unter 13 px; Zoom bis 200 % ohne abgeschnittene Inhalte. Vorläufig ausgenommen (Stand 7.64.0, Entscheidung offen): Zahlen in Plaketten mit fester Größe (18–22 px), Beschriftungen in SVG-Diagrammen, Leaflet-Quellenangabe.
+- Schriftgröße nie unter 13 px; Zoom bis 200 % ohne abgeschnittene Inhalte. Ausgenommen (Entscheidung Nutzer 08.11.2026): Zahlen in Plaketten mit fester Größe (18–22 px), Beschriftungen in SVG-Diagrammen, Leaflet-Quellenangabe – dort passt 13 px nicht in die feste Fläche.
 - Gesten haben immer eine Knopf-Alternative (Griff antippen, ×, Esc).
 - Statusänderungen über `aria-live="polite"` ansagen.
 - Reihenfolge im DOM = Lesereihenfolge (kein `order`-Trick für Inhalte).
