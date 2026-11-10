@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 10.11.2026 · App-Version **7.67.0**
+Stand: 11.11.2026 · App-Version **7.68.0**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.67.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.68.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -267,6 +267,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.66.0 | Designsystem, alle übrigen Farben (Rot, Gold, Grün, Grau/Rahmen) auf Tokens, in CSS und JS (Pegel-Zonen, Kartenpillen, Fluss-Diagramm, Meldungstypen, Teilen-Bild); neue Tokens `--wm-rand` und `--wm-gut/warn/hoch/stop-rand` (Einordnungsbalken hell); Meldungstypen mit getrennter Punkt- und Textfarbe; „Lage melden“, Logo und Kartendaten-Farben bleiben |
 | 7.66.1 | `main` zusammengeführt (OSM-Daten 01.11., Foto Slip Vössen); Konflikte in `admin/verlauf.json` (beide Verläufe vereinigt) und `overrides.json` (Foto aus `main` ergänzt, auf dem Branch entferntes Test-Foto bleibt weg) gelöst; Schrift < 13 px in Plaketten/SVG/Leaflet bleibt (Nutzer 08.11.) |
 | 7.67.0 | **Toast nach Designsystem, „Rückgängig“ in der Merkliste** (Vorbild Material-3-Snackbar, Figma): Kurzmeldung auf Tokens (Grund `--wm-tinte` statt Navy, Radius s, `schatten-hoch`, Schrift s), Baustein „Kurzmeldung (Toast)“ in `DESIGN_SYSTEM.md`. `toast(text, aktion)` kann einen Knopf rechts zeigen (8 s statt 5 s, bleibt bei Fokus stehen); Entfernen eines Orts oder Pegels in der Merkliste lässt sich rückgängig machen, Reihenfolge bleibt (`favorites.setzen`, `meinePegel.setzen`). **Fehler behoben:** `#toast` lag in `.map-wrap` innerhalb von `main` und war auf Mehr/Pegel/Meldungen nie sichtbar – jetzt direkt im `body`, `position: fixed` |
+| 7.68.0 | **Designumbau Phase 0 – Regeln** (Auftrag `docs/AUFTRAG-designumbau.md`, Prototyp `docs/prototyp-designumbau.dc.html`, beide vom Nutzer freigegeben 10.11.): `DESIGN_SYSTEM.md` – Kopf links mit × rechts und Griff, Ortszeile (≥ 64), Aktionsleiste je Art, Chip mit Farbpunkt/Häkchen, Navigation Karte · Meldungen · Melden · Gemerkt · Mehr, ein Sheet-Rahmen, neuer Abschnitt 7a Bewegung, Abschnitt 11 Pegel-Ampel; `tokens.css`: `--wm-kurz/mittel/lang/feder/sanft` statt der ungenutzten `--wm-kurve`/`--wm-dauer`. Keine sichtbare Änderung |
 | 7.54.1 | Pegel-Sheet wischt so flüssig wie auf der Hauptkarte: beim Ziehen nur noch verschoben (`transform`), nicht mehr in der Höhe neu berechnet; zu Beginn einmal auf volle Höhe gestellt und nach unten versetzt, die Größe ändert sich erst beim Einrasten |
 | 7.54.0 | **Fenster von unten wischbar und flüssig:** Das Pegel-Sheet folgt beim Ziehen dem Finger (vorher sprang es erst beim Loslassen) und rastet weich ein (klein · ca. 80 % · ganz · zu; Schwung nimmt die nächste Stufe in Bewegungsrichtung). Alle Fenster von unten (Dialoge, Standort-Vorschau und -Details, Pegel-Sheet) fahren auf dem Handy weich hoch statt plötzlich zu erscheinen (`sheet-ein`, bei „Bewegung reduzieren“ aus). Die übrigen Fenster folgten schon dem Finger (`wischen.js`) |
 | 7.53.0 | **Zart blau** (Rückmeldung: das kräftige Blau passt nicht zur App): gleicher Aufbau wie 7.52.0, aber ganz helles Wasserblau oben, weiße Karten und Knöpfe mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. **Tidepegel** im selben Muster (Name mittig, große Zahl, „● Tide · ↗ auflaufend“, drei Knöpfe Alarm · Merken · Teilen, Karten Gezeiten/Tidekurve/letztes HW·NW, Liste Häfen in der Nähe · Gewässer – alle Pegel · Station und Quelle) |
@@ -326,7 +327,9 @@ Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.
 
 ## 6. Offene Aufgaben
 
-**▶ Hier weitermachen (Stand 05.11.2026, 7.61.0): Umbau auf das Designsystem „Wasser“ – Phase 4**
+**▶ Hier weitermachen (Stand 11.11.2026, 7.68.0): Designumbau nach `docs/AUFTRAG-designumbau.md`** – Phase 0 erledigt, wartet auf Freigabe; danach Phase 1 (Bausteine, 7.69.0). Nach jeder Phase committen, Vorschau, Bilder 390/1440 px, auf Freigabe warten. Zusätzlich gewünscht (11.11.): neues Slip-Kartensymbol (Boot auf Trailer an der Rampe, eigener Entwurf nach Vorlage des Nutzers).
+
+**Früher: Umbau auf das Designsystem „Wasser“ – Phase 4 (abgeschlossen mit Schritt 8)**
 Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Disziplin von A, vom Nutzer gewählt) – vor jeder Oberflächenarbeit lesen.
 - [x] Schritt 1 – Tokens und Schrift (7.58.0): `public/css/tokens.css`, Atkinson Hyperlegible Next selbst gehostet (`public/fonts/`).
 - [x] Null ohne Schrägstrich (7.58.2, Wunsch des Nutzers; Schriftdatei angepasst, `public/fonts/LIESMICH.txt`).

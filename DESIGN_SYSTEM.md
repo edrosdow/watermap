@@ -118,7 +118,7 @@ Karte / Seitengrund (Wasserverlauf)
 ```
 Nie tiefer verschachteln. Keine Karte in einer Karte mit Schatten.
 
-**Ausrichtung:** Kopf von Sheets/Seiten/Dialogen **mittig** (Titel, Unterzeile), Inhalt **linksbündig**. Große Einzelwerte mittig.
+**Ausrichtung:** Kopf von Sheets/Seiten/Dialogen **linksbündig** (Titel, Unterzeile; × rechts), Inhalt **linksbündig**. Große Einzelwerte mittig. Ersetzt „Kopf mittig, Zurück links“ (Nutzer, 10.11.2026, Prototyp freigegeben).
 
 **Sheet (Handy):** zwei Stufen – *klein* (Inhalt bis ~60 %) und *groß* (oben bleibt Suche + 60 px Karte sichtbar). Folgt dem Finger, rastet ohne Sprung ein (siehe `pegel-dashboard.js`, `wischen.js`).
 
@@ -128,18 +128,20 @@ Nie tiefer verschachteln. Keine Karte in einer Karte mit Schatten.
 
 | Komponente | Standard |
 |---|---|
-| **Kopf** (Sheet, Seite, Dialog) | Raster `38px 1fr 38px`: links runder weißer Knopf (Schließen ×, Zurück ‹), Mitte Titel `xl` + Unterzeile `s matt`, rechts optional eine Aktion. Grund deckend `--wm-wasser`, damit beim Scrollen nichts durchscheint. |
-| **Aktionsleiste** | 3 gleich breite Knöpfe, Icon über Text, Höhe 62 px, Radius m. Primär (Route) gefüllt Petrol, sonst weiß. Merken: Stern mit Sonne-Füllung, wenn gemerkt. |
+| **Griff** (Sheet) | oben mittig 40 × 5 px, Radius 3, `--wm-rand`; Trefferfläche ganze Breite × 26 px (Knopf „Größe ändern“). |
+| **Kopf** (Sheet, Seite, Dialog) | Flexzeile: Titelblock links (`flex: 1`) mit Titel `xl` (24/700) und Unterzeile `s matt`, rechts runder ×-Knopf (44 px, weiß, `schatten`). Optionale Zusatzaktion als zweiter runder Knopf links neben ×. Im Sheet steht darüber der Griff. Grund deckend `--wm-wasser`, damit beim Scrollen nichts durchscheint. Die alte Regel `38px 1fr 38px` (mittig, Zurück links) entfällt (Nutzer, 10.11.2026, Prototyp freigegeben). |
+| **Aktionsleiste** | 3 gleich breite Knöpfe, Icon über Text, Höhe 62 px, Radius m. Primär (Route) gefüllt Petrol, sonst weiß. Merken: Stern mit Sonne-Füllung, wenn gemerkt. Slipanlage: Route (primär) · Merken · Teilen. Pegel: Alarm · Merken · Teilen. |
 | **Knopf** | Primär: Petrol, Text weiß, Höhe 48. Sekundär: weiß + schatten. Leise: Text Petrol ohne Fläche. Beschriftung = Handlung („Lage melden“, nicht „OK“). Kein „→“ im Text. |
 | **Karte / Gruppe** | weiß, Radius m, schatten, kein Rahmen. Titel `l` oder `s 700`. |
-| **Listenzeile** | Höhe ≥ 56, Icon-Kachel 40 × 40 (`petrol-hell` / `petrol-tief`, Radius s), Titel `m 700`, Unterzeile `s matt`, Pfeil `leise`. Trennlinie `--wm-linie` zwischen Zeilen. |
+| **Ortszeile** (Standard für alle Listen) | Höhe ≥ 64, Icon-Kachel 40 × 40 (`petrol-hell` / `petrol-tief`, Radius s), Titel `m 700`, Unterzeile `s matt`, rechts **eines** davon: Wert (`m 700`), Zustandsmarke oder Pfeil (`leise`). Zeilen stehen in einer weißen Gruppe (Radius m, `schatten`), getrennt durch 1 px `--wm-linie`. Ersetzt die „Listenzeile“ (≥ 56) (Nutzer, 10.11.2026, Prototyp freigegeben). |
 | **Wert-Kachel** | Beschriftung `s matt` mit Icon, Wert `xxl` tabular, darunter eine Zustandsmarke. Zwei Kacheln nebeneinander. |
 | **Zustandsmarke** | Pille, Radius rund, `s 700`, Grund `*-hell`, Text `*-text`. Immer mit Wort („Niedrig“), nie nur Farbe. |
-| **Chip** (Filter) | Höhe 36, Radius rund, weiß + schatten, `s 700`. Aktiv: `--wm-tinte` gefüllt, Text weiß, Haken-Icon. |
+| **Chip** (Filter) | Höhe 40, Radius rund, weiß + schatten, `s 700`. Kategorie-Chips (Slipanlagen, Häfen, Tanken, Pegel) haben links einen 10-px-Farbpunkt der Kategorie (Pegel: `--wm-gut`). Aktiv: Grund `--wm-tinte`, Text weiß, der Punkt schrumpft auf 0, ein Häkchen (16 px) wächst hinein (Nutzer, 10.11.2026, Prototyp freigegeben). |
 | **Segment-Umschalter** | Spur `flaeche-2`, Radius s, aktive Option weiß + schatten. |
 | **Eingabefeld** | Höhe 48, weiß, Rahmen 1,5 px `--wm-linie`, Radius s, Text `m`. Fokus: Rahmen Petrol + Fokusring. Fehler: Rahmen `--wm-stop`, Text darunter `s stop-text`. Beschriftung immer sichtbar über dem Feld. |
 | **Hinweis / Warnung** | Karte mit Grund `*-hell`, Rahmen 1,5 px in Punktfarbe, Icon links. Amtliche Warnungen zusätzlich linker Streifen 4 px. |
-| **Navigation unten** (Handy) | schwebende Pille, 5 Ziele, aktives Ziel `petrol-hell` / `petrol`. Melden mittig als runder Petrol-Knopf. |
+| **Navigation unten** (Handy) | schwebende Pille, 5 Ziele in dieser Reihenfolge: **Karte · Meldungen · Melden · Gemerkt · Mehr**; aktives Ziel `petrol-hell` / `petrol`. Melden mittig als runder Petrol-Knopf. Abzeichen an „Meldungen“ (neue Meldungen) und an „Gemerkt“ (Anzahl gemerkter Orte + Pegel). „Gemerkt“ = heute „Mehr › Merkliste“. Desktop-Kopfleiste: Karte · Meldungen · Gemerkt · Mehr, dazu „+ Melden“ (Nutzer, 10.11.2026, Prototyp freigegeben). |
+| **Sheet** | ein Rahmen für alle Inhalte (Standort, Pegel, Gemerkt, Meldungen, Mehr, Einstellungen, Wetter, Fluss). Handy: von unten, Griff, Radius l oben, `--wm-verlauf`, `schatten-hoch`, Stufen klein/groß. Desktop ≥ 768: Panel rechts (wie `.detail`). Sheets stapeln sich; × und Wischen führen eine Ebene zurück, der Fokus geht an den Auslöser (Nutzer, 10.11.2026, Prototyp freigegeben). |
 | **Kopfleiste** (Desktop ≥ 768) | `--wm-navy` mit Logo, Suche, Navigation – einzige dunkle Fläche. |
 | **Kurzmeldung (Toast)** | unten mittig über Navigation/Sheet, Grund `--wm-tinte`, Text weiß `s`, Radius s, `schatten-hoch`, max. 480 px. Optional **eine** Aktion rechts (z. B. „Rückgängig“ nach dem Entfernen aus der Merkliste): Text `--wm-petrol-hell` 700, Trefferfläche ≥ 44 px. Ohne Aktion 5 s, mit Aktion 8 s sichtbar; solange die Aktion den Fokus hat, bleibt die Meldung stehen. Vorbild: Material-3-Snackbar (ergänzt 7.67.0; `--wm-tinte` statt Navy, weil Navy nur Logo/Kopfleiste ist). |
 | **Leerer Zustand** | Satz, was fehlt, + eine Handlung („Noch keine Fotos – Foto einreichen“). |
@@ -175,7 +177,28 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 | Lädt | Platzhaltertext („Pegel werden geladen …“) oder Icon dreht sich; Knopf `aria-busy="true"` |
 | Veraltet / offline | Zustand „ohne Wert“, Text sagt warum („Messwert von gestern, 14:20 Uhr“) |
 
-**Bewegung:** Sheets/Dialoge 260–280 ms `cubic-bezier(.2,.8,.2,1)`, Inhalt einblenden 220 ms, Ausblenden 260 ms. Nur `transform` und `opacity` animieren. `prefers-reduced-motion: reduce` → keine Animation.
+**Bewegung:** siehe Abschnitt 7a.
+
+---
+
+## 7a. Bewegung
+
+Neu (Nutzer, 10.11.2026, Prototyp freigegeben). Animationen sind ausdrücklich gewünscht – aber nur mit diesen Tokens (`public/css/tokens.css`):
+
+| Token | Wert | Verwendung |
+|---|---|---|
+| `--wm-kurz` | 150 ms | Drücken, Farbwechsel, Häkchen |
+| `--wm-mittel` | 260 ms | Umschalter, Listen, Inhaltswechsel |
+| `--wm-lang` | 420 ms | Sheets, Suche, Navigation |
+| `--wm-feder` | `cubic-bezier(.34, 1.36, .5, 1)` | leicht überschwingend: Bewegung von Flächen (Sheet, Markierung, Häkchen, Stern) |
+| `--wm-sanft` | `cubic-bezier(.2, .8, .2, 1)` | Ein- und Ausblenden |
+
+Regeln:
+- **Keine anderen Dauern oder Kurven.** Ausnahmen mit fester Dauer, weil sie einen Ablauf zeigen (Prototyp): Stern-Plopp 480 ms, Flug zu „Gemerkt“ 820 ms, Zählen des Pegelwerts 700 ms, Kurve zeichnen 900 ms; Verzögerungen für versetzte Listen 45–70 ms je Zeile.
+- Bewegt werden nur `transform` und `opacity` (Ausnahme: Breite der Suchpille beim Aufklappen, ersatzweise `clip-path`).
+- Bewegung antwortet auf eine Handlung (Prinzip 5): öffnen, wählen, merken, umschalten, senden. Versetztes Einblenden höchstens für die ersten 10 Listenzeilen bzw. 30 Marker.
+- `prefers-reduced-motion: reduce`: alle Dauern 1 ms – kein Flug, kein Zählen, keine Verzögerung.
+- Die Abläufe im Einzelnen (Lupe → Suchfeld, Marker → Sheet, Merken mit Flug, Chips, Umschalter, Navigation, Pegelwert, Listen, Senden, Aktualisieren, Laden, Toast) stehen im Auftrag `docs/AUFTRAG-designumbau.md`, Phase 4, Vorbild `docs/prototyp-designumbau.dc.html`.
 
 ---
 
@@ -209,7 +232,7 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 - Kein dunkler Seitenkopf, keine Verläufe als Schmuck (einziger Verlauf: Wasser).
 - Keine Karten in Karten, keine Rahmen **und** Schatten zugleich (außer Warnungen).
 - Kein `!important`. Ausnahmen (7.64.0, weil sonst nicht lösbar): `[hidden]`, die Hilfsklassen `.nur-handy`/`.nur-desktop` und `input.hat-x` (Zustand muss jede Komponenten-Regel schlagen), `prefers-reduced-motion` (Animationen überall aus), Leaflet-Überschreibungen (`.wm-pin.is-selected`, Kachelgröße, `pointer-events` beim Auswählen) – Leaflet setzt diese Werte im `style`-Attribut.
-- Keine Einblende-Animation beim Laden einzelner Abschnitte, kein Hover-Hüpfen.
+- Keine Einblende-Animation beim Laden einzelner Abschnitte außer den Abläufen in Abschnitt 7a, kein Hover-Hüpfen.
 - Keine externen Schriften/CSS-Bibliotheken, keine neuen Abhängigkeiten.
 
 ---
@@ -248,11 +271,12 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 .wm-marke.is-warn { background: var(--wm-warn-hell); color: var(--wm-warn-text); }
 ```
 
-**Kopf eines Sheets:**
+**Kopf eines Sheets** (ab 7.68.0: Titel links, × rechts, Griff darüber):
 ```html
+<button type="button" class="wm-griff" aria-label="Größe ändern"><span></span></button>
 <header class="wm-kopf">
-  <button class="wm-rund" aria-label="Schließen">…×…</button>
-  <div><p class="wm-kopf-art">Slipanlage</p><h2 class="wm-kopf-titel">Yachthafen Minden</h2><p class="wm-kopf-unter">Weser, km 204,5</p></div>
+  <div class="wm-kopf-titel-block"><h2 class="wm-kopf-titel">Slip Vössen</h2><p class="wm-kopf-unter">Slipanlage · Weser</p></div>
+  <button type="button" class="wm-rund" aria-label="Schließen">…×…</button>
 </header>
 ```
 
@@ -284,6 +308,17 @@ Prüfbreiten bei jeder Änderung: **375, 390, 1024, 1440 px**. Keine horizontale
 - **Farbgruppen (Entscheidung Nutzer 07.11.2026: gruppenweise angleichen):**
   - **Blau erledigt (7.65.0):** Pegel-Blau `#1F6FB2` in Diagrammen, Wind, Pegel-Chip und Teilen-Bild → `--wm-petrol` (Fläche 8 %); Hover-Töne → `--wm-petrol-tief`; Trend „steigt“ → `--wm-petrol-tief`; dunkle Pillen auf Navy → `color-mix(in srgb, var(--wm-flaeche) 10%, var(--wm-navy))`; Ampelgehäuse/Bildbetrachter → `--wm-tinte`; Fokus auf Navy → `--wm-fokus`; Hinweis-Rahmen → `--wm-linie`. Das Teilen-Bild (`pegel-bild.js`) liest die Tokens per `getComputedStyle`. Bleibt: „Lage melden“ (`--sky`, `#163F57`), Logo.
   - **Alle übrigen Farben erledigt (7.66.0):** Rot, Gold, Grün, Grau/Rahmen in CSS und JS (`pegel-karte.js`, `pegel-ansicht.js`, `pegel-fluss.js`, `pegel-fluss-ansicht.js`, `meldungen.js`, `pegel-bild.js`) nach Rolle: Text → `*-text`, Fläche → `*-hell`, Punkt/Zone → Punkt-Farbe, Rahmen → `*-rand`/`rand`/`linie`, Nebentext → `matt`, Pfeile/Referenzlinien → `leise`. SVG-Attribute in `pegel-fluss-ansicht.js` tragen die Token-Werte direkt (kennen keine CSS-Variablen). Ausgenommen bleiben „Lage melden“ (`lage-*`, `lf-*`), Logo (`icons.js`), Kartendaten-Farben (`map.js`, `extras.js`, Maske in `config.js`).
+
+- **Designumbau (ab 7.68.0)** nach `docs/AUFTRAG-designumbau.md` und Prototyp `docs/prototyp-designumbau.dc.html` (Nutzer, 10.11.2026, Prototyp freigegeben): Phase 0 Regeln (7.68.0) · 1 Bausteine (7.69.0) · 2a Pegel auf die Hauptkarte (7.70.0) · 2b Pegel-Ampel ins Pegel-Sheet (7.71.0) · 3 Navigation und alle Bereiche als Sheet (7.72.0) · 4 Animationen (7.73.0) · 5 Aufräumen (7.74.0); nach „übernehmen“ 8.0.0. Nach jeder Phase Freigabe des Nutzers.
+  - **Phase 0 erledigt (7.68.0):** Kopf links mit × rechts und Griff, Ortszeile, Aktionsleiste je Art, Chip mit Farbpunkt, Navigation Karte · Meldungen · Melden · Gemerkt · Mehr, Sheet als ein Rahmen, Abschnitt 7a Bewegung (Tokens `--wm-kurz/mittel/lang/feder/sanft` ersetzen die ungenutzten `--wm-kurve`/`--wm-dauer`), Abschnitt 11 Pegel-Ampel. Noch keine sichtbare Änderung.
+
+## 11. Pegel-Ampel
+
+Neu (Nutzer, 10.11.2026, Prototyp freigegeben). Die Pegel-Ampel ist **Teil des Pegel-Sheets** (Phase 2b), keine eigene Seite mehr:
+- Abschnitt „Passt mein Boot?“ direkt unter der Aktionsleiste. Ohne Mindestpegel: Ortszeile „Passt mein Boot? · Mindestpegel festlegen ›“, ein Tipp öffnet im selben Sheet ein kleines Formular (Mindestpegel in cm, −/+ in 5-cm-Schritten, Bootstyp aus den Einstellungen vorbelegt).
+- Mit Mindestpegel: Hinweiszeile (`wm-hinweis`) im Zustand der Ampel, immer mit Wort und Abstand („Passt – 42 cm über deinem Mindestpegel“, „Knapp – …“, „Zu niedrig – …“), Farben aus den Zustands-Tokens gut/warn/stop; bei Vorhersage eine kurze Zeile für die nächsten Tage; „Ändern“ als leiser Knopf.
+- Mindestpegel je Pegel (`watermap.mindestpegel`); die Ampel erscheint auch in „Gemerkt“ (Marke rechts) und im Pegel-Kasten des Slipanlagen-Sheets.
+- `pegel-ampel.html` bleibt nur als Einstiegsseite für Suchmaschinen im Seitenstil (`page.css`, Wassergrund, weiße Karte, kein Navy-Kopf).
 
 ## Entscheidungen des Nutzers (Ausnahmen)
 

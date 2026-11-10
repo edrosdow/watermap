@@ -75,9 +75,12 @@
   --wm-schatten: 0 1px 2px rgba(14, 46, 66, .06), 0 4px 14px rgba(14, 46, 66, .07);
   --wm-schatten-hoch: 0 -6px 24px rgba(14, 46, 66, .14);
 
-  /* Bewegung */
-  --wm-kurve: cubic-bezier(.2, .8, .2, 1);
-  --wm-dauer: 280ms;
+  /* Bewegung (DESIGN_SYSTEM.md, Abschnitt 7a) – keine anderen Dauern oder Kurven */
+  --wm-kurz: 150ms;    /* Drücken, Farbwechsel, Häkchen */
+  --wm-mittel: 260ms;  /* Umschalter, Listen, Inhaltswechsel */
+  --wm-lang: 420ms;    /* Sheets, Suche, Navigation */
+  --wm-feder: cubic-bezier(.34, 1.36, .5, 1);  /* leicht überschwingend: Bewegung von Flächen */
+  --wm-sanft: cubic-bezier(.2, .8, .2, 1);     /* Ein-/Ausblenden */
 
   font-family: var(--wm-schrift);
   font-variant-numeric: tabular-nums;
