@@ -141,6 +141,7 @@ Nie tiefer verschachteln. Keine Karte in einer Karte mit Schatten.
 | **Hinweis / Warnung** | Karte mit Grund `*-hell`, Rahmen 1,5 px in Punktfarbe, Icon links. Amtliche Warnungen zusätzlich linker Streifen 4 px. |
 | **Navigation unten** (Handy) | schwebende Pille, 5 Ziele, aktives Ziel `petrol-hell` / `petrol`. Melden mittig als runder Petrol-Knopf. |
 | **Kopfleiste** (Desktop ≥ 768) | `--wm-navy` mit Logo, Suche, Navigation – einzige dunkle Fläche. |
+| **Kurzmeldung (Toast)** | unten mittig über Navigation/Sheet, Grund `--wm-tinte`, Text weiß `s`, Radius s, `schatten-hoch`, max. 480 px. Optional **eine** Aktion rechts (z. B. „Rückgängig“ nach dem Entfernen aus der Merkliste): Text `--wm-petrol-hell` 700, Trefferfläche ≥ 44 px. Ohne Aktion 5 s, mit Aktion 8 s sichtbar; solange die Aktion den Fokus hat, bleibt die Meldung stehen. Vorbild: Material-3-Snackbar (ergänzt 7.67.0; `--wm-tinte` statt Navy, weil Navy nur Logo/Kopfleiste ist). |
 | **Leerer Zustand** | Satz, was fehlt, + eine Handlung („Noch keine Fotos – Foto einreichen“). |
 | **Fehler** | Was ist passiert + was tun, im Ton der App, ohne Entschuldigung („Pegeldaten sind gerade nicht erreichbar. Erneut versuchen“). |
 | **Icons** | Linien-Icons aus `public/js/icons.js` (`icon(name, px)`), 24er-Raster, Strich 2 px, runde Enden. Größen 16 / 20 / 24. Farbe = Textfarbe. Keine gefüllten Icons außer gemerktem Stern und Kartenmarkern. |

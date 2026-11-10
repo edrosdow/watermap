@@ -123,6 +123,8 @@ export const meinePegel = {
   hat: (id) => lesen().includes(id),
   umschalten(id) { const a = lesen(); schreiben(a.includes(id) ? a.filter(x => x !== id) : [...a, id]); return lesen().includes(id); },
   entfernen(id) { schreiben(lesen().filter(x => x !== id)); },
+  /** Ganze Liste setzen (z. B. „Rückgängig“ nach dem Entfernen; Reihenfolge bleibt). */
+  setzen(a) { schreiben([...a]); },
   verschieben(id, um) {
     const a = lesen(); const i = a.indexOf(id); const j = i + um;
     if (i < 0 || j < 0 || j >= a.length) return;

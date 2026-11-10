@@ -867,8 +867,16 @@ function mehrBereich() {
       orte, pegelIds: ids, pegel,
       oeffneOrt: (id) => { setView('karte'); selectPlace(id, { full: true }); },
       oeffnePegel: (id) => pegelFensterOeffnen(id),
-      entferneOrt: (id) => { favorites.toggle(id); state.map?.refresh(id); },
-      entfernePegel: (id) => meinePegel.entfernen(id),
+      entferneOrt: (id) => {
+        const vorher = favorites.all(); const p = state.byId.get(id);
+        favorites.toggle(id); state.map?.refresh(id);
+        toast(`${p ? displayName(p) : 'Ort'} entfernt.`, { text: 'Rückgängig', onclick: () => { favorites.setzen(vorher); state.map?.refresh(id); } });
+      },
+      entfernePegel: (id) => {
+        const vorher = meinePegel.alle(); const name = pegelStand()?.byId?.get(id)?.name;
+        meinePegel.entfernen(id);
+        toast(`${name || 'Pegel'} entfernt.`, { text: 'Rückgängig', onclick: () => meinePegel.setzen(vorher) });
+      },
       zurueck: () => { state.mehrSeite = null; writeHash(true); mehrBereich(); },
       zuPegel: () => setView('pegel'),
     });
@@ -1441,11 +1449,18 @@ function setListOpen(open, tab) {
 }
 
 let toastTimer;
-function toast(text) {
+/** Kurze Meldung unten. aktion = { text, onclick } (optional, z. B. „Rückgängig“): Knopf rechts, die Meldung bleibt länger stehen
+ *  und verschwindet nicht, solange der Knopf den Fokus hat. */
+function toast(text, aktion = null) {
   const t = $('#toast');
-  t.textContent = text; t.hidden = false; announce(text);
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 5200);
+  const knopf = aktion ? h('button', { type: 'button', class: 'toast-aktion', text: aktion.text,
+    onclick: () => { clearTimeout(toastTimer); t.hidden = true; aktion.onclick(); } }) : null;
+  t.replaceChildren(h('span', { class: 'toast-text', text }), ...(knopf ? [knopf] : []));
+  t.classList.toggle('mit-aktion', !!aktion);
+  t.hidden = false; announce(aktion ? `${text} ${aktion.text} ist möglich.` : text);
+  const zu = () => { clearTimeout(toastTimer); toastTimer = setTimeout(() => { if (!t.contains(document.activeElement)) t.hidden = true; }, aktion ? 8000 : 5200); };
+  t.onfocusout = aktion ? zu : null;
+  zu();
 }
 
 function updateOnline(e) {
