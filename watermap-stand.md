@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 11.11.2026 · App-Version **7.68.1**
+Stand: 11.11.2026 · App-Version **7.69.0**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.68.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.69.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -269,6 +269,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.67.0 | **Toast nach Designsystem, „Rückgängig“ in der Merkliste** (Vorbild Material-3-Snackbar, Figma): Kurzmeldung auf Tokens (Grund `--wm-tinte` statt Navy, Radius s, `schatten-hoch`, Schrift s), Baustein „Kurzmeldung (Toast)“ in `DESIGN_SYSTEM.md`. `toast(text, aktion)` kann einen Knopf rechts zeigen (8 s statt 5 s, bleibt bei Fokus stehen); Entfernen eines Orts oder Pegels in der Merkliste lässt sich rückgängig machen, Reihenfolge bleibt (`favorites.setzen`, `meinePegel.setzen`). **Fehler behoben:** `#toast` lag in `.map-wrap` innerhalb von `main` und war auf Mehr/Pegel/Meldungen nie sichtbar – jetzt direkt im `body`, `position: fixed` |
 | 7.68.0 | **Designumbau Phase 0 – Regeln** (Auftrag `docs/AUFTRAG-designumbau.md`, Prototyp `docs/prototyp-designumbau.dc.html`, beide vom Nutzer freigegeben 10.11.): `DESIGN_SYSTEM.md` – Kopf links mit × rechts und Griff, Ortszeile (≥ 64), Aktionsleiste je Art, Chip mit Farbpunkt/Häkchen, Navigation Karte · Meldungen · Melden · Gemerkt · Mehr, ein Sheet-Rahmen, neuer Abschnitt 7a Bewegung, Abschnitt 11 Pegel-Ampel; `tokens.css`: `--wm-kurz/mittel/lang/feder/sanft` statt der ungenutzten `--wm-kurve`/`--wm-dauer`. Keine sichtbare Änderung |
 | 7.68.1 | **Neues Slip-Symbol** (Kartenmarker, Slip-Sheet, Listen; `GLYPH.slip` in `icons.js`): flaches, langes Motorboot auf dem Trailer an der schrägen Rampe, darunter Wellen – eigener Entwurf nach einer Vorlage des Nutzers (Variante F; Bug gerade, nicht hochgezogen). Ersetzt das Segelboot |
+| 7.69.0 | **Designumbau Phase 1 – gemeinsame Bausteine** (keine sichtbare Änderung): `css/bausteine.css` neu nach dem Prototyp, `js/bausteine.js` (`kopf`, `zeile`, `gruppe`, `aktionen`, `marke`, `hinweis`, `chip`, `seg`, Sheet-Rahmen `sheetOeffnen` mit Stapeln, Einrasten groß/klein, Esc/×/Wischen, Fokus zurück). Rahmen noch nicht genutzt; Pegel-Sheet folgt in 2a, `fenster()` und Standort-Sheet in Phase 3 (Begründung in `DESIGN_SYSTEM.md`). Test `ui_bausteine.py` |
 | 7.54.1 | Pegel-Sheet wischt so flüssig wie auf der Hauptkarte: beim Ziehen nur noch verschoben (`transform`), nicht mehr in der Höhe neu berechnet; zu Beginn einmal auf volle Höhe gestellt und nach unten versetzt, die Größe ändert sich erst beim Einrasten |
 | 7.54.0 | **Fenster von unten wischbar und flüssig:** Das Pegel-Sheet folgt beim Ziehen dem Finger (vorher sprang es erst beim Loslassen) und rastet weich ein (klein · ca. 80 % · ganz · zu; Schwung nimmt die nächste Stufe in Bewegungsrichtung). Alle Fenster von unten (Dialoge, Standort-Vorschau und -Details, Pegel-Sheet) fahren auf dem Handy weich hoch statt plötzlich zu erscheinen (`sheet-ein`, bei „Bewegung reduzieren“ aus). Die übrigen Fenster folgten schon dem Finger (`wischen.js`) |
 | 7.53.0 | **Zart blau** (Rückmeldung: das kräftige Blau passt nicht zur App): gleicher Aufbau wie 7.52.0, aber ganz helles Wasserblau oben, weiße Karten und Knöpfe mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. **Tidepegel** im selben Muster (Name mittig, große Zahl, „● Tide · ↗ auflaufend“, drei Knöpfe Alarm · Merken · Teilen, Karten Gezeiten/Tidekurve/letztes HW·NW, Liste Häfen in der Nähe · Gewässer – alle Pegel · Station und Quelle) |
@@ -328,7 +329,7 @@ Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.
 
 ## 6. Offene Aufgaben
 
-**▶ Hier weitermachen (Stand 11.11.2026, 7.68.0): Designumbau nach `docs/AUFTRAG-designumbau.md`** – Phase 0 erledigt, wartet auf Freigabe; danach Phase 1 (Bausteine, 7.69.0). Nach jeder Phase committen, Vorschau, Bilder 390/1440 px, auf Freigabe warten. Neues Slip-Symbol erledigt (7.68.1).
+**▶ Hier weitermachen (Stand 11.11.2026, 7.68.0): Designumbau nach `docs/AUFTRAG-designumbau.md`** – Phase 0 freigegeben (11.11.), Phase 1 erledigt (7.69.0), wartet auf Freigabe; danach Phase 2a (Pegel auf die Hauptkarte, 7.70.0). Nach jeder Phase committen, Vorschau, Bilder 390/1440 px, auf Freigabe warten. Neues Slip-Symbol erledigt (7.68.1).
 
 **Früher: Umbau auf das Designsystem „Wasser“ – Phase 4 (abgeschlossen mit Schritt 8)**
 Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Disziplin von A, vom Nutzer gewählt) – vor jeder Oberflächenarbeit lesen.
@@ -344,6 +345,7 @@ Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Dis
 - **Figma (seit 10.11.2026):** Figma-MCP-Server eingerichtet (`claude mcp add --scope user --transport http figma https://mcp.figma.com/mcp`, Anmeldung über `/mcp`). Konto im Starter-Tarif, Platz „View“ – nur sehr wenige MCP-Aufrufe im Monat, sparsam einsetzen. Datei „Watermap“ (`VnWuIUI66rzeJpAtzbdJJy`) mit Seite „Material 3 Vorschau“ (Snackbar, Bottom sheet, Filter chip, Search bar, Navigation bar, Segmented button, Side sheet). Eingebunden: Material 3 Design Kit, Simple Design System, Apple-Kits (erst nach Lizenzannahme nutzbar).
 - **Vorschläge aus Material 3 – noch offen:** Griff des Sheets prüfen (antippbar, Screenreader-Beschriftung) · Seitenleiste Tablet nach „Side sheet“ schärfen · Chip „Pegel“ (siehe unten) · Vollbild-Suche mit letzten Orten. Erledigt: Toast + „Rückgängig“ (7.67.0).
 - Test `ui_nav` scheitert unter Windows an „Phase 1 – Markierung dehnt sich“ auch ohne Änderung (Timing, geprüft 10.11. mit altem Stand).
+- Unter Windows lädt die Test-Seite gelegentlich > 8 s (auch mit altem Stand und mit `127.0.0.1` statt `localhost`, geprüft 11.11.): `ui_bereiche` bricht dann bei 768 px mit Zeitüberschreitung ab, ohne fehlgeschlagene Prüfung – einzeln wiederholen.
 - Plugin „frontend-design“ war nur in der Cloud-Sitzung installiert (`claude plugin install frontend-design@anthropic-plugin-directory`).
 
 **Pegel – vorgemerkt:** Chip „Pegel“ in der Kategorie-Leiste der Hauptkarte (Vorschaubild 02.11., vom Nutzer zurückgestellt).

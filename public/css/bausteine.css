@@ -1,130 +1,166 @@
-/* WaterMap – gemeinsame Bausteine (Designsystem „Wasser“, DESIGN_SYSTEM.md Abschnitt 5).
-   Nur Tokens aus tokens.css. Bereiche verwenden diese Klassen statt eigener Kopien. */
+/* WaterMap – gemeinsame Bausteine (Designsystem „Wasser“, DESIGN_SYSTEM.md Abschnitte 5 und 7a).
+   Neu aufgebaut nach dem Prototyp docs/prototyp-designumbau.dc.html (Designumbau Phase 1, 7.69.0).
+   Nur Tokens aus tokens.css. Erzeugt werden die Bausteine mit js/bausteine.js. */
 
-/* ---------------------------------------------------------------- Grund */
-.wm-grund { background: var(--wm-verlauf); color: var(--wm-tinte); }
+/* ---------------------------------------------------------------- Sheet (ein Rahmen für alle Inhalte)
+   Handy: von unten, Stufen groß (.is-offen) und klein (.is-offen.is-klein), zu (ohne .is-offen).
+   Desktop ≥ 768 px: Panel rechts. Lage und Ebene kommen über Variablen vom Rahmen in bausteine.js:
+   --wm-sheet-oben (Oberkante der Stufe „groß“), --wm-sheet-klein (Höhe der Stufe „klein“), z-index je Ebene. */
+.wm-sheet { position: fixed; z-index: 1200; left: 0; right: 0; bottom: 0; top: var(--wm-sheet-oben, 120px);   /* groß: oben bleiben Suche + 60 px Karte sichtbar (Abschnitt 4) */
+  display: flex; flex-direction: column; border-radius: var(--wm-r-l) var(--wm-r-l) 0 0; background: var(--wm-verlauf); color: var(--wm-tinte);
+  box-shadow: var(--wm-schatten-hoch); transform: translate3d(0, 100%, 0); transition: transform var(--wm-lang) var(--wm-feder); }
+.wm-sheet.is-offen { transform: translate3d(0, 0, 0); }
+.wm-sheet.is-offen.is-klein { transform: translate3d(0, calc(100% - var(--wm-sheet-klein, 45%)), 0); }
+.wm-sheet:focus { outline: none; }
+.wm-sheet-inhalt { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: 2px var(--wm-4) calc(var(--bn-space, 0px) + var(--wm-6)); display: flex; flex-direction: column; gap: var(--wm-3); }
 
-/* ---------------------------------------------------------------- Kopf (Sheet, Seite, Dialog) */
-.wm-kopf { display: grid; grid-template-columns: 38px minmax(0, 1fr) 38px; column-gap: var(--wm-2); align-items: start; text-align: center;
-  padding: var(--wm-3) var(--wm-4) var(--wm-2); background: var(--wm-wasser); }
-.wm-kopf > .wm-kopf-mitte { grid-column: 2; grid-row: 1; min-width: 0; }
-.wm-kopf > .wm-kopf-links { grid-column: 1; grid-row: 1; }
-.wm-kopf > .wm-kopf-rechts { grid-column: 3; grid-row: 1; }
-.wm-kopf-art { margin: 0; font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-petrol-tief); }
-.wm-kopf-titel { margin: 2px 0 0; font-size: var(--wm-t-xl); line-height: 1.15; font-weight: 700; letter-spacing: -.01em; color: var(--wm-tinte); overflow-wrap: anywhere; }
-.wm-kopf-titel:focus { outline: none; }
-.wm-kopf-unter { margin: 2px 0 0; font-size: var(--wm-t-s); color: var(--wm-matt); }
+/* Griff: sichtbar 40 × 5, Trefferfläche ganze Breite × 26 px */
+.wm-griff { flex: none; display: grid; place-items: center; width: 100%; height: 26px; padding: 0; border: 0; background: none; cursor: grab; touch-action: none; }
+.wm-griff span { width: 40px; height: 5px; border-radius: var(--wm-r-rund); background: var(--wm-rand); }
 
-/* runder Knopf (Schließen, Zurück, Aktualisieren) */
-.wm-rund { width: 38px; height: 38px; border: 0; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); color: var(--wm-tinte);
-  box-shadow: var(--wm-schatten); display: grid; place-items: center; padding: 0; cursor: pointer; position: relative; }
-.wm-rund::after { content: ""; position: absolute; inset: -3px; }   /* Trefferfläche 44 px */
+@media (min-width: 768px) {
+  .wm-sheet { left: auto; width: var(--detail-w, 420px); top: var(--wm-sheet-oben, 0px); border-radius: 0; transform: translate3d(100%, 0, 0); }
+  .wm-sheet.is-offen, .wm-sheet.is-offen.is-klein { transform: translate3d(0, 0, 0); }
+  .wm-sheet .wm-griff { display: none; }
+  .wm-sheet .wm-kopf { padding-top: var(--wm-4); }
+  .wm-sheet-inhalt { padding-bottom: var(--wm-6); }
+}
 
-/* ---------------------------------------------------------------- Abschnitt */
-.wm-abschnitt + .wm-abschnitt { margin-top: var(--wm-6); }
-.wm-titel { margin: 0 0 var(--wm-2); font-size: var(--wm-t-l); line-height: 1.25; font-weight: 700; color: var(--wm-tinte); }
-.wm-titel-s { margin: 0 0 var(--wm-2); font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-matt); }
+/* ---------------------------------------------------------------- Kopf: Titel links, runder ×-Knopf rechts */
+.wm-kopf { flex: none; display: flex; align-items: flex-start; gap: var(--wm-3); padding: 0 var(--wm-4) var(--wm-3) var(--wm-5); }
+.wm-kopf.is-klebend { position: sticky; top: 0; z-index: 2; background: var(--wm-wasser); }
+.wm-kopf-block { flex: 1; min-width: 0; }
+.wm-kopf-titel { margin: 0; font-size: var(--wm-t-xl); line-height: 1.15; font-weight: 700; color: var(--wm-tinte); overflow-wrap: anywhere; }
+.wm-kopf-unter { margin: var(--wm-1) 0 0; font-size: var(--wm-t-s); line-height: 1.4; color: var(--wm-matt); }
 
-/* ---------------------------------------------------------------- Karte / Gruppe */
-.wm-karte { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); padding: var(--wm-3) var(--wm-4); }
-.wm-karte.is-liste { padding: 0; overflow: hidden; }
-.wm-stapel { display: flex; flex-direction: column; gap: var(--wm-3); }
+/* runder Knopf (Schließen, Zusatzaktion): 44 px, weiß, Schatten */
+.wm-rund { flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); color: var(--wm-tinte);
+  box-shadow: var(--wm-schatten); display: grid; place-items: center; cursor: pointer; transition: transform var(--wm-kurz) var(--wm-sanft); }
+.wm-rund:active { transform: scale(.9); }
 
-/* ---------------------------------------------------------------- Knöpfe */
-.wm-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--wm-2); min-height: 48px; padding: 0 var(--wm-5);
-  border: 0; border-radius: var(--wm-r-m); background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten);
-  font: inherit; font-size: var(--wm-t-m); font-weight: 700; text-decoration: none; cursor: pointer;
-  transition: transform 80ms ease, background-color 120ms ease; }
-.wm-btn.is-primaer { background: var(--wm-petrol); color: #fff; }
-.wm-btn.is-leise { background: transparent; box-shadow: none; color: var(--wm-petrol-tief); padding: 0 var(--wm-2); }
-.wm-btn:disabled, .wm-btn[aria-disabled="true"] { opacity: .45; cursor: default; }
-.wm-btn svg { flex: none; }
+/* ---------------------------------------------------------------- Abschnittstitel */
+.wm-abschnitt { margin: var(--wm-3) var(--wm-1) 0; font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-matt); }
 
-/* Aktionsleiste: drei gleiche Knöpfe, Icon über Text */
-.wm-aktionen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--wm-3); }
-.wm-aktion { min-height: 62px; flex-direction: column; gap: var(--wm-1); padding: var(--wm-2); font-size: var(--wm-t-s); }
+/* ---------------------------------------------------------------- Aktionsleiste: drei gleiche Knöpfe, Icon über Text */
+.wm-aktionen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--wm-2); }
+.wm-aktion { height: 62px; padding: 0 var(--wm-1); border: 0; border-radius: var(--wm-r-m); background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--wm-1);
+  font: inherit; font-size: var(--wm-t-s); font-weight: 700; text-decoration: none; cursor: pointer; transition: transform var(--wm-kurz) var(--wm-sanft); }
+.wm-aktion:active { transform: scale(.95); }
+.wm-aktion.is-primaer { background: var(--wm-petrol); color: var(--wm-flaeche); }
 .wm-aktion.is-gemerkt svg { fill: var(--wm-sonne); color: var(--wm-tinte); }
+.wm-aktion.is-pop svg { animation: wm-stern-pop 480ms var(--wm-feder); }
 
-/* ---------------------------------------------------------------- Listenzeile */
-.wm-zeile { display: flex; align-items: center; gap: var(--wm-3); width: 100%; min-height: 56px; padding: var(--wm-3) var(--wm-4);
-  border: 0; border-top: 1px solid var(--wm-linie); background: none; color: var(--wm-tinte); text-align: left; text-decoration: none; font: inherit; cursor: pointer; }
-.wm-karte > .wm-zeile:first-child, .wm-karte > :first-child > .wm-zeile { border-top: 0; }
-.wm-ico { width: 40px; height: 40px; flex: none; border-radius: var(--wm-r-s); background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); display: grid; place-items: center; }
+/* ---------------------------------------------------------------- Gruppe und Ortszeile */
+.wm-gruppe { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); overflow: hidden; }
+.wm-zeile { display: flex; align-items: center; gap: var(--wm-3); width: 100%; min-height: 64px; padding: 10px var(--wm-3); border: 0; background: none;
+  color: var(--wm-tinte); font: inherit; text-align: left; text-decoration: none; cursor: pointer; transition: background-color var(--wm-kurz) var(--wm-sanft); }
+div.wm-zeile { cursor: default; }
+.wm-zeile + .wm-zeile { border-top: 1px solid var(--wm-linie); }
+.wm-kachel-ico { flex: none; width: 40px; height: 40px; border-radius: var(--wm-r-s); background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); display: grid; place-items: center; }
 .wm-zeile-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.wm-zeile-text b, .wm-zeile-text strong { font-size: var(--wm-t-m); font-weight: 700; }
-.wm-zeile-text small { font-size: var(--wm-t-s); color: var(--wm-matt); }
-.wm-zeile-wert { flex: none; font-weight: 700; }
-.wm-pfeil { flex: none; color: var(--wm-leise); display: grid; }
+.wm-zeile-text strong { font-size: var(--wm-t-m); line-height: 1.3; font-weight: 700; }
+.wm-zeile-text small { font-size: var(--wm-t-s); line-height: 1.4; color: var(--wm-matt); }
+.wm-zeile-wert { flex: none; font-size: var(--wm-t-m); font-weight: 700; }
+.wm-pfeil { flex: none; display: grid; color: var(--wm-leise); }
 
-/* ---------------------------------------------------------------- Wert-Kachel */
-.wm-kacheln { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--wm-3); }
-.wm-kachel-t { margin: 0; display: flex; align-items: center; gap: var(--wm-2); font-size: var(--wm-t-s); color: var(--wm-matt); }
-.wm-kachel-wert { margin: 2px 0 0; font-size: var(--wm-t-xxl); line-height: 1.1; font-weight: 700; letter-spacing: -.02em; }
-.wm-kachel-wert small, .wm-held small { font-size: .47em; font-weight: 400; margin-left: 2px; letter-spacing: 0; }
-.wm-held { margin: 0; font-size: var(--wm-t-held); line-height: 1; font-weight: 300; letter-spacing: -.04em; }
+/* ---------------------------------------------------------------- Hinweiszeile im Zustand (z. B. „Heute keine Probleme gemeldet“) */
+.wm-hinweis { display: flex; align-items: center; gap: 10px; padding: var(--wm-3) 14px; border-radius: var(--wm-r-m); border: 1.5px solid var(--wm-rand);
+  background: var(--wm-flaeche-2); color: var(--wm-matt); font-size: var(--wm-t-s); font-weight: 700; }
+.wm-hinweis-text { flex: 1; min-width: 0; }
+.wm-hinweis svg { flex: none; }
+.wm-hinweis.is-gut { background: var(--wm-gut-hell); border-color: var(--wm-gut-rand); color: var(--wm-gut-text); }
+.wm-hinweis.is-warn { background: var(--wm-warn-hell); border-color: var(--wm-warn-rand); color: var(--wm-warn-text); }
+.wm-hinweis.is-hoch { background: var(--wm-stop-hell); border-color: var(--wm-hoch-rand); color: var(--wm-stop-text); }
+.wm-hinweis.is-stop { background: var(--wm-stop-hell); border-color: var(--wm-stop-rand); color: var(--wm-stop-text); }
+.wm-hinweis-aktion { flex: none; min-height: 44px; padding: 0 var(--wm-1); border: 0; background: none; color: var(--wm-petrol-tief);
+  font: inherit; font-size: var(--wm-t-s); font-weight: 700; text-decoration: underline; cursor: pointer; }
 
-/* ---------------------------------------------------------------- Zustandsmarke und Punkt */
-.wm-marke { display: inline-flex; align-items: center; gap: var(--wm-2); padding: var(--wm-1) var(--wm-3); border-radius: var(--wm-r-rund);
-  font-size: var(--wm-t-s); font-weight: 700; background: var(--wm-flaeche-2); color: var(--wm-matt); }
-.wm-marke.is-gut { background: var(--wm-gut-hell); color: var(--wm-gut-text); }
-.wm-marke.is-warn { background: var(--wm-warn-hell); color: var(--wm-warn-text); }
-.wm-marke.is-hoch, .wm-marke.is-stop { background: var(--wm-stop-hell); color: var(--wm-stop-text); }
-.wm-marke.is-info { background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
-.wm-punkt { width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--wm-leise); display: inline-block; }
-.wm-punkt.is-gut { background: var(--wm-gut); } .wm-punkt.is-warn { background: var(--wm-warn); }
-.wm-punkt.is-hoch { background: var(--wm-hoch); } .wm-punkt.is-stop { background: var(--wm-stop); }
+/* ---------------------------------------------------------------- Zustandsmarke: Pille mit Punkt, immer mit Wort */
+.wm-marke { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: var(--wm-r-rund);
+  font-size: var(--wm-t-s); font-weight: 700; white-space: nowrap; background: var(--wm-flaeche-2); color: var(--wm-matt); }
+.wm-marke i { width: 9px; height: 9px; border-radius: var(--wm-r-rund); background: var(--wm-leise); }
+.wm-marke.is-gut { background: var(--wm-gut-hell); color: var(--wm-gut-text); } .wm-marke.is-gut i { background: var(--wm-gut); }
+.wm-marke.is-warn { background: var(--wm-warn-hell); color: var(--wm-warn-text); } .wm-marke.is-warn i { background: var(--wm-warn); }
+.wm-marke.is-hoch { background: var(--wm-stop-hell); color: var(--wm-stop-text); } .wm-marke.is-hoch i { background: var(--wm-hoch); }
+.wm-marke.is-stop { background: var(--wm-stop-hell); color: var(--wm-stop-text); } .wm-marke.is-stop i { background: var(--wm-stop); }
 
-/* ---------------------------------------------------------------- Chip (Filter) */
+/* ---------------------------------------------------------------- Chip mit Farbpunkt; aktiv: Punkt schrumpft, Häkchen wächst */
 .wm-chips { display: flex; gap: var(--wm-2); overflow-x: auto; scrollbar-width: none; }
 .wm-chips::-webkit-scrollbar { display: none; }
-.wm-chip { flex: none; display: inline-flex; align-items: center; gap: var(--wm-2); min-height: 36px; padding: 0 var(--wm-4); border: 0; border-radius: var(--wm-r-rund);
-  background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font: inherit; font-size: var(--wm-t-s); font-weight: 700; cursor: pointer; position: relative; }
-.wm-chip::after { content: ""; position: absolute; inset: -4px 0; }   /* Trefferfläche 44 px */
-.wm-chip[aria-pressed="true"] { background: var(--wm-tinte); color: #fff; }
+.wm-chip { flex: none; height: 40px; padding: 0 14px; border: 0; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten);
+  display: inline-flex; align-items: center; font: inherit; font-size: var(--wm-t-s); font-weight: 700; white-space: nowrap; cursor: pointer;
+  transition: background-color var(--wm-mittel) var(--wm-sanft), color var(--wm-mittel) var(--wm-sanft), transform var(--wm-kurz) var(--wm-sanft); }
+.wm-chip:active { transform: scale(.94); }
+.wm-chip[aria-pressed="true"] { background: var(--wm-tinte); color: var(--wm-flaeche); }
+.wm-chip-haken { display: grid; width: 0; margin-right: 0; overflow: hidden; transition: width var(--wm-mittel) var(--wm-feder), margin var(--wm-mittel) var(--wm-feder); }
+.wm-chip[aria-pressed="true"] .wm-chip-haken { width: 16px; margin-right: 6px; }
+.wm-chip-punkt { flex: none; width: 10px; height: 10px; margin-right: 7px; border-radius: var(--wm-r-rund); background: var(--punkt, var(--wm-leise));
+  transition: width var(--wm-mittel) var(--wm-feder), margin var(--wm-mittel) var(--wm-feder); }
+.wm-chip[aria-pressed="true"] .wm-chip-punkt { width: 0; margin-right: 0; }
 
-/* ---------------------------------------------------------------- Segment-Umschalter */
-.wm-seg { display: flex; padding: 3px; border-radius: var(--wm-r-s); background: var(--wm-linie); }
-.wm-seg button { flex: 1; min-height: 36px; padding: 0 var(--wm-2); border: 0; border-radius: calc(var(--wm-r-s) - 3px); background: transparent; color: var(--wm-matt);
-  font: inherit; font-size: var(--wm-t-s); font-weight: 700; cursor: pointer; }
-.wm-seg button[aria-pressed="true"] { background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); }
+/* ---------------------------------------------------------------- Umschalter mit gleitender Markierung (--n Optionen, --i gewählt) */
+.wm-seg { position: relative; display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); padding: 3px; border-radius: var(--wm-r-s); background: var(--wm-flaeche-2); }
+.wm-seg-ind { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / var(--n, 3)); border-radius: calc(var(--wm-r-s) - 3px);
+  background: var(--wm-flaeche); box-shadow: var(--wm-schatten); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform var(--wm-mittel) var(--wm-feder); }
+.wm-seg button { position: relative; z-index: 1; height: 40px; padding: 0 var(--wm-1); border: 0; background: none; color: var(--wm-matt);
+  font: inherit; font-size: var(--wm-t-s); font-weight: 700; cursor: pointer; transition: color var(--wm-mittel) var(--wm-sanft); }
+.wm-seg button[aria-pressed="true"] { color: var(--wm-tinte); }
 
-/* ---------------------------------------------------------------- Formular */
+/* ---------------------------------------------------------------- Karte (weiß, mit Titel) und Fakten */
+.wm-karte { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); padding: 14px 14px var(--wm-3); }
+.wm-karte-titel { margin: 0 0 10px; font-size: var(--wm-t-m); font-weight: 700; }
+.wm-fakten { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--wm-2); }
+.wm-fakt { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); padding: var(--wm-3) 14px; }
+.wm-fakt small { display: block; font-size: var(--wm-t-s); color: var(--wm-matt); }
+.wm-fakt strong { font-size: var(--wm-t-m); }
+
+/* ---------------------------------------------------------------- Großer Wert */
+.wm-held { padding: 2px 0 var(--wm-1); text-align: center; }
+.wm-held-zahl { font-size: var(--wm-t-held); line-height: 1; font-weight: 300; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.wm-held-zahl small { margin-left: var(--wm-1); font-size: var(--wm-t-xxl); font-weight: 400; letter-spacing: 0; }
+.wm-held-zeile { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 10px; font-size: var(--wm-t-s); color: var(--wm-matt); }
+
+/* ---------------------------------------------------------------- Knopf und Formular (für Phase 2b/3) */
+.wm-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--wm-2); min-height: 48px; padding: 0 var(--wm-5);
+  border: 0; border-radius: var(--wm-r-m); background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten);
+  font: inherit; font-size: var(--wm-t-m); font-weight: 700; text-decoration: none; cursor: pointer; transition: transform var(--wm-kurz) var(--wm-sanft); }
+.wm-btn:active { transform: scale(.98); }
+.wm-btn.is-primaer { background: var(--wm-petrol); color: var(--wm-flaeche); }
+.wm-btn.is-leise { background: transparent; box-shadow: none; color: var(--wm-petrol-tief); padding: 0 var(--wm-2); }
+.wm-btn:disabled, .wm-btn[aria-disabled="true"] { opacity: .45; cursor: default; }
 .wm-feld { display: flex; flex-direction: column; gap: var(--wm-2); }
-.wm-feld > label, .wm-feld-name { font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-tinte); }
+.wm-feld > label { font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-tinte); }
 .wm-eingabe { width: 100%; min-height: 48px; padding: 0 var(--wm-4); border: 1.5px solid var(--wm-linie); border-radius: var(--wm-r-s);
   background: var(--wm-flaeche); color: var(--wm-tinte); font: inherit; font-size: var(--wm-t-m); }
-textarea.wm-eingabe { min-height: 104px; padding: var(--wm-3) var(--wm-4); resize: vertical; }
 .wm-eingabe::placeholder { color: var(--wm-leise); }
-.wm-eingabe:focus { border-color: var(--wm-petrol); outline: none; box-shadow: 0 0 0 3px var(--wm-petrol-hell); }
+.wm-eingabe:focus { border-color: var(--wm-petrol); outline: none; }
 .wm-eingabe:focus-visible { outline: 3px solid var(--wm-fokus); outline-offset: 1px; }
 .wm-eingabe[aria-invalid="true"] { border-color: var(--wm-stop); }
 .wm-feld-fehler { margin: 0; font-size: var(--wm-t-s); color: var(--wm-stop-text); }
-.wm-feld-hilfe { margin: 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }
 
-/* ---------------------------------------------------------------- Hinweis / Warnung */
-.wm-hinweis { display: flex; gap: var(--wm-3); align-items: flex-start; padding: var(--wm-3) var(--wm-4); border-radius: var(--wm-r-m);
-  border: 1.5px solid var(--wm-linie); background: var(--wm-flaeche); color: var(--wm-tinte); font-size: var(--wm-t-s); }
-.wm-hinweis.is-gut { background: var(--wm-gut-hell); border-color: var(--wm-gut); color: var(--wm-gut-text); }
-.wm-hinweis.is-warn { background: var(--wm-warn-hell); border-color: var(--wm-warn); color: var(--wm-warn-text); }
-.wm-hinweis.is-stop { background: var(--wm-stop-hell); border-color: var(--wm-stop); color: var(--wm-stop-text); }
-.wm-hinweis.is-amtlich { border-left-width: 5px; }
-.wm-hinweis svg { flex: none; margin-top: 1px; }
-
-/* ---------------------------------------------------------------- Leer / Fehler */
-.wm-leer { padding: var(--wm-6) var(--wm-4); text-align: center; color: var(--wm-matt); }
-.wm-leer b { display: block; color: var(--wm-tinte); font-size: var(--wm-t-m); margin-bottom: var(--wm-1); }
+/* ---------------------------------------------------------------- Leerer Zustand: Satz + eine Handlung */
+.wm-leer { padding: var(--wm-6) var(--wm-4); text-align: center; color: var(--wm-matt); font-size: var(--wm-t-m); }
 .wm-leer .wm-btn { margin-top: var(--wm-3); }
 
 /* ---------------------------------------------------------------- Zustände (gemeinsam) */
-.wm-btn:focus-visible, .wm-rund:focus-visible, .wm-chip:focus-visible, .wm-zeile:focus-visible, .wm-seg button:focus-visible { outline: 3px solid var(--wm-fokus); outline-offset: 2px; }
+.wm-rund:focus-visible, .wm-aktion:focus-visible, .wm-zeile:focus-visible, .wm-chip:focus-visible, .wm-seg button:focus-visible,
+.wm-btn:focus-visible, .wm-griff:focus-visible, .wm-hinweis-aktion:focus-visible { outline: 3px solid var(--wm-fokus); outline-offset: 2px; }
 @media (hover: hover) {
-  .wm-btn:hover, .wm-rund:hover, .wm-chip:not([aria-pressed="true"]):hover { background: var(--wm-flaeche-2); }
-  .wm-btn.is-primaer:hover { background: var(--wm-petrol-tief); }
+  .wm-zeile:is(a, button):hover { background: var(--wm-wasser-2); }
+  .wm-rund:hover, .wm-aktion:not(.is-primaer):hover, .wm-btn:not(.is-primaer, .is-leise):hover, .wm-chip:not([aria-pressed="true"]):hover { background: var(--wm-flaeche-2); }
+  .wm-aktion.is-primaer:hover, .wm-btn.is-primaer:hover { background: var(--wm-petrol-tief); }
   .wm-btn.is-leise:hover { background: var(--wm-petrol-hell); }
-  .wm-zeile:hover { background: var(--wm-wasser-2); }
 }
-.wm-btn:active, .wm-rund:active, .wm-chip:active { transform: scale(.98); }
-@media (prefers-reduced-motion: reduce) { .wm-btn, .wm-rund, .wm-chip { transition: none; } .wm-btn:active, .wm-rund:active, .wm-chip:active { transform: none; } }
+
+@keyframes wm-stern-pop { 0% { transform: scale(1); } 35% { transform: scale(1.45) rotate(-12deg); } 100% { transform: scale(1); } }
+
+/* Bewegung reduzieren: alles sofort (DESIGN_SYSTEM.md 7a) */
+@media (prefers-reduced-motion: reduce) {
+  .wm-sheet, .wm-sheet *, .wm-chip, .wm-chip *, .wm-seg *, .wm-rund, .wm-aktion, .wm-aktion *, .wm-btn, .wm-zeile {
+    transition-duration: 1ms !important; animation-duration: 1ms !important; animation-delay: 0ms !important; }
+}
 
 /* ---------------------------------------------------------------- Fokus nur für Bedienelemente
    Überschriften und Bereiche mit tabindex="-1" bekommen den Fokus nur per Skript (für Screenreader beim Öffnen) –
