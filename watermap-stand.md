@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 07.11.2026 · App-Version **7.66.1**
+Stand: 10.11.2026 · App-Version **7.67.0**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.66.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.67.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -266,6 +266,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.65.0 | Designsystem, Farbgruppe Blau: 55 Blauwerte in CSS und das Teilen-Bild auf Tokens (Pegel-Blau → Petrol, Hover → Petrol-tief, dunkle Pillen auf Navy per `color-mix`, Ampelgehäuse → Tinte); Diagrammfläche 8 % |
 | 7.66.0 | Designsystem, alle übrigen Farben (Rot, Gold, Grün, Grau/Rahmen) auf Tokens, in CSS und JS (Pegel-Zonen, Kartenpillen, Fluss-Diagramm, Meldungstypen, Teilen-Bild); neue Tokens `--wm-rand` und `--wm-gut/warn/hoch/stop-rand` (Einordnungsbalken hell); Meldungstypen mit getrennter Punkt- und Textfarbe; „Lage melden“, Logo und Kartendaten-Farben bleiben |
 | 7.66.1 | `main` zusammengeführt (OSM-Daten 01.11., Foto Slip Vössen); Konflikte in `admin/verlauf.json` (beide Verläufe vereinigt) und `overrides.json` (Foto aus `main` ergänzt, auf dem Branch entferntes Test-Foto bleibt weg) gelöst; Schrift < 13 px in Plaketten/SVG/Leaflet bleibt (Nutzer 08.11.) |
+| 7.67.0 | **Toast nach Designsystem, „Rückgängig“ in der Merkliste** (Vorbild Material-3-Snackbar, Figma): Kurzmeldung auf Tokens (Grund `--wm-tinte` statt Navy, Radius s, `schatten-hoch`, Schrift s), Baustein „Kurzmeldung (Toast)“ in `DESIGN_SYSTEM.md`. `toast(text, aktion)` kann einen Knopf rechts zeigen (8 s statt 5 s, bleibt bei Fokus stehen); Entfernen eines Orts oder Pegels in der Merkliste lässt sich rückgängig machen, Reihenfolge bleibt (`favorites.setzen`, `meinePegel.setzen`). **Fehler behoben:** `#toast` lag in `.map-wrap` innerhalb von `main` und war auf Mehr/Pegel/Meldungen nie sichtbar – jetzt direkt im `body`, `position: fixed` |
 | 7.54.1 | Pegel-Sheet wischt so flüssig wie auf der Hauptkarte: beim Ziehen nur noch verschoben (`transform`), nicht mehr in der Höhe neu berechnet; zu Beginn einmal auf volle Höhe gestellt und nach unten versetzt, die Größe ändert sich erst beim Einrasten |
 | 7.54.0 | **Fenster von unten wischbar und flüssig:** Das Pegel-Sheet folgt beim Ziehen dem Finger (vorher sprang es erst beim Loslassen) und rastet weich ein (klein · ca. 80 % · ganz · zu; Schwung nimmt die nächste Stufe in Bewegungsrichtung). Alle Fenster von unten (Dialoge, Standort-Vorschau und -Details, Pegel-Sheet) fahren auf dem Handy weich hoch statt plötzlich zu erscheinen (`sheet-ein`, bei „Bewegung reduzieren“ aus). Die übrigen Fenster folgten schon dem Finger (`wischen.js`) |
 | 7.53.0 | **Zart blau** (Rückmeldung: das kräftige Blau passt nicht zur App): gleicher Aufbau wie 7.52.0, aber ganz helles Wasserblau oben, weiße Karten und Knöpfe mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. **Tidepegel** im selben Muster (Name mittig, große Zahl, „● Tide · ↗ auflaufend“, drei Knöpfe Alarm · Merken · Teilen, Karten Gezeiten/Tidekurve/letztes HW·NW, Liste Häfen in der Nähe · Gewässer – alle Pegel · Station und Quelle) |
@@ -336,6 +337,9 @@ Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Dis
 - **Pausiert auf Wunsch des Nutzers (05.11.2026)** – offen bleibt nur Schritt 8:
 - [ ] Schritt 8 (wieder aufgenommen 07.11.2026, lokal unter Windows) – Teil 1 Desktop (7.62.0), Teil 2 Wetter-Fenster + Textseiten (7.63.0), Teil 3 Reste aufräumen (7.64.0) erledigt. Farben mit ΔE > 6 werden gruppenweise angeglichen (Nutzer 07.11.): Blau (7.65.0) und alle übrigen Farben (7.66.0) erledigt. Bericht: `python3 -I scripts/farben_tokens.py public/css` (nächster Token in Lab). Schrift unter 13 px in Plaketten/SVG-Diagrammen/Leaflet-Quellenangabe bleibt (Nutzer 08.11.). Schritt 8 damit abgeschlossen.
 - Arbeitsweise: je Schritt Vorschaubild (vorher/nachher, 390 px) zeigen, Version erhöhen, alle Tests, pushen. Tests, die altes Aussehen festschreiben, auf das Designsystem anpassen (nicht die App verbiegen).
+- **Figma (seit 10.11.2026):** Figma-MCP-Server eingerichtet (`claude mcp add --scope user --transport http figma https://mcp.figma.com/mcp`, Anmeldung über `/mcp`). Konto im Starter-Tarif, Platz „View“ – nur sehr wenige MCP-Aufrufe im Monat, sparsam einsetzen. Datei „Watermap“ (`VnWuIUI66rzeJpAtzbdJJy`) mit Seite „Material 3 Vorschau“ (Snackbar, Bottom sheet, Filter chip, Search bar, Navigation bar, Segmented button, Side sheet). Eingebunden: Material 3 Design Kit, Simple Design System, Apple-Kits (erst nach Lizenzannahme nutzbar).
+- **Vorschläge aus Material 3 – noch offen:** Griff des Sheets prüfen (antippbar, Screenreader-Beschriftung) · Seitenleiste Tablet nach „Side sheet“ schärfen · Chip „Pegel“ (siehe unten) · Vollbild-Suche mit letzten Orten. Erledigt: Toast + „Rückgängig“ (7.67.0).
+- Test `ui_nav` scheitert unter Windows an „Phase 1 – Markierung dehnt sich“ auch ohne Änderung (Timing, geprüft 10.11. mit altem Stand).
 - Plugin „frontend-design“ war nur in der Cloud-Sitzung installiert (`claude plugin install frontend-design@anthropic-plugin-directory`).
 
 **Pegel – vorgemerkt:** Chip „Pegel“ in der Kategorie-Leiste der Hauptkarte (Vorschaubild 02.11., vom Nutzer zurückgestellt).
