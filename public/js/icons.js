@@ -3,15 +3,18 @@ export const COLORS = { slip: '#087F9C', marina: '#16619B', fuel: '#D78B23' };
 
 // Zeichen innerhalb des Kartenmarkers (Koordinatensystem 44 × 54, Pin-Kreis Mitte 22/21).
 const GLYPH = {
-  // Kleines Boot mit Segel, das auf einer schrägen Rampe ins Wasser fährt.
+  // Flaches, langes Motorboot auf dem Trailer an der schrägen Rampe, darunter Wasser
+  // (eigener Entwurf nach Vorlage des Nutzers, Variante F, 7.68.1). Boot und Trailer um 16,7° gedreht
+  // (Drehpunkt = Radmitte), parallel zur Rampe; Bug den Hang hinauf, Heck zum Wasser.
   slip: `
-    <path d="M9.5 15.5 12.5 15.5 33 29.5v2.6H9.5z" fill="#fff" opacity=".95"/>
-    <g transform="translate(23.6 22.2) rotate(35)">
-      <path d="M-6.5-4.2h13l-2.6 4.2h-7.8z" fill="#fff" stroke="#087F9C" stroke-width="1" stroke-linejoin="round"/>
-      <path d="M0-4.8V-13" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/>
-      <path d="M1-12.4 6-5.4H1z" fill="#fff" stroke="#087F9C" stroke-width=".8" stroke-linejoin="round"/>
+    <path d="M8.5 24.2 33.5 31.7v1.8H8.5z" fill="#fff" opacity=".95"/>
+    <g transform="rotate(16.7 21 24)">
+      <path d="M9.4 23h23.2" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/>
+      <path d="M9.4 15.8H34L32.9 19.9Q32.6 20.6 31.9 20.6H15Q10.8 20.6 9.4 15.8z" fill="#fff"/>
+      <path d="M21.6 15.8l2.6-2.6h3.2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <circle cx="21" cy="24" r="2.3" fill="#087F9C" stroke="#fff" stroke-width="1.9"/>
     </g>
-    <path d="M12.5 35.2q2.5-2.5 5 0t5 0 5 0 5 0" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/>`,
+    <path d="M11.5 36q2.5-2.5 5 0t5 0 5 0 5 0" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/>`,
   marina: `
     <circle cx="22" cy="12.2" r="2.7" stroke="#fff" stroke-width="2.2" fill="none"/>
     <path d="M22 15v18M16 19.5h12" stroke="#fff" stroke-width="2.3" stroke-linecap="round" fill="none"/>
