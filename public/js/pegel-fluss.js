@@ -1,4 +1,4 @@
-// Flüsse im Bereich „Pegel“: Gruppierung nach Gewässer, Zustand eines Flusses, Profil-Daten – ohne Oberfläche (in Node testbar).
+// Flüsse (Fluss-Sheet, Pegel-Suche): Gruppierung nach Gewässer, Zustand eines Flusses, Profil-Daten – ohne Oberfläche (in Node testbar).
 // Alles kommt aus der einmal geladenen Stationsliste (aktueller Wert, Kennwerte, km); keine Abfragen pro Pegel.
 import { CONFIG } from './config.js';
 

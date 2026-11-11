@@ -309,19 +309,7 @@
   .toolbar .inview { font-size: var(--wm-t-s); color: var(--wm-matt); }
 
   /* Pegel: Kopf auf Wassergrund, Suche wie oben, Chip-Symbole in Tinte (gemerkter Stern Sonne) */
-  .pa-kopf { background: var(--wm-wasser); border-bottom: 0; }
-  .pa-h1 { font-size: var(--wm-t-xl); font-weight: 700; color: var(--wm-tinte); }
-  .pa-neu { color: var(--wm-matt); }
-  .pa-neu:hover { background: var(--wm-flaeche); color: var(--wm-tinte); }
-  .pa-stand { font-size: var(--wm-t-xs); color: var(--wm-matt); }
-  .pa-suche { padding: 0 48px 0 var(--wm-5); }
-  .pa-suche::placeholder { color: var(--wm-matt); }
-  .pa-suche-ico { left: auto; right: 14px; top: 24px; color: var(--wm-tinte); }
-  .pa-chip svg { color: var(--wm-tinte); }
-  .pa-chip[data-liste="fav"] svg { color: var(--wm-sonne); }
-  .pa-chip[aria-pressed="true"] svg { color: #fff; }
-  .pa-chip[data-liste="fav"][aria-pressed="true"] svg { color: var(--wm-sonne); }
-
+                        
   /* In der Nähe (Seitenleiste): Kopf auf Wassergrund, Knöpfe als Chips */
   .nh-kopf { background: var(--wm-wasser); border-bottom: 0; }
   .nh-titel { font-size: var(--wm-t-xl); font-weight: 700; color: var(--wm-tinte); }

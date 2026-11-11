@@ -81,7 +81,7 @@ export function merkliste(root, ctx) {
   const pegelTitel = h('h2', { text: ctx.pegelIds.length ? `Meine Pegel (${ctx.pegelIds.length})` : 'Meine Pegel' });
   const pegelTeil = h('section', { class: 'bs-abschnitt' }, h('div', { class: 'bs-abschnitt-kopf' }, pegelTitel, ctx.pegelIds.length ? umschalten() : null), pegelHinweis, pegelGruppe);
   if (!ctx.pegelIds.length) {
-    pegelGruppe.append(h('p', { class: 'bs-leer' }, 'Noch keine Pegel gespeichert. Im Bereich ', h('a', { href: '#pegel', onclick: klick(ctx.zuPegel), text: 'Pegel' }), ' mit dem Stern hinzufügen.'));
+    pegelGruppe.append(h('p', { class: 'bs-leer' }, 'Noch keine Pegel gespeichert. Auf der Karte ', h('a', { href: '#pegel', onclick: klick(ctx.zuPegel), text: 'Pegel einblenden' }), ' und beim Pegel mit dem Stern hinzufügen.'));
   } else {
     pegelGruppe.append(h('p', { class: 'bs-leer', text: 'Pegelstände werden geladen …' }));
     ctx.pegel.then(({ eintraege, offline, stand }) => {
@@ -89,7 +89,7 @@ export function merkliste(root, ctx) {
       pegelHinweis.hidden = !offline;
       if (offline) pegelHinweis.textContent = `Offline – letzter gespeicherter Stand${stand ? ` von ${new Date(stand).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}`;
       pegelGruppe.replaceChildren(...eintraege.map(p => zeile({
-        ico: 'gauge', titel: p.name, sub: p.sub, href: `#pegel/${encodeURIComponent(p.id)}`, onclick: klick(() => ctx.oeffnePegel(p.id)),
+        ico: 'gauge', titel: p.name, sub: p.sub, href: `#karte/pegel/${encodeURIComponent(p.id)}`, onclick: klick(() => ctx.oeffnePegel(p.id)),
         rechts: bearbeiten ? entfernen(p.name, () => ctx.entfernePegel(p.id)) : (p.wert !== null ? h('span', { class: 'bs-wert', text: `${fmt(p.wert)} ${p.einheit || 'cm'}` }) : undefined),
       })));
     }, () => { pegelGruppe.replaceChildren(h('p', { class: 'bs-leer', text: 'Pegelstände sind gerade nicht erreichbar.' })); });
@@ -98,5 +98,5 @@ export function merkliste(root, ctx) {
   root.replaceChildren(h('div', { class: 'bs-seite' },
     kopf('Merkliste', 'Gespeichert auf diesem Gerät', ctx.zurueck),
     orteTeil, pegelTeil,
-    h('p', { class: 'bs-fuss', text: 'Pegel ordnest du im Bereich „Pegel“ unter „Meine Pegel“.' })));
+    h('p', { class: 'bs-fuss', text: 'Pegel merkst du mit dem Stern im Pegel-Fenster auf der Karte.' })));
 }

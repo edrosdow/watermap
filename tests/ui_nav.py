@@ -10,7 +10,7 @@ spec = importlib.util.spec_from_file_location('ui_full', HERE / 'ui_full.py'); u
 SHOTS = uf.SHOTS
 NOW = int(time.time() * 1000)
 problems = []
-LABELS = ['Karte', 'Pegel', 'Melden', 'Meldungen', 'Mehr']
+LABELS = ['Karte', 'Meldungen', 'Melden', 'Gemerkt', 'Mehr']   # Designumbau 2a
 def check(cond, msg):
     print(('OK   ' if cond else 'FAIL ') + msg, flush=True)
     if not cond: problems.append(msg)
@@ -67,16 +67,16 @@ def run(b, w, hh):
           f'{tag}: Leiste schwebt (16 px seitlich, 10 px unten, 68 px hoch) {bar}')
     check(c['r'] == '34px' and c['bg'] == 'rgba(255, 255, 255, 0.82)' and 'blur(22px)' in c['bf'] and c['bw'] == '1px', f'{tag}: helles Glas, Ecken 34 px, Rand 1 px ({c})')
     labels = pg.locator('#bottomnav .bn-item').evaluate_all("els => els.map(e => e.getAttribute('aria-label'))")
-    check([re.sub(r', .*$', '', l) for l in labels] == LABELS, f'{tag}: fünf Plätze in der Reihenfolge Karte · Pegel · Melden · Meldungen · Mehr ({labels})')
+    check([re.sub(r', .*$', '', l) for l in labels] == LABELS, f'{tag}: fünf Plätze in der Reihenfolge Karte · Meldungen · Melden · Gemerkt · Mehr ({labels})')
     check(all(t.strip() == '' or t.strip().isdigit() for t in pg.locator('#bottomnav .bn-item').all_inner_texts()) and pg.locator('#bottomnav .bn-label').count() == 0, f'{tag}: nur Symbole, kein sichtbarer Text')
-    ws = [rect(pg, f'{item(n)}')['w'] for n in ['karte', 'pegel', 'melden', 'meldungen', 'mehr']]
-    check(max(ws) - min(ws) <= 1 and all(rect(pg, item(n))['h'] >= 56 for n in ['karte', 'pegel', 'melden', 'meldungen', 'mehr']), f'{tag}: gleich breite Plätze, Trefferfläche ≥ 56 px ({ws})')
-    sizes = pg.evaluate("['karte', 'pegel', 'meldungen', 'mehr'].map(n => document.querySelector(`#bottomnav [data-nav=${n}] svg`).getBoundingClientRect().width)")
+    ws = [rect(pg, f'{item(n)}')['w'] for n in ['karte', 'meldungen', 'melden', 'gemerkt', 'mehr']]
+    check(max(ws) - min(ws) <= 1 and all(rect(pg, item(n))['h'] >= 56 for n in ['karte', 'meldungen', 'melden', 'gemerkt', 'mehr']), f'{tag}: gleich breite Plätze, Trefferfläche ≥ 56 px ({ws})')
+    sizes = pg.evaluate("['karte', 'meldungen', 'gemerkt', 'mehr'].map(n => document.querySelector(`#bottomnav [data-nav=${n}] svg`).getBoundingClientRect().width)")
     check(sizes == [26, 26, 26, 26], f'{tag}: Symbole 26 px ({sizes})')
     plus = rect(pg, '#bottomnav .bn-plus')
     check(abs(plus['w'] - 54) <= 0.5 and abs(plus['h'] - 54) <= 0.5 and plus['y'] >= bar['y'] and plus['y'] + plus['h'] <= bar['y'] + bar['h'] and css(pg, '#bottomnav .bn-plus', 'backgroundColor') == 'rgb(8, 127, 156)'
           and abs(rect(pg, '#bottomnav .bn-center svg')['w'] - 28) <= 0.5, f'{tag}: „Melden“ 54 px Petrol mit Plus 28 px, innerhalb der Leiste')
-    check(css(pg, item('karte'), 'color') == 'rgb(8, 127, 156)' and css(pg, item('pegel'), 'color') == 'rgb(82, 102, 118)', f'{tag}: aktiv Petrol, inaktiv matt')
+    check(css(pg, item('karte'), 'color') == 'rgb(8, 127, 156)' and css(pg, item('gemerkt'), 'color') == 'rgb(82, 102, 118)', f'{tag}: aktiv Petrol, inaktiv matt')
     check(pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('#bottomnav [data-nav=karte] svg')); return s.fill + ' ' + s.fillOpacity; })()") == 'rgb(8, 127, 156) 0.3', f'{tag}: aktive Karte mit 30 % Füllung')
     ind = rect(pg, '#bottomnav .bn-ind'); k = rect(pg, item('karte'))
     ci = pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('#bottomnav .bn-ind')); return { bg: s.backgroundColor, r: s.borderTopLeftRadius, sh: s.boxShadow, pe: s.pointerEvents }; })()")
@@ -99,20 +99,20 @@ def run(b, w, hh):
     pg.click(item('mehr')); pg.wait_for_timeout(100)
     again = rect(pg, '#bottomnav .bn-ind')
     check(abs(again['w'] - ind['w']) <= 1 and abs(again['x'] - ind['x']) <= 1, f'{tag}: Tipp auf den aktiven Punkt animiert nicht')
-    # Nachbar: Pegel; Plopp sofort nach dem Klick
-    plop = pg.evaluate("(() => { const a = document.querySelector('#bottomnav [data-nav=pegel]'); a.click(); return a.classList.contains('is-plop'); })()")
+    # Nachbar ohne Abzeichen: Gemerkt; Plopp sofort nach dem Klick
+    plop = pg.evaluate("(() => { const a = document.querySelector('#bottomnav [data-nav=gemerkt]'); a.click(); return a.classList.contains('is-plop'); })()")
     check(plop, f'{tag}: neues Symbol ploppt (is-plop)')
     pg.wait_for_timeout(1000)
-    check(not pg.evaluate("document.querySelector('#bottomnav [data-nav=pegel]').classList.contains('is-plop')") and abs(cx(rect(pg, '#bottomnav .bn-ind')) - cx(rect(pg, item('pegel')))) <= 1.5, f'{tag}: Plopp vorbei, Markierung unter „Pegel“')
+    check(not pg.evaluate("document.querySelector('#bottomnav [data-nav=gemerkt]').classList.contains('is-plop')") and abs(cx(rect(pg, '#bottomnav .bn-ind')) - cx(rect(pg, item('gemerkt')))) <= 1.5, f'{tag}: Plopp vorbei, Markierung unter „Pegel“')
 
     # ---- Zurück-Taste und Adressen bewegen die Markierung ebenfalls
     pg.click(item('meldungen')); pg.wait_for_timeout(700)
     pg.go_back(); pg.wait_for_timeout(900)
-    check(pg.get_attribute(item('pegel'), 'aria-current') == 'page' and abs(cx(rect(pg, '#bottomnav .bn-ind')) - cx(rect(pg, item('pegel')))) <= 1.5, f'{tag}: Zurück-Taste: Markierung wieder unter „Pegel“')
+    check(pg.get_attribute(item('gemerkt'), 'aria-current') == 'page' and abs(cx(rect(pg, '#bottomnav .bn-ind')) - cx(rect(pg, item('gemerkt')))) <= 1.5, f'{tag}: Zurück-Taste: Markierung wieder unter „Gemerkt“')
     pg.evaluate("location.hash = '#naehe'"); pg.wait_for_timeout(900)
     check(pg.get_attribute(item('mehr'), 'aria-current') == 'page' and abs(cx(rect(pg, '#bottomnav .bn-ind')) - cx(rect(pg, item('mehr')))) <= 1.5, f'{tag}: #naehe → „Mehr“ markiert, Markierung folgt')
     pg.evaluate("location.hash = '#favoriten'"); pg.wait_for_timeout(500)
-    check(pg.get_attribute(item('mehr'), 'aria-current') == 'page', f'{tag}: #favoriten → „Mehr“ markiert')
+    check(pg.get_attribute(item('gemerkt'), 'aria-current') == 'page', f'{tag}: #favoriten → „Gemerkt“ markiert (Designumbau 2a)')
 
     # ---- „Melden“: keine Markierung, nur Plopp; Menü liegt über der Leiste
     pg.click(item('karte')); pg.wait_for_timeout(900)
@@ -157,17 +157,17 @@ def run(b, w, hh):
 
     # ---- Langes Drücken: Beschriftung als Blase, ohne zu navigieren
     pg.goto(uf.BASE + '#karte'); pg.reload(); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(500)
-    pe = rect(pg, item('pegel'))
+    pe = rect(pg, item('gemerkt'))
     pg.mouse.move(cx(pe), pe['y'] + pe['h'] / 2); pg.mouse.down(); pg.wait_for_timeout(600)
     tip = pg.locator('#bottomnav .bn-tip')
     tb = rect(pg, '#bottomnav .bn-tip') if tip.count() else None
-    check(tip.count() == 1 and tip.inner_text() == 'Pegel' and tb['y'] + tb['h'] <= bar['y'] + 1, f'{tag}: langes Drücken zeigt „Pegel“ als Blase über dem Symbol')
+    check(tip.count() == 1 and tip.inner_text() == 'Gemerkt' and tb['y'] + tb['h'] <= bar['y'] + 1, f'{tag}: langes Drücken zeigt „Gemerkt“ als Blase über dem Symbol')
     pg.mouse.up(); pg.wait_for_timeout(300)
-    check(not pg.url.endswith('#pegel') and pg.get_attribute(item('karte'), 'aria-current') == 'page', f'{tag}: langes Drücken löst den Link nicht aus')
+    check(not pg.url.endswith('#mehr/merkliste') and pg.get_attribute(item('karte'), 'aria-current') == 'page', f'{tag}: langes Drücken löst den Link nicht aus')
     pg.wait_for_timeout(1000)
     check(pg.locator('#bottomnav .bn-tip').count() == 0, f'{tag}: Blase verschwindet kurz nach dem Loslassen')
     pg.mouse.click(cx(pe), pe['y'] + pe['h'] / 2); pg.wait_for_timeout(400)
-    check(pg.get_attribute(item('pegel'), 'aria-current') == 'page', f'{tag}: ein kurzer Tipp navigiert danach normal')
+    check(pg.get_attribute(item('gemerkt'), 'aria-current') == 'page', f'{tag}: ein kurzer Tipp navigiert danach normal')
 
     # ---- Tastatur: Leiste ausblenden
     pg.click(item('karte')); pg.wait_for_timeout(500)
@@ -178,14 +178,9 @@ def run(b, w, hh):
 
     # ---- Nichts verdeckt
     bar = rect(pg, '#bottomnav')
-    # Pegel: die Karte reicht wie die Hauptkarte bis unten; frei liegen muss der Inhalt des Bottom Sheets (hier: Liste „Favoriten“)
-    for adr, sel in [('#pegel', '#pegelseite .pa-inhalt'), ('#meldungen', '#meldungsseite'), ('#mehr', '#mehrseite')]:
+    for adr, sel in [('#mehr/merkliste', '#mehrseite'), ('#meldungen', '#meldungsseite'), ('#mehr', '#mehrseite')]:
         pg.goto(uf.BASE + adr); pg.reload()
-        if adr == '#pegel': pg.wait_for_selector('.pa-chip[data-liste=fav]'); pg.wait_for_timeout(300); pg.click('.pa-chip[data-liste=fav]')
         pg.wait_for_selector(f'{sel}:not([hidden])'); pg.wait_for_timeout(700)
-        if adr == '#pegel':
-            ib = rect(pg, sel)
-            check(ib['y'] + ib['h'] <= bar['y'] + 1, f'{tag}: pegel: Bottom Sheet endet über der Leiste ({ib["y"] + ib["h"]:.0f} ≤ {bar["y"]:.0f})')
         tiefstes = pg.evaluate("""(sel) => { const sc = document.querySelector(sel); sc.scrollTop = sc.scrollHeight;
           return Math.max(...[...sc.querySelectorAll('*')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.bottom)); }""", sel)
         check(tiefstes <= bar['y'] + 1, f'{tag}: {adr[1:]}-Seite: der letzte Inhalt liegt über der Leiste ({tiefstes:.0f} ≤ {bar["y"]:.0f})')
@@ -214,8 +209,8 @@ def run(b, w, hh):
     ctx, pg = page(b, w, hh)
     pg.goto(uf.BASE + 'pegel-ampel.html'); pg.wait_for_selector('#am-q'); pg.wait_for_timeout(700)
     b2 = rect(pg, '#bottomnav')
-    check(abs(b2['y'] + b2['h'] - (hh - 10)) <= 1 and pg.get_attribute(item('pegel'), 'aria-current') == 'page' and abs(cx(rect(pg, '#bottomnav .bn-ind')) - cx(rect(pg, item('pegel')))) <= 1.5,
-          f'{tag}: Pegel-Ampel: gleiche Leiste, „Pegel“ markiert')
+    check(abs(b2['y'] + b2['h'] - (hh - 10)) <= 1 and pg.get_attribute(item('karte'), 'aria-current') == 'page' and abs(cx(rect(pg, '#bottomnav .bn-ind')) - cx(rect(pg, item('karte')))) <= 1.5,
+          f'{tag}: Pegel-Ampel: gleiche Leiste, „Karte“ markiert (Pegel liegen auf der Karte, Designumbau 2a)')
     tiefstes = pg.evaluate("() => { window.scrollTo(0, document.documentElement.scrollHeight); return Math.max(...[...document.querySelectorAll('body > *:not(nav):not(script)')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.bottom)); }")
     check(tiefstes <= b2['y'] + 1, f'{tag}: Pegel-Ampel: der letzte Inhalt liegt über der Leiste ({tiefstes:.0f} ≤ {b2["y"]:.0f})')
     check(not pg.errs, f'{tag}: Pegel-Ampel ohne JS-Fehler {pg.errs[:3]}')
@@ -249,7 +244,7 @@ def sonderfaelle(b):
     ctx, pg = page(b, 1024, 768, mobile=False)
     pg.goto(uf.BASE + '#karte'); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(600)
     texte = [t.strip() for t in pg.locator('#topnav [data-nav]').all_inner_texts()]
-    check(pg.locator('#bottomnav').is_hidden() and pg.locator('#topnav').is_visible() and texte == ['Karte', 'Pegel', 'Meldungen', 'Mehr'] and pg.locator('#topnav .nav-badge').count() == 0, f'Desktop: Navigation oben unverändert, keine Leiste unten ({texte})')
+    check(pg.locator('#bottomnav').is_hidden() and pg.locator('#topnav').is_visible() and texte == ['Karte', 'Meldungen', 'Gemerkt', 'Mehr'] and pg.locator('#topnav .nav-badge').count() == 0, f'Desktop: Navigation oben unverändert, keine Leiste unten ({texte})')
     ctx.close()
 
 with tempfile.TemporaryDirectory() as t:

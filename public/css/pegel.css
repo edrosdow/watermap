@@ -4,7 +4,7 @@
 /* Bereich ein-/ausblenden */
 .pegelseite { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; background: var(--wm-flaeche-2); }
 .pegelseite:focus { outline: none; }
-body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, body.view-meldungen .shell, body.view-mehr .toolbar, body.view-mehr .shell { display: none; }
+body.view-meldungen .toolbar, body.view-meldungen .shell, body.view-mehr .toolbar, body.view-mehr .shell { display: none; }
 
 .pg-seite { max-width: 1280px; margin: 0 auto; padding: 24px 24px 40px; }
 .pg-kopf { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -210,11 +210,6 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pd.is-eingebettet .pd-body { padding: 0 12px 16px; }
 
 /* Pegel-Vorschau (Handy) */
-.gpeek-ico { background: var(--wm-petrol); color: #fff; }
-.gpeek-wert { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; color: var(--navy); }
-.gpeek-wert strong { font-size: 28px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-.gpeek-wert > span:nth-child(2) { font-weight: 700; margin-left: -4px; }
-.gpeek-trend { font-size: 14px; font-weight: 700; }
 
 /* ---------------------------------------------------------------- Schmal */
 @media (max-width: 1023px) {
@@ -410,11 +405,6 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pf-tidezeile-pfeil { display: grid; flex: none; color: var(--slip); }
 .pf-tipp { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
 
-@media (max-width: 767px) {
-  body.view-fluss .app-header { display: none; }
-  body.view-fluss .pf-kopf { padding-top: calc(10px + env(safe-area-inset-top)); }
-}
-
 /* ---------------------------------------------------------------- Tidepegel */
 .pt-klein { font-size: 14px; color: var(--muted); font-weight: 500; }
 .pt-kurve { position: relative; margin-top: 10px; min-height: 190px; }
@@ -450,7 +440,6 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 @media (max-width: 400px) { .pt-gz-zeit { font-size: 24px; } .pt-gz-kachel { padding: 10px 12px; } }
 .pm-tide { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
 .pm-karte.pz-tide { --z: var(--wm-fokus); }
-
 
 /* ---------------------------------------------------------------- Pegel-Tab neu (7.45.0): Kopf mit Umschalter, Suche, Liste | Karte */
 .pg-seite { max-width: 860px; }
@@ -513,9 +502,7 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 @media (max-width: 767px) {
   .pg-seite, .pg-seite.pf-seite, .pg-seite.pg-detailseite { max-width: none; }
   .pg-kopf { padding-bottom: 12px; margin-bottom: 0; flex-direction: row; align-items: flex-start; }
-  body.view-pegel-start .app-header { display: none; }
-  body.view-pegel-start .pg-kopf { padding-top: calc(14px + env(safe-area-inset-top)); }
-  .pg-suchzeile .pg-suche { font-size: 15px; padding-left: 42px; padding-right: 10px; }
+      .pg-suchzeile .pg-suche { font-size: 15px; padding-left: 42px; padding-right: 10px; }
   .pg-suchzeile .pg-suche::placeholder { font-size: 14.5px; }
   .pg-kopf-zeile { flex-direction: row; }
   .pg-tabs { background: rgba(255, 255, 255, .12); }
@@ -539,47 +526,7 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pegelseite.pg-ist-karte .pg-seite { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; width: 100%; padding: 0; margin: 0; }
 .pg-seite.is-karte .pg-kopf { padding-left: 16px; padding-right: 16px; margin-bottom: 0; }
 .pg-seite.is-karte .pg-suchzeile { padding: 0 16px 12px; }
-.pk-ansicht { position: relative; flex: 1 1 auto; min-height: 280px; background: var(--wm-flaeche-2); }
-.pk-karte { position: absolute; inset: 0; z-index: 0; }
-.pk-legende { position: absolute; z-index: 500; top: 10px; left: 10px; right: 56px; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; pointer-events: none; }
-.pk-leg { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 12px; border-radius: 99px; background: rgba(255, 255, 255, .95); box-shadow: 0 1px 4px rgba(11, 48, 69, .18); font-size: 14px; font-weight: 700; color: var(--navy); }
-.pk-leg i { width: 11px; height: 11px; border-radius: 50%; display: block; }
-.pk-meldung { position: absolute; z-index: 600; top: 60px; left: 16px; right: 16px; margin: 0; padding: 12px 14px; border-radius: 12px; background: #fff; color: var(--wm-stop-text); font-weight: 650; }
-.pk-marker { background: none; border: 0; }
-.pk-pille { --pk: var(--wm-leise); display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 10px 0 8px; border-radius: 99px; background: #fff; border: 2px solid var(--pk);
-  box-shadow: 0 1px 4px rgba(11, 48, 69, .3); font: 800 13.5px/1 var(--font, system-ui), sans-serif; color: var(--navy); white-space: nowrap; }
-.pk-pille b { width: 10px; height: 10px; border-radius: 50%; background: var(--pk); display: block; flex: none; }
-.pk-welle { color: var(--pk); flex: none; display: block; }
-.pk-pille.is-gemerkt { min-height: 32px; padding: 0 12px 0 10px; font-size: 15px; border-width: 2.5px; }
-.pk-pille.is-gewaehlt { background: var(--navy); border-color: var(--navy); color: #fff; box-shadow: 0 0 0 2px #fff, 0 3px 8px rgba(11, 48, 69, .45); }
-.pk-pille.is-gewaehlt b { box-shadow: 0 0 0 2px #fff; }
 /* kleiner Zoom: nur Punkte */
-.pk-kompakt .pk-pille { min-height: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
-.pk-kompakt .pk-pille .pk-zahl { display: none; }
-.pk-kompakt .pk-pille b { width: 14px; height: 14px; box-shadow: 0 0 0 2px #fff, 0 1px 3px rgba(0, 0, 0, .35); }
-.pk-kompakt .pk-pille .pk-welle { width: 16px; height: 16px; background: #fff; border-radius: 50%; box-shadow: 0 0 0 2px #fff, 0 1px 3px rgba(0, 0, 0, .35); }
-.pk-kompakt .pk-pille.is-gemerkt b { width: 18px; height: 18px; }
-.pk-kompakt .pk-pille.is-gewaehlt { background: transparent; }
-.pk-kompakt .pk-pille.is-gewaehlt b { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--navy); }
-.pk-vorschau { position: absolute; z-index: 700; left: 12px; right: 12px; bottom: 12px; max-width: 520px; margin: 0 auto; padding: 14px 16px 14px; border-radius: 20px; background: #fff; box-shadow: 0 6px 28px rgba(11, 48, 69, .28); }
-.pk-vorschau[hidden] { display: none; }
-.pk-v-kopf { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-.pk-v-name { margin: 0; font-size: 22px; color: var(--navy); }
-.pk-v-sub { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
-.pk-v-wert { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin: 6px 0 10px; color: var(--navy); }
-.pk-v-wert strong { font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
-.pk-v-einheit { font-size: 18px; font-weight: 700; margin-left: -8px; }
-.pk-v-trend { font-weight: 750; font-size: 16px; }
-.pk-v-trend.pt-down { color: var(--wm-stop-text); } .pk-v-trend.pt-up { color: var(--wm-petrol-tief); } .pk-v-trend.pt-flat { color: var(--wm-matt); }
-.pk-v-extra { color: var(--muted); font-size: 16px; }
-.pk-v-knoepfe { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
-.pk-details { min-height: 48px; }
-.pk-merken { min-height: 48px; padding: 0 18px; border: 1px solid var(--line); border-radius: 14px; background: #fff; color: var(--navy); font-weight: 750; font-size: 16px; display: inline-flex; align-items: center; gap: 6px; }
-@media (max-width: 767px) {
-  .pk-vorschau { bottom: calc(var(--bn-space) - 6px); }
-  .pk-legende { right: 10px; top: 8px; }
-  .pk-ansicht .leaflet-top.leaflet-right { top: 44px; }
-}
 
 /* ---------------------------------------------------------------- Pegel-Tab aufgeräumt (7.46.0) */
 .pegelseite { overflow-x: hidden; }   /* nichts darf die Seite seitlich verschiebbar machen */
@@ -651,7 +598,6 @@ body.view-pegel .toolbar, body.view-pegel .shell, body.view-meldungen .toolbar, 
 .pm-etiketten[hidden] { display: none; }
 .pm-et { display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 99px; background: var(--wm-flaeche-2); color: var(--wm-matt); font-size: 13px; font-weight: 700; }
 .pm-spark-vorh { stroke-dasharray: 4 3; opacity: .85; }
-.pk-v-extra:empty { display: none; }
 
 /* ---------------------------------------------------------------- Stufe 3 (7.48.0): Pegel-Alarm-Fenster */
 @media (min-width: 768px) { .wxd-alarm { width: min(94vw, 520px); } }
@@ -700,134 +646,17 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 
 /* ---------------------------------------------------------------- Pegel als Kartenanwendung (7.49.0)
    Kopf mit Suche und Filtern · Karte (ca. 65 %) · Panel rechts; Handy: Karte voll, Panel als Bottom Sheet. */
-.pegelseite.pa-modus { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
-.pa { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; position: relative; --pa-unten: 0px; }
-.pa-kopf { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 20px; padding: 12px 22px; background: #fff; border-bottom: 1px solid var(--line); position: relative; z-index: 1100; }
-.pa-titelblock { min-width: 0; }
-.pa-titelzeile { display: flex; align-items: center; gap: 6px; }
-.pa-h1 { margin: 0; font-size: 22px; line-height: 1.15; letter-spacing: -.01em; color: var(--navy); }
-.pa-neu { width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
-.pa-neu:hover { background: var(--bg); color: var(--navy); }
-.pa-neu.is-busy svg { animation: pa-dreh 1s linear infinite; }
 @keyframes pa-dreh { to { transform: rotate(360deg); } }
-.pa-stand { margin: 1px 0 0; font-size: 13px; color: var(--muted); }
-.pa-stand.is-offline { color: var(--fuel-ink); font-weight: 700; }
-.pa-suchbox { position: relative; flex: 1 1 300px; max-width: 480px; }
-.pa-suche { width: 100%; height: 44px; padding: 0 14px 0 42px; border: 1.5px solid var(--line); border-radius: 22px; background: #fff; color: var(--ink); font: inherit; font-size: 16px; -webkit-appearance: none; appearance: none; }
-.pa-suche::-webkit-search-cancel-button { display: none; }
-.pa-suche:focus { outline: none; border-color: var(--slip); box-shadow: 0 0 0 3px rgba(8, 127, 156, .18); }
-.pa-suche-ico { position: absolute; left: 14px; top: 22px; transform: translateY(-50%); color: var(--muted); display: grid; pointer-events: none; }
-.pa-treffer { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 1300; margin: 0; padding: 6px; list-style: none; background: #fff; border-radius: 16px; box-shadow: var(--shadow-lg); max-height: min(60vh, 440px); overflow-y: auto; }
-.pa-treffer[hidden] { display: none; }
-.pa-t { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 10px; border-radius: 10px; cursor: pointer; }
-.pa-t:hover, .pa-t[aria-selected="true"] { background: var(--info-bg); }
-.pa-t-ico { width: 34px; height: 34px; border-radius: 50%; background: var(--bg); color: var(--slip); display: grid; place-items: center; flex: none; }
-.pa-t-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.pa-t-text b { color: var(--navy); font-size: 15.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pa-t-text small { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pa-t-wert { font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.pa-t-leer { padding: 12px 10px; color: var(--muted); }
-.pa-filter { display: flex; gap: 8px; }
-.pa-chip { min-height: 40px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 20px; background: #fff; color: var(--ink); font: inherit; font-size: 14px; font-weight: 700;
-  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
-.pa-chip:hover { border-color: var(--wm-rand); }
-.pa-chip[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
-.pa-chip svg { color: var(--wm-sonne); display: block; }
-.pa-chip[aria-pressed="true"] svg { color: var(--wm-sonne); }
-.pa-chip-zahl { min-width: 20px; padding: 1px 6px; border-radius: 99px; background: var(--bg); color: var(--navy); font-size: var(--wm-t-xs); text-align: center; }
-.pa-chip[aria-pressed="true"] .pa-chip-zahl { background: rgba(255, 255, 255, .2); color: #fff; }
-.pa-chip-zahl:empty { display: none; }
-
-.pa-haupt { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 65fr) minmax(340px, 35fr); }
-.pa-haupt .pk-ansicht { min-height: 0; }
-.pa-panel { min-height: 0; display: flex; flex-direction: column; background: var(--bg); border-left: 1px solid var(--line); }
-.pa-griff { display: none; }
-.pa-inhalt { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px; }
 
 /* gewählter Pegel kurz */
-.pa-kurz { background: #fff; border-radius: 18px; padding: 16px 18px 18px; box-shadow: 0 2px 12px rgba(11, 48, 69, .10); }
-.pa-k-kopf { display: flex; align-items: flex-start; gap: 4px; }
-.pa-k-titel { flex: 1; min-width: 0; }
-.pa-name { margin: 0; font-size: 23px; line-height: 1.2; color: var(--navy); }
-.pa-name:focus { outline: none; }
-.pa-name:focus-visible { outline: 3px solid var(--slip); outline-offset: 2px; border-radius: 4px; }
-.pa-sub { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
-.pa-kurz .pm-stern { flex: none; }
-.pa-schliessen { width: 44px; height: 44px; margin: -4px -8px 0 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); display: grid; place-items: center; flex: none; cursor: pointer; }
-.pa-schliessen:hover { background: var(--bg); color: var(--navy); }
-.pa-zeit { margin: 6px 0 0; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
-.pa-zeit.is-alt { display: inline-flex; padding: 5px 10px; border-radius: 10px; background: var(--warn-bg); color: var(--fuel-ink); font-weight: 750; }
-.pa-k-mitte { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-.pa-wert { margin: 0; line-height: 1; color: var(--navy); }
-.pa-wert strong { font-size: 54px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-.pa-wert span { font-size: 20px; font-weight: 750; }
-.pa-kurz.is-alt .pa-wert { color: var(--wm-matt); }
-.pa-trend { margin: 6px 0 0; font-size: 16px; font-weight: 750; min-height: 1.3em; }
-.pa-trend.pt-up, .pa-z-aend.pt-up { color: var(--wm-petrol-tief); }
-.pa-trend.pt-down, .pa-z-aend.pt-down { color: var(--wm-stop-text); }
-.pa-trend.pt-flat, .pa-z-aend.pt-flat { color: var(--muted); }
-.pa-kurve { display: block; width: 100%; height: 64px; overflow: visible; }
-.pa-kurve.is-klein { height: 26px; }
-.pa-kurve-linie { fill: none; stroke: var(--slip); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-.pa-kurve.is-klein .pa-kurve-linie { stroke-width: 2; }
-.pa-kurve-flaeche { fill: var(--slip); opacity: .09; }
-.pa-kurve-punkt { fill: var(--slip); }
-.pa-kurve-box { min-height: 64px; }
-.pa-kurve-fuss { display: flex; justify-content: space-between; font-size: var(--wm-t-xs); color: var(--muted); margin-top: 2px; }
-.pa-kurve-fuss[hidden] { display: none; }
-.pa-einordnung { display: inline-flex; align-items: center; gap: 7px; margin: 12px 0 0; padding: 5px 11px; border-radius: 99px; background: var(--bg); color: var(--navy); font-size: 13.5px; font-weight: 750; }
-.pa-einordnung i, .pa-z-punkt { width: 10px; height: 10px; border-radius: 50%; background: var(--wm-leise); flex: none; display: block; }
-.pz-low > i, .pa-z-punkt.pz-low { background: var(--wm-warn); }
-.pz-normal > i, .pa-z-punkt.pz-normal { background: var(--wm-gut); }
-.pz-high > i, .pa-z-punkt.pz-high { background: var(--wm-hoch); }
-.pz-hsw > i, .pa-z-punkt.pz-hsw { background: var(--wm-stop); }
-.pa-k-knoepfe { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 14px; }
-.pa-k-knoepfe .btn { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 16px; }
-.pa-hinweis { margin: 12px 0 0; padding: 8px 11px; border-radius: 10px; background: var(--bg); color: var(--muted); font-size: 13px; }
+.pz-low > i { background: var(--wm-warn); }
+.pz-normal > i { background: var(--wm-gut); }
+.pz-high > i { background: var(--wm-hoch); }
+.pz-hsw > i { background: var(--wm-stop); }
 
 /* Liste: Meine Pegel / im Kartenausschnitt */
-.pa-liste { margin-top: 20px; }
-.pa-inhalt > .pa-liste:first-child { margin-top: 0; }
-.pa-liste-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 0 4px 8px; }
-.pa-h2 { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-.pa-anzahl { font-size: 13px; color: var(--muted); }
-.pa-zeilen { list-style: none; margin: 0; padding: 4px 8px; background: #fff; border-radius: 16px; box-shadow: 0 1px 3px rgba(11, 48, 69, .08); }
-.pa-z { display: flex; align-items: center; gap: 2px; }
-.pa-z + .pa-z { border-top: 1px solid var(--wm-flaeche-2); }
-.pa-z.is-gewaehlt .pa-z-knopf { background: var(--info-bg); }
-.pa-z-knopf { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 8px 6px; border: 0; border-radius: 10px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.pa-z-knopf:hover { background: var(--wm-wasser-2); }
-.pa-z-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.pa-z-text b { color: var(--navy); font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pa-z-text small { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pa-z-spark { width: 72px; flex: none; }
-.pa-z-spark:empty { display: none; }
-.pa-z-wert { display: flex; flex-direction: column; align-items: flex-end; flex: none; text-align: right; }
-.pa-z-wert b { color: var(--navy); font-size: 15.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.pa-z-aend { font-size: var(--wm-t-xs); font-weight: 750; white-space: nowrap; }
-.pa-z-aend.is-alt { color: var(--fuel-ink); }
-.pa-leer { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 16px; background: #fff; box-shadow: 0 1px 3px rgba(11, 48, 69, .08); }
-.pa-leer strong { color: var(--navy); font-size: 16px; }
-.pa-leer p { margin: 4px 0 0; color: var(--muted); font-size: 14.5px; line-height: 1.45; }
-.pa-leer-ico { color: var(--wm-sonne); flex: none; display: grid; }
-.pa-fehler { flex-direction: column; }
-.pa-leer-text { margin: 0; padding: 14px 16px; border-radius: 16px; background: #fff; color: var(--muted); font-size: 14.5px; }
-.pa-fuss { margin: 16px 4px 4px; font-size: var(--wm-t-xs); color: var(--muted); line-height: 1.45; }
 
 /* Cockpit im Panel: helle Kopfzeile statt Navy-Block */
-.pa-panel .pd { background: transparent; }
-.pa-panel .pd-kopf { background: #fff; color: var(--navy); border-radius: 18px 18px 0 0; padding: 4px 12px 14px; }
-.pa-panel .pd-icon { color: var(--navy); }
-.pa-panel .pd-icon:hover { background: var(--bg); }
-.pa-panel .pd-kicker { color: var(--muted); }
-.pa-panel .pd-kopf .pt-down { color: var(--wm-stop-text); } .pa-panel .pd-kopf .pt-up { color: var(--wm-petrol-tief); } .pa-panel .pd-kopf .pt-flat { color: var(--muted); }
-.pa-panel .pd-zeit { color: var(--muted); }
-.pa-panel .pd-kopf .pm-stern:not(.is-on) { color: var(--muted); }
-.pa-panel .pd-kopf :focus-visible { outline-color: var(--slip); }
-.pa-panel .pd.is-eingebettet .pd-body { margin-top: 0; padding: 12px 0 8px; background: transparent; }
-.pa-panel .pd.is-eingebettet .pd-wert strong { font-size: 48px; }
-.pa-panel .pd-umschalter button { padding: 0 11px; white-space: nowrap; }
-.pa-panel .pd-karte-kopf { flex-wrap: wrap; }
 .pd-vorh-info { margin: 8px 0 0; font-size: 13.5px; color: var(--muted); }
 .pd-vorh-info[hidden] { display: none; }
 .pd-kw { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--wm-flaeche-2); }
@@ -841,101 +670,15 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pd-stamm[open] summary { margin-bottom: 10px; }
 
 /* Karte im Pegel-Tab */
-.pa .pk-ansicht { background: var(--wm-flaeche-2); }
-.pa .pk-legende { top: auto; bottom: calc(var(--pa-unten) + 10px); left: 10px; right: auto; max-width: calc(100% - 20px); gap: 4px; }
-.pa .pk-leg { min-height: 24px; padding: 0 9px; font-size: var(--wm-t-xs); font-weight: 650; gap: 5px; }
-.pa .pk-leg i { width: 9px; height: 9px; }
-.pa .leaflet-bottom { bottom: var(--pa-unten); }
-.pa .leaflet-bottom.leaflet-left { display: none; }
-.pk-stern { font-style: normal; color: var(--wm-sonne); font-size: var(--wm-t-xs); margin-left: -2px; }
-.pk-pille.is-gewaehlt .pk-stern { color: var(--wm-sonne); }
-.pk-pille.is-old { opacity: .7; }
-.pk-pille.is-old b { background: transparent; box-shadow: inset 0 0 0 2px var(--pk); }
-.pk-pille.is-gewaehlt { transform: scale(1.12); }
-.pk-cluster { background: none; border: 0; }
-.pk-cluster span { width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, .95); border: 3px solid var(--slip); display: grid; place-items: center;
-  font: 800 13px/1 var(--font, system-ui), sans-serif; color: var(--navy); box-shadow: 0 1px 4px rgba(11, 48, 69, .3); }
-.pk-kompakt .pk-pille .pk-stern { display: none; }
 
-@media (max-width: 1100px) and (min-width: 768px) {
-  .pa-kopf { padding: 10px 16px; gap: 10px 14px; }
-  .pa-suchbox { flex-basis: 220px; }
-  .pa-chip { padding: 0 11px; }
-}
-.pa-tipp { margin: 0 4px 16px; padding: 12px 14px; border-radius: 14px; background: var(--info-bg); color: var(--navy); font-size: 14.5px; line-height: 1.4; }
 @media (max-width: 767px) {
-  .pa-kopf { position: absolute; top: 0; left: 0; right: 0; flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 8px; padding: calc(10px + env(safe-area-inset-top)) 12px 0;
-    background: none; border: 0; pointer-events: none; }
-  .pa-kopf > * { pointer-events: auto; }
-  .pa-titelblock { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .pa-suchbox { flex: none; max-width: none; }
-  .pa-suche { height: 46px; border: 0; border-radius: 23px; box-shadow: 0 2px 10px rgba(11, 48, 69, .22); }
-  .pa-suche-ico { top: 23px; }
-  .pa-filter { overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 12px 6px; }
-  .pa-filter::-webkit-scrollbar { display: none; }
-  .pa-chip { border: 0; min-height: 36px; box-shadow: 0 1px 4px rgba(11, 48, 69, .25); }
-  .pa-haupt { display: block; position: relative; }
-  .pa-haupt .pk-ansicht { position: absolute; inset: 0; }
-  .pa .pk-ansicht .leaflet-top.leaflet-right { top: calc(106px + env(safe-area-inset-top)); }
-  .pa .pk-legende { display: none; }
-  .pa-panel { position: absolute; z-index: 1000; left: 0; right: 0; bottom: 0; max-height: 46%; border: 0; border-radius: 22px 22px 0 0; background: #fff;
-    box-shadow: 0 -4px 20px rgba(11, 48, 69, .2); padding-bottom: var(--bn-space, 0px); }
-  .pa-panel.hat-auswahl { max-height: 64%; }
-  .pa-panel.is-gross { max-height: none; top: var(--pa-gross-top, calc(env(safe-area-inset-top) + 170px)); }   /* --pa-gross-top: aus der Kopfhöhe (pegel-dashboard.js) */   /* groß: unter Suche und Chips bleibt ein Streifen Karte (wie Hauptkarte) */
-  .pa-griff { display: flex; justify-content: center; align-items: center; flex: none; width: 100%; height: 26px; padding: 0; border: 0; background: none; cursor: pointer; }
-  .pa-griff span { width: 40px; height: 5px; border-radius: 3px; background: var(--wm-rand); }
-  .pa-inhalt { padding: 0 16px 12px; }
-  .pa-panel.hat-auswahl:not(.is-gross) .pa-liste, .pa-panel.hat-auswahl:not(.is-gross) .pa-fuss { display: none; }
-  .pa-kurz { padding: 0 2px 4px; border-radius: 0; box-shadow: none; }
-  .pa-name { font-size: 21px; }
-  .pa-k-mitte { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 14px; margin-top: 6px; }
-  .pa-wert strong { font-size: 46px; }
-  .pa-trend { font-size: 15px; }
-  .pa-kurve { height: 56px; }
-  .pa-kurve-box { min-height: 56px; }
-  .pa-einordnung { margin-top: 8px; }
-  .pa-k-knoepfe { margin-top: 12px; }
-  .pa-hinweis, .pa-tipp { display: none; }
-  .pa-zeilen { padding: 0; box-shadow: none; }
-  .pa-leer { box-shadow: none; padding: 6px 0; }
-  .pa-leer-text { padding: 6px 0; }
-  .pa-liste-kopf { margin: 2px 0 4px; }
-  .pa-panel .pd-kopf { padding: 0 0 12px; }
-  .pa-panel .pd.is-eingebettet .pd-body { padding: 8px 0; }
-  .pa-panel .pd-karte { box-shadow: none; border: 1px solid var(--wm-linie); padding: 14px 14px; }
-  .pa-panel .pd-umschalter button { padding: 0 10px; font-size: 14px; }
-}
-.pa-panel .pd-kopf .pm-stern { background: var(--bg); }
+                              /* --pa-gross-top: aus der Kopfhöhe (pegel-dashboard.js) */   /* groß: unter Suche und Chips bleibt ein Streifen Karte (wie Hauptkarte) */
+                                            }
 
 /* ---------------------------------------------------------------- Pegel optimiert (7.50.0): Pillen, kompakte Ansicht, Stufen, Einordnung */
 /* Pillen „● 245 cm ↗“ – kräftige Ampel nur mit Kennwerten, über HSW gefüllt */
-.pk-pille { font-weight: 800; gap: 5px; min-height: 28px; border-width: 2.5px; }
-.pk-zahl small { font-size: .82em; font-weight: 750; }
-.pk-pfeil { font-style: normal; font-weight: 900; font-size: 13px; line-height: 1; color: var(--navy); }
-.pk-pille.is-low .pk-pfeil, .pk-pille.is-low .pk-zahl { color: var(--wm-warn-text); }
-.pk-pille.is-hsw { background: var(--wm-stop); border-color: var(--wm-stop); color: #fff; }
-.pk-pille.is-hsw b { background: #fff; }
-.pk-pille.is-hsw .pk-pfeil, .pk-pille.is-hsw .pk-zahl { color: #fff; }
-.pk-pille.is-gewaehlt .pk-pfeil, .pk-pille.is-gewaehlt .pk-zahl { color: #fff; }
-.pk-pille.is-gewaehlt { box-shadow: 0 0 0 3px var(--pk), 0 3px 10px rgba(11, 48, 69, .5); border-color: #fff; }
-.pk-kompakt .pk-pille .pk-pfeil { display: none; }
 
 /* Stufe 1: kompakt, ohne Leerraum; Wert und 24-h-Kurve nebeneinander */
-.pa-kurz { padding: 14px 16px 16px; }
-.pa-sub { font-weight: 600; color: var(--wm-matt); }
-.pa-k-mitte { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 14px; margin-top: 6px; }
-.pa-wert strong { font-size: 50px; }
-.pa-kurve-box { min-height: 56px; }
-.pa-kurve-box .pa-kurve { height: 56px; }
-.pa-trend { margin: 6px 0 0; font-size: 14.5px; font-weight: 650; color: var(--wm-matt); min-height: 1.35em; line-height: 1.35; }
-.pa-trend b { font-weight: 800; }
-.pa-trend b.pt-up { color: var(--wm-petrol-tief); } .pa-trend b.pt-down { color: var(--wm-stop-text); } .pa-trend b.pt-flat { color: var(--navy); }
-.pa-tr-24, .pa-tr-tend { white-space: nowrap; }
-.pa-tr-laden { color: var(--muted); font-weight: 600; }
-.pa-einordnung { margin-top: 8px; font-weight: 800; }
-.pa-k-knoepfe { margin-top: 12px; }
-.pa-k-knoepfe .btn { min-height: 48px; font-weight: 800; }
-.pa-z-aend { font-weight: 800; }
 
 /* Cockpit-Kopf: Änderung 24 h und Tendenz (2 h) als zwei Felder */
 .pd-tz { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
@@ -943,10 +686,6 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pd-tz span { font-size: var(--wm-t-xs); font-weight: 700; color: var(--wm-linie); }
 .pd-tz strong { font-size: 17px; font-weight: 800; color: #fff; }
 .pd-kopf .pd-tz strong.pt-up { color: var(--wm-petrol-hell); } .pd-kopf .pd-tz strong.pt-down { color: var(--wm-stop-hell); }
-.pa-panel .pd-tz > div { background: var(--bg); }
-.pa-panel .pd-tz span { color: var(--wm-matt); }
-.pa-panel .pd-tz strong { color: var(--navy); }
-.pa-panel .pd-kopf .pd-tz strong.pt-up { color: var(--wm-petrol-tief); } .pa-panel .pd-kopf .pd-tz strong.pt-down { color: var(--wm-stop-text); }
 .pd-body { gap: 12px; }
 .pd-karte { padding: 14px 16px; }
 .pd-karte h2 { margin-bottom: 8px; font-size: 18px; }
@@ -976,49 +715,17 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pd-kw-name { color: var(--wm-matt); font-weight: 600; font-size: 13px; }
 .pd-stamm h2 { margin: 0 0 8px; }
 .pd-stamm .pd-hinweis { margin: 8px 0 0; }
-.pa-k-knoepfe .pa-verlauf { white-space: nowrap; }
 .pd-tz strong { font-size: 15.5px; line-height: 1.3; }
 @media (max-width: 400px) {
-  .pa-k-knoepfe .btn { font-size: 15px; padding: 0 12px; }
-  .pa-k-knoepfe .pa-alarm { font-size: 0; gap: 0; padding: 0 14px; }   /* nur Glocke; Name steht im aria-label */
-  .pa-wert strong { font-size: 44px; }
-}
+    /* nur Glocke; Name steht im aria-label */
+  }
 
 /* ---------------------------------------------------------------- Pegel aufgeräumt (7.51.0): kein Dauer-Sheet, weniger Text */
-.pa-panel[hidden] { display: none; }
-.pa-haupt { grid-template-columns: minmax(0, 1fr); }
-.pa.hat-panel .pa-haupt { grid-template-columns: minmax(0, 65fr) minmax(340px, 35fr); }
-.pa-ico { width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--wm-flaeche-2); color: var(--navy); display: grid; place-items: center; flex: none; cursor: pointer; }
-.pa-ico:hover { background: var(--wm-linie); }
-.pa-kurz .pm-stern.is-klein { width: 40px; height: 40px; }
-.pa-k-kopf { align-items: center; gap: 6px; }
-.pa-k-kopf .pa-name { flex: 1; min-width: 0; font-size: 21px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pa-name small { font-size: 15px; font-weight: 600; color: var(--wm-matt); }
-.pa-schliessen { margin: 0; }
-.pa-k-mitte { margin-top: 4px; }
-.pa-trend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 6px 0 0; font-size: 14.5px; font-weight: 700; color: var(--wm-matt); }
-.pa-zustand { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; color: var(--navy); }
-.pa-zustand i { width: 10px; height: 10px; border-radius: 50%; background: var(--wm-leise); display: block; }
-.pa-zustand.pz-low i { background: var(--wm-warn); } .pa-zustand.pz-normal i { background: var(--wm-gut); } .pa-zustand.pz-high i { background: var(--wm-hoch); } .pa-zustand.pz-hsw i { background: var(--wm-stop); }
-.pa-zahlen { display: inline-flex; gap: 14px; }
-.pa-zahlen b { font-weight: 800; }
-.pa-zahlen b.pt-up { color: var(--wm-petrol-tief); } .pa-zahlen b.pt-down { color: var(--wm-stop-text); } .pa-zahlen b.pt-flat { color: var(--navy); }
-.pa-kurz > .pa-verlauf { width: 100%; min-height: 48px; margin-top: 12px; font-size: 16px; font-weight: 800; }
-.pa-liste { margin: 0; }
-.pa-liste-kopf { align-items: center; margin: 0 0 4px; }
-.pa-liste .pa-h2 { font-size: 17px; letter-spacing: 0; text-transform: none; color: var(--navy); }
-.pa-liste .pa-h2:focus { outline: none; }
-.pa-z-knopf { min-height: 52px; }
-.pa-z-wert { flex-direction: row; align-items: baseline; gap: 2px; font-weight: 800; color: var(--navy); font-size: 15.5px; white-space: nowrap; }
-.pa-z-wert em { font-style: normal; font-weight: 900; }
-.pa-z-wert.is-alt { color: var(--muted); }
 /* Details: kurze Zeilen statt Kästen */
 .pd-tz { display: flex; flex-direction: column; gap: 0; margin: 2px 0 0; }
 .pd-tz p { margin: 0; font-size: 14px; font-weight: 700; color: var(--wm-linie); }
 .pd-tz p span { color: inherit; font-size: inherit; }
 .pd-tz strong { font-size: 14.5px; font-weight: 800; color: #fff; }
-.pa-panel .pd-tz p { color: var(--wm-matt); }
-.pa-panel .pd-tz strong { color: var(--navy); }
 .pd-verlauf > .pd-umschalter { display: flex; width: 100%; margin-bottom: 4px; }
 .pd-verlauf > .pd-umschalter button { flex: 1; }
 .pd-einordnung h2 { margin: 0 0 4px; }
@@ -1040,58 +747,34 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pd-kw.pd-zu { margin-top: 0; padding-top: 0; border-top: 0; }
 .pd-zu .pd-klartext { margin: 0 0 8px; font-size: 14.5px; }
 .pd-link { border: 0; background: none; padding: 8px 0 0; color: var(--slip); font: inherit; font-weight: 800; cursor: pointer; }
-.pa-panel .pd-aktion { background: var(--bg); box-shadow: none; }
 @media (max-width: 767px) {
-  .pa-panel.hat-auswahl:not(.is-gross) { max-height: 60%; }
-  .pa-panel .pd-zuliste { border: 1px solid var(--wm-linie); box-shadow: none; }
-  .pd-aktion { font-size: 13px; }
+      .pd-aktion { font-size: 13px; }
 }
 
+/* Hinweis (7.70.0): früher „.pd.pd-blau“ – der Zusatz pd-blau entfällt, „.pd.pd“ behält das Gewicht der Regeln (sie überstimmen ältere .pd-Regeln weiter oben; diese räumt Phase 5 auf). */
 /* ---------------------------------------------------------------- Pegel im Stil einer Wetter-App (7.52.0)
    Zart blau (7.53.0): ganz helles Wasserblau, weiße Karten mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. Gilt für Kompaktansicht, Details im Panel/Sheet, Pegel-Fenster und Kartenpanel. */
 :root { --pd-blau: var(--wm-verlauf); --pd-glas: var(--wm-flaeche); --pd-glas2: var(--wm-flaeche); --pd-linie: var(--wm-linie); --pd-matt: var(--wm-matt); --pd-schatten: var(--wm-schatten); }   /* Verweise auf tokens.css */
 /* Panel/Sheet mit gewähltem Pegel: blau (Desktop und Handy) */
-.pa-panel.hat-auswahl { background: var(--pd-blau); color: var(--navy); }
-.pa-panel.hat-auswahl .pa-griff span { background: var(--wm-rand); }
 /* Kompakt */
-.pa-kurz.pa-blau { background: transparent; box-shadow: none; color: var(--navy); padding: 2px 2px 4px; }
-.pa-blau .pa-k-kopf .pa-name { color: var(--navy); font-weight: 600; font-size: 22px; }
-.pa-blau .pa-name small { color: var(--pd-matt); font-weight: 500; }
-.pa-blau .pa-ico, .pa-blau .pm-stern.is-klein { width: 38px; height: 38px; background: var(--pd-glas2); color: var(--navy); }
-.pa-blau .pm-stern.is-klein.is-on { color: var(--wm-sonne); }
-.pa-blau .pa-ico:hover { background: var(--wm-flaeche-2); }
-.pa-blau .pa-wert { color: var(--navy); }
-.pa-blau .pa-wert strong { font-size: 64px; font-weight: 300; letter-spacing: -.03em; }
-.pa-blau .pa-wert span { font-size: 22px; font-weight: 400; }
-.pa-blau .pa-kurve-linie { stroke: var(--wm-slip); stroke-width: 2.2; }
-.pa-blau .pa-kurve-flaeche { fill: var(--wm-slip); opacity: .08; }
-.pa-blau .pa-kurve-punkt { fill: var(--wm-slip); }
-.pa-blau .pa-trend { color: var(--navy); font-size: 15.5px; font-weight: 500; gap: 0; margin-top: 4px; }
-.pa-blau .pa-zustand { color: var(--navy); font-weight: 650; }
-.pa-blau .pa-zahlen { gap: 0; }
-.pa-blau .pa-zahlen b, .pa-blau .pa-zahlen b.pt-up, .pa-blau .pa-zahlen b.pt-down, .pa-blau .pa-zahlen b.pt-flat { color: var(--navy); font-weight: 500; }
-.pa-blau .pa-zeit.is-alt { background: var(--warn-bg); color: var(--fuel-ink); }
-.pa-kurz.pa-blau > .pa-verlauf { width: 100%; min-height: 46px; margin-top: 14px; border: 0; border-radius: 23px; background: var(--slip); color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
-.pa-kurz.pa-blau > .pa-verlauf:hover { background: var(--wm-petrol-tief); }
 /* Zustandspunkt (wie in der Ampel der Pillen) */
-.pd-zdot, .pa-blau .pa-zustand i, .pd-zst i { width: 10px; height: 10px; border-radius: 50%; background: var(--wm-rand); display: inline-block; flex: none; }
-.pz-low.pd-zdot, .pa-blau .pa-zustand.pz-low i, .pd-zst.pz-low i { background: var(--wm-sonne); }
-.pz-normal.pd-zdot, .pa-blau .pa-zustand.pz-normal i, .pd-zst.pz-normal i { background: var(--wm-gut); }
-.pz-high.pd-zdot, .pa-blau .pa-zustand.pz-high i, .pd-zst.pz-high i { background: var(--wm-hoch); }
-.pz-hsw.pd-zdot, .pa-blau .pa-zustand.pz-hsw i, .pd-zst.pz-hsw i { background: var(--wm-stop); }
+.pd-zdot, .pd-zst i { width: 10px; height: 10px; border-radius: 50%; background: var(--wm-rand); display: inline-block; flex: none; }
+.pz-low.pd-zdot, .pd-zst.pz-low i { background: var(--wm-sonne); }
+.pz-normal.pd-zdot, .pd-zst.pz-normal i { background: var(--wm-gut); }
+.pz-high.pd-zdot, .pd-zst.pz-high i { background: var(--wm-hoch); }
+.pz-hsw.pd-zdot, .pd-zst.pz-hsw i { background: var(--wm-stop); }
 /* Details */
-.pd.pd-blau { background: var(--pd-blau); color: var(--navy); min-height: 100%; }
-.pa-panel .pd.pd-blau { background: transparent; }
-.wxd-pegel .wxd-body:has(.pd-blau), .detail.is-pegel:has(.pd-blau) { background: var(--wm-wasser); }
-.pd.pd-blau .pd-kopf { background: transparent; color: var(--navy); text-align: center; padding: 4px 16px 6px; border-radius: 0; }
-.pd.pd-blau .pd-leiste { justify-content: flex-start; min-height: 40px; }
-.pd.pd-blau .pd-icon { width: 38px; height: 38px; background: var(--pd-glas2); color: var(--navy); }
-.pd.pd-blau .pd-name { margin: 0; font-size: 28px; font-weight: 500; color: var(--navy); letter-spacing: -.01em; }
-.pd.pd-blau .pd-ort { margin: 2px 0 0; color: var(--pd-matt); font-size: 14px; }
-.pd.pd-blau .pd-ort.is-alt { color: var(--wm-tanke-text); font-weight: 600; }
-.pd.pd-blau .pd-wert { margin: 6px 0 0; line-height: 1; display: block; }
-.pd.pd-blau .pd-wert strong, .pa-panel .pd.pd-blau .pd-wert strong, .pd.is-eingebettet.pd-blau .pd-wert strong { font-size: 84px; font-weight: 250; letter-spacing: -.04em; color: var(--navy); }
-.pd.pd-blau .pd-wert span { font-size: 26px; font-weight: 400; margin-left: 2px; color: var(--navy); }
+.pd.pd { background: var(--pd-blau); color: var(--navy); min-height: 100%; }
+.wxd-pegel .wxd-body:has(.pd), .detail.is-pegel:has(.pd) { background: var(--wm-wasser); }
+.pd.pd .pd-kopf { background: transparent; color: var(--navy); text-align: center; padding: 4px 16px 6px; border-radius: 0; }
+.pd.pd .pd-leiste { justify-content: flex-start; min-height: 40px; }
+.pd.pd .pd-icon { width: 38px; height: 38px; background: var(--pd-glas2); color: var(--navy); }
+.pd.pd .pd-name { margin: 0; font-size: 28px; font-weight: 500; color: var(--navy); letter-spacing: -.01em; }
+.pd.pd .pd-ort { margin: 2px 0 0; color: var(--pd-matt); font-size: 14px; }
+.pd.pd .pd-ort.is-alt { color: var(--wm-tanke-text); font-weight: 600; }
+.pd.pd .pd-wert { margin: 6px 0 0; line-height: 1; display: block; }
+.pd.pd .pd-wert strong, .pd.is-eingebettet.pd .pd-wert strong { font-size: 84px; font-weight: 250; letter-spacing: -.04em; color: var(--navy); }
+.pd.pd .pd-wert span { font-size: 26px; font-weight: 400; margin-left: 2px; color: var(--navy); }
 .pd-zeile-kopf { margin: 6px 0 0; font-size: 15.5px; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
 .pd-zeile-kopf b { font-weight: 650; }
 .pd-zeile-kopf .pd-tz { display: inline; margin: 0; font-weight: 500; color: var(--navy); }
@@ -1103,31 +786,31 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pd-kb-text { font-size: 13.5px; font-weight: 600; }
 .pd-kb.is-an { background: var(--wm-wasser); color: var(--slip); }
 .pd-kb.pm-stern.is-on .pd-kb-ico { color: var(--wm-sonne); }
-.pd.pd-blau .pm-stern.pd-kb { width: auto; height: auto; }
-.pd.pd-blau .pd-body, .pa-panel .pd.pd-blau.is-eingebettet .pd-body, .pd.pd-blau.is-eingebettet .pd-body { margin: 0; padding: 4px 14px 18px; gap: 10px; background: transparent; }
-.pd.pd-blau .pd-karte { background: var(--pd-glas); color: var(--navy); border: 0; border-radius: 18px; padding: 12px 14px; box-shadow: none; }
-.pd-ct, .pd.pd-blau .pd-karte h2.pd-ct { margin: 0 0 8px; font-size: var(--wm-t-xs); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--pd-matt); display: flex; align-items: center; gap: 6px; }
-.pd.pd-blau .pd-umschalter { display: flex; width: 100%; background: var(--wm-linie); border-radius: 10px; padding: 3px; margin-bottom: 6px; }
-.pd.pd-blau .pd-umschalter button { flex: 1; min-height: 32px; padding: 0 6px; color: var(--pd-matt); font-size: 13.5px; font-weight: 600; background: transparent; box-shadow: none; }
-.pd.pd-blau .pd-umschalter button[aria-pressed="true"] { background: #FFFFFF; color: var(--navy); box-shadow: 0 1px 2px rgba(11, 48, 69, .15); }
-.pd.pd-blau .gc-grid { stroke: var(--wm-linie); }
-.pd.pd-blau .gc-axis, .pd.pd-blau .gc-reflabel { fill: var(--wm-matt); }
-.pd.pd-blau .gc-ref { stroke: var(--wm-leise); }
-.pd.pd-blau .gc-ref.is-hsw { stroke: var(--wm-stop); }
-.pd.pd-blau .gc-line { stroke: var(--wm-slip); stroke-width: 2.2; }
-.pd.pd-blau .gc-area { fill: var(--wm-slip); opacity: .08; }
-.pd.pd-blau .gc-dot { fill: var(--wm-slip); stroke: #FFFFFF; }
-.pd.pd-blau .gc-vorh { stroke: var(--wm-slip); }
-.pd.pd-blau .gc-vorh-bg { fill: rgba(8, 127, 156, .05); }
-.pd.pd-blau .gc-tief { fill: rgba(247, 183, 51, .14); }
-.pd.pd-blau .gc-jetzt { stroke: var(--wm-leise); }
-.pd.pd-blau .gc-jetzt-text { fill: var(--wm-matt); }
-.pd.pd-blau .gc-cross { stroke: var(--wm-navy); }
-.pd.pd-blau .gc-schraffur { stroke: var(--wm-rand); }
-.pd.pd-blau .gc-tip { background: var(--navy); color: #FFFFFF; }
-.pd.pd-blau .gc-table summary, .pd.pd-blau .gc-luecken-text, .pd.pd-blau .pd-vorh-info, .pd.pd-blau .pd-vorh-satz { color: var(--pd-matt); }
-.pd.pd-blau .gc-table table { color: var(--navy); }
-.pd.pd-blau .muted, .pd.pd-blau .unknown { color: var(--pd-matt); }
+.pd.pd .pm-stern.pd-kb { width: auto; height: auto; }
+.pd.pd .pd-body, .pd.pd.is-eingebettet .pd-body { margin: 0; padding: 4px 14px 18px; gap: 10px; background: transparent; }
+.pd.pd .pd-karte { background: var(--pd-glas); color: var(--navy); border: 0; border-radius: 18px; padding: 12px 14px; box-shadow: none; }
+.pd-ct, .pd.pd .pd-karte h2.pd-ct { margin: 0 0 8px; font-size: var(--wm-t-xs); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--pd-matt); display: flex; align-items: center; gap: 6px; }
+.pd.pd .pd-umschalter { display: flex; width: 100%; background: var(--wm-linie); border-radius: 10px; padding: 3px; margin-bottom: 6px; }
+.pd.pd .pd-umschalter button { flex: 1; min-height: 32px; padding: 0 6px; color: var(--pd-matt); font-size: 13.5px; font-weight: 600; background: transparent; box-shadow: none; }
+.pd.pd .pd-umschalter button[aria-pressed="true"] { background: #FFFFFF; color: var(--navy); box-shadow: 0 1px 2px rgba(11, 48, 69, .15); }
+.pd.pd .gc-grid { stroke: var(--wm-linie); }
+.pd.pd .gc-axis, .pd.pd .gc-reflabel { fill: var(--wm-matt); }
+.pd.pd .gc-ref { stroke: var(--wm-leise); }
+.pd.pd .gc-ref.is-hsw { stroke: var(--wm-stop); }
+.pd.pd .gc-line { stroke: var(--wm-slip); stroke-width: 2.2; }
+.pd.pd .gc-area { fill: var(--wm-slip); opacity: .08; }
+.pd.pd .gc-dot { fill: var(--wm-slip); stroke: #FFFFFF; }
+.pd.pd .gc-vorh { stroke: var(--wm-slip); }
+.pd.pd .gc-vorh-bg { fill: rgba(8, 127, 156, .05); }
+.pd.pd .gc-tief { fill: rgba(247, 183, 51, .14); }
+.pd.pd .gc-jetzt { stroke: var(--wm-leise); }
+.pd.pd .gc-jetzt-text { fill: var(--wm-matt); }
+.pd.pd .gc-cross { stroke: var(--wm-navy); }
+.pd.pd .gc-schraffur { stroke: var(--wm-rand); }
+.pd.pd .gc-tip { background: var(--navy); color: #FFFFFF; }
+.pd.pd .gc-table summary, .pd.pd .gc-luecken-text, .pd.pd .pd-vorh-info, .pd.pd .pd-vorh-satz { color: var(--pd-matt); }
+.pd.pd .gc-table table { color: var(--navy); }
+.pd.pd .muted, .pd.pd .unknown { color: var(--pd-matt); }
 /* Einordnung */
 .pd-zst { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 600; }
 .pd-zst i { width: 12px; height: 12px; }
@@ -1143,15 +826,15 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pd-zgrenzen { position: relative; height: 16px; font-size: var(--wm-t-xs); color: var(--wm-matt); }
 .pd-zgrenzen span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 /* Abfluss, Wasser */
-.pd.pd-blau .pd-zusatz { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; }
-.pd.pd-blau .pd-zusatz[hidden] { display: none; }
-.pd.pd-blau .pd-z { background: var(--pd-glas); border: 0; border-radius: 18px; padding: 12px 14px; box-shadow: none; color: var(--navy); }
-.pd.pd-blau .pd-z .pd-ct { margin-bottom: 4px; }
-.pd.pd-blau .pd-z-wert { margin: var(--wm-1) 0 0; color: var(--navy); }
-.pd.pd-blau .pd-z-wert strong { font-size: 30px; font-weight: 400; color: var(--navy); }
-.pd.pd-blau .pd-z-wert span { font-size: 15px; color: var(--pd-matt); }
-.pd.pd-blau .pd-z-sub { margin: 2px 0 0; font-size: var(--wm-t-xs); color: var(--pd-matt); }
-.pd.pd-blau .pd-z-sub:empty { display: none; }
+.pd.pd .pd-zusatz { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; }
+.pd.pd .pd-zusatz[hidden] { display: none; }
+.pd.pd .pd-z { background: var(--pd-glas); border: 0; border-radius: 18px; padding: 12px 14px; box-shadow: none; color: var(--navy); }
+.pd.pd .pd-z .pd-ct { margin-bottom: 4px; }
+.pd.pd .pd-z-wert { margin: var(--wm-1) 0 0; color: var(--navy); }
+.pd.pd .pd-z-wert strong { font-size: 30px; font-weight: 400; color: var(--navy); }
+.pd.pd .pd-z-wert span { font-size: 15px; color: var(--pd-matt); }
+.pd.pd .pd-z-sub { margin: 2px 0 0; font-size: var(--wm-t-xs); color: var(--pd-matt); }
+.pd.pd .pd-z-sub:empty { display: none; }
 /* Kennwerte */
 .pd-kwl { list-style: none; margin: 0; padding: 0; }
 .pd-kwl li { display: flex; align-items: baseline; gap: 10px; padding: 8px 0; border-top: 1px solid var(--pd-linie); }
@@ -1160,7 +843,7 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pd-kwl span { flex: 1; min-width: 0; font-size: 13px; color: var(--pd-matt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pd-kwl strong { font-weight: 600; font-size: 15.5px; white-space: nowrap; }
 /* Liste unten */
-.pd.pd-blau .pd-liste { padding: 0 14px; }
+.pd.pd .pd-liste { padding: 0 14px; }
 .pd-zeile { display: flex; align-items: center; gap: 10px; min-height: 50px; width: 100%; border: 0; border-top: 1px solid var(--pd-linie); background: none; color: var(--navy); font: inherit; font-size: 15.5px; font-weight: 500; text-decoration: none; text-align: left; cursor: pointer; padding: 0; }
 .pd-liste > .pd-zeile:first-child { border-top: 0; }
 .pd-zeile > span:first-child, .pd-zeile > summary > span:first-child { display: grid; color: var(--pd-matt); }
@@ -1173,78 +856,122 @@ details.pd-zeile[open] > summary::after { transform: rotate(90deg); }
 details.pd-zeile > summary em { font-style: normal; color: var(--pd-matt); margin-left: auto; }
 details.pd-zeile > summary em + ::after { margin-left: 8px; }
 details.pd-zeile[open] { padding-bottom: 10px; }
-.pd.pd-blau .pd-slips button { color: var(--navy); }
-.pd.pd-blau .pd-slip-name { color: var(--navy); } .pd.pd-blau .pd-slip-km { color: var(--pd-matt); }
-.pd.pd-blau .pd-slips li + li { border-top-color: var(--pd-linie); }
-.pd.pd-blau .pd-kw-liste dt { color: var(--pd-matt); } .pd.pd-blau .pd-kw-liste dd { color: var(--navy); }
-.pd.pd-blau .pd-hinweis, .pd.pd-blau .pd-leer { color: var(--pd-matt); font-size: 13px; margin: 8px 0 0; }
-.pd.pd-blau .pd-link { color: var(--slip); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; display: inline-block; padding-top: 8px; }
+.pd.pd .pd-slips button { color: var(--navy); }
+.pd.pd .pd-slip-name { color: var(--navy); } .pd.pd .pd-slip-km { color: var(--pd-matt); }
+.pd.pd .pd-slips li + li { border-top-color: var(--pd-linie); }
+.pd.pd .pd-kw-liste dt { color: var(--pd-matt); } .pd.pd .pd-kw-liste dd { color: var(--navy); }
+.pd.pd .pd-hinweis, .pd.pd .pd-leer { color: var(--pd-matt); font-size: 13px; margin: 8px 0 0; }
+.pd.pd .pd-link { color: var(--slip); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; display: inline-block; padding-top: 8px; }
 /* Wetter (Kartenpanel) bleibt hell lesbar */
-.pd.pd-blau .pd-wetter { background: #fff; color: var(--ink); }
-.pd.pd-blau :focus-visible { outline: 3px solid var(--slip); outline-offset: 2px; }
+.pd.pd .pd-wetter { background: #fff; color: var(--ink); }
+.pd.pd :focus-visible { outline: 3px solid var(--slip); outline-offset: 2px; }
 @media (max-width: 767px) {
-  .pa-panel.hat-auswahl .pd.pd-blau .pd-karte, .pa-panel .pd.pd-blau .pd-z { border: 0; }
-  .pd.pd-blau .pd-wert strong, .pa-panel .pd.pd-blau .pd-wert strong { font-size: 72px; }
-  .pa-blau .pa-wert strong { font-size: 56px; }
-}
-.pd.pd-blau .pd-kb.pm-stern, .pd.pd-blau .pd-kb.pm-stern.is-on { background: var(--pd-glas2); color: var(--navy); border-radius: 16px; }
-.pd.pd-blau .pd-kb.pm-stern.is-on .pd-kb-ico { color: var(--wm-sonne); }
-.pa-blau .pa-trend { gap: 0 6px; }
-.pa-blau .pa-zahlen { display: inline; }
+    .pd.pd .pd-wert strong { font-size: 72px; }
+  }
+.pd.pd .pd-kb.pm-stern, .pd.pd .pd-kb.pm-stern.is-on { background: var(--pd-glas2); color: var(--navy); border-radius: 16px; }
+.pd.pd .pd-kb.pm-stern.is-on .pd-kb-ico { color: var(--wm-sonne); }
 
 /* Zart blau: weiße Karten und Knöpfe mit leichtem Schatten */
-.pd.pd-blau .pd-karte, .pd.pd-blau .pd-z, .pd-kb, .pa-blau .pa-ico, .pa-blau .pm-stern.is-klein, .pd.pd-blau .pd-icon { box-shadow: var(--pd-schatten); }
-.pd.pd-blau .pd-kb.pm-stern, .pd.pd-blau .pd-kb.pm-stern.is-on { color: var(--navy); }
-.pd.pd-blau .pd-wetter { box-shadow: var(--pd-schatten); }
-.pa-blau .pa-zustand.pz-tide i, .pd-zdot.pz-tide { background: var(--wm-fokus); }
-.pd.pd-blau .pd-karte-kopf { margin-bottom: 8px; }
-.pd.pd-blau .pd-karte-kopf .pd-ct { margin: 0; }
-.pd.pd-blau .pd-hinweis { margin: 4px 4px 0; }
-.pd.pd-blau .pd-zeile-kopf .pd-tz, .pd.pd-blau .pd-zeile-kopf .pt-tendenz { color: var(--navy); font-weight: 500; }
+.pd.pd .pd-karte, .pd.pd .pd-z, .pd-kb, .pd.pd .pd-icon { box-shadow: var(--pd-schatten); }
+.pd.pd .pd-kb.pm-stern, .pd.pd .pd-kb.pm-stern.is-on { color: var(--navy); }
+.pd.pd .pd-wetter { box-shadow: var(--pd-schatten); }
+.pd-zdot.pz-tide { background: var(--wm-fokus); }
+.pd.pd .pd-karte-kopf { margin-bottom: 8px; }
+.pd.pd .pd-karte-kopf .pd-ct { margin: 0; }
+.pd.pd .pd-hinweis { margin: 4px 4px 0; }
+.pd.pd .pd-zeile-kopf .pd-tz, .pd.pd .pd-zeile-kopf .pt-tendenz { color: var(--navy); font-weight: 500; }
 
 /* ------------------------------------------------------------------ 7.60.0 Designsystem Schritt 4: Pegel (DESIGN_SYSTEM.md)
    Nur Tokens: Titel 24/700, ein großer Wert (held 72/300), Knöpfe/Karten Radius m, Abschnittstitel ohne Großbuchstaben. */
-.pd-ct, .pd.pd-blau .pd-karte h2.pd-ct, .pa-h2, .pd-kicker { font-size: var(--wm-t-s); font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }
-.pd.pd-blau .pd-name { font-size: var(--wm-t-xl); font-weight: 700; line-height: 1.15; color: var(--wm-tinte); }
-.pd.pd-blau .pd-ort { font-size: var(--wm-t-s); color: var(--wm-matt); }
-.pd.pd-blau .pd-wert strong, .pa-panel .pd.pd-blau .pd-wert strong, .pd.is-eingebettet.pd-blau .pd-wert strong { font-size: var(--wm-t-held); font-weight: 300; color: var(--wm-tinte); }
-.pd.pd-blau .pd-wert span { font-size: var(--wm-t-xl); font-weight: 400; }
+.pd-ct, .pd.pd .pd-karte h2.pd-ct, .pd-kicker { font-size: var(--wm-t-s); font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }
+.pd.pd .pd-name { font-size: var(--wm-t-xl); font-weight: 700; line-height: 1.15; color: var(--wm-tinte); }
+.pd.pd .pd-ort { font-size: var(--wm-t-s); color: var(--wm-matt); }
+.pd.pd .pd-wert strong, .pd.is-eingebettet.pd .pd-wert strong { font-size: var(--wm-t-held); font-weight: 300; color: var(--wm-tinte); }
+.pd.pd .pd-wert span { font-size: var(--wm-t-xl); font-weight: 400; }
 .pd-kb { min-height: 62px; border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); color: var(--wm-tinte); }
 .pd-kb-text { font-size: var(--wm-t-s); font-weight: 700; }
 .pd-kb.is-an { background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
-.pd-kb.pm-stern.is-on .pd-kb-ico svg, .pd.pd-blau .pd-kb.pm-stern.is-on .pd-kb-ico svg { fill: var(--wm-sonne); color: var(--wm-tinte); }
-.pd.pd-blau .pd-kb.pm-stern, .pd.pd-blau .pd-kb.pm-stern.is-on { border-radius: var(--wm-r-m); }
-.pd.pd-blau .pd-karte { border-radius: var(--wm-r-m); padding: var(--wm-3) var(--wm-4); box-shadow: var(--wm-schatten); }
-.pd.pd-blau .pd-umschalter { background: var(--wm-linie); border-radius: var(--wm-r-s); }
-.pd.pd-blau .pd-umschalter button { border-radius: calc(var(--wm-r-s) - 3px); font-size: var(--wm-t-s); font-weight: 700; }
-.pd.pd-blau .pd-umschalter button[aria-pressed="true"] { color: var(--wm-tinte); box-shadow: var(--wm-schatten); }
-.pa-chip { border: 0; border-radius: var(--wm-r-rund); box-shadow: var(--wm-schatten); color: var(--wm-tinte); }
-.pa-chip:hover { background: var(--wm-flaeche-2); }
-.pa-chip[aria-pressed="true"] { background: var(--wm-tinte); color: #fff; }
-.pa-chip-zahl { background: var(--wm-flaeche-2); color: var(--wm-tinte); }
-.pa-suche { height: 48px; border: 0; border-radius: var(--wm-r-rund); box-shadow: var(--wm-schatten); }
-.pa-name { font-size: var(--wm-t-l); font-weight: 700; color: var(--wm-tinte); }
-.pa-name small { font-size: var(--wm-t-s); font-weight: 400; color: var(--wm-matt); }
-.pa-wert strong { font-weight: 700; }
-.pa-kurz.pa-blau > .pa-verlauf { min-height: 48px; border-radius: var(--wm-r-m); background: var(--wm-petrol); font-weight: 700; }
-.pa-kurz.pa-blau > .pa-verlauf:hover { background: var(--wm-petrol-tief); }
-.pa-panel.hat-auswahl, .pa-panel { border-radius: var(--wm-r-l) var(--wm-r-l) 0 0; }
-@media (min-width: 768px) { .pa-panel { border-radius: 0; } }
+.pd-kb.pm-stern.is-on .pd-kb-ico svg, .pd.pd .pd-kb.pm-stern.is-on .pd-kb-ico svg { fill: var(--wm-sonne); color: var(--wm-tinte); }
+.pd.pd .pd-kb.pm-stern, .pd.pd .pd-kb.pm-stern.is-on { border-radius: var(--wm-r-m); }
+.pd.pd .pd-karte { border-radius: var(--wm-r-m); padding: var(--wm-3) var(--wm-4); box-shadow: var(--wm-schatten); }
+.pd.pd .pd-umschalter { background: var(--wm-linie); border-radius: var(--wm-r-s); }
+.pd.pd .pd-umschalter button { border-radius: calc(var(--wm-r-s) - 3px); font-size: var(--wm-t-s); font-weight: 700; }
+.pd.pd .pd-umschalter button[aria-pressed="true"] { color: var(--wm-tinte); box-shadow: var(--wm-schatten); }
 /* 7.60.1 Suche im Pegel-Bereich wie auf der Hauptkarte (Logo links, Pille 48 px, Lupe rechts, Chips 40 px) */
-.pa-suchzeile { display: contents; }
-.pa-logo { display: none; }
+
+/* ---------------------------------------------------------------- Pegel auf der Hauptkarte (Designumbau 2a, 7.70.0)
+   Eine Wert-Pille für alle Pegel, nach dem Prototyp: weiß, Zustandspunkt, Wert, Pfeil; gewählt dunkel und größer.
+   Schrift 13 px in der Plakette (Ausnahme laut DESIGN_SYSTEM.md 8). js/pegel-marker.js, js/map.js */
+.pk-marker { background: none; border: 0; }
+.pk-pille { --pk: var(--wm-leise); display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px 0 5px; border-radius: var(--wm-r-rund);
+  background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font: 700 var(--wm-t-xs)/1 var(--wm-schrift); white-space: nowrap;
+  font-variant-numeric: tabular-nums; transition: transform var(--wm-mittel) var(--wm-feder); }
+.pk-pille b { flex: none; display: block; width: 14px; height: 14px; border-radius: var(--wm-r-rund); background: var(--pk); box-shadow: 0 0 0 2px var(--wm-flaeche); }
+.pk-welle { flex: none; display: block; color: var(--pk); }
+.pk-zahl small { font-weight: 400; }
+.pk-pfeil { font-style: normal; color: var(--wm-matt); }
+.pk-stern { font-style: normal; color: var(--wm-sonne); }
+.pk-pille.is-gemerkt { height: 32px; padding: 0 12px 0 7px; font-size: var(--wm-t-s); }
+.pk-pille.is-old { opacity: .7; }
+.pk-pille.is-old b { background: transparent; box-shadow: inset 0 0 0 2px var(--pk), 0 0 0 2px var(--wm-flaeche); }
+.pk-pille.is-gewaehlt { background: var(--wm-tinte); color: var(--wm-flaeche); transform: scale(1.15); }
+.pk-pille.is-gewaehlt .pk-pfeil { color: var(--wm-petrol-hell); }
+/* weit herausgezoomt: nur Punkte */
+.pk-kompakt .pk-pille { height: auto; padding: 0; background: transparent; box-shadow: none; }
+.pk-kompakt .pk-pille .pk-zahl, .pk-kompakt .pk-pille .pk-pfeil, .pk-kompakt .pk-pille .pk-stern { display: none; }
+.pk-kompakt .pk-pille b { box-shadow: 0 0 0 2px var(--wm-flaeche), var(--wm-schatten); }
+.pk-kompakt .pk-pille .pk-welle { background: var(--wm-flaeche); border-radius: var(--wm-r-rund); box-shadow: var(--wm-schatten); }
+.pk-kompakt .pk-pille.is-gemerkt b { width: 18px; height: 18px; }
+.pk-kompakt .pk-pille.is-gewaehlt { background: transparent; }
+.pk-kompakt .pk-pille.is-gewaehlt b { box-shadow: 0 0 0 2px var(--wm-flaeche), 0 0 0 4px var(--wm-tinte); }
+/* Cluster */
+.pk-cluster { background: none; border: 0; }
+.pk-cluster span { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); border: 3px solid var(--wm-gut);
+  box-shadow: var(--wm-schatten); color: var(--wm-tinte); font: 700 var(--wm-t-xs)/1 var(--wm-schrift); }
+/* Legende: kleine aufklappbare Pille unten links (über „In der Nähe“), nur bei eingeschaltetem Chip „Pegel“ */
+.pk-legende { position: absolute; z-index: 1000; left: 12px; bottom: 28px; max-width: calc(100% - 96px); border-radius: var(--wm-r-m);
+  background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-size: var(--wm-t-s); }
+.pk-legende[hidden] { display: none; }
+.pk-legende summary { display: flex; align-items: center; min-height: 40px; padding: 0 var(--wm-4); font-weight: 700; cursor: pointer; list-style: none; }
+.pk-legende summary::-webkit-details-marker { display: none; }
+.pk-legende summary::before { content: ""; width: 10px; height: 10px; margin-right: var(--wm-2); border-radius: var(--wm-r-rund); background: var(--wm-gut); }
+.pk-legende ul { margin: 0; padding: 0 var(--wm-4) var(--wm-3); list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.pk-legende li { display: flex; align-items: center; gap: var(--wm-2); color: var(--wm-matt); }
+.pk-legende li i { flex: none; width: 12px; height: 12px; border-radius: var(--wm-r-rund); }
+.pk-legende summary:focus-visible { outline: 3px solid var(--wm-fokus); outline-offset: 2px; }
+.has-detail .pk-legende, .is-picking .pk-legende { display: none; }
 @media (max-width: 767px) {
-  .pa-kopf { padding-top: calc(8px + env(safe-area-inset-top)); }
-  .pa-suchzeile { display: flex; align-items: center; gap: 10px; }
-  .pa-suchzeile .pa-suchbox { flex: 1; min-width: 0; }
-  .pa-logo { display: grid; flex: none; border-radius: 50%; }
-  .pa-logo svg { display: block; border-radius: 50%; box-shadow: var(--wm-schatten); }
-  .pa-suche { height: 48px; padding: 0 48px 0 var(--wm-5); box-shadow: var(--wm-schatten); }
-  .pa-suche-ico { left: auto; right: 14px; top: 24px; color: var(--wm-tinte); }
-  .pa-suche::placeholder { color: var(--wm-matt); }
-  .pa-chip { min-height: 40px; }
-  .pa-chip svg { color: var(--wm-tinte); }
-  .pa-chip[data-liste="fav"] svg { color: var(--wm-sonne); }
-  .pa-chip[aria-pressed="true"] svg { color: #fff; }
-  .pa-chip[data-liste="fav"][aria-pressed="true"] svg { color: var(--wm-sonne); }
+  .pk-legende { bottom: calc(var(--bn-space) + 70px); }
+  .has-peek .pk-legende { display: none; }
 }
+/* Kategorie-Chips: Farbpunkt links, aktiv Häkchen statt Punkt (DESIGN_SYSTEM.md 5, Chip) */
+.cat-pegel { --cc: var(--wm-gut); }
+.cat-punkt { flex: none; width: 10px; height: 10px; border-radius: var(--wm-r-rund); background: var(--cc); }
+.cat[aria-pressed="true"] .cat-punkt { display: none; }
+/* Handy: vier Kategorie-Chips passen nicht nebeneinander – die Chip-Zeile scrollt seitlich, Chips behalten ihre Breite */
+@media (max-width: 767px) {
+  .toolbar .cats { overflow-x: auto; scrollbar-width: none; padding: 4px 2px; margin: -4px 0; pointer-events: auto; }
+  .toolbar .cats::-webkit-scrollbar { display: none; }
+  .toolbar .cats .cat { flex: none; }
+}
+/* ---------------------------------------------------------------- Pegel-Sheet (Designumbau 2a, 7.70.0): Kurzansicht in der Stufe „klein“ */
+.pks-kurz { display: flex; flex-direction: column; gap: var(--wm-3); }
+.pks-mitte { display: flex; align-items: center; gap: var(--wm-4); }
+.pks-wert { flex: none; margin: 0; font-variant-numeric: tabular-nums; }
+.pks-wert strong { font-size: var(--wm-t-held); line-height: 1; font-weight: 300; letter-spacing: -.02em; }
+.pks-wert small { font-size: var(--wm-t-xl); font-weight: 400; }
+.pks-kurve { flex: 1; min-width: 0; height: 64px; }
+.pks-kurve-svg { display: block; width: 100%; height: 64px; overflow: visible; }
+.pks-kurve-linie { fill: none; stroke: var(--wm-petrol); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.pks-kurve-flaeche { fill: var(--wm-petrol); opacity: .08; }
+.pks-kurve-punkt { fill: var(--wm-petrol); stroke: var(--wm-flaeche); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.pks-trend { display: flex; align-items: center; flex-wrap: wrap; gap: var(--wm-2) var(--wm-3); margin: 0; font-size: var(--wm-t-s); color: var(--wm-matt); }
+.pks-zahlen { display: inline-flex; gap: var(--wm-3); }
+.pks-zahlen b { color: var(--wm-tinte); }
+.pks-details { width: 100%; }
+/* Details im Sheet: Kopf ohne eigenen Namen und × (stehen im Sheet-Kopf) */
+.wm-sheet .pd { background: none; }
+.wm-sheet .pd-kopf.is-im-sheet { padding-top: 0; text-align: center; }
+/* Fluss-Sheet (7.70.0): Inhalt der Flussseite ohne eigenen Kopf und ohne Seitenränder */
+.wm-sheet .pf-seite.is-im-sheet { padding: 0; background: none; min-height: 0; }
+.wm-sheet .pf-raster { grid-template-columns: minmax(0, 1fr); grid-template-areas: "profil" "liste" "slips" "hinweis"; grid-template-rows: none; gap: var(--wm-3); padding: 0; margin-top: 0; max-width: none; }

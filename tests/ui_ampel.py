@@ -96,8 +96,8 @@ with sync_playwright() as p:
         pg.wait_for_function('() => !document.getElementById("am-msg").textContent') if False else pg.wait_for_timeout(600)
         check(pg.locator('#am-result').is_hidden(), f'{name}: ohne Pegel kein Ergebnis')
         navsel = '#bottomnav' if mobile else '#topnav'
-        check(pg.locator(navsel).is_visible() and pg.locator(f'{navsel} [data-nav=pegel]').get_attribute('aria-current') == 'page',
-              f'{name}: Hauptnavigation auf der Pegel-Ampel, „Pegel“ aktiv')
+        check(pg.locator(navsel).is_visible() and pg.locator(f'{navsel} [data-nav=karte]').get_attribute('aria-current') == 'page',
+              f'{name}: Hauptnavigation auf der Pegel-Ampel, „Karte“ aktiv (Pegel liegen auf der Karte, Designumbau 2a)')
         check(pg.locator(f'{navsel} [data-nav=meldungen]').get_attribute('href') == './#meldungen' and pg.locator(f'{navsel} [data-nav=mehr]').get_attribute('href') == './#mehr',
               f'{name}: „Meldungen“ und „Mehr“ führen zur Karte')
 
@@ -205,14 +205,12 @@ with sync_playwright() as p:
         check(not pg.evaluate('window.__csp || null'), f'{name}: keine CSP-Verstöße')
         ctx.close()
 
-    # Navigation: „Pegel“ führt zum Dashboard, Pegel-Ampel zurück zur Karte (Melden öffnet die Auswahl)
+    # Navigation: kein Punkt „Pegel“ mehr (Designumbau 2a); Pegel-Ampel → „Karte“ und „Gemerkt“ führen in die App
     ctx = b.new_context(service_workers='block'); ctx.route('**/api/**', lambda r: r.fulfill(status=200, content_type='application/json', body='[]'))
     ctx.route(re.compile(r'https?://(?!127\.0\.0\.1).*'), lambda r: r.abort())
-    pg = ctx.new_page(); pg.goto(BASE); pg.locator('#topnav [data-nav=pegel]').wait_for()
-    pg.click('#topnav [data-nav=pegel]'); pg.wait_for_selector('#pegelseite:not([hidden])')
-    check(pg.url.endswith('/#pegel') and pg.inner_text('#topnav [data-nav=pegel]').strip() == 'Pegel', 'Navigation „Pegel“ öffnet das Pegel-Dashboard')
-    pg.goto(BASE + 'pegel-ampel'); pg.locator('#topnav [data-nav=pegel]').wait_for()
-    check((pg.get_attribute('#topnav [data-nav=pegel]', 'href') or '').endswith('#pegel'), 'Pegel-Ampel → „Pegel“ führt zum Dashboard')
+    pg = ctx.new_page(); pg.goto(BASE + 'pegel-ampel'); pg.locator('#topnav [data-nav=karte]').wait_for()
+    check(pg.locator('#topnav [data-nav=pegel]').count() == 0 and (pg.get_attribute('#topnav [data-nav=karte]', 'href') or '').endswith('#karte')
+          and (pg.get_attribute('#topnav [data-nav=gemerkt]', 'href') or '').endswith('#mehr/merkliste'), 'Pegel-Ampel: kein Punkt „Pegel“, „Karte“ und „Gemerkt“ führen in die App')
     pg.locator('#topnav [data-nav=mehr]').wait_for()
     pg.click('#topnav [data-nav=mehr]'); pg.wait_for_selector('#mehrseite:not([hidden]) .bs-zeile')
     check(pg.url.endswith('/#mehr') and 'Merkliste' in pg.inner_text('#mehrseite'), 'Pegel-Ampel → „Mehr“ öffnet den Bereich „Mehr“')

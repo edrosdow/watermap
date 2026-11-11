@@ -31,6 +31,7 @@
 .wm-kopf { flex: none; display: flex; align-items: flex-start; gap: var(--wm-3); padding: 0 var(--wm-4) var(--wm-3) var(--wm-5); }
 .wm-kopf.is-klebend { position: sticky; top: 0; z-index: 2; background: var(--wm-wasser); }
 .wm-kopf-block { flex: 1; min-width: 0; }
+.wm-kopf-zeile { display: flex; align-items: center; flex-wrap: wrap; gap: var(--wm-1) var(--wm-2); }
 .wm-kopf-titel { margin: 0; font-size: var(--wm-t-xl); line-height: 1.15; font-weight: 700; color: var(--wm-tinte); overflow-wrap: anywhere; }
 .wm-kopf-unter { margin: var(--wm-1) 0 0; font-size: var(--wm-t-s); line-height: 1.4; color: var(--wm-matt); }
 

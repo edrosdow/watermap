@@ -1,5 +1,5 @@
-// Hauptnavigation (Karte · Pegel · Melden · Meldungen · Mehr) – oben auf dem Desktop, unten auf dem Handy.
-// „In der Nähe“ und die Favoriten (Merkliste) liegen unter „Mehr“; ihre Adressen (#naehe, #favoriten) gelten weiter.
+// Hauptnavigation (Karte · Meldungen · Melden · Gemerkt · Mehr, Designumbau 2a) – oben auf dem Desktop, unten auf dem Handy.
+// „Gemerkt“ öffnet bis Phase 3 die Merkliste (#mehr/merkliste); „In der Nähe“ liegt unter „Mehr“. Alte Adressen (#naehe, #favoriten) gelten weiter.
 // Wird von der Karte (main.js) und der Pegel-Ampel (ampel.js) genutzt.
 import { h } from './dom.js';
 import { icon } from './icons.js';
@@ -8,13 +8,13 @@ import { CONFIG } from './config.js';
 /** Ziele; `href` gilt von jeder Seite aus (die Karte fängt die Klicks ab und schaltet ohne Neuladen um). */
 export const NAV = [
   { id: 'karte', label: 'Karte', top: 'Karte', ico: 'map', href: './#karte' },
-  { id: 'pegel', label: 'Pegel', top: 'Pegel', ico: 'gauge', href: './#pegel' },
-  { id: 'melden', label: 'Melden', ico: 'plus', href: './#melden', center: true },
   { id: 'meldungen', label: 'Meldungen', top: 'Meldungen', ico: 'chat', href: './#meldungen' },
+  { id: 'melden', label: 'Melden', ico: 'plus', href: './#melden', center: true },
+  { id: 'gemerkt', label: 'Gemerkt', top: 'Gemerkt', ico: 'lesezeichen', href: './#mehr/merkliste' },
   { id: 'mehr', label: 'Mehr', top: 'Mehr', ico: 'menu', href: './#mehr' },
 ];
 /** Bereiche ohne eigenen Navigationspunkt: welcher Punkt dabei hervorgehoben wird. */
-export const NAV_ZIEL = { naehe: 'mehr', favoriten: 'mehr' };
+export const NAV_ZIEL = { naehe: 'mehr', favoriten: 'gemerkt' };
 
 const LS_LABELS = 'wm-nav-labels-gesehen';   // die Beschriftungen wurden beim ersten Start schon gezeigt
 const LANGDRUCK_MS = 400;

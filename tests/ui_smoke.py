@@ -129,7 +129,7 @@ with sync_playwright() as p:
         pg.go_back(); pg.wait_for_timeout(300)
         check(pg.url.endswith('#mehr/merkliste') and pg.locator('#mehrseite h2:has-text("Gespeicherte Orte")').is_visible(), f'{name}: Zurück-Taste öffnet wieder die Merkliste')
         pg.reload(); pg.wait_for_selector('#mehrseite h2:has-text("Gespeicherte Orte (1)")', timeout=8000)
-        check(pg.locator(f'{nav} [data-nav=mehr]').get_attribute('aria-current') == 'page', f'{name}: Neuladen behält den Bereich')
+        check(pg.locator(f'{nav} [data-nav=gemerkt]').get_attribute('aria-current') == 'page', f'{name}: Neuladen behält den Bereich (Merkliste → „Gemerkt“ markiert)')
         pg.goto(BASE + '#favoriten'); pg.wait_for_selector('.place', timeout=8000)
         check(pg.locator('#list-title').inner_text() == 'Favoriten' and pg.locator('.place').count() == 1, f'{name}: alter Link #favoriten zeigt weiter die Favoritenliste')
         check(not errors, f'{name}: keine JS-Fehler {errors[:3]}')

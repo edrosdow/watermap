@@ -4,18 +4,7 @@
 import { CONFIG } from './config.js';
 import { schoenerName } from './pegel-namen.js';
 import { h } from './dom.js';
-import { icon } from './icons.js';
 import { s, niceStep, fmtNum, abfahren } from './chart.js';
-
-// Zustände (Status-Farben: nie allein – immer mit Wert, Pfeil bzw. Symbol und Text)
-export const GAUGE_STATES = {
-  hsw:     { label: 'Über HSW – Schifffahrt eingeschränkt', short: 'über HSW', color: '#D03B3B', ico: 'alert' },
-  high:    { label: 'Hochwasser (über MHW)', short: 'hoch', color: '#EC835A', ico: 'alert' },
-  normal:  { label: 'Normaler Wasserstand', short: 'normal', color: '#6CBF84', ico: 'check' },
-  low:     { label: 'Niedrigwasser (unter MNW)', short: 'niedrig', color: '#FAB219', ico: 'alert' },
-  unknown: { label: 'Einordnung nicht möglich', short: 'ohne Einordnung', color: '#8A99A6', ico: 'info' },
-  old:     { label: 'Messwert veraltet', short: 'veraltet', color: '#8A99A6', ico: 'clock' },
-};
 
 const REFS = {
   MNW: 'Mittleres Niedrigwasser', MW: 'Mittelwasser', MHW: 'Mittleres Hochwasser', HSW: 'Höchster Schifffahrtswasserstand',
@@ -148,8 +137,6 @@ export async function loadVorhersage(id, now = Date.now()) {
 }
 
 // ------------------------------------------------------------------ Darstellung
-const TREND = { 1: '↑', 0: '→', '-1': '↓' };
-const TREND_TEXT = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' };
 
 export function formatTime(t, withDay = true) {
   if (!t) return 'unbekannt';
@@ -158,85 +145,6 @@ export function formatTime(t, withDay = true) {
   const time = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
   if (!withDay || d.toDateString() === today.toDateString()) return `${time} Uhr`;
   return `${d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}, ${time} Uhr`;
-}
-
-/** Marker-HTML (nur feste Strings und Zahlen). Bei kleinem Zoom blendet CSS den Wert aus. */
-export function gaugeMarkerHtml(g, selected = false) {
-  const st = GAUGE_STATES[g.state];
-  const arrow = g.trend === null ? '' : `<i>${TREND[g.trend]}</i>`;
-  return `<span class="wm-gauge-pill${selected ? ' is-selected' : ''}"><b style="background:${st.color}"></b><span>${fmtNum(g.value)}&nbsp;${g.unit === 'cm' ? 'cm' : ''}</span>${arrow}</span>`;
-}
-
-/** Detailansicht eines Pegels. history = Promise mit Messreihe. */
-export function renderGaugeDetail(g, { history, close, user, distance, weather }) {
-  const st = GAUGE_STATES[g.state];
-  const head = h('header', { class: 'detail-head' },
-    h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Schließen', title: 'Schließen', html: icon('close', 22), onclick: close }),
-    h('div', { class: 'detail-title' },
-      h('span', { class: 'badge badge-gauge', html: icon('gauge', 16) }, h('span', { text: 'Pegel' })),
-      h('h2', { id: 'detail-name', text: g.name }),
-      h('p', { class: 'detail-sub', text: [g.water, g.km !== null ? `km ${g.km.toLocaleString('de-DE')}` : ''].filter(Boolean).join(' · ') }),
-      user && distance !== null ? h('p', { class: 'detail-sub', text: `${distance} Luftlinie von deinem Standort` }) : null),
-    h('span', { class: 'detail-spacer' }));   // Platz der Favoriten-Schaltfläche bei Standorten
-
-  const body = h('div', { class: 'detail-body' });
-
-  // Kopfzahl: aktueller Wasserstand
-  body.append(h('section', { class: 'gauge-now' },
-    h('p', { class: 'gauge-label', text: 'Wasserstand' }),
-    h('p', { class: 'gauge-value' }, h('strong', { text: fmtNum(g.value) }), h('span', { text: ` ${g.unit}` }),
-      g.trend !== null ? h('span', { class: 'gauge-trend', title: TREND_TEXT[g.trend], 'aria-label': TREND_TEXT[g.trend], text: ` ${TREND[g.trend]}` }) : null),
-    h('p', { class: 'gauge-time', text: `Stand: ${formatTime(g.time)}${g.trend !== null ? ' · ' + TREND_TEXT[g.trend] : ''}` }),
-    h('p', { class: `gauge-state gauge-state-${g.state}` },
-      h('span', { class: 'gauge-dot', style: `background:${st.color}` }), h('span', { html: icon(st.ico, 16) }), h('span', { text: st.label }))));
-
-  // Einordnung zwischen Kennwerten
-  const meter = gaugeMeter(g);
-  if (meter) body.append(h('section', { class: 'block' }, h('h3', { text: 'Einordnung' }), meter));
-
-  // Verlauf
-  const chartBox = h('div', { class: 'gauge-chart', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Verlauf wird geladen …' }));
-  body.append(h('section', { class: 'block' }, h('h3', { text: `Verlauf der letzten ${CONFIG.PEGEL_HISTORY_DAYS} Tage` }), chartBox));
-  history.then(pts => {
-    chartBox.removeAttribute('aria-busy');
-    chartBox.replaceChildren(...(pts.length > 1 ? historyChart(pts, g) : [h('p', { class: 'unknown', text: 'Keine Messreihe verfügbar.' })]));
-  }, () => {
-    chartBox.removeAttribute('aria-busy');
-    chartBox.replaceChildren(h('p', { class: 'unknown', text: 'Verlauf konnte nicht geladen werden.' }));
-  });
-
-  if (weather) body.append(weather);
-
-  body.append(h('a', { class: 'btn btn-outline ampel-link', href: `./pegel-ampel?pegel=${encodeURIComponent(g.id)}`, html: icon('gauge', 18) + '<span>In der Pegel-Ampel prüfen</span>' }));
-
-  body.append(h('p', { class: 'hint', text: 'Pegelwerte beziehen sich auf den Pegelnullpunkt, nicht auf die Wassertiefe. Für Fahrrinnentiefen gelten die amtlichen Bekanntmachungen.' }));
-
-  body.append(h('footer', { class: 'source' },
-    h('p', {}, 'Quelle: ', g.number ? h('a', { href: `https://www.pegelonline.wsv.de/gast/stammdaten?pegelnr=${encodeURIComponent(g.number)}`, target: '_blank', rel: 'noopener noreferrer', text: 'PEGELONLINE' }) : 'PEGELONLINE',
-      ', Wasserstraßen- und Schifffahrtsverwaltung des Bundes (WSV) · Datenlizenz Deutschland – Zero – 2.0'),
-    g.agency ? h('p', { text: `Zuständig: ${schoenerName(g.agency)}` }) : null));
-
-  return [head, body];
-}
-
-/** Horizontale Skala MNW – MW – MHW (– HSW) mit Markierung des aktuellen Werts. */
-function gaugeMeter(g) {
-  const keys = ['MNW', 'MW', 'MHW', 'HSW'].filter(k => g.refs[k] !== undefined);
-  if (keys.length < 2) return null;
-  const vals = keys.map(k => g.refs[k]);
-  const lo = Math.min(...vals, g.value), hi = Math.max(...vals, g.value);
-  const pad = (hi - lo) * 0.08 || 10;
-  const pos = (v) => `${((v - (lo - pad)) / ((hi + pad) - (lo - pad)) * 100).toFixed(2)}%`;
-  const st = GAUGE_STATES[g.state];
-  return h('div', { class: 'gauge-meter', role: 'img',
-    'aria-label': `Aktuell ${fmtNum(g.value)} ${g.unit}. ` + keys.map(k => `${k} ${fmtNum(g.refs[k])} ${g.unit}`).join(', ') },
-    h('div', { class: 'gm-track' },
-      g.refs.MNW !== undefined && g.refs.MHW !== undefined
-        ? h('div', { class: 'gm-normal', style: `left:${pos(g.refs.MNW)};right:calc(100% - ${pos(g.refs.MHW)})` }) : null,
-      keys.map(k => h('div', { class: 'gm-tick' + (k === 'HSW' ? ' is-hsw' : ''), style: `left:${pos(g.refs[k])}` })),
-      h('div', { class: 'gm-now', style: `left:${pos(g.value)};background:${st.color}` })),
-    h('div', { class: 'gm-labels' }, keys.map(k => h('span', { style: `left:${pos(g.refs[k])}`, title: REFS[k] },
-      h('b', { text: k }), h('span', { text: fmtNum(g.refs[k]) })))));
 }
 
 // ------------------------------------------------------------------ Verlaufsdiagramm (eigenes SVG, keine Bibliothek)

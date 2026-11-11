@@ -1,4 +1,4 @@
-"""UI-Test der Hauptnavigation (Karte · Pegel · Melden · Meldungen · Mehr), der Übersicht „Aktuelle Meldungen“ (#meldungen),
+"""UI-Test der Hauptnavigation (Karte · Meldungen · Melden · Gemerkt · Mehr), der Übersicht „Aktuelle Meldungen“ (#meldungen),
 des Bereichs „Mehr“ (#mehr) und der Merkliste (#mehr/merkliste) – mit nachgebildeter API und den Daten aus ui_full.py.
 Start: python3 tests/ui_bereiche.py [screenshots-ordner]"""
 import datetime as dt, importlib.util, json, pathlib, re, tempfile, time, urllib.parse
@@ -76,7 +76,7 @@ def run(b, w, hh):
     pg.reload(); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(800)   # die „neu“-Zahl lädt die Meldungen schon beim Start
     # Navigation (Handy: nur Symbole, Beschriftung als aria-label; „Meldungen“ trägt die Zahl der neuen Meldungen)
     texte = [t.strip() for t in pg.locator(f'{nav} [data-nav]').all_inner_texts()] if not mobile else [re.sub(r', \d+ neu$', '', a) for a in pg.locator(f'{nav} [data-nav]').evaluate_all("els => els.map(e => e.getAttribute('aria-label'))")]
-    check(texte == (['Karte', 'Pegel', 'Melden', 'Meldungen', 'Mehr'] if mobile else ['Karte', 'Pegel', 'Meldungen', 'Mehr']), f'{tag}: Navigation {texte}')
+    check(texte == (['Karte', 'Meldungen', 'Melden', 'Gemerkt', 'Mehr'] if mobile else ['Karte', 'Meldungen', 'Gemerkt', 'Mehr']), f'{tag}: Navigation {texte}')
     if mobile:
         bn = pg.locator('#bottomnav').bounding_box()
         check(abs(bn['y'] + bn['height'] - (hh - 10)) <= 1 and abs(bn['x'] - 16) <= 1 and abs(bn['x'] + bn['width'] - (w - 16)) <= 1 and abs(bn['height'] - 68) <= 1, f'{tag}: Leiste schwebt (16 px seitlich, 10 px unten, 68 px hoch) ({bn})')
@@ -231,7 +231,7 @@ def run(b, w, hh):
     check('Deine Angaben werden geprüft' in pg.inner_text('body'), f'{tag}: Danke-Hinweis')
 
     # Alte Adressen
-    for adresse, sel in [('#pegel', '.pegelseite .pa-h1'), ('#favoriten', '#list-title'), ('#naehe', '.place.nk, .nh-leer'), ('#melden', '#report-menu[open]')]:
+    for adresse, sel in [('#pegel', '#cats [data-cat=pegel][aria-pressed=true]'), ('#favoriten', '#list-title'), ('#naehe', '.place.nk, .nh-leer'), ('#melden', '#report-menu[open]')]:
         pg.goto(uf.BASE + adresse); pg.wait_for_selector(sel, timeout=10000)
         check(True, f'{tag}: alte Adresse {adresse} funktioniert')
     check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')

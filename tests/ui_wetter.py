@@ -198,10 +198,10 @@ with sync_playwright() as p:
         check(pg.locator('#detail .wxz').count() == 0, f'{name}: Hafen: Wetter weiter als Abschnitt, keine Zeile')
 
         # Pegel-Detail enthält ebenfalls Wetter
-        pg.evaluate("window.__watermap.setGauges(true)"); pg.wait_for_selector('.wm-gauge')
-        pg.evaluate("window.__watermap.selectGauge('a6ee8177-107b-47dd-bcfd-30960ccc6e9c', { fly: false, full: true })")
-        pg.wait_for_selector('#detail .wx-wind', timeout=8000)
-        check('pegel' in pg.inner_text('#detail .pd-kopf').lower() and pg.locator('#detail .wx-block').count() == 1, f'{name}: Wetter auch im Pegel-Detail')
+        pg.evaluate("window.__watermap.setGauges(true)"); next((True for _ in range(60) if pg.evaluate('!!window.__watermap.state.gauges') or pg.wait_for_timeout(100)), None)   # Cluster zeichnen nur Marker im Ausschnitt
+        pg.evaluate("window.__watermap.selectGauge('a6ee8177-107b-47dd-bcfd-30960ccc6e9c', { fly: false, stufe: 'gross' })")
+        pg.wait_for_selector('.pks-sheet .wx-wind', timeout=8000)
+        check('pegel' in pg.inner_text('.pks-sheet .wm-kopf').lower() and pg.locator('.pks-sheet .wx-block').count() == 1, f'{name}: Wetter auch im Pegel-Sheet')
         pg.evaluate("window.__watermap.setGauges(false)")
 
         # Dienst gestört (neuer Ort, damit nichts aus dem Zwischenspeicher kommt)

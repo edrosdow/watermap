@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import { NAV, NAV_ZIEL, badgeText, navLabel } from '../public/js/nav.js';
 import { neueAnzahl } from '../public/js/meldungen.js';
 
-assert.deepEqual(NAV.map(n => n.id), ['karte', 'pegel', 'melden', 'meldungen', 'mehr']);
+// Designumbau 2a: kein Pegel-Tab mehr; Reihenfolge Karte · Meldungen · Melden (Mitte) · Gemerkt · Mehr
+assert.deepEqual(NAV.map(n => n.id), ['karte', 'meldungen', 'melden', 'gemerkt', 'mehr']);
 assert.equal(NAV.filter(n => n.center).length, 1);
-assert.deepEqual(NAV_ZIEL, { naehe: 'mehr', favoriten: 'mehr' });
+assert.equal(NAV.findIndex(n => n.center), 2, 'Melden steht in der Mitte');
+assert.equal(NAV.find(n => n.id === 'gemerkt').href, './#mehr/merkliste', 'Gemerkt öffnet bis Phase 3 die Merkliste');
+assert.deepEqual(NAV_ZIEL, { naehe: 'mehr', favoriten: 'gemerkt' });
 
 assert.equal(badgeText(1), '1');
 assert.equal(badgeText(99), '99');

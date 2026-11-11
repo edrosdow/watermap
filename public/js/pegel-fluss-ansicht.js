@@ -1,4 +1,4 @@
-// Bereich „Pegel“: Flussseite (#pegel/fluss/<name>) mit Profil und Pegelliste (erreichbar per Link und aus dem Pegel-Cockpit).
+// Fluss bzw. Küste: Profil und Pegelliste – als Sheet über der Karte (Designumbau 2a; alte Adresse #pegel/fluss/<name> leitet dorthin).
 import { h } from './dom.js';
 import { icon, glyphSvg } from './icons.js';
 import { fmt } from './pegel-ansicht.js';
@@ -257,6 +257,9 @@ export function flussSeite(root, gr, ctx) {
   };
   const profilK = pr ? profilKarte(gr, z, { onOpen: ctx.onOpen, isMobile: ctx.isMobile, zuTide, verlauf: ctx.verlauf }) : null;
   // Raster: Handy Profil · Liste · Slipanlagen · Hinweis; Desktop links Profil (+ Slipanlagen, Hinweis), rechts die Liste
-  root.replaceChildren(h('div', { class: 'pg-seite pf-seite' }, kopf,
+  // imSheet (Fluss-Sheet, 7.70.0): ohne eigenen Kopf – Titel und Zusammenfassung gehen an den Kopf des Sheet-Rahmens
+  root.replaceChildren(h('div', { class: 'pg-seite pf-seite' + (ctx.imSheet ? ' is-im-sheet' : '') }, ctx.imSheet ? null : kopf,
     h('div', { class: 'pf-raster' + (profilK ? '' : ' ohne-profil') }, profilK, listenKarte, slipKarte, hinweis)));
+  const MARKE = { hsw: 'stop', hoch: 'hoch', 'teils-hoch': 'hoch', niedrig: 'warn', 'teils-niedrig': 'warn', normal: 'gut' };
+  return { titel: gr.name, unter: `${z.kopf} · ${stand}`, marke: { zustand: MARKE[z.key] || 'leise', text: FLUSS_ZUSTAND[z.key].text } };
 }

@@ -157,8 +157,8 @@ def defaults(b):
         nav = '#bottomnav' if mob else '#topnav'
         check(pg.locator(nav).is_visible() and pg.locator('#bottomnav' if not mob else '#topnav').is_hidden(), f'{name}: Navigation {"unten" if mob else "oben"}')
         check(pg.locator(f'{nav} [data-nav=karte]').get_attribute('aria-current') == 'page', f'{name}: „Karte“ aktiv')
-        check(([t.strip() for t in pg.locator(f'{nav} [data-nav]').all_inner_texts()] if not mob else [re.sub(r', .*$', '', a) for a in pg.locator(f'{nav} [data-nav]').evaluate_all("els => els.map(e => e.getAttribute('aria-label'))")]) == (['Karte', 'Pegel', 'Melden', 'Meldungen', 'Mehr'] if mob else ['Karte', 'Pegel', 'Meldungen', 'Mehr']),
-              f'{name}: Navigation Karte · Pegel · (Melden) · Meldungen · Mehr')
+        check(([t.strip() for t in pg.locator(f'{nav} [data-nav]').all_inner_texts()] if not mob else [re.sub(r', .*$', '', a) for a in pg.locator(f'{nav} [data-nav]').evaluate_all("els => els.map(e => e.getAttribute('aria-label'))")]) == (['Karte', 'Meldungen', 'Melden', 'Gemerkt', 'Mehr'] if mob else ['Karte', 'Meldungen', 'Gemerkt', 'Mehr']),
+              f'{name}: Navigation Karte · Meldungen · (Melden) · Gemerkt · Mehr (Designumbau 2a)')
         # „In der Nähe“: Schnellzugriff auf der Karte bzw. in der Werkzeugleiste
         pg.click('#btn-naehe-m' if mob else '#btn-naehe-d'); pg.wait_for_timeout(400)
         check(pg.locator('#sidebar').is_visible() and pg.locator('.place').count() > 0 and pg.url.endswith('#naehe'), f'{name}: „In der Nähe“ über den Schnellzugriff (#naehe)')
@@ -523,7 +523,7 @@ def mobile(b):
     hb = pg.locator('.app-header').bounding_box(); sb = pg.locator('#q').bounding_box()
     check(pg.locator('.brand-text').is_hidden() and sb['width'] > 390 * 0.7, 'Kopf: Logo-Symbol und breites Suchfeld, kein Schriftzug')
     cats = pg.locator('#cats .cat')
-    check(cats.count() == 3 and [cats.nth(i).inner_text().strip() for i in range(3)] == ['Slip', 'Häfen', 'Tanken'], 'Kategorie-Chips: Slip · Häfen · Tanken')
+    check(cats.count() == 4 and [cats.nth(i).inner_text().strip() for i in range(4)] == ['Slip', 'Häfen', 'Tanken', 'Pegel'], 'Kategorie-Chips: Slip · Häfen · Tanken · Pegel (Designumbau 2a)')
     pg.click('.cat-slip'); pg.click('.cat-marina'); pg.wait_for_timeout(200)   # nur Tankstellen
     check(pg.evaluate("getComputedStyle(document.querySelector('.cat-fuel')).backgroundColor") == 'rgb(14, 46, 66)', 'Aktive Kategorie dunkel gefüllt (Designsystem: Chip aktiv = Tinte)')
     bn = pg.locator('#bottomnav').bounding_box()

@@ -1,6 +1,7 @@
 // Kapselt Leaflet (+ MarkerCluster). Der Rest der App kennt nur diese Schnittstelle.
 import { CONFIG } from './config.js';
-import { gaugeMarkerHtml } from './pegel.js';
+import { pillenHtml, pegelTitel, ZOOM_MIT_ZAHL, ZOOM_OHNE_CLUSTER } from './pegel-marker.js';
+import { meinePegel } from './pegel-daten.js';
 import { extraMarkerHtml, extraTitle, KINDS, GROUPS } from './extras.js';
 import { pinSvg } from './icons.js';
 import { favorites } from './favorites.js';
@@ -120,11 +121,14 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, onAusserha
     return `${displayName(p)} – ${TYPES[p.type].label}` + (info ? (info.typ === 'gesperrt' ? ' – gesperrt gemeldet' : ` – ${info.n} aktuelle Meldung${info.n === 1 ? '' : 'en'}`) : '');
   };
 
-  // Pegel: eigene Ebene, ohne Cluster, unter den Standort-Pins; bei kleinem Zoom nur Punkte (CSS)
+  // Pegel (Chip „Pegel“): Wert-Pillen in eigener Ebene, Cluster bis ZOOM_OHNE_CLUSTER, unter ZOOM_MIT_ZAHL nur Punkte (CSS .pk-kompakt)
   let gaugeLayer = null, gaugeMarkers = new Map(), gaugeSel = null;
-  const gaugeIcon = (g, sel) => L.divIcon({ className: 'wm-gauge', html: gaugeMarkerHtml(g, sel), iconSize: null, iconAnchor: [9, 13] });
-  const zoomClass = () => el.classList.toggle('wm-gauges-compact', map.getZoom() < 9);
+  const gaugeIcon = (g, sel) => L.divIcon({ className: 'pk-marker', html: pillenHtml(g, { gewaehlt: sel, gemerkt: meinePegel.hat(g.id) }), iconSize: null, iconAnchor: [20, 14] });
+  const gaugeZ = (g) => (g.id === gaugeSel ? 1000 : meinePegel.hat(g.id) ? 600 : 500);
+  const zoomClass = () => el.classList.toggle('pk-kompakt', map.getZoom() < ZOOM_MIT_ZAHL);
   map.on('zoomend', zoomClass); zoomClass();
+  // Stern „Meine Pegel“ an anderer Stelle geändert: Pillen neu zeichnen (gemerkte größer, mit Stern)
+  document.addEventListener('meine-pegel', () => { for (const { marker, gauge } of gaugeMarkers.values()) { marker.setIcon(gaugeIcon(gauge, gauge.id === gaugeSel)); marker.setZIndexOffset(gaugeZ(gauge)); } });
 
   // Extras: je Gruppe eine Ebene (mit kleinen Clustern, wenn verfügbar)
   const extraLayers = {}, extraMarkers = new Map();
@@ -202,13 +206,18 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, onAusserha
     setGauges(list, onClick) {
       if (gaugeLayer) { gaugeLayer.remove(); gaugeLayer = null; gaugeMarkers.clear(); }
       if (!list) { map.attributionControl.removeAttribution(CONFIG.PEGEL_ATTRIBUTION); return; }
-      gaugeLayer = L.layerGroup().addTo(map);
-      for (const g of list) {
-        const m = L.marker([g.lat, g.lon], { icon: gaugeIcon(g, g.id === gaugeSel), title: `Pegel ${g.name}`, alt: `Pegel ${g.name}`, keyboard: true, zIndexOffset: 500 });
+      gaugeLayer = useCluster
+        ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 44, disableClusteringAtZoom: ZOOM_OHNE_CLUSTER, chunkedLoading: true, spiderfyOnMaxZoom: false,
+            iconCreateFunction: (c) => L.divIcon({ html: `<span>${c.getChildCount()}</span>`, className: 'pk-cluster', iconSize: [40, 40] }) })
+        : L.layerGroup();
+      const ms = list.map((g) => {
+        const m = L.marker([g.lat, g.lon], { icon: gaugeIcon(g, g.id === gaugeSel), title: pegelTitel(g), alt: `Pegel ${g.name}`, keyboard: true, zIndexOffset: gaugeZ(g) });
         m.on('click', () => onClick(g.id));
         gaugeMarkers.set(g.id, { marker: m, gauge: g });
-        m.addTo(gaugeLayer);
-      }
+        return m;
+      });
+      if (gaugeLayer.addLayers) gaugeLayer.addLayers(ms); else ms.forEach(m => m.addTo(gaugeLayer));
+      gaugeLayer.addTo(map);
       map.attributionControl.addAttribution(CONFIG.PEGEL_ATTRIBUTION);
     },
     /** Extras einer Gruppe zeigen (Liste) oder entfernen (null). */
@@ -239,10 +248,14 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, onAusserha
     },
     selectGauge(id) {
       const prev = gaugeMarkers.get(gaugeSel);
-      if (prev) { prev.marker.setIcon(gaugeIcon(prev.gauge, false)); prev.marker.setZIndexOffset(500); }
       gaugeSel = id;
+      if (prev) { prev.marker.setIcon(gaugeIcon(prev.gauge, false)); prev.marker.setZIndexOffset(gaugeZ(prev.gauge)); }
       const cur = gaugeMarkers.get(id);
-      if (cur) { cur.marker.setIcon(gaugeIcon(cur.gauge, true)); cur.marker.setZIndexOffset(1000); }
+      if (cur) {
+        // im Cluster versteckt: Cluster auflösen, damit der gewählte Pegel zu sehen ist
+        if (gaugeLayer?.zoomToShowLayer && !cur.marker._icon) gaugeLayer.zoomToShowLayer(cur.marker, () => {});
+        cur.marker.setIcon(gaugeIcon(cur.gauge, true)); cur.marker.setZIndexOffset(1000);
+      }
     },
     fitBounds(points, opts = {}) {
       if (!points.length) return;

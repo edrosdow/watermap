@@ -1,4 +1,4 @@
-"""UI-Test Flussseite (#pegel/fluss/<name>) und Tidepegel im Pegel-Cockpit mit nachgebildetem PEGELONLINE und den Daten aus ui_full.py.
+"""UI-Test Fluss-Sheet (alte Adresse #pegel/fluss/<name> leitet auf die Karte, Designumbau 2a) und Tidepegel im Pegel-Sheet mit nachgebildetem PEGELONLINE und den Daten aus ui_full.py.
 Start: python3 tests/ui_pegel_fluss.py [screenshots-ordner]"""
 import datetime as dt, importlib.util, json, math, pathlib, re, sys
 from urllib.parse import urlparse, parse_qs
@@ -98,22 +98,31 @@ def page(b, w, hh, mobile):
     pg.errs = errs; pg.infos = infos
     return ctx, pg
 
+FLUSS, PEGEL = '.wm-sheet.pf-sheet', '.wm-sheet.pks-sheet'
+
+def oeffne(pg, adresse):
+    """Adresse frisch laden (ein reiner Hash-Wechsel würde Sheets stapeln; die App schreibt alte Adressen sofort um, daher kein reload)."""
+    pg.goto('about:blank'); pg.goto(uf.BASE + adresse); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(500)
+
+def details(pg, adresse, mobile):
+    """Pegel-Sheet mit allen Details: Handy erst „Details“ tippen, Desktop zeigt sie gleich."""
+    oeffne(pg, adresse); pg.wait_for_selector(PEGEL + ' #pd-name')
+    if mobile: pg.click(PEGEL + ' .pks-details')
+    pg.wait_for_selector(PEGEL + ' .pd')
+
 def run(b, w, hh, mobile):
     tag = f'{w}px'
     print(f'--- {tag}')
     nav = '#bottomnav' if mobile else '#topnav'
     ctx, pg = page(b, w, hh, mobile)
-    # „Flüsse im Überblick“ gibt es im Pegel-Tab nicht mehr (7.49.0); die Flussseite bleibt per Link und aus dem Pegel-Cockpit erreichbar
-    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pa .pk-pille')
-    check(pg.locator('.fk').count() == 0 and pg.locator('.pg-fl-zeile').count() == 0, f'{tag}: Pegelkarte ohne „Flüsse im Überblick“')
+    # Pegel-Tab entfallen (Designumbau 2a): #pegel → Karte mit Chip „Pegel“, die Flussseite ist ein Sheet über der Karte
+    oeffne(pg, '#pegel'); pg.wait_for_selector('.pk-marker')
+    check(pg.locator('#cats [data-cat=pegel]').get_attribute('aria-pressed') == 'true' and pg.locator('.fk').count() == 0, f'{tag}: #pegel → Karte mit Pegeln')
     n_mess = len([c for c in calls if 'measurements' in c])
-    # die eigentliche Flussseite per Direktlink (Seite bleibt erhalten)
-    pg.goto(uf.BASE + '#pegel/fluss/elbe'); pg.wait_for_selector('.pf-titel'); pg.wait_for_timeout(300)
-    check(pg.url.endswith('#pegel/fluss/elbe') and pg.locator(f'{nav} [data-nav=pegel]').get_attribute('aria-current') == 'page', f'{tag}: Adresse #pegel/fluss/elbe, Tab „Pegel“ aktiv')
-    kopf = pg.inner_text('.pf-kopf')
-    check('GEWÄSSER' not in kopf.upper() and 'Elbe' in kopf and 'niedrig' in kopf and re.search(r'7 von 11 bewerteten Pegeln unter MNW · Stand \d\d:\d\d', kopf), f'{tag}: kompakter Kopf ({kopf!r})')
-    if mobile:
-        check(pg.locator('.app-header').is_hidden() and pg.locator('.pf-kopf').bounding_box()['y'] < 5, f'{tag}: Flussseite ohne globales Suchfeld')
+    oeffne(pg, '#pegel/fluss/elbe'); pg.wait_for_selector(FLUSS + ' #pf-name'); pg.wait_for_timeout(300)
+    check(pg.locator(f'{nav} [data-nav=karte]').get_attribute('aria-current') == 'page', f'{tag}: alte Adresse #pegel/fluss/elbe → Fluss-Sheet über der Karte')
+    kopf = pg.inner_text(FLUSS + ' .wm-kopf')
+    check('GEWÄSSER' not in kopf.upper() and 'Elbe' in kopf and re.search(r'7 von 11 bewerteten Pegeln unter MNW · Stand \d\d:\d\d', kopf), f'{tag}: Kopf mit Titel links und Zusammenfassung ({kopf!r})')
     check('Wasserstand entlang der Elbe' in pg.inner_text('.pf-profilkarte'), f'{tag}: Überschrift Profil')
     check(pg.locator('.pf-punkt').count() == 10, f'{tag}: 10 Punkte (ohne Tide, ohne km)')
     hv = pg.inner_text('.pf-hervor')
@@ -127,7 +136,7 @@ def run(b, w, hh, mobile):
     lab = pg.get_attribute('.pf-svg', 'aria-label') or ''
     check('Tiefster Pegel: Dresden 62 cm' in lab and '7 unter MNW' in lab and 'Ab Neu Darchau folgen 2 Tidepegel' in lab, f'{tag}: aria-label mit Textzusammenfassung und Tidepegeln')
     svg = pg.locator('.pf-svg').bounding_box()
-    check(abs(svg['height'] - 170) < 2 and svg['width'] > (w * 0.45 if not mobile else w - 80), f'{tag}: Profil volle Breite, 170 px hoch ({svg})')
+    check(abs(svg['height'] - 170) < 2 and svg['width'] > (300 if not mobile else w - 80), f'{tag}: Profil volle Breite, 170 px hoch ({svg})')
     cx = [float(c.get_attribute('cx')) for c in pg.locator('.pf-punkt').all()]
     abst = [round(b - a, 1) for a, b in zip(cx, cx[1:])]
     check(max(abst) - min(abst) < 0.5, f'{tag}: gleiche Abstände in Fließrichtung ({abst[:3]})')
@@ -160,10 +169,10 @@ def run(b, w, hh, mobile):
     check(re.search(r'· HW Cuxhaven (morgen )?\d\d:\d\d', pg.inner_text('.pf-tidezeile')), f'{tag}: Tide-Zeile mit nächstem HW ({pg.inner_text(".pf-tidezeile")!r})')
     neu = [c for c in calls[len(calls) - 50:] if 'measurements' in c]
     check(len([c for c in calls if 'measurements' in c]) - n_mess <= 1, f'{tag}: höchstens eine Abfrage (Tide-Zeile) für die Flussseite')
-    if not mobile and w >= 1024:
+    if not mobile:
         pk = pg.locator('.pf-profilkarte').bounding_box(); lk = pg.locator('.pf-listenkarte').bounding_box()
-        check(lk['x'] > pk['x'] + pk['width'] - 1 and abs(lk['y'] - pk['y']) < 2, f'{tag}: Desktop zweispaltig (Profil links, Liste rechts)')
-    check(pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth') and pg.evaluate("document.querySelector('#pegelseite').scrollWidth <= window.innerWidth"), f'{tag}: kein horizontales Scrollen')
+        check(lk['y'] > pk['y'] + pk['height'] - 1, f'{tag}: Desktop im Panel einspaltig (Profil über der Liste)')
+    check(pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth') and pg.evaluate(f"(() => {{ const e = document.querySelector('{FLUSS} .wm-sheet-inhalt'); return e.scrollWidth <= e.clientWidth; }})()"), f'{tag}: kein horizontales Scrollen')
     klein = pg.evaluate("""[...document.querySelectorAll('.pf-seite button, .fk')].filter(e => e.offsetParent !== null)
         .map(e => { const r = e.getBoundingClientRect(); return [e.className, Math.round(r.height)]; }).filter(x => x[1] < 44)""")
     check(not klein, f'{tag}: Touch-Ziele ≥ 44 px {klein[:3]}')
@@ -173,7 +182,7 @@ def run(b, w, hh, mobile):
     ziel = pg.locator('.pf-ziel').nth(1)
     if mobile:
         ziel.tap(force=True); pg.wait_for_timeout(150)   # dicht liegende Punkte: der nächstgelegene zur Tippstelle gewinnt
-        check(pg.locator('.pf-blase').is_visible() and 'Dresden' in pg.inner_text('.pf-blase') and 'Details ›' in pg.inner_text('.pf-blase') and pg.url.endswith('#pegel/fluss/elbe'),
+        check(pg.locator('.pf-blase').is_visible() and 'Dresden' in pg.inner_text('.pf-blase') and 'Details ›' in pg.inner_text('.pf-blase'),
               f'{tag}: erster Tipp zeigt die Blase')
         pg.locator('.pf-legende').tap(); pg.wait_for_timeout(100)
         check(pg.locator('.pf-blase').is_hidden(), f'{tag}: Tipp daneben schließt die Blase')
@@ -182,20 +191,19 @@ def run(b, w, hh, mobile):
         ziel.hover(); pg.wait_for_timeout(150)
         check(pg.locator('.pf-blase').is_visible() and '62 cm' in pg.inner_text('.pf-blase') and 'niedrig' in pg.inner_text('.pf-blase'), f'{tag}: Hover zeigt Name, Wert, Zustand')
         ziel.click()
-    pg.wait_for_selector('dialog.wxd-pegel[open] .pd-name')
-    check(pg.url.endswith('#pegel/fluss/elbe') and 'Dresden' in pg.inner_text('dialog.wxd-pegel .pd-name'), f'{tag}: Punkt öffnet die Pegel-Details im Fenster')
-    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
-    check(pg.url.endswith('#pegel/fluss/elbe') and pg.locator('.pf-titel').is_visible(), f'{tag}: Esc schließt das Fenster → Flussseite')
-    pg.locator('.pf-zeile').nth(0).click(); pg.wait_for_selector('dialog.wxd-pegel[open] .pd-name')
-    check('Schöna' in pg.inner_text('dialog.wxd-pegel .pd-name'), f'{tag}: Zeile öffnet die Pegel-Details im Fenster')
-    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
-    pg.click('.pf-zurueck'); pg.wait_for_selector('.pa .pk-pille')
-    check(pg.url.endswith('#pegel'), f'{tag}: Zurück-Pfeil → Pegelkarte')
+    pg.wait_for_selector(PEGEL + ' #pd-name'); pg.wait_for_timeout(500)
+    check('Dresden' in pg.inner_text(PEGEL + ' #pd-name') and pg.locator(FLUSS).count() == 0, f'{tag}: Punkt öffnet das Pegel-Sheet (Fluss-Sheet schließt)')
+    oeffne(pg, '#pegel/fluss/elbe'); pg.wait_for_selector(FLUSS + ' .pf-zeile')
+    pg.locator('.pf-zeile').nth(0).click(); pg.wait_for_selector(PEGEL + ' #pd-name'); pg.wait_for_timeout(500)
+    check('Schöna' in pg.inner_text(PEGEL + ' #pd-name'), f'{tag}: Zeile öffnet das Pegel-Sheet')
+    oeffne(pg, '#pegel/fluss/elbe'); pg.wait_for_selector(FLUSS + ' #pf-name')
+    pg.click(FLUSS + ' .wm-zu'); pg.wait_for_timeout(700)
+    check(pg.locator(FLUSS).count() == 0 and pg.locator('.pk-marker').count() > 0, f'{tag}: × schließt das Fluss-Sheet → Karte mit Pegeln')
 
     # Tidepegel-Detailseite (Cuxhaven)
-    pg.goto(uf.BASE + f'#pegel/{U(21)}'); pg.wait_for_selector('.pa-kurz'); pg.click('.pa-verlauf'); pg.wait_for_selector('.pt-svg', timeout=8000); pg.wait_for_timeout(300)
-    kp = ' '.join(pg.inner_text('.pd-kopf').split())
-    check('TIDEPEGEL · ELBE · KM 727' in kp.upper() and 'Cuxhaven' in kp and '610' in kp and pg.inner_text('.pd-kopf .pz-tag-text') == 'Tide' and '↗ auflaufend' in kp,
+    details(pg, f'#pegel/{U(21)}', mobile); pg.wait_for_selector('.pt-svg', timeout=8000); pg.wait_for_timeout(300)
+    kp = ' '.join((pg.inner_text(PEGEL + ' .wm-kopf') + ' · ' + pg.inner_text('.pd-kopf')).split())
+    check('TIDEPEGEL · ELBE' in kp.upper() and 'KM 727' in kp.upper() and 'Cuxhaven' in kp and '610' in kp and pg.inner_text('.pd-kopf .pz-tag-text') == 'Tide' and '↗ auflaufend' in kp,
           f'{tag}: Tidepegel-Kopf mit „Tide“ und „auflaufend“ ({kp!r})')
     check(pg.locator('.pd .ps').count() == 0 and 'Wo steht der Pegel' not in pg.inner_text('.pd'), f'{tag}: keine MNW/MHW-Skala')
     tk = pg.locator('.pt-svg')
@@ -221,33 +229,30 @@ def run(b, w, hh, mobile):
     pg.screenshot(path=str(SHOTS / f'fluss_{w}_4tide.png'), full_page=True)
     # offline: letzte Vorhersage mit „Stand von … (offline)“
     bsh['aus'] = True
-    pg.reload(); pg.wait_for_selector('.pa-kurz'); pg.click('.pa-verlauf'); pg.wait_for_selector('.pt-gezeiten', timeout=5000)
+    details(pg, f'#pegel/{U(21)}', mobile); pg.wait_for_selector('.pt-gezeiten', timeout=5000)
     check('(offline)' in pg.inner_text('.pt-gezeiten') and 'Stand von' in pg.inner_text('.pt-gezeiten'), f'{tag}: offline letzte Vorhersage mit „Stand von …“')
     pg.evaluate("Object.keys(localStorage).filter(k => k.startsWith('watermap.gezeiten.')).forEach(k => localStorage.removeItem(k))")
-    pg.reload(); pg.wait_for_selector('.pa-kurz'); pg.click('.pa-verlauf'); pg.wait_for_selector('.pt-svg', timeout=8000); pg.wait_for_timeout(500)
+    details(pg, f'#pegel/{U(21)}', mobile); pg.wait_for_selector('.pt-svg', timeout=8000); pg.wait_for_timeout(500)
     check(pg.locator('.pt-gezeiten').count() == 0 and pg.locator('.pt-vorhersage').count() == 0 and '24 h gemessen' in pg.inner_text('.pd-body'), f'{tag}: BSH nicht erreichbar → nur Messwerte')
     bsh['aus'] = False
-    pg.locator('.pd-kachel', has_text='alle Pegel').click(); pg.wait_for_selector('dialog.wxd-fluss[open] .pf-titel')
-    check(f'#pegel/{U(21)}' in pg.url and 'Elbe' in pg.inner_text('dialog.wxd-fluss .pf-kopf'), f'{tag}: Kachel „Elbe – alle Pegel“ öffnet das Fluss-Fenster')
-    pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
-    # Favoriten: Tidepegel mit auf-/ablaufend statt 2 h/24 h
-    pg.evaluate(f"localStorage.setItem('watermap.meinePegel', JSON.stringify(['{U(21)}']))")
-    pg.goto(uf.BASE + '#pegel'); pg.wait_for_selector('.pa .pk-pille'); pg.click('.pa-chip[data-liste=fav]'); pg.wait_for_selector('.pa-liste .pa-z')
-    check('Cuxhaven' in pg.locator('.pa-liste .pa-z').first.inner_text(), f'{tag}: Favoriten-Liste mit dem Tidepegel')
-    pg.locator('.pa-liste .pa-z-knopf').first.click(); pg.wait_for_selector('.pa-kurz .pa-kurve'); pg.wait_for_timeout(300)
-    check('Tide' in pg.inner_text('.pa-trend') and 'auflaufend' in pg.inner_text('.pa-zahlen'), f'{tag}: Tidepegel kompakt mit „auflaufend“ statt 2 Std./24 Std. ({pg.inner_text(".pa-trend")!r})')
-    pg.evaluate("localStorage.removeItem('watermap.meinePegel')")
+    pg.locator('.pd-kachel', has_text='alle Pegel').click(); pg.wait_for_selector(FLUSS + ' #pf-name')
+    check('Elbe' in pg.inner_text(FLUSS + ' .wm-kopf') and pg.locator(PEGEL).count() == 1, f'{tag}: Kachel „Elbe – alle Pegel“ öffnet das Fluss-Sheet über dem Pegel-Sheet')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(600)
+    check(pg.locator(FLUSS).count() == 0 and pg.locator(PEGEL).count() == 1, f'{tag}: Esc schließt nur das Fluss-Sheet')
+    if mobile:   # Kurzansicht (Stufe klein): Tidepegel mit auf-/ablaufend statt 2 Std./24 Std.
+        oeffne(pg, f'#pegel/{U(21)}'); pg.wait_for_selector(PEGEL + ' .pks-kurz .pks-kurve-svg', timeout=8000); pg.wait_for_timeout(300)
+        check('Tide' in pg.inner_text('.pks-trend') and 'auflaufend' in pg.inner_text('.pks-zahlen'), f'{tag}: Tidepegel kompakt mit „auflaufend“ statt 2 Std./24 Std. ({pg.inner_text(".pks-trend")!r})')
 
     # Küste und Kanal: ohne Profil, nur Liste
-    pg.goto(uf.BASE + '#pegel/fluss/kueste'); pg.wait_for_selector('.pf-titel')
-    check(pg.url.endswith('#pegel/fluss/kueste') and pg.locator('.pf-svg').count() == 0 and pg.locator('.pf-zeile').count() == 3 and 'Tide' in pg.inner_text('.pf-kopf'), f'{tag}: Küste ohne Profil, Liste der Küstenpegel')
-    pg.goto(uf.BASE + '#pegel/fluss/mittellandkanal'); pg.wait_for_selector('.pf-titel')
-    check(pg.url.endswith('#pegel/fluss/mittellandkanal') and pg.locator('.pf-svg').count() == 0 and 'ohne Kennwerte' in pg.inner_text('.pf-kopf')
+    oeffne(pg, '#pegel/fluss/kueste'); pg.wait_for_selector(FLUSS + ' #pf-name')
+    check(pg.locator('.pf-svg').count() == 0 and pg.locator('.pf-zeile').count() == 3 and 'Tide' in pg.inner_text(FLUSS + ' .wm-kopf'), f'{tag}: Küste ohne Profil, Liste der Küstenpegel')
+    oeffne(pg, '#pegel/fluss/mittellandkanal'); pg.wait_for_selector(FLUSS + ' #pf-name')
+    check(pg.locator('.pf-svg').count() == 0 and 'ohne Kennwerte' in pg.inner_text(FLUSS + ' .wm-kopf')
           and pg.locator('.pf-zeile .pz-tag').first.inner_text() == 'ohne Kennw.', f'{tag}: Kanal ohne Profil, Pegel „ohne Kennw.“')
     pg.screenshot(path=str(SHOTS / f'fluss_{w}_3kanal.png'))
 
     # Direkter Link, Slipanlagen an diesem Gewässer
-    pg.goto(uf.BASE + '#pegel/fluss/test-see'); pg.wait_for_selector('.pf-titel')
+    oeffne(pg, '#pegel/fluss/test-see'); pg.wait_for_selector(FLUSS + ' #pf-name')
     slips = pg.locator('.pf-slips')
     n = int(re.search(r'(\d+) Slipanlage', slips.inner_text()).group(1))
     check(n > 0 and 'am Test-See' in slips.inner_text() and 'Auf der Karte zeigen' in slips.inner_text(), f'{tag}: Karte „{n} Slipanlagen an der …“')
@@ -264,8 +269,8 @@ def run(b, w, hh, mobile):
     check('Tidepegel mit BSH-Vorhersage (1)' in pt and 'Elbe: Cuxhaven' in pt and 'BSH-Orte ohne PEGELONLINE-Pegel (1)' in pt and 'helgoland | Helgoland | Nr. 9510070' in pt, f'{tag}: Prüfliste mit BSH-Zuordnung')
     check('Reihenfolge Elbe' in pt and '1. Schöna (km 2)' in pt and 'Hamburg St. Pauli (km 623,1) · Tide' in pt and 'Erkannte Tidepegel (3)' in pt and 'Mittellandkanal (2)' in pt,
           f'{tag}: Prüfliste mit Reihenfolge, Tidepegeln und Gewässern ohne Bewertung')
-    pg.goto(uf.BASE + '#pegel/fluss/gibtsnicht'); pg.wait_for_selector('.pg-fehler')
-    check('nicht gefunden' in pg.inner_text('.pg-fehler'), f'{tag}: unbekanntes Gewässer → Hinweis')
+    oeffne(pg, '#pegel/fluss/gibtsnicht'); pg.wait_for_timeout(1500)
+    check('nicht gefunden' in pg.inner_text('#toast') and pg.locator(FLUSS).count() == 0, f'{tag}: unbekanntes Gewässer → Hinweis')
     check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
     ctx.close()
 

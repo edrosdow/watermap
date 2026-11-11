@@ -118,12 +118,12 @@ export function tideDetail(g, opts) {
   const tend = h('span', { class: 'pd-tz pt-tendenz' });
   const alt = g.state === 'old';
   // Kopf wie bei allen Pegeln: Name, Ort und Zeit, große Zahl, Zustandszeile, drei Knöpfe
-  const kopf = h('header', { class: 'pd-kopf is-tide' },
-    h('div', { class: 'pd-leiste' },
+  const kopf = h('header', { class: 'pd-kopf is-tide' + (opts.imSheet ? ' is-im-sheet' : '') },
+    opts.imSheet ? null : h('div', { class: 'pd-leiste' },
       h('button', { type: 'button', class: 'pd-icon', 'aria-label': opts.backLabel || 'Zurück', html: icon(opts.eingebettet ? 'close' : 'back', 22), onclick: opts.onBack })),
-    h('h1', { class: 'pd-name', id: 'pd-name', tabindex: '-1', text: g.name }),
-    h('p', { class: 'pd-ort' + (alt ? ' is-alt' : '') }, h('span', { class: 'sr-only', text: 'Tidepegel · ' }),
-      [g.water, kmText(g), alt ? `veraltet – ${formatTime(g.time)}` : formatTime(g.time)].filter(Boolean).join(' · ')),
+    opts.imSheet ? null : h('h1', { class: 'pd-name', id: 'pd-name', tabindex: '-1', text: g.name }),
+    h('p', { class: 'pd-ort' + (alt ? ' is-alt' : '') }, opts.imSheet ? null : h('span', { class: 'sr-only', text: 'Tidepegel · ' }),
+      [opts.imSheet ? null : g.water, kmText(g), alt ? `veraltet – ${formatTime(g.time)}` : formatTime(g.time)].filter(Boolean).join(' · ')),
     h('p', { class: 'pd-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: g.unit })),
     h('p', { class: 'pd-zeile-kopf' }, h('span', { class: 'pd-zdot pz-tide', 'aria-hidden': 'true' }), h('b', { class: 'pz-tag-text', text: alt ? 'veraltet' : 'Tide' }), alt ? null : tend),
     h('div', { class: 'pd-knoepfe' }, alarmKnopf(g), merkKnopf(g, opts.onStern),
@@ -186,5 +186,5 @@ export function tideDetail(g, opts) {
     opts.onFluss ? h('button', { type: 'button', class: 'pd-zeile pd-kachel', onclick: opts.onFluss }, h('span', { html: icon('welle', 18), 'aria-hidden': 'true' }), `${g.water || 'Gewässer'} – alle Pegel`, chev()) : null,
     stammdaten(g)));
   body.append(quelle);
-  return h('article', { class: 'pd pd-blau pz-tide' + (opts.eingebettet ? ' is-eingebettet' : ''), 'aria-labelledby': 'pd-name' }, kopf, body);
+  return h('article', { class: 'pd pz-tide' + (opts.eingebettet ? ' is-eingebettet' : ''), 'aria-labelledby': 'pd-name' }, kopf, body);
 }

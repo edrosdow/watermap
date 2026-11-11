@@ -169,11 +169,12 @@ export function pegelDetail(g, opts) {
   // Zustand, Tendenz (2 h) und Änderung (24 h) in einer Zeile – aus derselben Messreihe wie das Diagramm
   const aend24 = h('b', { class: 'pd-24', text: '…' }), tend = h('b', { class: 'pd-2h', text: '…' });
   const alt = g.state === 'old';
-  const kopf = h('header', { class: 'pd-kopf' },
-    h('div', { class: 'pd-leiste' },
+  // imSheet (Pegel-Sheet, 7.70.0): Name und Gewässer stehen im Kopf des Sheet-Rahmens, × ebenfalls – hier nur km und Zeit
+  const kopf = h('header', { class: 'pd-kopf' + (opts.imSheet ? ' is-im-sheet' : '') },
+    opts.imSheet ? null : h('div', { class: 'pd-leiste' },
       h('button', { type: 'button', class: 'pd-icon', 'aria-label': opts.backLabel || 'Zurück', html: icon(opts.eingebettet ? 'close' : 'back', 22), onclick: opts.onBack })),
-    titel,
-    h('p', { class: 'pd-ort' + (alt ? ' is-alt' : '') }, h('span', { class: 'sr-only', text: 'Pegel · ' }), [g.water, kmText(g), alt ? `veraltet – ${formatTime(g.time)}` : formatTime(g.time)].filter(Boolean).join(' · ')),
+    opts.imSheet ? null : titel,
+    h('p', { class: 'pd-ort' + (alt ? ' is-alt' : '') }, opts.imSheet ? null : h('span', { class: 'sr-only', text: 'Pegel · ' }), [opts.imSheet ? null : g.water, kmText(g), alt ? `veraltet – ${formatTime(g.time)}` : formatTime(g.time)].filter(Boolean).join(' · ')),
     h('p', { class: 'pd-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: g.unit })),
     h('p', { class: 'pd-zeile-kopf' }, h('span', { class: `pd-zdot ${ZUSTAND[z].cls}`, 'aria-hidden': 'true' }), h('b', { text: ZUSTAND[z].text.replace(/^ü/, 'Ü') }),
       alt ? null : h('span', { class: 'pd-tz' }, ' · 2 Std. ', tend, ' · 24 Std. ', aend24)),
@@ -258,5 +259,5 @@ export function pegelDetail(g, opts) {
   }
   zeilen.push(stammdaten(g));
   body.append(h('section', { class: 'pd-karte pd-liste', 'aria-label': 'Weiteres' }, zeilen));
-  return h('article', { class: `pd pd-blau ${ZUSTAND[z].cls}` + (opts.eingebettet ? ' is-eingebettet' : ''), 'aria-labelledby': 'pd-name' }, kopf, body);
+  return h('article', { class: `pd ${ZUSTAND[z].cls}` + (opts.eingebettet ? ' is-eingebettet' : ''), 'aria-labelledby': 'pd-name' }, kopf, body);
 }

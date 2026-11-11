@@ -281,7 +281,7 @@ async function alarmLink(params) {
 async function init() {
   $('am-logo').innerHTML = logoSvg(32);
   suchfelderMitX();
-  mountNav({ top: $('topnav'), bottom: $('bottomnav'), active: 'pegel', reportLink: true });
+  mountNav({ top: $('topnav'), bottom: $('bottomnav'), active: 'karte', reportLink: true });   // Pegel liegen auf der Karte (Designumbau 2a)
   $('am-searchico').innerHTML = icon('search', 22);
   $('am-bell').innerHTML = icon('bell', 26);
 

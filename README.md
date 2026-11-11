@@ -50,8 +50,8 @@ Eigene Seite unter `/pegel-ampel` (`public/pegel-ampel.html`, `js/ampel.js`, Log
 python3 -I -m unittest discover -s tests -v     # Importer, Validator, Moderationsskript
 python3 -I tests/ui_full.py                     # Oberfläche (braucht: pip install playwright pillow)
 python3 -I tests/ui_ampel.py                    # Pegel-Ampel
-python3 -I tests/ui_pegel_dashboard.py          # Pegel-Tab als Kartenanwendung: Karte, Suche, Filter, Bottom Sheet, Cockpit, Favoriten (375/390/1024/1440 px)
-python3 -I tests/ui_pegel_fluss.py              # Flussseite, Tidepegel mit BSH-Vorhersage im Cockpit (375/390/1024/1440 px)
+python3 -I tests/ui_pegel_karte.py              # Pegel auf der Hauptkarte: Chip, Marker, Pegel-Sheet, alte Adressen, Suche, Navigation (390/1440 px)
+python3 -I tests/ui_pegel_fluss.py              # Fluss-Sheet, Tidepegel mit BSH-Vorhersage im Pegel-Sheet (375/390/1024/1440 px)
 python3 -I tests/ui_naehe.py                    # „In der Nähe“ (Bezugspunkt, Standortfreigabe, Liste; 375/390/1024/1440 px)
 python3 -I tests/ui_bereiche.py                 # Navigation, „Aktuelle Meldungen“, „Mehr“, Merkliste (360–1440 px)
 python3 -I tests/ui_einstellungen.py            # „Mein WaterMap“ (Einstellungen; 375/390/1024/1440 px)

@@ -9,11 +9,12 @@ let laufendeId = 0;
 const neueId = (p) => `${p}-${++laufendeId}`;
 
 /** Kopf: Titel links (h2, per Skript fokussierbar), Unterzeile, rechts runder ×-Knopf; optional eine Zusatzaktion links neben ×.
- *  aktion = { icon, label, onclick } */
-export function kopf({ titel, unter = null, onZu = null, aktion = null, titelId = neueId('wm-titel'), klebend = false }) {
+ *  aktion = { icon, label, onclick } · marke = { zustand, text }: Zustandsmarke neben dem Titel (z. B. Fluss „niedrig“) */
+export function kopf({ titel, unter = null, onZu = null, aktion = null, titelId = neueId('wm-titel'), klebend = false, marke: mk = null }) {
+  const t = h('h2', { class: 'wm-kopf-titel', id: titelId, tabindex: '-1', text: titel });
   return h('header', { class: 'wm-kopf' + (klebend ? ' is-klebend' : '') },
     h('div', { class: 'wm-kopf-block' },
-      h('h2', { class: 'wm-kopf-titel', id: titelId, tabindex: '-1', text: titel }),
+      mk ? h('div', { class: 'wm-kopf-zeile' }, t, marke(mk.zustand, mk.text)) : t,
       unter ? h('p', { class: 'wm-kopf-unter', text: unter }) : null),
     aktion ? h('button', { type: 'button', class: 'wm-rund', 'aria-label': aktion.label, html: icon(aktion.icon, 20), onclick: aktion.onclick }) : null,
     onZu ? h('button', { type: 'button', class: 'wm-rund wm-zu', 'aria-label': 'Schließen', html: icon('close', 20), onclick: onZu }) : null);
@@ -128,12 +129,15 @@ function escVerdrahten() {
  * inhalt: Element(e) für den Inhalt · kopf: Element (z. B. kopf({...})) oder { titel, unter, aktion } · label: Name für Screenreader
  * stufe: 'gross' | 'klein' · klein: Höhe der Stufe „klein“ (CSS-Wert, Standard 45 %) · oben: Oberkante der Stufe „groß“ (CSS-Wert)
  * opener: Element, das danach den Fokus bekommt (Standard: das aktive Element beim Öffnen) · onZu: nach dem Schließen · klasse: Zusatzklasse
- * Rückgabe: { el, inhalt, schliessen(), stufe(neu?), setzeInhalt(…) }
+ * inhaltFuer(stufe): optional – eigener Inhalt je Stufe (z. B. Pegel: klein = Kurzansicht, groß = Details). Beim Hochziehen aus „klein“
+ *   wird schon zu Beginn der Bewegung der große Inhalt gezeigt (kein leeres Blatt), federt es zurück, wieder der kleine.
+ * onStufe(stufe): nach jedem Stufenwechsel.
+ * Rückgabe: { el, inhalt, schliessen(), stufe(neu?), setzeInhalt(…), setzeKopf(angaben|Element) }
  */
-export function sheetOeffnen({ inhalt, kopf: k = null, label = null, stufe = 'gross', klein = null, oben = null, opener = null, onZu = null, klasse = '' }) {
+export function sheetOeffnen({ inhalt = [], kopf: k = null, label = null, stufe = 'gross', klein = null, oben = null, opener = null, onZu = null, klasse = '', inhaltFuer = null, onStufe = null }) {
   escVerdrahten();
   const ausloeser = opener || document.activeElement;
-  const s = { offen: true, aktuell: stufe };
+  const s = { offen: true, aktuell: stufe, gezeigt: null, inhaltFuer };
   const body = h('div', { class: 'wm-sheet-inhalt' }, inhalt);
   // Kopf als Angaben → hier gebaut, × schließt; als fertiges Element ohne × → × wird angehängt (mit × → bleibt beim Aufrufer)
   const kopfEl = k && !k.nodeType ? kopf({ ...k, onZu: () => s.schliessen() }) : k;
@@ -165,11 +169,29 @@ export function sheetOeffnen({ inhalt, kopf: k = null, label = null, stufe = 'gr
   Object.assign(s, {
     el, inhalt: body,
     setzeInhalt(...knoten) { body.replaceChildren(...knoten); body.scrollTop = 0; },
+    /** Inhalt der Stufe zeigen (nur mit inhaltFuer); erneut: neu aufbauen (z. B. anderer Pegel). */
+    zeigeInhalt(stufe, neu = false) {
+      if (!s.inhaltFuer || (!neu && s.gezeigt === stufe)) return;
+      s.gezeigt = stufe;
+      const n = s.inhaltFuer(stufe);
+      s.setzeInhalt(...(Array.isArray(n) ? n : [n]));
+    },
+    /** Kopf ersetzen (Angaben → kopf() mit ×, oder fertiges Element). */
+    setzeKopf(neu) {
+      const alt = el.querySelector(':scope > .wm-kopf');
+      const n = neu && !neu.nodeType ? kopf({ ...neu, onZu: () => s.schliessen() }) : neu;
+      if (alt && n) alt.replaceWith(n); else if (n) griff.after(n);
+      const t = n?.querySelector('.wm-kopf-titel');
+      if (t && !label) el.setAttribute('aria-labelledby', t.id);
+    },
     stufe(neu) {
       if (neu === undefined) return s.aktuell;
+      const anders = neu !== s.aktuell;
       s.aktuell = neu;
       el.classList.toggle('is-klein', neu === 'klein');
       griff.setAttribute('aria-expanded', String(neu === 'gross'));
+      s.zeigeInhalt(neu);
+      if (anders) onStufe?.(neu);
       return neu;
     },
     schliessen() {
@@ -183,13 +205,22 @@ export function sheetOeffnen({ inhalt, kopf: k = null, label = null, stufe = 'gr
         if (ausloeser && document.contains(ausloeser)) ausloeser.focus({ preventScroll: true });
         onZu?.();
       };
-      if (ruhig()) weg(); else { let fertig = false; const f = () => { if (!fertig) { fertig = true; weg(); } }; el.addEventListener('transitionend', f, { once: true }); setTimeout(f, 480); }
+      nachUebergang(el, weg);
     },
   });
-  // Stufe einmal über die Funktion setzen (aria-expanded des Griffs)
+  // Stufe einmal über die Funktion setzen (aria-expanded des Griffs, Inhalt der Stufe)
   s.stufe(stufe);
   wischen(el, body, s);
   return s;
+}
+
+/** fn nach dem Ende des transform-Übergangs von el (nur el selbst, nicht Kinder); spätestens nach 480 ms; bei „Bewegung reduzieren“ sofort. */
+function nachUebergang(el, fn) {
+  if (ruhig()) { fn(); return; }
+  let fertig = false;
+  const f = (e) => { if (e && e.target !== el) return; if (fertig) return; fertig = true; el.removeEventListener('transitionend', f); fn(); };
+  el.addEventListener('transitionend', f);
+  setTimeout(() => f(), 480);
 }
 
 /** Offene Sheets (oberstes zuletzt) – für Tests und für das Routing in Phase 3. */
@@ -230,6 +261,7 @@ function wischen(el, body, s) {
       if (dy > 0 && body.scrollTop > 0 && !e.target.closest('.wm-griff')) { z = null; loesen(); return; }
       z.aktiv = true;
       el.style.transition = 'none';
+      if (dy < 0 && s.aktuell === 'klein') s.zeigeInhalt('gross');   // Details schon beim Hochziehen zeigen
     }
     if (e.cancelable) e.preventDefault();
     z.v = (dy - z.dy) / Math.max(1, e.timeStamp - z.t); z.dy = dy; z.t = e.timeStamp;
@@ -251,7 +283,8 @@ function wischen(el, body, s) {
     if (ziel === 'zu') { s.schliessen(); return; }
     el.style.transform = `translate3d(0, ${stufen[ziel]}px, 0)`;
     s.stufe(ziel);
+    s.zeigeInhalt(ziel);   // zurückgefedert: wieder der passende Inhalt
     const aufraeumen = () => { el.style.transition = 'none'; el.style.transform = ''; void el.offsetHeight; el.style.transition = ''; };
-    if (ruhig()) aufraeumen(); else { let fertig = false; const f = () => { if (!fertig) { fertig = true; aufraeumen(); } }; el.addEventListener('transitionend', f, { once: true }); setTimeout(f, 480); }
+    nachUebergang(el, aufraeumen);
   }
 }
