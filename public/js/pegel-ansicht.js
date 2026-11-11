@@ -11,6 +11,7 @@ import { pegelBild, bildTeilen } from './pegel-bild.js';
 import { alarmFenster, alarmStatus } from './alarm.js';
 import { istTidepegel } from './gezeiten.js';
 import { tideDetail } from './pegel-tide-ansicht.js';
+import { passtMeinBoot } from './passt-mein-boot.js';
 
 export const fmt = (v) => Math.round(v).toLocaleString('de-DE');
 export const kmText = (g) => (g.km !== null && g.km !== undefined ? `km ${g.km.toLocaleString('de-DE', { maximumFractionDigits: 1 })}` : '');
@@ -160,7 +161,7 @@ export function kicker(art, g) {
 
 /**
  * Pegel-Detailseite (Dashboard, Sheet auf dem Handy, rechtes Panel am Desktop).
- * opts = { verlauf: Promise<pts>, onBack, backLabel, onShare, onAmpel, onKarte, slips: [{p, d}], onSlip(p), onStern, eingebettet, wetter }
+ * opts = { verlauf: Promise<pts>, onBack, backLabel, onShare, onKarte, slips: [{p, d}], onSlip(p), onStern, eingebettet, wetter }
  */
 export function pegelDetail(g, opts) {
   if (istTidepegel(g)) return tideDetail(g, opts);   // Tidepegel: Tidekurve und Einordnung statt MNW/MHW-Skala
@@ -224,6 +225,8 @@ export function pegelDetail(g, opts) {
   body.append(h('section', { class: 'pd-karte pd-verlauf', 'aria-label': 'Verlauf' }, h('h2', { class: 'pd-ct', text: 'Verlauf' }), umschalter, chart, vorhInfo, vorhSatz));
   const vorhersage = vorhersageWLaden(g.id);
   vorhersage.then((v) => { wv = v; wvFertig = true; zeichnen(); });
+  // „Passt mein Boot?“ (Designumbau 2b): direkt unter der Aktionsleiste, vor dem Verlauf
+  body.prepend(passtMeinBoot(g, { verlauf: opts.verlauf, vorhersage }));
   if (bereich === '30d') verlauf30Laden(g.id).then((pts) => { alle30 = pts; zeichnen(); }, () => { fehler30 = true; zeichnen(); });
   opts.verlauf.then((pts) => {
     alle = pts; zeichnen();
@@ -243,10 +246,8 @@ export function pegelDetail(g, opts) {
   // Wetter am Pegel (nur im Kartenpanel)
   if (opts.wetter) { opts.wetter.classList.add('pd-karte', 'pd-wetter'); body.append(opts.wetter); }
 
-  // Liste: Passt mein Boot?, Als Bild teilen, Slipanlagen, Station und Quelle
-  const chev = () => h('span', { class: 'pd-chev', html: icon('chevron', 16), 'aria-hidden': 'true' });
+  // Liste: Als Bild teilen, Slipanlagen, Station und Quelle
   const zeilen = [
-    h('a', { class: 'pd-zeile pd-aktion', href: `./pegel-ampel?pegel=${encodeURIComponent(g.id)}`, onclick: opts.onAmpel }, h('span', { html: icon('boat', 18), 'aria-hidden': 'true' }), 'Passt mein Boot?', chev()),
     bildZeile(g, async () => ({ pts: await opts.verlauf.catch(() => []), wv: await vorhersage })),
   ];
   if (opts.slips || opts.onKarte) {

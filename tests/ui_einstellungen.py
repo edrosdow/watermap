@@ -49,9 +49,9 @@ def run(b, w, hh):
         check(len(sp) == 2 and sp[1] > sp[0] + 200, f'{tag}: zwei Spalten ({sp})')
     pg.screenshot(path=str(SHOTS / f'einst_{w}.png'), full_page=True)
 
-    # Bootstyp gehört der Pegel-Ampel
+    # Bootstyp in watermap.boot (7.71.0; früher watermap.ampel.boot) – gilt für „Passt mein Boot?“
     pg.click('#mehrseite .ei-seg[aria-label=Bootstyp] button[data-wert=segel]')
-    check(json.loads(ls(pg, 'watermap.ampel') or '{}').get('boot') == 'segel', f'{tag}: Bootstyp in der Pegel-Ampel gespeichert')
+    check(json.loads(ls(pg, 'watermap.boot') or '{}').get('typ') == 'segel', f'{tag}: Bootstyp in watermap.boot gespeichert')
     # Maße: Komma, Grenzen, leer
     pg.fill('#ei-laenge', '6,5'); pg.press('#ei-laenge', 'Enter')
     pg.fill('#ei-tiefgang', '9'); pg.press('#ei-tiefgang', 'Tab'); pg.wait_for_timeout(50)

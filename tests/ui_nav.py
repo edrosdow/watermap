@@ -205,15 +205,11 @@ def run(b, w, hh):
     check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
     ctx.close()
 
-    # ---- Pegel-Ampel: dieselbe Leiste, Seite lässt Platz
+    # ---- /pegel-ampel ist seit 7.71.0 eine Einstiegsseite wie „Über“ (ohne Leiste); die Ampel steckt im Pegel-Sheet (ui_pegel_ampel.py)
     ctx, pg = page(b, w, hh)
-    pg.goto(uf.BASE + 'pegel-ampel.html'); pg.wait_for_selector('#am-q'); pg.wait_for_timeout(700)
-    b2 = rect(pg, '#bottomnav')
-    check(abs(b2['y'] + b2['h'] - (hh - 10)) <= 1 and pg.get_attribute(item('karte'), 'aria-current') == 'page' and abs(cx(rect(pg, '#bottomnav .bn-ind')) - cx(rect(pg, item('karte')))) <= 1.5,
-          f'{tag}: Pegel-Ampel: gleiche Leiste, „Karte“ markiert (Pegel liegen auf der Karte, Designumbau 2a)')
-    tiefstes = pg.evaluate("() => { window.scrollTo(0, document.documentElement.scrollHeight); return Math.max(...[...document.querySelectorAll('body > *:not(nav):not(script)')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.bottom)); }")
-    check(tiefstes <= b2['y'] + 1, f'{tag}: Pegel-Ampel: der letzte Inhalt liegt über der Leiste ({tiefstes:.0f} ≤ {b2["y"]:.0f})')
-    check(not pg.errs, f'{tag}: Pegel-Ampel ohne JS-Fehler {pg.errs[:3]}')
+    pg.goto(uf.BASE + 'pegel-ampel.html'); pg.wait_for_selector('#pa-suchen'); pg.wait_for_timeout(300)
+    check(pg.locator('#bottomnav, #topnav').count() == 0, f'{tag}: Einstiegsseite Pegel-Ampel ohne Navigationsleiste')
+    check(not pg.errs, f'{tag}: Einstiegsseite ohne JS-Fehler {pg.errs[:3]}')
     ctx.close()
 
 def sonderfaelle(b):

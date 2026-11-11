@@ -4,6 +4,7 @@ import { CONFIG } from './config.js';
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { fenster } from './wetter.js';
+import { mindestFuer } from './mindestpegel.js';
 
 const LS = 'watermap.alarme';   // [{ pegel, name, gewaesser, richtung, wert, kanal: 'push' | 'mail', erstellt }]
 const PUSH_API = '/.netlify/functions/pegel-push';
@@ -65,7 +66,8 @@ export function alarmFenster(g, { opener = null, toast = (t) => document.dispatc
   const vorhanden = alarmFuer(g.id);
   const alt = vorhanden.find(a => a.kanal === 'push') || vorhanden[0] || null;
   let richtung = alt?.richtung || 'unter';
-  let wert = alt?.wert ?? Math.round(g.value / SCHRITT) * SCHRITT;
+  const mindest = mindestFuer(g.id);   // „Passt mein Boot?“: dann Vorschlag „unter <Mindestpegel> cm“
+  let wert = alt?.wert ?? mindest ?? Math.round(g.value / SCHRITT) * SCHRITT;
   const iosOhneApp = istIos() && !istHomeApp();
   const pushGeht = pushMoeglich() && !iosOhneApp;
   let kanal = alt?.kanal === 'mail' || !pushGeht ? 'mail' : 'push';
@@ -132,7 +134,8 @@ export function alarmFenster(g, { opener = null, toast = (t) => document.dispatc
     } catch (err) { melden(err.message, true); }
     finally { los.disabled = false; }
   } },
-    h('p', { class: 'al-h', text: 'Benachrichtige mich, wenn …' }), seg, stepper, hochwasser,
+    h('p', { class: 'al-h', text: 'Benachrichtige mich, wenn …' }), seg, stepper,
+    !alt && mindest !== null ? h('p', { class: 'al-klein al-vorschlag', text: `Vorschlag: dein Mindestpegel (${mindest.toLocaleString('de-DE')} cm)` }) : null, hochwasser,
     h('p', { class: 'al-h', text: 'Wie?' }),
     h('div', { class: 'al-optionen', role: 'radiogroup', 'aria-label': 'Wie benachrichtigen?' },
       option('push', 'Push aufs Handy', pushSub, !pushGeht), option('mail', 'E-Mail', 'wie bisher')),

@@ -4,6 +4,7 @@
 import { h } from './dom.js';
 import { icon, glyphSvg } from './icons.js';
 import { CONFIG } from './config.js';
+import { marke } from './bausteine.js';
 
 const KONTAKT = 'e.drosdow@gmail.com';   // wie im Impressum
 const fmt = (v) => Math.round(v).toLocaleString('de-DE');
@@ -57,7 +58,7 @@ export function mehrSeite(root, ctx) {
 /**
  * Merkliste. ctx = {
  *   orte: [{ id, name, typ, sub }] | null (Standorte noch nicht geladen),
- *   pegel: Promise<{ eintraege: [{ id, name, sub, wert, einheit }], offline, stand }>,
+ *   pegel: Promise<{ eintraege: [{ id, name, sub, wert, einheit, ampel }], offline, stand }>,   ampel: „Passt mein Boot?“ (mindestpegel.js) oder null
  *   pegelIds: [id], oeffneOrt(id), oeffnePegel(id), entferneOrt(id), entfernePegel(id), zurueck(), zuPegel() }
  */
 export function merkliste(root, ctx) {
@@ -89,8 +90,11 @@ export function merkliste(root, ctx) {
       pegelHinweis.hidden = !offline;
       if (offline) pegelHinweis.textContent = `Offline – letzter gespeicherter Stand${stand ? ` von ${new Date(stand).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}`;
       pegelGruppe.replaceChildren(...eintraege.map(p => zeile({
-        ico: 'gauge', titel: p.name, sub: p.sub, href: `#karte/pegel/${encodeURIComponent(p.id)}`, onclick: klick(() => ctx.oeffnePegel(p.id)),
-        rechts: bearbeiten ? entfernen(p.name, () => ctx.entfernePegel(p.id)) : (p.wert !== null ? h('span', { class: 'bs-wert', text: `${fmt(p.wert)} ${p.einheit || 'cm'}` }) : undefined),
+        ico: 'gauge', titel: p.name, sub: p.ampel && p.wert !== null ? [p.sub, `${fmt(p.wert)} ${p.einheit || 'cm'}`].filter(Boolean).join(' · ') : p.sub,
+        href: `#karte/pegel/${encodeURIComponent(p.id)}`, onclick: klick(() => ctx.oeffnePegel(p.id)),
+        rechts: bearbeiten ? entfernen(p.name, () => ctx.entfernePegel(p.id))
+          : p.ampel ? marke(p.ampel.zustand, p.ampel.wort)
+          : (p.wert !== null ? h('span', { class: 'bs-wert', text: `${fmt(p.wert)} ${p.einheit || 'cm'}` }) : undefined),
       })));
     }, () => { pegelGruppe.replaceChildren(h('p', { class: 'bs-leer', text: 'Pegelstände sind gerade nicht erreichbar.' })); });
   }

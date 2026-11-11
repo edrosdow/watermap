@@ -1,13 +1,13 @@
 // „Mein WaterMap“: Einstellungen (#mehr/einstellungen). Alles bleibt im Browser dieses Geräts, kein Konto.
-// Liest und schreibt die vorhandenen Speicher (Bootstyp der Pegel-Ampel, Kategorien, Bezugspunkt „In der Nähe“);
-// neu sind nur Bootsmaße (watermap.boot) und der Startausschnitt der Karte (watermap.start, watermap.ansicht).
+// Liest und schreibt die vorhandenen Speicher (Kategorien, Bezugspunkt „In der Nähe“); Boot (Typ und Maße) in watermap.boot,
+// der Startausschnitt der Karte in watermap.start/watermap.ansicht. Mindestpegel je Pegel: mindestpegel.js (7.71.0).
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { BOOTSTYPEN } from './ampel-logik.js';
 import { alarmeLesen, pushAlarmLoeschen, mailAlarmVergessen } from './alarm.js';
+import { bootTyp, bootTypSetzen, mindestSetzen } from './mindestpegel.js';
 
-const LS_AMPEL = 'watermap.ampel';   // { pegel, min, boot, hoehe } – Bootstyp gehört der Pegel-Ampel
-const LS_BOOT = 'watermap.boot';     // { laenge, tiefgang } in Metern, beides optional
+const LS_BOOT = 'watermap.boot';     // { typ, laenge, tiefgang } – Maße in Metern, beides optional (Typ früher in watermap.ampel.boot)
 const BEHALTEN = new Set(['watermap.geraet']);   // zufällige Geräte-ID (Missbrauchsschutz der Meldungen)
 
 export const STARTARTEN = { deutschland: 'Ganz Deutschland', letzte: 'Letzte Ansicht', position: 'Meine Position' };
@@ -21,12 +21,12 @@ const schreiben = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); 
 
 /** Boot aus beiden Speichern: { typ, laenge, tiefgang } (Maße null, wenn nicht angegeben). */
 export function bootLesen() {
-  const a = lesen(LS_AMPEL) || {}, b = lesen(LS_BOOT) || {};
+  const b = lesen(LS_BOOT) || {};
   const zahl = (v) => (Number.isFinite(v) ? v : null);
-  return { typ: BOOTSTYPEN[a.boot] ? a.boot : 'motor', laenge: zahl(b.laenge), tiefgang: zahl(b.tiefgang) };
+  return { typ: bootTyp(), laenge: zahl(b.laenge), tiefgang: zahl(b.tiefgang) };
 }
 function bootSchreiben({ typ, ...masse }) {
-  if (typ) schreiben(LS_AMPEL, { ...(lesen(LS_AMPEL) || {}), boot: typ });
+  if (typ) bootTypSetzen(typ);
   if (Object.keys(masse).length) schreiben(LS_BOOT, { ...(lesen(LS_BOOT) || {}), ...masse });
 }
 
@@ -107,11 +107,18 @@ export function einstellungenSeite(root, ctx) {
   const bootTeil = abschnitt('Mein Boot', [
     h('div', { class: 'ei-zeile' },
       h('span', { class: 'ei-label', id: 'ei-boot-l', text: 'Bootstyp' }),
-      h('span', { class: 'ei-hilfe', text: 'Für die Pegel-Ampel und „Passt mein Boot?“' }),
+      h('span', { class: 'ei-hilfe', text: 'Für „Passt mein Boot?“ beim Pegel' }),
       segmente('Bootstyp', BOOTSTYPEN, boot.typ, (typ) => bootSchreiben({ typ }))),
     h('div', { class: 'ei-zeile' },
       h('div', { class: 'ei-masse' }, massFeld('laenge'), massFeld('tiefgang')),
       h('span', { class: 'ei-hilfe', text: 'Bleibt auf diesem Gerät. Damit kann WaterMap später zeigen, ob eine Slipanlage zu deinem Boot passt.' })),
+    // Mindestpegel je Pegel („Passt mein Boot?“): Zeile öffnet den Pegel mit dem Abschnitt; Löschen hier möglich
+    ...(ctx.mindestpegel?.() || []).map(m => h('div', { class: 'ei-reihe ei-mindest' },
+      h('a', { class: 'ei-reihe-text', href: `#karte/pegel/${encodeURIComponent(m.id)}` },
+        h('span', { class: 'ei-label', text: m.name ? `Pegel ${m.name}` : 'Pegel' }),
+        h('span', { class: 'ei-hilfe', text: `Mindestpegel ${m.cm.toLocaleString('de-DE')} cm – „Passt mein Boot?“` })),
+      h('button', { type: 'button', class: 'ei-knopf', text: 'Löschen', 'aria-label': `Mindestpegel für ${m.name || 'diesen Pegel'} löschen`,
+        onclick: () => { mindestSetzen(m.id, null); ctx.toast('Mindestpegel gelöscht.'); einstellungenSeite(root, ctx); } }))),
   ]);
 
   // ---- Karte beim Start
@@ -186,11 +193,7 @@ export function einstellungenSeite(root, ctx) {
       einstellungenSeite(root, ctx);
     } }));
   const alarmTeil = abschnitt('Benachrichtigungen', [
-    ...(alarme.length ? alarme.map(alarmZeile) : [h('p', { class: 'ei-hilfe ei-keine-alarme', text: 'Noch keine Pegel-Alarme auf diesem Gerät. Einen Alarm legst du im Pegel-Fenster unter „Pegel-Alarm“ an.' })]),
-    h('a', { class: 'bs-zeile', href: ctx.alarmHref },
-      h('span', { class: 'bs-ico', html: icon('bell', 22), 'aria-hidden': 'true' }),
-      h('span', { class: 'bs-text' }, h('strong', { text: 'Ampel-Alarm (Pegel-Ampel)' }), h('small', { text: 'Mail, wenn sich die Ampel deines Pegels ändert' })),
-      h('span', { class: 'bs-pfeil', html: icon('chevron', 18), 'aria-hidden': 'true' })),
+    ...(alarme.length ? alarme.map(alarmZeile) : [h('p', { class: 'ei-hilfe ei-keine-alarme', text: 'Noch keine Pegel-Alarme auf diesem Gerät. Einen Alarm legst du beim Pegel mit „Alarm“ an.' })]),
   ]);
 
   // ---- Daten auf diesem Gerät
@@ -232,7 +235,7 @@ function zuruecksetzenFragen(ctx) {
   const body = dlg.querySelector('#dlg-body');
   body.replaceChildren(
     h('h2', { id: 'dlg-title', text: 'Alles zurücksetzen?' }),
-    h('p', { text: 'Gelöscht werden auf diesem Gerät: Merkliste, Meine Pegel, die Einstellungen der Pegel-Ampel, Bootsangaben, Filter und gespeicherte Orte.' }),
+    h('p', { text: 'Gelöscht werden auf diesem Gerät: Merkliste, Meine Pegel, Mindestpegel, Bootsangaben, Filter und gespeicherte Orte.' }),
     h('p', { class: 'muted small', text: 'Pegel-Alarme per Mail bleiben bestehen – abmelden kannst du sie über den Link in jeder Alarm-Mail.' }),
     h('div', { class: 'btn-row end' },
       h('button', { type: 'button', class: 'btn btn-outline', text: 'Abbrechen', onclick: () => dlg.close() }),

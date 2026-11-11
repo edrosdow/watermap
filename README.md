@@ -29,9 +29,9 @@ Bereich „In der Nähe“ unter `#naehe` (`js/naehe.js`, Stil `css/naehe.css`; 
 Bereich „Pegel“ unter `#pegel` (`js/pegel-dashboard.js`, Darstellung `js/pegel-ansicht.js`, Daten `js/pegel-daten.js`, Stil `css/pegel.css`): Lage heute, „Meine Pegel“ (eigene Liste im Browser, getrennt von den Favoriten), Flüsse im Überblick, alle Pegel als Tabelle. Detailseite `#pegel/<UUID>`; Pegel auf der Karte `#karte/pegel/<UUID>` (alter Link `#g=<UUID>` geht weiter). Eine gemeinsame Stationsliste für Karte und Dashboard, alle 15 Min. aktualisiert; Verläufe nur für sichtbare Karten und die Detailseite. Offline: letzter gespeicherter Stand mit „Stand von …“. Flussseite `#pegel/fluss/<name>` (`js/pegel-fluss.js` Logik, `js/pegel-fluss-ansicht.js` Darstellung): Profil des Wasserstands entlang des Flusses und alle Pegel nach Flusskilometer; Küstengewässer laut `CONFIG.PEGEL_KUESTE`.
 
 ## Pegel-Ampel
-Eigene Seite unter `/pegel-ampel` (`public/pegel-ampel.html`, `js/ampel.js`, Logik in `js/ampel-logik.js`): Pegel wählen, persönlichen Mindestpegel eingeben → Grün/Gelb/Rot mit Trend, 14-Tage-Verlauf und den nächsten Slipanlagen. Puffer (20 cm), Trendschwelle und Prognosezeitraum stehen als Konstanten oben in `ampel-logik.js`. Weitere Prüfungen (z. B. Brücken) werden an `PRUEFUNGEN` angehängt. Teilbare Links: `/pegel-ampel?pegel=<PEGELONLINE-UUID>&min=<cm>`.
+Seit 7.71.0 ein Abschnitt „Passt mein Boot?“ im Pegel-Sheet (`js/passt-mein-boot.js`, Speicher `js/mindestpegel.js`, Logik in `js/ampel-logik.js`): Mindestpegel je Pegel (`watermap.mindestpegel`) → Passt/Knapp/Zu niedrig mit Abstand und Vorschau; sichtbar auch in der Merkliste und am Pegel-Kasten der Slipanlage. `/pegel-ampel` ist nur noch Einstiegsseite für Suchmaschinen (`?pegel=` leitet ins Sheet, Bestätigen/Abbestellen der Alarm-Mails läuft weiter dort). Puffer (20 cm), Trendschwelle und Prognosezeitraum stehen als Konstanten oben in `ampel-logik.js`. Weitere Prüfungen (z. B. Brücken) werden an `PRUEFUNGEN` angehängt. Alte Links `/pegel-ampel?pegel=<PEGELONLINE-UUID>` führen ins Pegel-Sheet.
 
-**E-Mail-Alarm:** `netlify/functions/pegel-alarm.mjs` (Anmeldung mit Double-Opt-in) und `pegel-alarm-pruefen.mjs` (stündlich), Mails über Brevo (kostenlos). Einrichtung: [docs/PEGEL-ALARM.md](docs/PEGEL-ALARM.md).
+**E-Mail-Alarm:** `netlify/functions/pegel-alarm.mjs` (Anmeldung mit Double-Opt-in) und `pegel-alarm-pruefen.mjs` (stündlich), Mails über Brevo (kostenlos). Einrichtung: [docs/PEGEL-ALARM.md](docs/PEGEL-ALARM.md). Seit 7.71.0 legt die App nur noch Schwellen-Alarme an (Alarm-Fenster, Push oder E-Mail); bestehende Ampel-Alarme laufen weiter, Bestätigen und Abbestellen über `/pegel-ampel`.
 
 ## Ordner
 | Pfad | Inhalt |
@@ -49,7 +49,8 @@ Eigene Seite unter `/pegel-ampel` (`public/pegel-ampel.html`, `js/ampel.js`, Log
 ```
 python3 -I -m unittest discover -s tests -v     # Importer, Validator, Moderationsskript
 python3 -I tests/ui_full.py                     # Oberfläche (braucht: pip install playwright pillow)
-python3 -I tests/ui_ampel.py                    # Pegel-Ampel
+python3 -I tests/ui_pegel_ampel.py              # „Passt mein Boot?“ im Pegel-Sheet, Einstiegsseite /pegel-ampel
+node tests/mindestpegel_test.mjs                # Mindestpegel je Pegel, Übernahme, Sätze
 python3 -I tests/ui_pegel_karte.py              # Pegel auf der Hauptkarte: Chip, Marker, Pegel-Sheet, alte Adressen, Suche, Navigation (390/1440 px)
 python3 -I tests/ui_pegel_fluss.py              # Fluss-Sheet, Tidepegel mit BSH-Vorhersage im Pegel-Sheet (375/390/1024/1440 px)
 python3 -I tests/ui_naehe.py                    # „In der Nähe“ (Bezugspunkt, Standortfreigabe, Liste; 375/390/1024/1440 px)

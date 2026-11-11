@@ -975,3 +975,20 @@ details.pd-zeile[open] { padding-bottom: 10px; }
 /* Fluss-Sheet (7.70.0): Inhalt der Flussseite ohne eigenen Kopf und ohne Seitenränder */
 .wm-sheet .pf-seite.is-im-sheet { padding: 0; background: none; min-height: 0; }
 .wm-sheet .pf-raster { grid-template-columns: minmax(0, 1fr); grid-template-areas: "profil" "liste" "slips" "hinweis"; grid-template-rows: none; gap: var(--wm-3); padding: 0; margin-top: 0; max-width: none; }
+
+/* ---------------------------------------------------------------- „Passt mein Boot?“ im Pegel-Sheet (Designumbau 2b, 7.71.0, passt-mein-boot.js)
+   Ohne Mindestpegel eine Ortszeile, mit Mindestpegel eine Hinweiszeile im Zustand der Ampel (gut/warn/stop, immer mit Wort). */
+.pmb { display: flex; flex-direction: column; gap: var(--wm-2); text-align: left; }
+.pmb-titel { margin: 0; font-size: var(--wm-t-m); font-weight: 700; color: var(--wm-tinte); }
+.pmb-klein { margin: 0; font-size: var(--wm-t-s); line-height: 1.4; color: var(--wm-matt); }
+.pmb .wm-gruppe { margin: 0; }
+.pmb-form { display: flex; flex-direction: column; gap: var(--wm-4); padding: var(--wm-4); border-radius: var(--wm-r-m); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
+.pmb-label { font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-tinte); }
+.pmb-stepper { display: flex; align-items: center; gap: var(--wm-3); }
+.pmb-stepper .wm-rund { flex: none; font-size: var(--wm-t-l); font-weight: 700; color: var(--wm-tinte); }
+.pmb-einheit { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; }
+.pmb-einheit .wm-eingabe { text-align: center; font-weight: 700; padding-right: var(--wm-12); -moz-appearance: textfield; }
+.pmb-einheit .wm-eingabe::-webkit-inner-spin-button, .pmb-einheit .wm-eingabe::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.pmb-einheit > span { position: absolute; right: var(--wm-4); color: var(--wm-matt); font-size: var(--wm-t-s); pointer-events: none; }
+.pmb-knoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: var(--wm-2); }
+.pmb-entfernen { margin-left: auto; }

@@ -181,9 +181,9 @@ with sync_playwright() as p:
         d = pg.locator(S + ' .gc-line').get_attribute('d')
         check(d.count('M') == 2, f'{name}: Messlücke unterbricht die Linie ({d.count("M")} Abschnitte)')
         check('#karte/pegel/' + KOELN in pg.url, f'{name}: Adresse #karte/pegel/…')
-        link = pg.locator(S + ' a.pd-aktion')
-        check(link.count() == 1 and 'Passt mein Boot?' in link.inner_text() and link.get_attribute('href') == './pegel-ampel?pegel=' + KOELN,
-              f'{name}: Kachel „Passt mein Boot?“')
+        pmb = pg.locator(S + ' .pmb')
+        check(pmb.count() == 1 and 'Passt mein Boot?' in pmb.inner_text() and pg.locator(S + ' a[href*="pegel-ampel"]').count() == 0,
+              f'{name}: Abschnitt „Passt mein Boot?“ im Sheet (kein Link mehr auf die Ampel-Seite)')
         check(pg.locator('.pk-pille.is-gewaehlt').count() == 1, f'{name}: gewählter Pegel hervorgehoben')
         check(pg.locator(S + ' #heute-vor-ort').count() == 0, f'{name}: keine Karte „Heute vor Ort“')
         # Fadenkreuz
@@ -221,7 +221,7 @@ with sync_playwright() as p:
         check(pg.inner_text('dialog.wxd-pegel .pd-name') == 'Köln' and 'pegel/' not in pg.url and pg.locator(S).count() == 0 and pg.locator('#detail:not([hidden])').count() == 1,
               f'{name}: Klick öffnet die Pegel-Details im Fenster, keine neue Seite ({pg.url[-30:]})')
         pg.wait_for_selector('dialog.wxd-pegel .gc-line', timeout=8000)
-        check(pg.locator('dialog.wxd-pegel .pd-karte').count() >= 2 and pg.locator('dialog.wxd-pegel .pd-aktion', has_text='Passt mein Boot?').count() == 1 and pg.locator('dialog.wxd-pegel .pd-slips').count() == 1,
+        check(pg.locator('dialog.wxd-pegel .pd-karte').count() >= 2 and pg.locator('dialog.wxd-pegel .pmb', has_text='Passt mein Boot?').count() == 1 and pg.locator('dialog.wxd-pegel .pd-slips').count() == 1,
               f'{name}: Fenster zeigt Skala, Verlauf, „Passt mein Boot?“ und Slipanlagen am Pegel')
         pg.wait_for_timeout(350)   # Einblenden (.28 s) abwarten
         r = pg.locator('dialog.wxd-pegel').bounding_box(); vp = pg.viewport_size

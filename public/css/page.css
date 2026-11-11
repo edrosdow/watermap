@@ -32,3 +32,10 @@ code { font-size: var(--wm-t-s); background: var(--wm-flaeche-2); border-radius:
 
 footer { margin-top: var(--wm-8); padding-top: var(--wm-4); border-top: 1px solid var(--wm-linie); font-size: var(--wm-t-s); color: var(--wm-matt); }
 :focus-visible { outline: 3px solid var(--wm-fokus); outline-offset: 2px; }
+
+/* Einstiegsseite /pegel-ampel (7.71.0): Knopf „Pegel suchen“ wie .wm-btn.is-primaer, Meldung zu Alarm-Links aus der Mail als Hinweiszeile */
+.pa-knopf { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 var(--wm-5); border-radius: var(--wm-r-m);
+  background: var(--wm-petrol); color: var(--wm-flaeche); font-weight: 700; text-decoration: none; }
+.pa-knopf:hover { background: var(--wm-petrol-tief); color: var(--wm-flaeche); }
+.pa-meldung { padding: var(--wm-3) var(--wm-4); border-radius: var(--wm-r-m); border: 1.5px solid var(--wm-gut-rand); background: var(--wm-gut-hell); color: var(--wm-gut-text); font-weight: 700; }
+.pa-meldung.is-fehler { border-color: var(--wm-stop-rand); background: var(--wm-stop-hell); color: var(--wm-stop-text); }

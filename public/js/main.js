@@ -13,7 +13,8 @@ import { renderDetail, placeTags, tagRow, routeLink } from './detail.js';
 import { mountNav, popover } from './nav.js';
 import { wischenZuMachen } from './wischen.js';
 import { suchfelderMitX } from './suchfeld.js';
-import { bewerte } from './ampel-logik.js';
+import { ampel as bootAmpel, mindestAlle } from './mindestpegel.js';
+import { alarmFenster } from './alarm.js';
 import { aktivLaden, ausgeblendetAnzahl, ausgeblendetZuruecksetzen, gesehenSetzen, listeLaden, neueAnzahl, senden, standortLaden, statusZeile, vorOrtKarte, zusammenfassen, TYPEN as MELD_TYPEN } from './meldungen.js';
 import { openLageForm } from './lage-form.js';
 import { naehe, geoFreigabe } from './naehe.js';
@@ -569,11 +570,11 @@ function showPeek(p) {
       document.body.style.setProperty('--peek-h', `${el.peek.offsetHeight}px`);
     });
   }
-  // Pegel-Etikett nur, wenn für diesen Pegel ein Mindestpegel in der Pegel-Ampel gespeichert ist
+  // Pegel-Etikett nur, wenn für diesen Pegel ein Mindestpegel gespeichert ist („Passt mein Boot?“)
   pegelInfo(p).then((info) => {
     if (!info?.ampel || state.peekId !== p.id) return;
     const row = tags.querySelector('.dtags') || tags.appendChild(h('div', { class: 'dtags' }));
-    row.append(h('span', { class: `dtag ${info.ampel.cls}`, text: info.ampel.tag }));
+    row.append(h('span', { class: `dtag ${AMPEL_KLASSE[info.ampel.zustand].cls}`, text: `Pegel: ${info.ampel.wort}` }));
     document.body.style.setProperty('--peek-h', `${el.peek.offsetHeight}px`);
   });
 }
@@ -587,37 +588,23 @@ function hidePeek() {
 
 // ---- Pegel am selben Gewässer (nächster PEGELONLINE-Pegel, siehe naechsterPegel)
 function allGauges() { return pegelLaden().then(st => st.gauges); }
-const AMPEL_TAG = {
-  gruen: { tag: 'Pegel gut', cls: 'is-good', box: 'is-gruen' },
-  gelb: { tag: 'Pegel knapp', cls: 'is-warn', box: '' },
-  rot: { tag: 'Pegel zu niedrig', cls: 'is-bad', box: 'is-rot' },
-};
+// „Passt mein Boot?“ (Mindestpegel je Pegel, mindestpegel.js) → Klassen des Pegel-Kastens und des Etiketts in der Vorschau
+const AMPEL_KLASSE = { gut: { cls: 'is-good', box: 'is-gruen' }, warn: { cls: 'is-warn', box: '' }, stop: { cls: 'is-bad', box: 'is-rot' } };
 const pegelCache = new Map();
 function pegelInfo(p) {
-  if (pegelCache.has(p.id)) return pegelCache.get(p.id);
-  const pr = allGauges().then((list) => {
-    const best = naechsterPegel(p, list);
-    if (!best) return null;
-    let ampel = null;
-    try {
-      const a = JSON.parse(localStorage.getItem('watermap.ampel') || '{}');
-      if (a.pegel === best.g.id && Number.isFinite(a.min)) ampel = AMPEL_TAG[bewerte({ pegel: best.g, mindest: a.min }).status] || null;
-    } catch { /* ohne gespeicherte Ampel */ }
-    return { ...best, ampel };
-  }).catch(() => null);
-  pegelCache.set(p.id, pr);
-  return pr;
+  if (!pegelCache.has(p.id)) pegelCache.set(p.id, allGauges().then(list => naechsterPegel(p, list)).catch(() => null));
+  return pegelCache.get(p.id).then(best => (best ? { ...best, ampel: bootAmpel(best.g) } : null));   // Ampel immer frisch (Mindestpegel kann sich ändern)
 }
 
 function pegelBox({ g, d, ampel }) {
   const trend = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' }[g.trend];
   const weit = d > 2000 ? `Pegel ${formatDistance(d)} entfernt` : null;   // weiter weg: ehrlich dazusagen
   // ganzer Kasten öffnet die Pegel-Details in einem Fenster über der Standortansicht (wie „Wetter und Wind“); neuer Tab bleibt möglich
-  return h('a', { class: 'pegel-box ' + (ampel ? ampel.box : 'is-neutral'), href: `#karte/pegel/${encodeURIComponent(g.id)}`, 'aria-haspopup': 'dialog',
+  return h('a', { class: 'pegel-box ' + (ampel ? AMPEL_KLASSE[ampel.zustand].box : 'is-neutral'), href: `#karte/pegel/${encodeURIComponent(g.id)}`, 'aria-haspopup': 'dialog',
     onclick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); pegelFenster(g, e.currentTarget); } },
     h('div', {},
       h('p', {}, h('strong', { text: `Pegel ${g.name}: ${fmtN(Math.round(g.value))} ${g.unit}${trend ? `, ${trend}` : ''}` })),
-      h('small', { text: [ampel ? `${ampel.tag} für dein Boot (laut Pegel-Ampel)` : 'Verlauf, Kennwerte und Trend', weit].filter(Boolean).join(' · ') })),
+      h('small', { text: [ampel ? `Passt mein Boot? ${ampel.satz}` : 'Verlauf, Kennwerte und Trend', weit].filter(Boolean).join(' · ') })),
     h('span', { class: 'pegel-box-mehr', text: 'Details ›' }));
 }
 
@@ -857,7 +844,7 @@ function mehrBereich() {
     const ids = meinePegel.alle();
     const pegel = ids.length ? pegelLaden().then(st => ({
       offline: !!st.offline, stand: st.zeit,
-      eintraege: ids.map(id => st.byId.get(id)).filter(Boolean).map(g => ({ id: g.id, name: g.name, wert: g.value, einheit: g.unit,
+      eintraege: ids.map(id => st.byId.get(id)).filter(Boolean).map(g => ({ id: g.id, name: g.name, wert: g.value, einheit: g.unit, ampel: bootAmpel(g),
         sub: [g.water, PEGEL_ZUSTAND[pegelZustand(g)]?.text].filter(Boolean).join(' · ') })),
     })) : Promise.resolve({ eintraege: [] });
     merkliste(root, {
@@ -904,7 +891,7 @@ function einstellungenCtx() {
     },
     zuruecksetzen: () => { allesLoeschen(); location.hash = '#mehr'; location.reload(); },
     zurueck: () => { state.mehrSeite = null; writeHash(true); mehrBereich(); },
-    alarmHref: './pegel-ampel#am-alarm',
+    mindestpegel: () => Object.entries(mindestAlle()).map(([id, cm]) => ({ id, cm, name: pegelStand()?.byId?.get(id)?.name || null })),
     dialog: el.dlg, toast,
   };
 }
@@ -990,15 +977,16 @@ const VIEWS = ['karte', 'naehe', 'favoriten', 'meldungen', 'mehr'];
 let selHash = null, appliedHash = null;
 
 function readHash() {
-  const out = { view: null, sel: null, melden: false, pegel: null, fluss: null, mehr: null };
+  const out = { view: null, sel: null, melden: false, pegel: null, fluss: null, mehr: null, alarm: false, suche: false };
   for (const part of location.hash.replace(/^#/, '').split('&').filter(Boolean)) {
-    const fl = part.match(/^pegel\/fluss\/([a-z0-9-]+)$/), pg = part.match(/^pegel\/(.+)$/), kp = part.match(/^karte\/pegel\/(.+)$/);
+    const fl = part.match(/^pegel\/fluss\/([a-z0-9-]+)$/), pg = part.match(/^pegel\/(.+)$/), kp = part.match(/^karte\/pegel\/(.+?)(\/alarm)?$/);
     // Pegel-Tab entfallen (Designumbau 2a): alte Adressen (Lesezeichen, Push, geteilte Links) führen auf die Karte mit Chip „Pegel“
     if (part === 'pegel' || part === 'pegel/karte') { out.view = 'karte'; out.pegelAn = true; }
+    else if (part === 'pegel/suche') { out.view = 'karte'; out.pegelAn = true; out.suche = true; }   // Einstiegsseite /pegel-ampel: „Pegel suchen“
     else if (part.startsWith('pf=')) { out.view = 'karte'; try { out.sel = { k: 'g', id: decodeURIComponent(part.slice(3)) }; } catch { /* ungültig */ } }   // aus der Push-Nachricht
     else if (fl) { out.view = 'karte'; out.fluss = fl[1]; out.pegelAn = true; }
     else if (pg) { out.view = 'karte'; try { out.sel = { k: 'g', id: decodeURIComponent(pg[1]) }; } catch { /* ungültig */ } }
-    else if (kp) { out.view = 'karte'; try { out.sel = { k: 'g', id: decodeURIComponent(kp[1]) }; } catch { /* ungültig */ } }
+    else if (kp) { out.view = 'karte'; out.alarm = !!kp[2]; try { out.sel = { k: 'g', id: decodeURIComponent(kp[1]) }; } catch { /* ungültig */ } }
     else if (part === 'mehr/merkliste' || part === 'mehr/einstellungen') { out.view = 'mehr'; out.mehr = part.slice(5); }
     else if (VIEWS.includes(part)) out.view = part;
     else if (part === 'liste') out.view = 'naehe';   // alte Links
@@ -1081,12 +1069,13 @@ function onNav(id, e) {
 
 function handleHash({ initial = false } = {}) {
   if (!initial && location.hash === appliedHash) return;
-  const { view, sel, melden, fluss, mehr, pegelAn } = readHash();
+  const { view, sel, melden, fluss, mehr, pegelAn, alarm, suche } = readHash();
   state.mehrSeite = view === 'mehr' ? mehr : null;
   if (view === 'mehr' && state.view === 'mehr') mehrBereich();
   setView(view || 'karte', { push: false, sofort: initial });
   if (pegelAn && state.mapOk && !state.gaugesOn) setGauges(true);
   if (fluss) setTimeout(() => flussFenster(fluss), 0);
+  if (suche) setTimeout(() => el.q.focus(), 0);
   if (melden) setTimeout(() => { renderReportMenu({ fragen: true }); reportPop.open($(isMobile() ? '#bottomnav [data-nav="melden"]' : '#btn-report')); }, 0);
   selHash = sel;
   writeHash(false);
@@ -1102,7 +1091,11 @@ function handleHash({ initial = false } = {}) {
   if (k === 'g' && state.mapOk) {
     if (id === state.gaugeId) return;
     (state.gaugesOn && state.gauges ? Promise.resolve() : setGauges(true))
-      .then(() => { if (state.gauges && !selectGauge(id)) toast('Dieser Pegel wurde nicht gefunden.'); });
+      .then(() => {
+        if (state.gauges && !selectGauge(id)) { toast('Dieser Pegel wurde nicht gefunden.'); return; }
+        const g = alarm && state.gaugeById.get(id);   // aus der Einstiegsseite (#am-alarm): gleich das Alarm-Fenster
+        if (g) setTimeout(() => alarmFenster(g), 0);
+      });
     return;
   }
   if (k === 'p' && id !== state.selectedId && !selectPlace(id, { updateHash: false }) && state.places.length) toast('Dieser Standort ist nicht mehr in der Datenbank.');
