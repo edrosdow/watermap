@@ -6,6 +6,7 @@ import { CONFIG } from './config.js';
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { s, sText, niceStep, fmtNum, abfahren } from './chart.js';
+import { sheetOeffnen } from './bausteine.js';
 
 // ------------------------------------------------------------------ Umrechnungen
 const BFT_KMH = [1, 6, 12, 20, 29, 39, 50, 62, 75, 89, 103, 118];
@@ -215,23 +216,20 @@ export function wetterZeile(lat, lon, { name = '' } = {}) {
  * Fenster über der Seite (Handy: von unten, sonst mittig). Der Inhalt kommt von außen; schließt per Escape, Klick daneben
  * oder über `dialog.close()`; danach geht der Fokus zurück zum Auslöser. `labelId`: Überschrift, die den Fokus bekommt.
  */
-export function fenster({ inhalt, kopf = null, klasse = '', labelId, opener = null }) {
-  const dlg = h('dialog', { class: `wxd ${klasse}`.trim(), 'aria-labelledby': labelId },
-    h('span', { class: 'wxd-grip', 'aria-hidden': 'true' }), kopf, h('div', { class: 'wxd-body' }, inhalt));
-  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
-  dlg.addEventListener('close', () => { dlg.remove(); if (opener && document.contains(opener)) opener.focus({ preventScroll: true }); });
-  document.body.append(dlg);
-  dlg.showModal();
-  dlg.querySelector(`#${labelId}`)?.focus({ preventScroll: true });
-  return dlg;
+/**
+ * Fenster über der aktuellen Ansicht (Wetter, Pegel-Alarm, Pegel aus der Slipanlage) – seit Designumbau 3a im gemeinsamen Sheet-Rahmen:
+ * Handy von unten mit Griff, Desktop als Panel rechts; stapelt sich über einem offenen Sheet; × und Zurück-Taste führen eine Ebene zurück.
+ * kopf = { titel, unter, titelId } · Rückgabe: { close(), el, sheet }
+ */
+export function fenster({ inhalt, kopf, klasse = '', opener = null, onZu = null }) {
+  const sh = sheetOeffnen({ inhalt, kopf, klasse: `wxd ${klasse}`.trim(), opener, stufe: 'gross', verlauf: true, onZu });
+  return { close: () => sh.schliessen({ durchNutzer: true }), el: sh.el, sheet: sh };
 }
 
 /** Fenster „Wetter und Wind“ (Handy: von unten, sonst mittig): Warnungen, Wind jetzt, Vorhersage. */
 export function wetterFenster({ lat, lon, name = '', opener = null }) {
   const box = h('div', { class: 'wx', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Wetter wird geladen …' }));
-  const dlg = fenster({ inhalt: box, klasse: 'wxd-wetter', labelId: 'wxd-titel', opener, kopf: h('header', { class: 'wxd-kopf' },
-    h('div', {}, h('h2', { id: 'wxd-titel', tabindex: '-1', text: 'Wetter und Wind' }), name ? h('p', { class: 'wxd-unter', text: name }) : null),
-    h('button', { type: 'button', class: 'wxd-x', 'aria-label': 'Schließen', html: icon('close', 22), onclick: () => dlg.close() })) });
+  const dlg = fenster({ inhalt: box, klasse: 'wxd-wetter', opener, kopf: { titel: 'Wetter und Wind', titelId: 'wxd-titel', unter: name || null } });
   loadWeather(lat, lon).then((d) => { box.removeAttribute('aria-busy'); box.replaceChildren(...renderWeather(d)); },
     () => { box.removeAttribute('aria-busy'); box.replaceChildren(h('p', { class: 'unknown', text: 'Wetterdaten sind gerade nicht erreichbar.' })); });
   return dlg;

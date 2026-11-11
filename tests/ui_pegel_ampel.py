@@ -89,16 +89,16 @@ def run(b, w, hh):
     check('Passt – 36 cm über deinem Mindestpegel' in pg.inner_text(S + ' .pmb') and pg.locator(S + ' .pmb .wm-hinweis.is-gut').count() == 1, f'{tag}: Enter speichert → „Passt“')
 
     # ---- Alarm-Fenster schlägt den Mindestpegel vor
-    pg.click(S + ' .pd-alarm'); pg.wait_for_selector('dialog.wxd-alarm[open]')
-    check(pg.input_value('#al-wert') == '60' and pg.locator('.al-r[data-r=unter][aria-pressed=true]').count() == 1 and 'Mindestpegel (60 cm)' in pg.inner_text('dialog.wxd-alarm'),
+    pg.click(S + ' .pd-alarm'); pg.wait_for_selector('.wm-sheet.wxd-alarm.is-offen')
+    check(pg.input_value('#al-wert') == '60' and pg.locator('.al-r[data-r=unter][aria-pressed=true]').count() == 1 and 'Mindestpegel (60 cm)' in pg.inner_text('.wm-sheet.wxd-alarm'),
           f'{tag}: Alarm-Fenster schlägt „unter 60 cm“ vor')
-    pg.keyboard.press('Escape'); pg.wait_for_timeout(300)
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
 
     # ---- Gemerkt: Ampel als Marke rechts
     pg.evaluate(f"localStorage.setItem('watermap.meinePegel', JSON.stringify(['{G}']))")
-    frisch(pg, '#mehr/merkliste'); pg.wait_for_selector('.bs-zeile .wm-marke', timeout=30000)
-    m = pg.locator('.bs-zeile .wm-marke')
-    check(m.inner_text() == 'Passt' and 'is-gut' in m.get_attribute('class') and '96 cm' in pg.inner_text('.bs-zeile:has(.wm-marke)'), f'{tag}: Merkliste zeigt „Passt“ und den Wert in der Unterzeile')
+    frisch(pg, '#gemerkt'); pg.wait_for_selector('.gm-sheet .wm-zeile .wm-marke', timeout=30000)
+    m = pg.locator('.gm-sheet .wm-zeile .wm-marke')
+    check(m.inner_text() == 'Passt' and 'is-gut' in m.get_attribute('class') and '96 cm' in pg.inner_text('.gm-sheet .wm-zeile:has(.wm-marke)'), f'{tag}: „Gemerkt“ zeigt „Passt“ und den Wert in der Unterzeile')
 
     # ---- Einstellungen: Mindestpegel-Zeile, kein Ampel-Alarm mehr
     frisch(pg, '#mehr/einstellungen'); pg.wait_for_selector('.ei-seite', timeout=30000); pg.wait_for_timeout(500)
@@ -117,7 +117,7 @@ def run(b, w, hh):
     check(warte(pg, "document.activeElement?.id === 'q'") and pg.get_attribute('#cats [data-cat=pegel]', 'aria-pressed') == 'true', f'{tag}: „Pegel suchen“ → Karte, Pegel an, Suche aktiv')
     frisch(pg, f'pegel-ampel.html?pegel={ENC}&min=40'); pg.wait_for_selector(S, timeout=60000)
     check(f'#karte/pegel/{G}' in urllib.parse.unquote(pg.url) and 'pegel-ampel' not in pg.url, f'{tag}: ?pegel= leitet ins Pegel-Sheet ({pg.url[-60:]})')
-    frisch(pg, f'pegel-ampel.html?pegel={ENC}#am-alarm'); pg.wait_for_selector('dialog.wxd-alarm[open]', timeout=60000)
+    frisch(pg, f'pegel-ampel.html?pegel={ENC}#am-alarm'); pg.wait_for_selector('.wm-sheet.wxd-alarm.is-offen', timeout=60000)
     check(pg.locator(S).count() == 1, f'{tag}: #am-alarm → Pegel-Sheet mit Alarm-Fenster')
     pg.keyboard.press('Escape')
     # Links aus den Mails (Bestätigen/Abbestellen) laufen weiter über die Einstiegsseite

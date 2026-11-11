@@ -31,26 +31,27 @@ def run(b, w, hh):
     mobile = w < 768; tag = f'{w}px'
     print(f'--- {tag}')
     ctx, pg = page(b, w, hh, mobile)
-    pg.goto(uf.BASE + '#mehr'); pg.wait_for_selector('#mehrseite .ei-profil')
-    karte = pg.inner_text('#mehrseite .ei-profil')
-    check('Mein WaterMap' in karte and 'Motorboot' in karte and 'ohne Konto' in karte, f'{tag}: „Mehr“ zeigt „Mein WaterMap“ ({karte!r})')
-    bb = pg.locator('#mehrseite .ei-profil').bounding_box()
-    check(bb['x'] >= 15 and bb['x'] + bb['width'] <= w - 15 and bb['height'] >= 44, f'{tag}: Profil-Karte mit Rand und ≥ 44 px ({bb})')
-    pg.click('#mehrseite .ei-profil'); pg.wait_for_selector('#mehrseite .ei-seite')
-    check(pg.evaluate('location.hash') == '#mehr/einstellungen' and 'Mein WaterMap' in pg.inner_text('#bs-titel'), f'{tag}: Einstellungen unter #mehr/einstellungen')
-    abschnitte = [t.strip().lower() for t in pg.locator('#mehrseite .bs-abschnitt h2').all_inner_texts()]
+    PROFIL = '.wm-sheet.mh-sheet .wm-zeile:has-text("Mein WaterMap")'
+    pg.goto(uf.BASE + '#mehr'); pg.wait_for_selector(PROFIL)
+    karte = pg.inner_text(PROFIL)
+    check('Mein WaterMap' in karte and 'Motorboot' in karte and 'ohne Konto' in karte, f'{tag}: „Mehr“ zeigt „Mein WaterMap“ als helle Ortszeile ({karte!r})')
+    bb = pg.locator(PROFIL).bounding_box()
+    check(bb['height'] >= 63.5 and pg.locator('.ei-profil').count() == 0, f'{tag}: Zeile ≥ 64 px, keine dunkle Karte ({bb})')
+    pg.click(PROFIL); pg.wait_for_selector('.wm-sheet.ei-sheet.is-offen .ei-seite')
+    check(pg.evaluate('location.hash') == '#mehr/einstellungen' and 'Mein WaterMap' in pg.inner_text('#ei-titel') and pg.locator('.wm-sheet.mh-sheet').count() == 1,
+          f'{tag}: Einstellungen unter #mehr/einstellungen, als Sheet über „Mehr“')
+    abschnitte = [t.strip().lower() for t in pg.locator('.ei-sheet .bs-abschnitt h2').all_inner_texts()]
     check(abschnitte == ['mein boot', 'karte beim start', 'in der nähe', 'benachrichtigungen', 'daten auf diesem gerät'], f'{tag}: Abschnitte ({abschnitte})')
     check(pg.evaluate('document.documentElement.scrollWidth <= innerWidth'), f'{tag}: kein horizontales Scrollen')
-    klein = pg.evaluate("""[...document.querySelectorAll('#mehrseite button, #mehrseite a, #mehrseite input')].filter(e => e.offsetParent)
+    klein = pg.evaluate("""[...document.querySelectorAll('.ei-sheet button:not(.wm-griff), .ei-sheet a, .ei-sheet input')].filter(e => e.offsetParent)
         .map(e => e.getBoundingClientRect()).filter(r => r.height < 44).length""")
     check(klein == 0, f'{tag}: alle Bedienelemente ≥ 44 px ({klein} kleiner)')
-    if w >= 1024:
-        sp = pg.evaluate("[...document.querySelectorAll('.ei-spalten > div')].map(d => Math.round(d.getBoundingClientRect().left))")
-        check(len(sp) == 2 and sp[1] > sp[0] + 200, f'{tag}: zwei Spalten ({sp})')
+    sp = pg.evaluate("[...document.querySelectorAll('.ei-spalten > div')].map(d => Math.round(d.getBoundingClientRect().left))")
+    check(len(sp) == 2 and abs(sp[1] - sp[0]) <= 1, f'{tag}: eine Spalte im Sheet ({sp})')
     pg.screenshot(path=str(SHOTS / f'einst_{w}.png'), full_page=True)
 
     # Bootstyp in watermap.boot (7.71.0; früher watermap.ampel.boot) – gilt für „Passt mein Boot?“
-    pg.click('#mehrseite .ei-seg[aria-label=Bootstyp] button[data-wert=segel]')
+    pg.click('.ei-sheet .ei-seg[aria-label=Bootstyp] button[data-wert=segel]')
     check(json.loads(ls(pg, 'watermap.boot') or '{}').get('typ') == 'segel', f'{tag}: Bootstyp in watermap.boot gespeichert')
     # Maße: Komma, Grenzen, leer
     pg.fill('#ei-laenge', '6,5'); pg.press('#ei-laenge', 'Enter')
@@ -64,22 +65,22 @@ def run(b, w, hh):
     check(json.loads(ls(pg, 'watermap.boot')).get('laenge') is None, f'{tag}: leere Länge = keine Angabe')
 
     # Kategorien wirken auf die Karte; die letzte bleibt an
-    pg.click('#mehrseite .ei-sw[data-typ=fuel]')
+    pg.click('.ei-sheet .ei-sw[data-typ=fuel]')
     check(pg.evaluate("window.__watermap.state.cats.has('fuel')") and pg.get_attribute('.ei-sw[data-typ=fuel]', 'aria-checked') == 'true', f'{tag}: Tankstellen eingeschaltet')
-    pg.click('#mehrseite .ei-sw[data-typ=fuel]'); pg.click('#mehrseite .ei-sw[data-typ=slip]')
+    pg.click('.ei-sheet .ei-sw[data-typ=fuel]'); pg.click('.ei-sheet .ei-sw[data-typ=slip]')
     check(pg.evaluate("[...window.__watermap.state.cats]") == ['slip'] and pg.get_attribute('.ei-sw[data-typ=slip]', 'aria-checked') == 'true' and 'Mindestens eine' in pg.inner_text('#toast'),
           f'{tag}: letzte Kategorie bleibt an')
 
     # Bezugspunkt „In der Nähe“
-    seg = '#mehrseite .ei-seg[aria-label="Entfernungen messen ab"]'
+    seg = '.ei-sheet .ei-seg[aria-label="Entfernungen messen ab"]'
     check(pg.get_attribute(f'{seg} button[data-wert=kartenmitte]', 'aria-pressed') == 'true', f'{tag}: Standard „Kartenmitte“')
     pg.click(f'{seg} button[data-wert=position]')
     check(json.loads(ls(pg, 'watermap.naehe.bezug') or '{}').get('art') == 'position' and pg.evaluate("window.__watermap.state.view") == 'mehr', f'{tag}: Bezugspunkt gespeichert')
-    frei = pg.inner_text('#mehrseite .ei-reihe:has-text("Standortfreigabe")')
-    check(('Blockiert' in frei) or pg.locator('#mehrseite .ei-knopf:has-text("Erlauben")').is_visible(), f'{tag}: Standortfreigabe ohne Erlaubnis ({frei!r})')
+    frei = pg.inner_text('.ei-sheet .ei-reihe:has-text("Standortfreigabe")')
+    check(('Blockiert' in frei) or pg.locator('.ei-sheet .ei-knopf:has-text("Erlauben")').is_visible(), f'{tag}: Standortfreigabe ohne Erlaubnis ({frei!r})')
 
     # Startausschnitt „Letzte Ansicht“: wird gemerkt und beim Start genutzt
-    pg.click('#mehrseite .ei-seg[aria-label="Ausschnitt beim Start"] button[data-wert=letzte]')
+    pg.click('.ei-sheet .ei-seg[aria-label="Ausschnitt beim Start"] button[data-wert=letzte]')
     check(json.loads(ls(pg, 'watermap.start')) == 'letzte' and ls(pg, 'watermap.ansicht'), f'{tag}: „Letzte Ansicht“ speichert die Ansicht')
     pg.evaluate("localStorage.setItem('watermap.ansicht', JSON.stringify({ lat: 53.55, lon: 9.99, zoom: 12 }))")
     pg.goto(uf.BASE + '#karte'); pg.reload(); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(600)
@@ -92,32 +93,38 @@ def run(b, w, hh):
 
     # Ausgeblendete Meldungen wieder zeigen
     pg.evaluate("localStorage.setItem('watermap.meldungen.ausgeblendet', JSON.stringify(['m1', 'm2']))")
-    pg.goto(uf.BASE + '#mehr/einstellungen'); pg.wait_for_selector('#mehrseite .ei-seite')
-    check('2 Meldungen, die du als unpassend markiert hast' in pg.inner_text('#mehrseite'), f'{tag}: Anzahl ausgeblendeter Meldungen')
-    pg.click('#mehrseite .ei-knopf:has-text("Wieder zeigen")'); pg.wait_for_timeout(100)
-    check(ls(pg, 'watermap.meldungen.ausgeblendet') is None and 'Keine' in pg.inner_text('#mehrseite') and pg.locator('#mehrseite .ei-knopf:has-text("Wieder zeigen")').count() == 0,
+    pg.goto(uf.BASE + '#mehr/einstellungen'); pg.wait_for_selector('.ei-sheet .ei-seite')
+    check('2 Meldungen, die du als unpassend markiert hast' in pg.inner_text('.ei-sheet'), f'{tag}: Anzahl ausgeblendeter Meldungen')
+    pg.click('.ei-sheet .ei-knopf:has-text("Wieder zeigen")'); pg.wait_for_timeout(100)
+    check(ls(pg, 'watermap.meldungen.ausgeblendet') is None and 'Keine' in pg.inner_text('.ei-sheet') and pg.locator('.ei-sheet .ei-knopf:has-text("Wieder zeigen")').count() == 0,
           f'{tag}: ausgeblendete Meldungen zurückgesetzt')
 
     # Offline-Daten aktualisieren
-    pg.click('#mehrseite .ei-knopf:has-text("Aktualisieren")'); pg.wait_for_selector('#mehrseite .ei-knopf:has-text("Aktualisieren"):not([disabled])')
-    check('Daten aktualisiert' in pg.inner_text('#toast') and 'Standorte vom' in pg.inner_text('#mehrseite .ei-stand'), f'{tag}: Daten aktualisiert ({pg.inner_text("#mehrseite .ei-stand")})')
+    pg.click('.ei-sheet .ei-knopf:has-text("Aktualisieren")'); pg.wait_for_selector('.ei-sheet .ei-knopf:has-text("Aktualisieren"):not([disabled])')
+    check('Daten aktualisiert' in pg.inner_text('#toast') and 'Standorte vom' in pg.inner_text('.ei-sheet .ei-stand'), f'{tag}: Daten aktualisiert ({pg.inner_text(".ei-sheet .ei-stand")})')
 
     # Alles zurücksetzen: Rückfrage, Abbrechen, dann löschen (Geräte-ID bleibt)
     pg.evaluate("localStorage.setItem('watermap.favorites.v1', '[\"node/1\"]'); localStorage.setItem('watermap.geraet', 'abc')")
-    pg.click('#mehrseite .ei-rot'); pg.wait_for_selector('#dlg[open]')
+    pg.click('.ei-sheet .ei-rot'); pg.wait_for_selector('#dlg[open]')
     check('Alles zurücksetzen?' in pg.inner_text('#dlg') and 'Pegel-Alarme per Mail bleiben' in pg.inner_text('#dlg'), f'{tag}: Rückfrage vor dem Zurücksetzen')
     pg.click('#dlg .btn-outline:has-text("Abbrechen")'); pg.wait_for_timeout(100)
     check(ls(pg, 'watermap.boot') is not None, f'{tag}: Abbrechen löscht nichts')
-    pg.click('#mehrseite .ei-rot'); pg.wait_for_selector('#dlg[open]')
-    pg.click('#dlg .btn-gefahr'); pg.wait_for_load_state('load'); pg.wait_for_selector('#mehrseite .ei-profil')
-    rest = pg.evaluate("Object.keys(localStorage).filter(k => k.startsWith('watermap.') && !['watermap.cats', 'watermap.pegel.stand', 'watermap.meldungen.aktiv', 'watermap.meldungen.liste'].includes(k))")
+    pg.click('.ei-sheet .ei-rot'); pg.wait_for_selector('#dlg[open]')
+    pg.click('#dlg .btn-gefahr'); pg.wait_for_load_state('load'); pg.wait_for_selector(PROFIL)
+    rest = pg.evaluate("Object.keys(localStorage).filter(k => k.startsWith('watermap.') && !['watermap.cats', 'watermap.pegel.stand', 'watermap.meldungen.aktiv', 'watermap.meldungen.liste', 'watermap.mindestpegel'].includes(k))")
     check(rest == ['watermap.geraet'] and ls(pg, 'watermap.geraet') == 'abc', f'{tag}: alles gelöscht außer Geräte-ID ({rest})')
-    check(pg.evaluate('location.hash') == '#mehr' and 'Motorboot' in pg.inner_text('#mehrseite .ei-profil'), f'{tag}: nach dem Zurücksetzen „Mehr“ mit Standardwerten')
+    check(pg.evaluate('location.hash') == '#mehr' and 'Motorboot' in pg.inner_text(PROFIL), f'{tag}: nach dem Zurücksetzen „Mehr“ mit Standardwerten')
 
-    # Zurück-Pfeil
-    pg.goto(uf.BASE + '#mehr/einstellungen'); pg.wait_for_selector('#mehrseite .ei-seite')
-    pg.click('#mehrseite .bs-zurueck'); pg.wait_for_selector('#mehrseite .ei-profil')
-    check(pg.evaluate('location.hash') == '#mehr', f'{tag}: Zurück führt zu „Mehr“')
+    # × führt eine Ebene zurück zu „Mehr“; über „Mehr“ geöffnet → auch die Zurück-Taste
+    pg.goto(uf.BASE + '#mehr/einstellungen'); pg.wait_for_selector('.ei-sheet .ei-seite')
+    pg.click('.ei-sheet .wm-zu'); pg.wait_for_selector('.ei-sheet', state='detached')
+    check(pg.evaluate('location.hash') == '#mehr' and pg.locator('.wm-sheet.mh-sheet.is-offen').count() == 1, f'{tag}: × führt zu „Mehr“')
+    pg.click(PROFIL); pg.wait_for_selector('.ei-sheet.is-offen .ei-seite')
+    pg.go_back(); pg.wait_for_selector('.ei-sheet', state='detached')
+    check(pg.evaluate('location.hash') == '#mehr' and pg.locator('.wm-sheet.mh-sheet.is-offen').count() == 1, f'{tag}: Zurück-Taste schließt die Einstellungen, „Mehr“ bleibt')
+    pg.click(PROFIL); pg.wait_for_selector('.ei-sheet.is-offen .ei-seite')
+    pg.click('.ei-sheet .wm-zu'); pg.wait_for_selector('.ei-sheet', state='detached'); pg.wait_for_timeout(300)
+    check(pg.evaluate('location.hash') == '#mehr' and pg.locator('.wm-sheet.mh-sheet.is-offen').count() == 1, f'{tag}: × nach dem Öffnen über „Mehr“ geht im Verlauf zurück')
     check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
     ctx.close()
 
@@ -126,8 +133,8 @@ def run(b, w, hh):
     pg.add_init_script("try { localStorage.setItem('watermap.start', JSON.stringify('position')); } catch {}")
     pg.goto(uf.BASE + '#karte'); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(1200)
     check(pg.evaluate("!!window.__watermap.state.user"), f'{tag}: Start „Meine Position“ ortet bei bestehender Freigabe')
-    pg.goto(uf.BASE + '#mehr/einstellungen'); pg.wait_for_selector('#mehrseite .ei-status.is-ok')
-    check('Erlaubt' in pg.inner_text('#mehrseite .ei-status'), f'{tag}: Standortfreigabe „Erlaubt“')
+    pg.goto(uf.BASE + '#mehr/einstellungen'); pg.wait_for_selector('.ei-sheet .ei-status.is-ok')
+    check('Erlaubt' in pg.inner_text('.ei-sheet .ei-status'), f'{tag}: Standortfreigabe „Erlaubt“')
     check(not pg.errs, f'{tag}: keine JS-Fehler mit Freigabe {pg.errs[:3]}')
     ctx.close()
 

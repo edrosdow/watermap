@@ -6,6 +6,7 @@ import { icon } from './icons.js';
 import { displayName, formatDistance } from './model.js';
 import { prefs } from './favorites.js';
 import { openPhotoForm } from './photo-form.js';
+import { kopf } from './bausteine.js';
 
 const YNU = [['', 'Nicht bekannt'], ['ja', 'Ja'], ['nein', 'Nein']];
 
@@ -299,7 +300,7 @@ export function openForm(formName, ctx, preset = {}) {
     }
   });
 
-  root.append(h('h2', { id: 'dlg-title', tabindex: '-1', text: spec.title }), h('p', { class: 'muted', text: spec.intro }), form);
+  root.append(kopf({ titel: spec.title, titelId: 'dlg-title', onZu: () => dlg.close() }), h('p', { class: 'muted', text: spec.intro }), form);   // Kopf-Baustein (Designumbau 3a)
   dlg.setAttribute('aria-labelledby', 'dlg-title');
   dlg.showModal();
   $('#dlg-title', root).focus();   // nicht der Schließen-Knopf (sonst Fokus-Rahmen beim Öffnen)

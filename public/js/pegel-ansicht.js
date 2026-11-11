@@ -160,22 +160,18 @@ export function kicker(art, g) {
 }
 
 /**
- * Pegel-Detailseite (Dashboard, Sheet auf dem Handy, rechtes Panel am Desktop).
- * opts = { verlauf: Promise<pts>, onBack, backLabel, onShare, onKarte, slips: [{p, d}], onSlip(p), onStern, eingebettet, wetter }
+ * Pegel-Details im Sheet-Rahmen (Pegel-Sheet auf der Karte, Pegel-Fenster über Slipanlage und Gemerkt).
+ * opts = { verlauf: Promise<pts>, onShare, onKarte, slips: [{p, d}], onSlip(p), onStern, eingebettet, wetter }
  */
 export function pegelDetail(g, opts) {
   if (istTidepegel(g)) return tideDetail(g, opts);   // Tidepegel: Tidekurve und Einordnung statt MNW/MHW-Skala
   const z = zustand(g);
-  const titel = h('h1', { class: 'pd-name', id: 'pd-name', tabindex: '-1', text: g.name });
   // Zustand, Tendenz (2 h) und Änderung (24 h) in einer Zeile – aus derselben Messreihe wie das Diagramm
   const aend24 = h('b', { class: 'pd-24', text: '…' }), tend = h('b', { class: 'pd-2h', text: '…' });
   const alt = g.state === 'old';
-  // imSheet (Pegel-Sheet, 7.70.0): Name und Gewässer stehen im Kopf des Sheet-Rahmens, × ebenfalls – hier nur km und Zeit
-  const kopf = h('header', { class: 'pd-kopf' + (opts.imSheet ? ' is-im-sheet' : '') },
-    opts.imSheet ? null : h('div', { class: 'pd-leiste' },
-      h('button', { type: 'button', class: 'pd-icon', 'aria-label': opts.backLabel || 'Zurück', html: icon(opts.eingebettet ? 'close' : 'back', 22), onclick: opts.onBack })),
-    opts.imSheet ? null : titel,
-    h('p', { class: 'pd-ort' + (alt ? ' is-alt' : '') }, opts.imSheet ? null : h('span', { class: 'sr-only', text: 'Pegel · ' }), [opts.imSheet ? null : g.water, kmText(g), alt ? `veraltet – ${formatTime(g.time)}` : formatTime(g.time)].filter(Boolean).join(' · ')),
+  // Immer im Sheet-Rahmen (Pegel-Sheet, Pegel-Fenster): Name, Gewässer und × stehen im Kopf des Rahmens – hier km, Zeit, Wert, Zustand, Aktionen
+  const kopf = h('div', { class: 'pd-oben' },
+    h('p', { class: 'pd-ort' + (alt ? ' is-alt' : '') }, [kmText(g), alt ? `veraltet – ${formatTime(g.time)}` : formatTime(g.time)].filter(Boolean).join(' · ')),
     h('p', { class: 'pd-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: g.unit })),
     h('p', { class: 'pd-zeile-kopf' }, h('span', { class: `pd-zdot ${ZUSTAND[z].cls}`, 'aria-hidden': 'true' }), h('b', { text: ZUSTAND[z].text.replace(/^ü/, 'Ü') }),
       alt ? null : h('span', { class: 'pd-tz' }, ' · 2 Std. ', tend, ' · 24 Std. ', aend24)),

@@ -2,7 +2,6 @@
 // Auf diesem Gerät gemerkt wird nur, welche Alarme es hier gibt (für die Anzeige im Pegel-Fenster und unter Einstellungen).
 import { CONFIG } from './config.js';
 import { h } from './dom.js';
-import { icon } from './icons.js';
 import { fenster } from './wetter.js';
 import { mindestFuer } from './mindestpegel.js';
 
@@ -142,9 +141,7 @@ export function alarmFenster(g, { opener = null, toast = (t) => document.dispatc
     anleitung, mailBox, meldung, los, loeschen,
     h('p', { class: 'al-fuss', text: 'Höchstens eine Nachricht pro Tag und Pegel. Jederzeit abbestellbar.' }));
 
-  dlg = fenster({ inhalt: form, klasse: 'wxd-alarm', labelId: 'al-titel', opener, kopf: h('header', { class: 'wxd-kopf' },
-    h('div', {}, h('h2', { id: 'al-titel', tabindex: '-1', text: 'Pegel-Alarm' }),
-      h('p', { class: 'wxd-unter', text: [g.name, g.water, `jetzt ${Math.round(g.value).toLocaleString('de-DE')} cm`].filter(Boolean).join(' · ') })),
-    h('button', { type: 'button', class: 'wxd-x', 'aria-label': 'Schließen', html: icon('close', 22), onclick: () => dlg.close() })) });
+  dlg = fenster({ inhalt: form, klasse: 'wxd-alarm', opener, kopf: { titel: 'Pegel-Alarm', titelId: 'al-titel',
+    unter: [g.name, g.water, `jetzt ${Math.round(g.value).toLocaleString('de-DE')} cm`].filter(Boolean).join(' · ') } });
   return dlg;
 }

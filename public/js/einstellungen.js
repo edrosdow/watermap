@@ -79,8 +79,10 @@ function segmente(label, optionen, wert, onWahl) {
 /**
  * Seite zeichnen. ctx = { cats: Set, katLabels: {typ: {label, farbe}}, toggleCat(typ), bezug(): 'position'|'kartenmitte'|'ort',
  *   setBezug(art), freigabe(): Promise<'granted'|'denied'|'prompt'|…>, erlauben(): Promise, ausgeblendet(): Zahl, ausgeblendetZeigen(),
- *   stand(): { orte, pegel }, aktualisieren(): Promise, zuruecksetzen(), zurueck(), alarmHref, dialog, toast }
+ *   stand(): { orte, pegel }, aktualisieren(): Promise, zuruecksetzen(), mindestpegel(), dialog, toast }
  */
+export const EINSTELLUNGEN_KOPF = { titel: 'Mein WaterMap', titelId: 'ei-titel', unter: 'Einstellungen – gespeichert nur auf diesem Gerät, kein Konto nötig.' };
+
 export function einstellungenSeite(root, ctx) {
   const boot = bootLesen();
 
@@ -217,14 +219,11 @@ export function einstellungenSeite(root, ctx) {
     h('div', { class: 'ei-reihe' }, h('span', { class: 'ei-reihe-text' }, h('span', { class: 'ei-label', text: 'Offline-Daten' }), h('span', { class: 'ei-hilfe ei-stand', text: standText })), aktKnopf),
     h('button', { type: 'button', class: 'bs-zeile ei-rot', onclick: () => zuruecksetzenFragen(ctx) },
       h('span', { class: 'bs-ico', html: icon('close', 22), 'aria-hidden': 'true' }),
-      h('span', { class: 'bs-text' }, h('strong', { text: 'Alles zurücksetzen' }), h('small', { text: 'Merkliste, Meine Pegel und Einstellungen löschen' }))),
+      h('span', { class: 'bs-text' }, h('strong', { text: 'Alles zurücksetzen' }), h('small', { text: 'Gemerkte Orte und Pegel und Einstellungen löschen' }))),
   ]);
 
+  // Kopf („Mein WaterMap“, ×) kommt vom Sheet-Rahmen (Designumbau 3a): EINSTELLUNGEN_KOPF
   root.replaceChildren(h('div', { class: 'bs-seite ei-seite' },
-    h('header', { class: 'bs-kopf' },
-      h('button', { type: 'button', class: 'bs-zurueck', 'aria-label': 'Zurück zu „Mehr“', html: icon('back', 24), onclick: ctx.zurueck }),
-      h('div', {}, h('h1', { class: 'bs-titel', id: 'bs-titel', tabindex: '-1', text: 'Mein WaterMap' }),
-        h('p', { class: 'bs-unter', text: 'Einstellungen – gespeichert nur auf diesem Gerät, kein Konto nötig.' }))),
     h('div', { class: 'ei-spalten' }, h('div', {}, bootTeil, karteTeil, naeheTeil), h('div', {}, alarmTeil, datenTeil)),
     h('p', { class: 'bs-fuss', text: 'Konto, Bewertungen und Abgleich zwischen Geräten kommen später.' })));
 }
@@ -235,7 +234,7 @@ function zuruecksetzenFragen(ctx) {
   const body = dlg.querySelector('#dlg-body');
   body.replaceChildren(
     h('h2', { id: 'dlg-title', text: 'Alles zurücksetzen?' }),
-    h('p', { text: 'Gelöscht werden auf diesem Gerät: Merkliste, Meine Pegel, Mindestpegel, Bootsangaben, Filter und gespeicherte Orte.' }),
+    h('p', { text: 'Gelöscht werden auf diesem Gerät: gemerkte Orte und Pegel, Mindestpegel, Bootsangaben, Filter und gespeicherte Orte.' }),
     h('p', { class: 'muted small', text: 'Pegel-Alarme per Mail bleiben bestehen – abmelden kannst du sie über den Link in jeder Alarm-Mail.' }),
     h('div', { class: 'btn-row end' },
       h('button', { type: 'button', class: 'btn btn-outline', text: 'Abbrechen', onclick: () => dlg.close() }),

@@ -92,7 +92,7 @@ with sync_playwright() as p:
         check('Foto unpassend: photos/t-2.png' in pg.input_value('#dlg textarea[name=details]')
               and pg.locator('#dlg input[name=standort_id]').get_attribute('value') == MANY and pg.input_value('#dlg select[name=art]') == 'foto',
               f'{name}: „Foto melden“ füllt die Meldung vor')
-        pg.click('#dlg-close')
+        pg.click('#dlg .wm-zu')
         # Kategorien: Filter „Alle 3 · Rampe 2 · Steg 1“, Etikett auf dem Foto, gefiltertes Blättern und Vollbild
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(MANY)}, {{ full: true }})"); pg.locator('#detail .ph-filter').wait_for()
         chips = [re.sub(r'\s+', ' ', t).strip() for t in pg.locator('#detail .ph-chip').all_inner_texts()]

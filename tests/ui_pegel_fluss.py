@@ -202,8 +202,8 @@ def run(b, w, hh, mobile):
 
     # Tidepegel-Detailseite (Cuxhaven)
     details(pg, f'#pegel/{U(21)}', mobile); pg.wait_for_selector('.pt-svg', timeout=8000); pg.wait_for_timeout(300)
-    kp = ' '.join((pg.inner_text(PEGEL + ' .wm-kopf') + ' · ' + pg.inner_text('.pd-kopf')).split())
-    check('TIDEPEGEL · ELBE' in kp.upper() and 'KM 727' in kp.upper() and 'Cuxhaven' in kp and '610' in kp and pg.inner_text('.pd-kopf .pz-tag-text') == 'Tide' and '↗ auflaufend' in kp,
+    kp = ' '.join((pg.inner_text(PEGEL + ' .wm-kopf') + ' · ' + pg.inner_text('.pd-oben')).split())
+    check('TIDEPEGEL · ELBE' in kp.upper() and 'KM 727' in kp.upper() and 'Cuxhaven' in kp and '610' in kp and pg.inner_text('.pd-oben .pz-tag-text') == 'Tide' and '↗ auflaufend' in kp,
           f'{tag}: Tidepegel-Kopf mit „Tide“ und „auflaufend“ ({kp!r})')
     check(pg.locator('.pd .ps').count() == 0 and 'Wo steht der Pegel' not in pg.inner_text('.pd'), f'{tag}: keine MNW/MHW-Skala')
     tk = pg.locator('.pt-svg')

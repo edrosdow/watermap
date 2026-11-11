@@ -1,17 +1,9 @@
 /* Bereiche „Mehr“, Merkliste und „Aktuelle Meldungen“ – im Stil des Pegel-Bereichs (heller Kopf am Desktop, dunkelblau auf dem Handy). */
-.seite { background: var(--bg); }
 .bs-seite { max-width: 760px; margin: 0 auto; padding: 24px 24px 40px; }
-.bs-kopf { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.bs-titel { margin: 0; font-size: 34px; color: var(--navy); letter-spacing: -.02em; }
-.bs-titel:focus { outline: none; }
-.bs-unter { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
-.bs-zurueck { width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--navy); display: grid; place-items: center; flex: none; margin-left: -10px; }
-.bs-zurueck:hover { background: var(--wm-linie); }
 
 .bs-abschnitt { margin-top: 18px; }
 .bs-abschnitt-kopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 4px 8px; min-height: 28px; }
 .bs-abschnitt h2 { margin: 0; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-.bs-link { border: 0; background: none; padding: 6px 4px; min-height: 44px; color: var(--wm-petrol-tief); font-weight: 750; font-size: 15px; }
 .bs-gruppe { background: #fff; border-radius: 16px; box-shadow: 0 1px 3px rgba(11, 48, 69, .07); overflow: hidden; }
 .bs-zeile { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 10px 14px; border: 0; border-top: 1px solid var(--wm-flaeche-2); background: none;
   text-align: left; color: var(--ink); text-decoration: none; font: inherit; }
@@ -24,41 +16,16 @@
 .bs-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .bs-text strong { color: var(--navy); font-size: 16px; overflow-wrap: anywhere; }
 .bs-text small { color: var(--muted); font-size: 13.5px; }
-.bs-pfeil { color: var(--wm-leise); display: grid; flex: none; }
-.bs-wert { font-weight: 800; color: var(--navy); font-size: 17px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.bs-entfernen { width: 44px; height: 44px; border: 0; border-radius: 50%; background: var(--wm-stop-hell); color: var(--wm-stop); display: grid; place-items: center; flex: none; }
-.bs-leer { margin: 0; padding: 16px; color: var(--muted); font-size: 14.5px; }
-.bs-leer a { color: var(--wm-petrol-tief); font-weight: 700; }
-.bs-hinweis { margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; background: var(--wm-warn-hell); color: var(--wm-warn-text); font-size: 13.5px; font-weight: 650; }
 .bs-fuss { margin: 18px 4px 0; color: var(--muted); font-size: 13px; }
 
 @media (max-width: 767px) {
   .bs-seite { padding: 0 0 28px; }
-  .bs-kopf { background: var(--navy); color: #fff; margin: 0; padding: 14px 16px 18px; }
-  .bs-titel { color: #fff; font-size: 28px; }
-  .bs-unter { color: var(--wm-linie); font-size: 14.5px; }
-  .bs-zurueck { color: #fff; margin-left: -8px; }
-  .bs-zurueck:hover { background: rgba(255, 255, 255, .1); }
-  .bs-abschnitt { margin: 16px 16px 0; }
+            .bs-abschnitt { margin: 16px 16px 0; }
   .bs-fuss { margin: 18px 20px 0; }
 }
 
 /* „Aktuelle Meldungen“ – Karten im Stil von „Heute vor Ort“ (Farbton nach Art der Meldung) */
-.mu-kopf { justify-content: space-between; align-items: flex-start; }
-.mu-zahl { display: inline-block; margin: 10px 0 0; padding: 4px 12px; border-radius: 99px; background: var(--wm-linie); color: var(--navy); font-weight: 750; font-size: 14px; }
-.mu-neu { width: 48px; height: 48px; border: 1px solid var(--line); border-radius: 14px; background: #fff; color: var(--navy); display: grid; place-items: center; flex: none; }
-.mu-neu.is-busy svg { animation: spin 1s linear infinite; }
-.mu-chips { display: flex; gap: 8px; overflow-x: auto; padding: 14px 0 4px; scrollbar-width: none; }
-.mu-chips::-webkit-scrollbar { display: none; }
-.mu-chip { flex: none; min-height: 40px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--line); background: #fff; color: var(--navy); font-weight: 700; font-size: 14px;
-  display: inline-flex; align-items: center; gap: 6px; }
-.mu-chip i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-.mu-chip.is-an { background: var(--navy); border-color: var(--navy); color: #fff; }
 .mu-steuer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0 10px; flex-wrap: wrap; }
-.mu-seg { display: inline-flex; background: var(--wm-linie); border-radius: 12px; padding: 3px; }
-.mu-seg button { min-height: 36px; padding: 0 12px; border: 0; border-radius: 9px; background: none; font-size: 14px; font-weight: 700; color: var(--muted); }
-.mu-seg button.is-an { background: #fff; color: var(--navy); box-shadow: 0 1px 3px rgba(11, 48, 69, .12); }
-.mu-seg button:disabled { opacity: .5; }
 .mu-sort { min-height: 40px; border: 0; background: none; color: var(--wm-petrol-tief); font-weight: 750; font-size: 14.5px; padding: 0 4px; max-width: 100%; }
 .mu-umkreis { margin: 0 0 12px; padding: 12px 16px 10px; background: #fff; border: 1px solid var(--line); border-radius: 14px; }
 .mu-umkreis-kopf { display: flex; justify-content: space-between; align-items: baseline; color: var(--muted); font-size: 14px; }
@@ -70,16 +37,8 @@
 .mu-liste { display: flex; flex-direction: column; gap: 12px; }
 .mu-karte { background: #fff; border: 1.5px solid var(--wm-linie); border-radius: 18px; overflow: hidden; box-shadow: 0 1px 3px rgba(11, 48, 69, .06); }
 .mu-karte.vo-warn { border-color: var(--wm-warn-rand); } .mu-karte.vo-stop { border-color: var(--wm-stop-rand); } .mu-karte.vo-gut { border-color: var(--wm-gut-rand); }
-.mu-oben { display: flex; gap: 12px; padding: 14px 14px 10px; align-items: flex-start; }
-.mu-karte.vo-warn .mu-oben { background: var(--wm-warn-hell); } .mu-karte.vo-stop .mu-oben { background: var(--wm-stop-hell); } .mu-karte.vo-gut .mu-oben { background: var(--wm-flaeche-2); }
-.mu-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.mu-typ { margin: 0; font-size: 17px; line-height: 1.25; color: var(--wm-warn-text); }
-.vo-stop .mu-typ { color: var(--wm-stop-text); } .vo-gut .mu-typ { color: var(--wm-gut-text); }
-.mu-ort { margin: 0; font-weight: 750; color: var(--navy); font-size: 15px; overflow-wrap: anywhere; }
-.mu-ort span { font-weight: 500; color: var(--muted); }
 .mu-zeit { margin: 0; color: var(--muted); font-size: 13.5px; }
 .mu-notiz { margin: 6px 0 0; font-size: 15px; color: var(--ink); overflow-wrap: anywhere; }
-.mu-entf { font-weight: 800; color: var(--navy); font-size: 16px; white-space: nowrap; }
 .mu-knoepfe { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--wm-flaeche-2); }
 .mu-knopf { min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: #fff; font-weight: 700; font-size: 14px; color: var(--navy); padding: 0 8px; }
 .mu-knopf:disabled { opacity: .55; }
@@ -88,32 +47,20 @@
 .mu-unpassend .vo-unpassend { padding: 0 2px; }
 .mu-bewertet { margin: 0; padding: 0 14px 12px; color: var(--muted); font-size: 13px; }
 .mu-leer { padding: 6px 0 14px; display: flex; flex-direction: column; align-items: flex-start; }
-.mu-leer .bs-link, .mu-leer .mu-melden { margin: 0 16px; }
+.mu-leer .mu-melden { margin: 0 16px; }
 .mu-leer-titel { margin: 0; padding: 16px 16px 0; font-weight: 800; color: var(--navy); font-size: 16.5px; }
 .mu-melden { display: inline-flex; align-items: center; gap: 8px; }
 
 @media (max-width: 767px) {
-  .mu-kopf { padding-right: 12px; }
-  .mu-zahl { background: color-mix(in srgb, var(--wm-flaeche) 10%, var(--wm-navy)); color: #fff; }
-  .mu-neu { background: color-mix(in srgb, var(--wm-flaeche) 10%, var(--wm-navy)); border: 0; color: #fff; }
-  .mu-chips, .mu-steuer, .mu-offline, .mu-liste, .mu-leer { margin-left: 16px; margin-right: 16px; }
-  .mu-chips { margin-right: 0; padding-right: 16px; }
-  .mu-knoepfe { grid-template-columns: 1fr 1fr; }
-  .mu-seg button { padding: 0 10px; font-size: 13.5px; }
-  .mu-sort { font-size: 13.5px; padding: 0; }
+        .mu-steuer, .mu-offline, .mu-liste, .mu-leer { margin-left: 16px; margin-right: 16px; }
+    .mu-knoepfe { grid-template-columns: 1fr 1fr; }
+    .mu-sort { font-size: 13.5px; padding: 0; }
   .mu-ort-link { grid-column: 1 / -1; justify-content: center; border-top: 1px solid var(--wm-flaeche-2); margin-top: 2px; }
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* „Mein WaterMap“: Karte in „Mehr“ und Einstellungen (#mehr/einstellungen) */
-.ei-profil { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 16px; border-radius: 20px; background: var(--navy); color: #fff; text-decoration: none; }
-.ei-profil:hover { background: var(--wm-petrol-tief); }
-.ei-av { width: 52px; height: 52px; border-radius: 50%; background: color-mix(in srgb, var(--wm-flaeche) 10%, var(--wm-navy)); color: var(--sky); display: grid; place-items: center; flex: none; }
-.ei-profil-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
-.ei-profil-text strong { font-size: 18px; }
-.ei-profil-text small { color: var(--wm-linie); font-size: 14px; }
-.ei-pf { color: var(--wm-linie); display: grid; flex: none; }
 .ei-seite { max-width: 1040px; }
 .ei-spalten { display: grid; gap: 0 24px; }
 @media (min-width: 1024px) { .ei-spalten { grid-template-columns: 1fr 1fr; align-items: start; } }
@@ -150,63 +97,35 @@ a.ei-reihe-text { display: flex; flex-direction: column; color: inherit; text-de
 .ei-rot .bs-text strong { color: var(--wm-stop); }
 .btn-gefahr { background: var(--wm-stop); color: #fff; }
 .btn-gefahr:hover { background: var(--wm-stop-text); }
-@media (max-width: 767px) {
-  .ei-profil { margin: 16px 16px 0; }
-}
 
 /* ------------------------------------------------------------------ 7.61.0 Designsystem Schritt 5–7: Meldungen, Mehr, Merkliste, Einstellungen, Melden-Menü, Formulare
    Eine Sprache wie Karte und Pegel: heller Wassergrund, Kopf mittig (Titel 24/700, runder Zurück-Knopf), weiße Karten mit Radius m und Schatten,
    Abschnittstitel in Satzschreibung, Chips/Umschalter/Knöpfe wie überall. Ausnahme: „Lage melden“ (dunkle Karte + Formular) bleibt. */
-.seite, .pegelseite.seite { background: var(--wm-verlauf); }
 @media (max-width: 767px) {
   /* oberste Leiste auf allen Seiten wie auf der Karte: Logo + weiße Such-Pille auf Wassergrund */
   .app-header { background: var(--wm-wasser); color: var(--wm-tinte); }
   .bs-seite { padding: 0 0 28px; }
-  .bs-kopf { background: transparent; color: var(--wm-tinte); padding: var(--wm-2) var(--wm-4) var(--wm-1); display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px;
-    column-gap: var(--wm-1); align-items: start; text-align: center; }
-  .bs-kopf > div { grid-column: 2; grid-row: 1; min-width: 0; }
-  .bs-kopf > .bs-zurueck { grid-column: 1; grid-row: 1; margin: 0; }
-  .bs-kopf > .mu-neu { grid-column: 3; grid-row: 1; }
-  .bs-titel { color: var(--wm-tinte); font-size: var(--wm-t-xl); font-weight: 700; line-height: 1.15; }
-  .bs-unter { color: var(--wm-matt); font-size: var(--wm-t-s); }
-  .bs-zurueck { color: var(--wm-tinte); }
-  .bs-abschnitt { margin: var(--wm-6) var(--wm-4) 0; }
-  .mu-chips, .mu-steuer { padding-left: var(--wm-4); padding-right: var(--wm-4); }
+                .bs-abschnitt { margin: var(--wm-6) var(--wm-4) 0; }
+  .mu-steuer { padding-left: var(--wm-4); padding-right: var(--wm-4); }
 }
-.bs-titel { color: var(--wm-tinte); font-weight: 700; }
 /* runder Knopf: sichtbar 38 px (wie überall), Tippfläche 44 px */
-.bs-zurueck, .mu-neu { width: 44px; height: 44px; border: 0; border-radius: var(--wm-r-rund); background: transparent; color: var(--wm-tinte); box-shadow: none; position: relative; isolation: isolate; }
-.bs-zurueck::before, .mu-neu::before { content: ""; position: absolute; inset: 3px; z-index: -1; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
-.bs-zurueck:hover, .mu-neu:hover { background: transparent; }
-.bs-zurueck:hover::before, .mu-neu:hover::before { background: var(--wm-flaeche-2); }
 .bs-abschnitt h2, .bs-abschnitt-kopf h2 { font-size: var(--wm-t-s); font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }
-.bs-link { color: var(--wm-petrol-tief); font-weight: 700; }
 .bs-gruppe, .mu-umkreis { background: var(--wm-flaeche); border: 0; border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
 .bs-zeile, .ei-zeile, .ei-sw, .ei-reihe { border-top-color: var(--wm-linie); }
 .bs-zeile:hover { background: var(--wm-wasser-2); }
 .bs-ico, .bs-ico.is-dunkel { border-radius: var(--wm-r-s); background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
 .bs-ico.is-typ { color: #fff; }
 .bs-text strong { color: var(--wm-tinte); font-weight: 700; }
-.bs-text small, .bs-leer, .bs-fuss { color: var(--wm-matt); }
-.bs-pfeil { color: var(--wm-leise); }
-.bs-wert { color: var(--wm-tinte); font-weight: 700; }
-.bs-leer a { color: var(--wm-petrol-tief); }
-.bs-hinweis { border-radius: var(--wm-r-s); background: var(--wm-warn-hell); color: var(--wm-warn-text); }
+.bs-text small, .bs-fuss { color: var(--wm-matt); }
 
 /* Mehr: Profil-Karte hell wie alle Karten */
-.ei-profil { background: var(--wm-flaeche); color: var(--wm-tinte); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
-.ei-profil:hover { background: var(--wm-wasser-2); }
-.ei-av { background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
-.ei-profil-text strong { font-weight: 700; }
-.ei-profil-text small, .ei-pf { color: var(--wm-matt); }
-@media (max-width: 767px) { .ei-profil { margin: var(--wm-3) var(--wm-4) 0; } }
 
 /* Einstellungen */
 .ei-label { color: var(--wm-tinte); }
 .ei-hilfe, .ei-opt, .ei-einheit { color: var(--wm-matt); }
-.ei-seg, .mu-seg { background: var(--wm-linie); border-radius: var(--wm-r-s); padding: 3px; gap: 0; }
-.ei-seg button, .mu-seg button { border-radius: calc(var(--wm-r-s) - 3px); color: var(--wm-matt); font-weight: 700; font-size: var(--wm-t-s); }
-.ei-seg button[aria-pressed="true"], .mu-seg button.is-an { background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-weight: 700; }
+.ei-seg { background: var(--wm-linie); border-radius: var(--wm-r-s); padding: 3px; gap: 0; }
+.ei-seg button { border-radius: calc(var(--wm-r-s) - 3px); color: var(--wm-matt); font-weight: 700; font-size: var(--wm-t-s); }
+.ei-seg button[aria-pressed="true"] { background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-weight: 700; }
 .ei-zahl { border: 1.5px solid var(--wm-linie); border-radius: var(--wm-r-s); }
 .ei-zahl:focus { border-color: var(--wm-petrol); outline: none; box-shadow: 0 0 0 3px var(--wm-petrol-hell); }
 .ei-zahl[aria-invalid="true"] { border-color: var(--wm-stop); }
@@ -216,16 +135,10 @@ a.ei-reihe-text { display: flex; flex-direction: column; color: inherit; text-de
 .ei-status.is-ok { color: var(--wm-gut-text); } .ei-status.is-stop { color: var(--wm-stop-text); } .ei-status.is-offen { color: var(--wm-matt); }
 
 /* Meldungen: Chips wie auf der Karte, Karten ohne Rahmen (Zustandsfarbe bleibt oben) */
-.mu-zahl { background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-weight: 700; }
-.mu-chip { min-height: 40px; border: 0; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-weight: 700; }
-.mu-chip.is-an { background: var(--wm-tinte); color: #fff; }
-.mu-chips { padding-bottom: var(--wm-2); }
 .mu-sort { color: var(--wm-petrol-tief); font-weight: 700; }
 .mu-umkreis-kopf b { color: var(--wm-petrol-tief); }
 .mu-range { accent-color: var(--wm-petrol); }
 .mu-karte, .mu-karte.vo-warn, .mu-karte.vo-stop, .mu-karte.vo-gut { border: 0; border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
-.mu-karte.vo-warn .mu-oben { background: var(--wm-warn-hell); } .mu-karte.vo-stop .mu-oben { background: var(--wm-stop-hell); } .mu-karte.vo-gut .mu-oben { background: var(--wm-gut-hell); }
-.mu-ort { color: var(--wm-tinte); font-weight: 700; }
 .mu-knopf { border: 0; border-radius: var(--wm-r-m); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); color: var(--wm-tinte); }
 
 /* Melden-Menü (ohne „Lage vor Ort melden“ – die dunkle Karte bleibt) */
@@ -257,21 +170,10 @@ a.ei-reihe-text { display: flex; flex-direction: column; color: inherit; text-de
 
 /* 7.61.0 Abgleich: „In der Nähe“-Kopf am Handy hell wie alle Köpfe; Formular-Köpfe wie alle Sheets (Titel mittig, rundes × links) */
 @media (max-width: 767px) {
-  .nh-kopf-m, body.view-naehe .nh-kopf-m { background: var(--wm-wasser); color: var(--wm-tinte); gap: 6px; padding-bottom: 10px; }
-  body.view-naehe .nh-kopf-m::before { background: var(--wm-leise); opacity: .5; }
-  .nh-kopf-m .nh-titel { color: var(--wm-tinte); font-size: var(--wm-t-xl); font-weight: 700; }
-  .nh-kopf-m :focus-visible { outline-color: var(--wm-fokus); }
-  .nh-sym { border-radius: var(--wm-r-rund); background: transparent; color: var(--wm-tinte); isolation: isolate; }
-  .nh-sym::before { content: ""; position: absolute; inset: 3px; z-index: -1; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
-  .nh-sym:hover { background: transparent; }
-  .nh-sym .filter-n { background: var(--wm-petrol); color: #fff; }
-  .nh-pille { height: 36px; border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); }
+                  .nh-pille { height: 36px; border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); }
   .nh-pille .nh-bezug-ico { color: var(--wm-petrol-tief); }
   .nh-pille-pfeil { color: var(--wm-matt); }
-  .nh-kopf-m .cat { min-height: 40px; height: 40px; border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-weight: 700; }
-  .nh-kopf-m .cat:hover { color: var(--wm-tinte); }
-  .nh-kopf-m .cat[aria-pressed="true"] { background: var(--wm-tinte); color: #fff; }
-  .nh-zeile1 { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); color: var(--wm-tinte); }
+        .nh-zeile1 { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); color: var(--wm-tinte); }
 }
 .dialog-form:not(.dialog-photo) #dlg-title { text-align: center; padding: 0 44px; font-size: var(--wm-t-xl); font-weight: 700; color: var(--wm-tinte); }
 .dialog-form:not(.dialog-photo) > .dlg-x, .dialog:not(.dialog-photo) > .dlg-x { right: auto; left: 10px; }
@@ -282,12 +184,6 @@ a.ei-reihe-text { display: flex; flex-direction: column; color: inherit; text-de
 .dlg-x { border-radius: var(--wm-r-rund); }
 .dialog:not(.dialog-photo) > .dlg-x { isolation: isolate; background: transparent; color: var(--wm-tinte); }
 .dialog:not(.dialog-photo) > .dlg-x::before { content: ""; position: absolute; inset: 3px; z-index: -1; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
-@media (max-width: 767px) {
-  .nh-kopf-m > .nh-zeile:first-child { display: grid; grid-template-columns: 88px minmax(0, 1fr) 88px; align-items: center; }
-  .nh-kopf-m > .nh-zeile:first-child > .nh-titel { grid-column: 2; grid-row: 1; text-align: center; }
-  .nh-kopf-m > .nh-zeile:first-child > .nh-symbole { grid-column: 3; grid-row: 1; justify-content: flex-end; }
-  .nh-kopf-m > .nh-pille { align-self: center; }
-}
 
 /* ------------------------------------------------------------------ 7.62.0 Designsystem Schritt 8, Teil 1: Desktop (≥ 768 px)
    Gleiche Sprache wie am Handy: die dunkle Kopfleiste bleibt (DESIGN_SYSTEM.md, Abschnitt 5), alles darunter liegt auf dem Wassergrund.
@@ -312,28 +208,15 @@ a.ei-reihe-text { display: flex; flex-direction: column; color: inherit; text-de
   /* Pegel: Kopf auf Wassergrund, Suche wie oben, Chip-Symbole in Tinte (gemerkter Stern Sonne) */
                         
   /* In der Nähe (Seitenleiste): Kopf auf Wassergrund, Knöpfe als Chips */
-  .nh-kopf { background: var(--wm-wasser); border-bottom: 0; }
-  .nh-titel { font-size: var(--wm-t-xl); font-weight: 700; color: var(--wm-tinte); }
-  .nh-bezug { font-size: var(--wm-t-s); color: var(--wm-matt); }
-  .nh-bezug-ico { color: var(--wm-petrol-tief); }
-  .nh-knopf, .nh-aendern { min-height: 44px; border: 0; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); color: var(--wm-tinte);
-    box-shadow: var(--wm-schatten); font-size: var(--wm-t-s); font-weight: 700; }
-  .nh-knopf:hover, .nh-aendern:hover { background: var(--wm-flaeche-2); }
-
+        .nh-bezug-ico { color: var(--wm-petrol-tief); }
+    
   /* Seitenleiste (Standortliste, In der Nähe): Wassergrund, Karten weiß mit Schatten */
-  .sidebar, body.list-open .sidebar { background: var(--wm-wasser-2); border-right-color: var(--wm-linie); }
-  .datainfo { background: transparent; border-bottom: 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }
-  .sidebar-foot { border-top-color: var(--wm-linie); font-size: var(--wm-t-xs); color: var(--wm-matt); }
-  .nh-erklaer { border: 0; border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
+    .datainfo { background: transparent; border-bottom: 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+    .nh-erklaer { border: 0; border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
   .nh-erklaer-ico { background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
   .nh-erklaer-knoepfe { flex-wrap: wrap; }
   .nh-erklaer-knoepfe .btn { flex: 1 1 auto; white-space: nowrap; border-radius: var(--wm-r-m); }
-  .list .place.nk { border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
-  .list .place.nk:hover { background: var(--wm-flaeche-2); box-shadow: var(--wm-schatten); }
-  .nk-ico { border-radius: var(--wm-r-s); }
-  .nk-name { font-size: var(--wm-t-m); font-weight: 700; color: var(--wm-tinte); }
-  .nk-dist { font-size: var(--wm-t-l); font-weight: 700; color: var(--wm-tinte); }
-  .nh-sort { color: var(--wm-petrol-tief); font-size: var(--wm-t-s); font-weight: 700; }
+            .nh-sort { color: var(--wm-petrol-tief); font-size: var(--wm-t-s); font-weight: 700; }
   .nh-sort-box::after { color: var(--wm-petrol-tief); }
 }
 
@@ -350,9 +233,6 @@ a.ei-reihe-text { display: flex; flex-direction: column; color: inherit; text-de
 .wx-dir path { stroke: var(--wm-matt); }
 .wx .gc-tip { background: var(--wm-tinte); font-size: var(--wm-t-xs); font-weight: 400; border-radius: var(--wm-r-s); }
 
-.wxd.wxd-wetter .wxd-kopf h2 { font-size: var(--wm-t-xl); font-weight: 700; line-height: 1.15; color: var(--wm-tinte); }
-.wxd.wxd-wetter .wxd-unter { font-size: var(--wm-t-s); }
-.wxd.wxd-wetter .wxd-body { padding: var(--wm-1) var(--wm-4) var(--wm-6); }
 .wxd.wxd-wetter .wx { gap: var(--wm-3); }
 .wxd.wxd-wetter .wx-alert, .wxd.wxd-wetter .note-warn { border-radius: var(--wm-r-m); }
 .wxd.wxd-wetter .wx-now-arrow { background: var(--wm-flaeche); color: var(--wm-petrol); box-shadow: var(--wm-schatten); }
@@ -372,3 +252,73 @@ a.ei-reihe-text { display: flex; flex-direction: column; color: inherit; text-de
 .wxd.wxd-wetter .wx-strip { background: var(--wm-flaeche); border-radius: var(--wm-r-m); padding: var(--wm-2); box-shadow: var(--wm-schatten); }
 .wxd.wxd-wetter .wx-strip li { background: var(--wm-flaeche-2); border-radius: var(--wm-r-s); }
 .wxd.wxd-wetter .wx-diagramm > .gc-wrap { margin: 0 calc(-1 * var(--wm-4)); }
+
+/* ================================================================ Bereiche als Sheet über der Karte (Designumbau 3a, 7.72.0)
+   Nähe, Gemerkt, Meldungen, Mehr und Einstellungen im gemeinsamen Rahmen (bausteine.css: .wm-sheet). Nur Tokens. */
+.wm-bereich-inhalt, .mu-root, .ei-root, .mu-seite { display: flex; flex-direction: column; gap: var(--wm-3); }
+.wm-bereich .wm-kopf .wm-rund.is-busy svg { animation: wm-dreh 1s linear infinite; }
+@keyframes wm-dreh { to { transform: rotate(360deg); } }
+
+/* ---- In der Nähe: Bezugspunkt, Kategorien, Zählzeile, Liste als weiße Gruppe aus Ortszeilen */
+.nh-steuer { display: flex; flex-direction: column; gap: var(--wm-2); }
+.nh-steuer .nh-zeile { display: flex; align-items: center; gap: var(--wm-2); min-width: 0; }
+.nh-steuer .nh-pille { flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: var(--wm-2); height: 44px; padding: 0 var(--wm-4);
+  border: 0; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font: inherit; font-size: var(--wm-t-s); font-weight: 700; cursor: pointer; }
+.nh-steuer .nh-pille-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.nh-steuer .nh-pille-pfeil { display: grid; flex: none; transform: rotate(90deg); color: var(--wm-matt); }
+.nh-steuer .nh-bezug-ico { display: grid; flex: none; color: var(--wm-petrol-tief); }
+.nh-filter { position: relative; flex: none; }
+.nh-filter .filter-n { position: absolute; top: -2px; right: -2px; }
+.nh-sheet .list-head { padding: 0 var(--wm-1); gap: var(--wm-2); font-size: var(--wm-t-s); color: var(--wm-matt); }
+.nh-sheet .list { flex: none; overflow: visible; padding: 0; }
+.nh-sheet .list > li + li > .wm-zeile { border-top: 1px solid var(--wm-linie); }
+.nh-sheet .list .place.is-selected { background: var(--wm-wasser); box-shadow: none; }
+.nh-sheet .list > li.empty, .nh-sheet .list > li.nh-leer { padding: var(--wm-6) var(--wm-4); text-align: center; }
+.nh-sheet .nh-fuss { padding: var(--wm-3) var(--wm-4); border-top: 1px solid var(--wm-linie); font-size: var(--wm-t-xs); color: var(--wm-matt); }
+.nh-sheet .nh-fuss .version { display: block; margin-top: var(--wm-1); }
+.nh-sheet .datainfo { padding: 0 var(--wm-1); font-size: var(--wm-t-xs); color: var(--wm-matt); }
+.nh-sheet .datainfo p { margin: 0; }
+.wm-kachel-ico.is-typ { color: var(--wm-flaeche); }
+.nh-meld { margin-top: 2px; }
+
+/* ---- Gemerkt */
+.gm-leer { display: flex; flex-direction: column; align-items: center; gap: var(--wm-2); }
+.gm-leer-ico { color: var(--wm-sonne); }
+.gm-leer p { margin: 0; max-width: 32ch; }
+.gm-laedt { margin: 0; padding: var(--wm-4); color: var(--wm-matt); font-size: var(--wm-t-s); }
+.gm-hinweis { margin: 0 0 var(--wm-2); font-size: var(--wm-t-s); color: var(--wm-warn-text); }
+.gm-entfernen { width: 40px; height: 40px; }
+
+/* ---- Mehr */
+.mh-fuss { margin: var(--wm-2) var(--wm-1) 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+
+/* ---- Aktuelle Meldungen: Chips, Umschalter, Meldung als Ortszeile mit Marke, Knöpfe darunter */
+.mu-steuer { display: flex; flex-direction: column; gap: var(--wm-2); }
+.mu-sort-box { align-self: flex-end; }
+.mu-liste { display: flex; flex-direction: column; gap: var(--wm-3); }
+.mu-karte { padding-bottom: var(--wm-3); }
+.mu-karte .mu-ico { background: color-mix(in srgb, var(--c) 16%, var(--wm-flaeche)); color: var(--c); }
+.mu-karte .mu-zeit, .mu-karte .mu-wo { font-size: var(--wm-t-s); color: var(--wm-matt); }
+.mu-karte .mu-notiz { margin: 0 var(--wm-3) var(--wm-2); font-size: var(--wm-t-s); color: var(--wm-tinte); }
+.mu-karte .mu-knoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: var(--wm-2); padding: 0 var(--wm-3); }
+.mu-karte .mu-bewertet, .mu-karte .mu-unpassend { margin: var(--wm-2) var(--wm-3) 0; }
+.mu-leer { display: flex; flex-direction: column; align-items: center; gap: var(--wm-2); }
+.mu-leer-titel { margin: 0; font-weight: 700; color: var(--wm-tinte); }
+.mu-leer-text { margin: 0; max-width: 36ch; }
+
+/* ---- Einstellungen („Mein WaterMap“) im Sheet: eine Spalte, ohne Seitenrand */
+.ei-sheet .bs-seite { max-width: none; margin: 0; padding: 0; }
+.ei-sheet .ei-spalten { display: flex; flex-direction: column; gap: 0; }
+.ei-sheet .bs-abschnitt { margin: var(--wm-3) 0 0; }
+.ei-sheet .bs-abschnitt:first-child { margin-top: 0; }
+.ei-sheet .bs-fuss { margin: var(--wm-4) var(--wm-1) 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+
+/* ---- Fenster im Rahmen (Wetter, Pegel-Alarm, Pegel aus Slipanlage und Gemerkt) */
+.wxd-pegel .pegel-fenster .pd { background: none; }
+
+/* ---- Formulare und Melden-Menü mit dem Kopf-Baustein (Designumbau 3a): Titel links, × rechts; der alte ×-Knopf des Dialogs entfällt dort */
+.dialog:has(#dlg-body > .wm-kopf, #dlg-body .ae-form > .wm-kopf) > .dlg-x { display: none; }
+#dlg-body > .wm-kopf, .ae-form > .wm-kopf, #report-body > .wm-kopf { padding: 0 0 var(--wm-3); }
+.pf-oben { position: relative; padding: var(--wm-5) var(--wm-4) 0; }
+.pf-oben > .wm-kopf { padding: 0 0 var(--wm-2) var(--wm-1); }
+#dlg-body > .wm-kopf, .ae-form > .wm-kopf, #report-body > .wm-kopf, .pf-oben > .wm-kopf { text-align: left; }

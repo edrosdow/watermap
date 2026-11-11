@@ -7,7 +7,7 @@ import { neueAnzahl } from '../public/js/meldungen.js';
 assert.deepEqual(NAV.map(n => n.id), ['karte', 'meldungen', 'melden', 'gemerkt', 'mehr']);
 assert.equal(NAV.filter(n => n.center).length, 1);
 assert.equal(NAV.findIndex(n => n.center), 2, 'Melden steht in der Mitte');
-assert.equal(NAV.find(n => n.id === 'gemerkt').href, './#mehr/merkliste', 'Gemerkt öffnet bis Phase 3 die Merkliste');
+assert.equal(NAV.find(n => n.id === 'gemerkt').href, './#gemerkt', 'Gemerkt öffnet das Sheet (Designumbau 3a)');
 assert.deepEqual(NAV_ZIEL, { naehe: 'mehr', favoriten: 'gemerkt' });
 
 assert.equal(badgeText(1), '1');
@@ -18,6 +18,7 @@ assert.equal(navLabel(meldungen), 'Meldungen');
 assert.equal(navLabel(meldungen, 0), 'Meldungen');
 assert.equal(navLabel(meldungen, 3), 'Meldungen, 3 neu');
 assert.equal(navLabel(meldungen, 150), 'Meldungen, über 99 neu');
+assert.equal(navLabel(NAV.find(n => n.id === 'gemerkt'), 4), 'Gemerkt, 4', 'Gemerkt: Anzahl ohne „neu“');
 
 const m = (id, t) => ({ id, erstelltAm: t });
 const liste = [m('a', 1000), m('b', 2000), m('c', 3000)];

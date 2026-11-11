@@ -63,6 +63,7 @@ const P = {
   external: '<path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/>',
   alert: '<path d="M12 3 22 21H2zM12 10v5M12 18h.01"/>',
   check: '<path d="m5 12 5 5 9-10"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',   // Bearbeiten (Gemerkt, 7.72.0)
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>',
   phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',

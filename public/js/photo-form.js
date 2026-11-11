@@ -6,6 +6,7 @@ import { icon, glyphSvg } from './icons.js';
 import { displayName } from './model.js';
 import { prepareImage, sendReport } from './forms.js';
 import { FOTO_KATEGORIEN } from './foto-kategorien.js';
+import { kopf } from './bausteine.js';
 
 export const NOTIZ_MAX = 140;
 
@@ -25,9 +26,9 @@ export function openPhotoForm(ctx, preset = {}) {
   const revoke = () => { if (state.url) URL.revokeObjectURL(state.url); state.url = null; };
 
   // ---- Kopfzeile
-  const title = h('h2', { id: 'dlg-title', class: 'pf-title', tabindex: '-1', text: 'Foto hinzufügen' });
-  const head = h('header', { class: 'pf-head' }, h('span', { class: 'pf-grip', 'aria-hidden': 'true' }), title,
-    h('button', { type: 'button', class: 'pf-x', 'aria-label': 'Schließen', html: icon('close', 22), onclick: () => dlg.close() }));
+  // Kopf-Baustein (Designumbau 3a): Griff (Handy), Titel links, × rechts
+  const head = h('div', { class: 'pf-oben' }, h('span', { class: 'pf-grip', 'aria-hidden': 'true' }), kopf({ titel: 'Foto hinzufügen', titelId: 'dlg-title', onZu: () => dlg.close() }));
+  const title = head.querySelector('#dlg-title');
 
   // ---- Standort
   const idIn = h('input', { type: 'hidden', name: 'standort_id', value: p ? p.id : '' });

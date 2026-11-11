@@ -60,7 +60,8 @@ def page(b, w, hh, mobile, perm='prompt', allow='true', init=''):
     return ctx, pg
 
 def kopf(pg, mobile):
-    return pg.inner_text('#naehe-kopf-m' if mobile else '#naehe-kopf-d')
+    # Sheet „In der Nähe“ (Designumbau 3a): Titel im Kopf des Rahmens, Bezugspunkt und Kategorien im Steuerbereich
+    return pg.inner_text('.nh-sheet .wm-kopf') + '\n' + pg.inner_text('#naehe-steuer')
 
 def oeffnen(pg, mobile):
     pg.goto(uf.BASE + '#naehe'); pg.wait_for_selector('.place.nk, .nh-leer', timeout=10000); pg.wait_for_timeout(300)
@@ -78,9 +79,9 @@ def run(b, w, hh, mobile):
     HINT = '.nh-zeile1:not(.is-blockiert)' if mobile else '.nh-erklaer'
     ERLAUBEN = '.nh-erlauben' if mobile else '.nh-erklaer .btn-primary'
     BLOCK = '.nh-zeile1.is-blockiert' if mobile else '.nh-blockiert'
-    AENDERN = '.nh-pille' if mobile else '.nh-aendern:visible'
+    AENDERN = '.nh-pille'
     ORT = '.nh-sym[aria-label="Ort suchen"]' if mobile else '.nh-erklaer .btn-outline'
-    AUFKARTE = '.nh-sym[aria-label="Auf der Karte zeigen"]' if mobile else '.nh-knopf:visible'
+    AUFKARTE = '.nh-sheet .wm-kopf [aria-label="Auf der Karte zeigen"]'
 
     # 1) Erstes Öffnen ohne Freigabe: kein Browser-Dialog, Erklär-Karte, Liste um die Kartenmitte
     ctx, pg = page(b, w, hh, mobile)
@@ -101,26 +102,25 @@ def run(b, w, hh, mobile):
     if mobile:
         zk = pg.locator('.nh-zahl-kurz')
         check(re.fullmatch(r'\d+ Slipanlagen · bis (25|50|100) km', zk.inner_text().strip()) and zk.bounding_box()['height'] < 26, f'{tag}: Zählzeile einzeilig ({zk.inner_text()!r})')
-        check(pg.locator('.app-header').is_hidden() and pg.locator('#naehe-kopf-m .nh-titel').inner_text() == 'In der Nähe', f'{tag}: globales Suchfeld ausgeblendet, Titel im Kopf')
-        kh = pg.locator('#naehe-kopf-m').bounding_box()['height']
-        check(kh <= 175, f'{tag}: Kopf kompakt ({kh} px)')
-        # mindestens 4 Einträge ohne Scrollen ganz sichtbar (über der Navigation und dem Melden-Knopf)
+        check(pg.locator('.nh-sheet #nh-titel').inner_text() == 'In der Nähe', f'{tag}: Titel im Kopf des Sheets')
+        kh = pg.locator('#naehe-steuer').bounding_box()['height']
+        check(kh <= 110, f'{tag}: Steuerbereich kompakt ({kh} px)')
+        # mindestens 3 Einträge ohne Scrollen ganz sichtbar (über der Navigation und dem Melden-Knopf; Sheet beginnt unter der Suche)
         unten = pg.locator('#bottomnav .bn-plus').bounding_box()['y']
         ganz = sum(1 for bb in [c.bounding_box() for c in pg.locator('.place.nk').all()[:8]] if bb and bb['y'] >= 0 and bb['y'] + bb['height'] <= unten)
-        check(ganz >= 4, f'{tag}: mindestens 4 Einträge ohne Scrollen sichtbar ({ganz})')
+        check(ganz >= (3 if hh > 700 else 2), f'{tag}: Einträge ohne Scrollen sichtbar ({ganz})')
     else:
         check('um die Kartenmitte' in pg.inner_text('.nh-zahl'), f'{tag}: Zeile „… um die Kartenmitte“')
-    check(pg.locator('#sidebar button', has_text='Favoriten').count() == 0 and pg.locator('#sidebar [role=tab]').count() == 0, f'{tag}: kein Umschalter Standorte/Favoriten')
-    check(pg.locator('#naehe-kopf-m').is_visible() == mobile and pg.locator('#naehe-kopf-d').is_visible() != mobile, f'{tag}: Kopf {"über den Kategorien" if mobile else "in der Seitenleiste"}')
+    check(pg.locator('.nh-sheet [role=tab]').count() == 0 and pg.locator('#sidebar').count() == 0, f'{tag}: kein Umschalter Standorte/Favoriten, keine Seitenleiste')
+    sh = pg.locator('.wm-sheet.nh-sheet').bounding_box(); mw = pg.locator('.map-wrap').bounding_box()
     if not mobile:
-        sb = pg.locator('#sidebar').bounding_box(); mw = pg.locator('.map-wrap').bounding_box()
-        check(sb['x'] < 1 and mw['x'] >= sb['width'] - 1 and pg.locator('#toolbar').is_visible(), f'{tag}: linke Seitenleiste neben der Karte, Kategorien in der Werkzeugleiste')
+        check(sh['x'] + sh['width'] >= w - 1 and sh['x'] > w / 2 and mw['x'] < 1 and pg.locator('#toolbar').is_visible(), f'{tag}: Panel rechts über der Karte, Kategorien auch in der Werkzeugleiste')
     else:
-        check(pg.locator('#toolbar').is_hidden() and pg.locator('.nh-cat').count() == 3, f'{tag}: Kategorien im Navy-Kopf')
+        check(sh['y'] > 60 and pg.locator('.nh-sheet .nh-cat.wm-chip').count() == 3, f'{tag}: Sheet von unten, Kategorien als Chips im Sheet')
     check(pg.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), f'{tag}: kein horizontales Scrollen')
     # Chips und Pille sind laut Vorgabe 36 px hoch, Knöpfe der Hinweiszeile 40 px, sonst ≥ 44 px
-    klein = pg.evaluate("""[...document.querySelectorAll('.nh-kopf button, .nh-erklaer button, .nh-zeile1 button, .place.nk, .nh-sort')].filter(e => e.offsetParent !== null)
-        .map(e => { const r = e.getBoundingClientRect(); const min = e.matches('.cat, .nh-pille') ? 36 : e.matches('.nh-zeile1 button, .nh-sort') ? 40 : 44;
+    klein = pg.evaluate("""[...document.querySelectorAll('#naehe-steuer button, .nh-erklaer button, .nh-zeile1 button, .place.nk, .nh-sort')].filter(e => e.offsetParent !== null)
+        .map(e => { const r = e.getBoundingClientRect(); const min = e.matches('.wm-chip, .nh-pille') ? 36 : e.matches('.nh-zeile1 button, .nh-sort') ? 40 : 44;
           return [e.className || e.tagName, Math.round(r.width), Math.round(r.height), min]; }).filter(x => x[2] < x[3])""")
     check(not klein, f'{tag}: Touch-Ziele groß genug {klein[:3]}')
     karte = pg.locator('.place.nk').first
@@ -181,7 +181,7 @@ def run(b, w, hh, mobile):
     if mobile:
         unten = pg.locator('#bottomnav .bn-plus').bounding_box()['y']
         ganz = sum(1 for bb in [c.bounding_box() for c in pg.locator('.place.nk').all()[:8]] if bb and bb['y'] >= 0 and bb['y'] + bb['height'] <= unten)
-        check(ganz >= 4, f'{tag}: blockiert: mindestens 4 Einträge sichtbar ({ganz})')
+        check(ganz >= (3 if hh > 700 else 2), f'{tag}: blockiert: Einträge sichtbar ({ganz})')
     ctx.close()
 
     # 5) Freigabe bereits erteilt: direkt „Meine Position“, keine Erklär-Karte; „Meine Position“ auf der Karte teilt den Status
@@ -190,7 +190,7 @@ def run(b, w, hh, mobile):
     if mobile:
         unten = pg.locator('#bottomnav .bn-plus').bounding_box()['y']
         ganz = sum(1 for bb in [c.bounding_box() for c in pg.locator('.place.nk').all()[:8]] if bb and bb['y'] >= 0 and bb['y'] + bb['height'] <= unten)
-        check(ganz >= 4, f'{tag}: mit Freigabe: mindestens 4 Einträge sichtbar ({ganz})')
+        check(ganz >= (3 if hh > 700 else 2), f'{tag}: mit Freigabe: Einträge sichtbar ({ganz})')
     ctx.close()
 
     # 6) Ort eingeben, Wahl bleibt nach Neuladen, zuletzt gesucht, Kartenmitte, Meldungs-Etikett, leerer Zustand
@@ -202,11 +202,11 @@ def run(b, w, hh, mobile):
         pg.reload(); pg.wait_for_selector('.place.nk'); pg.wait_for_timeout(300)
         check(pg.locator(HINT).count() == 0, f'{tag}: geschlossene Hinweiszeile bleibt nach Neuladen weg')
         # Links am Listenende, nicht verdeckt
-        check(pg.locator('#sidebar .sidebar-foot').is_hidden() and pg.locator('.nh-fuss').count() == 1, f'{tag}: Links als letzter Listeneintrag')
-        pg.locator('#list').evaluate('e => e.scrollTop = e.scrollHeight'); pg.wait_for_timeout(200)
+        check(pg.locator('.nh-fuss').count() == 1, f'{tag}: Links als letzter Listeneintrag')
+        pg.locator('.nh-sheet .wm-sheet-inhalt').evaluate('e => e.scrollTop = e.scrollHeight'); pg.wait_for_timeout(200)
         fb = pg.locator('.nh-fuss').bounding_box(); plus = pg.locator('#bottomnav .bn-plus').bounding_box()
         check(fb['y'] + fb['height'] <= plus['y'], f'{tag}: Links nicht von Navigation oder Melden-Knopf verdeckt ({fb}, {plus["y"]})')
-        pg.locator('#list').evaluate('e => e.scrollTop = 0')
+        pg.locator('.nh-sheet .wm-sheet-inhalt').evaluate('e => e.scrollTop = 0')
     pg.click(ORT); pg.wait_for_selector('#naehe-bezug[open]'); pg.wait_for_timeout(150)
     mp = pg.locator('#naehe-bezug .nb-zeile', has_text='Meine Position')
     check('nicht gespeichert, nicht gesendet' in mp.inner_text(), f'{tag}: Datenschutz-Satz unter „Meine Position“ im Fenster')
@@ -248,16 +248,13 @@ def run(b, w, hh, mobile):
     check(erste.get_attribute('data-id') == 'node/1' and re.search(r'Parkplatz voll · vor \d+ Min\.', erste.inner_text()) and erste.locator('.nh-meld.ton-warn').count() == 1, f'{tag}: Meldungs-Etikett mit Alter')
 
     # Kategorien gemeinsam mit der Karte
-    if mobile:
-        pg.click('.nh-cat[data-cat=marina]'); pg.wait_for_timeout(200)
-        check(pg.locator('.nh-cat[data-cat=marina]').get_attribute('aria-pressed') == 'true' and pg.evaluate("window.__watermap.state.cats.has('marina')"), f'{tag}: Kategorie im Kopf wählt auch auf der Karte')
-    else:
-        pg.click('#cats .cat-marina'); pg.wait_for_timeout(200)
-        check(pg.locator('.place.nk .bg-marina').count() > 0, f'{tag}: Kategorie aus der Werkzeugleiste wirkt auf die Liste')
+    pg.click('.nh-cat[data-cat=marina]'); pg.wait_for_timeout(200)
+    check(pg.locator('.nh-cat[data-cat=marina]').get_attribute('aria-pressed') == 'true' and pg.evaluate("window.__watermap.state.cats.has('marina')"), f'{tag}: Kategorie im Sheet wählt auch auf der Karte')
+    check(pg.locator('.place.nk .bg-marina').count() > 0, f'{tag}: Kategorie wirkt auf die Liste')
     pg.screenshot(path=str(SHOTS / f'naehe_{w}_2liste.png'))
 
     # Tipp → Karte mit Vorschau; Zurück → wieder „In der Nähe“ an derselben Stelle
-    liste = pg.locator('#list')
+    liste = pg.locator('.nh-sheet .wm-sheet-inhalt')
     if mobile:
         liste.evaluate('e => e.scrollTop = 300'); pg.wait_for_timeout(100)
         y = liste.evaluate('e => e.scrollTop')
@@ -269,8 +266,10 @@ def run(b, w, hh, mobile):
         check(pg.url.endswith('#naehe') and abs(y2 - y) < 5, f'{tag}: Zurück → „In der Nähe“ an derselben Stelle ({y} → {y2})')
     else:
         ziel = pg.locator('.place.nk').nth(1); zid = ziel.get_attribute('data-id')
-        ziel.click(); pg.wait_for_selector('#detail:not([hidden])'); pg.wait_for_timeout(200)
-        check(pg.locator('#sidebar').is_visible() and pg.evaluate('window.__watermap.state.selectedId') == zid, f'{tag}: Tipp → Details neben der Liste')
+        ziel.click(); pg.wait_for_selector('#detail:not([hidden])'); pg.wait_for_selector('.nh-sheet', state='detached')
+        check(pg.evaluate('window.__watermap.state.selectedId') == zid, f'{tag}: Tipp → Details des Standorts (Sheet „In der Nähe“ zu)')
+        pg.go_back(); pg.wait_for_selector('.nh-sheet .place.nk'); pg.wait_for_timeout(300)
+        check(pg.url.endswith('#naehe'), f'{tag}: Zurück → „In der Nähe“')
     # „Auf Karte“: alle Treffer im Ausschnitt
     ids = pg.evaluate("[...document.querySelectorAll('.place.nk')].map(e => e.dataset.id)")
     pg.locator(AUFKARTE).click(); pg.wait_for_timeout(400)
@@ -282,8 +281,8 @@ def run(b, w, hh, mobile):
 
     # 7) Favoriten bleiben eigener Tab mit denselben Karten
     ctx, pg = page(b, w, hh, mobile, init="try { localStorage.setItem('watermap.favorites.v1', JSON.stringify(['node/1'])); } catch {}")
-    pg.goto(uf.BASE + '#favoriten'); pg.wait_for_selector('.place.nk')
-    check(pg.locator('.place.nk').count() == 1 and pg.inner_text('#list-title') == 'Favoriten' and pg.locator('.nh-kopf').first.is_hidden(), f'{tag}: Favoriten als eigener Tab')
+    pg.goto(uf.BASE + '#favoriten'); pg.wait_for_selector('.gm-sheet .wm-zeile')
+    check(pg.url.endswith('#gemerkt') and pg.locator('.gm-sheet .wm-zeile').count() == 1 and pg.locator('.nh-sheet').count() == 0, f'{tag}: alte Adresse #favoriten → „Gemerkt“')
     ctx.close()
 
 with tempfile.TemporaryDirectory() as t:

@@ -1,19 +1,9 @@
 /* „In der Nähe“: Kopf mit Bezugspunkt, Erklär-Karte, Standort-Karten, Fenster „Entfernungen messen ab …“ */
-.nh-kopf { display: none; }
-body.view-naehe .nh-kopf-d { display: flex; }
-body.view-naehe .list-top { display: none; }
-.nh-kopf { flex-direction: column; gap: 6px; padding: 16px 16px 12px; border-bottom: 1px solid var(--line); background: #fff; }
 .nh-zeile { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
-.nh-titel { margin: 0; font-size: 22px; color: var(--navy); letter-spacing: -.01em; }
-.nh-bezug { margin: 0; display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--muted); font-size: 14.5px; }
-.nh-bezug > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nh-bezug-ico { display: grid; flex: none; color: var(--slip); }
-.nh-knopf, .nh-aendern { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: #fff; color: var(--navy); font-weight: 750; font-size: 15px; }
-.nh-knopf:hover, .nh-aendern:hover { background: var(--bg); }
 .nh-kat { display: none; }
 
 /* Liste */
-body.list-open .sidebar { background: var(--bg); }
 .list-head:empty { display: none; }
 .nh-zahlzeile { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; }
 .nh-zahl { margin: 0; font-size: 15px; color: var(--muted); }
@@ -23,14 +13,6 @@ body.list-open .sidebar { background: var(--bg); }
 .nh-sort-box::after { content: '▾'; position: absolute; right: 2px; top: 50%; transform: translateY(-50%); color: var(--wm-petrol-tief); font-size: var(--wm-t-xs); pointer-events: none; }
 .nh-limit { margin: 0; font-size: 13px; }
 
-.list .place.nk { width: calc(100% - 32px); margin: 0 16px 10px; padding: 14px 16px; min-height: 76px; gap: 14px; background: #fff; border: 0; border-radius: 16px; box-shadow: 0 1px 3px rgba(11, 48, 69, .07); align-items: center; }
-.list .place.nk:hover { box-shadow: 0 2px 10px rgba(11, 48, 69, .12); }
-.list li:first-child .place.nk { margin-top: 2px; }
-.nk-ico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; flex: none; color: #fff; }
-.nk-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
-.nk-name { font-size: 16.5px; font-weight: 800; color: var(--navy); white-space: normal; overflow-wrap: anywhere; }
-.nk-sub { font-size: 14px; }
-.nk-dist { font-size: 20px; font-weight: 800; color: var(--navy); align-self: center; }
 .nh-meld { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; padding: 3px 10px; border-radius: 99px; font-size: 13px; font-weight: 750; }
 .nh-meld i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
 .nh-meld.ton-warn { background: var(--wm-warn-hell); color: var(--wm-warn-text); }
@@ -39,7 +21,6 @@ body.list-open .sidebar { background: var(--bg); }
 .nh-meld.ton-gut i { display: none; }
 .nh-leer { padding: 24px 20px; }
 .nh-leer .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-.list.nh-zieht::before { content: 'Loslassen zum Aktualisieren'; display: block; text-align: center; padding: 10px; color: var(--muted); font-size: 13px; }
 
 /* Erklär-Karte und Hinweis „blockiert“ */
 .nh-erklaer { width: 100%; display: grid; grid-template-columns: 56px 1fr; gap: 6px 14px; padding: 18px; background: #fff; border: 1px solid var(--wm-petrol-hell); border-radius: 18px; margin-bottom: 4px; }
@@ -96,28 +77,14 @@ body.list-open .sidebar { background: var(--bg); }
 /* Handy: kompakter Navy-Kopf (statt Suchfeld und Werkzeugleiste), schmale Hinweiszeile, Links am Listenende */
 @media (max-width: 767px) {
   .nur-desktop { display: none !important; }
-  body.view-naehe .nh-kopf-d { display: none; }
-  body.view-naehe .nh-kopf-m { display: flex; }
-  body.view-naehe .toolbar, body.view-naehe .app-header, body.view-naehe .sidebar-foot, body.view-naehe .datainfo { display: none; }
-  .nh-kopf-m { background: var(--navy); color: #fff; border-bottom: 0; padding: 12px 12px 12px 16px; padding-top: calc(12px + env(safe-area-inset-top)); gap: 8px; }
-  .nh-kopf-m .nh-titel { color: #fff; font-size: 22px; font-weight: 800; }
-  .nh-kopf-m :focus-visible { outline-color: var(--sky); }
-  .nh-symbole { display: flex; gap: 8px; flex: none; }
-  .nh-sym { position: relative; width: 44px; height: 44px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, .1); color: #fff; display: grid; place-items: center; flex: none; }
-  .nh-sym:hover { background: rgba(255, 255, 255, .16); }
-  .nh-sym svg { display: block; }
-  .nh-sym .filter-n { position: absolute; top: 4px; right: 4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--sky); color: var(--navy); font-size: 11.5px; font-weight: 800; display: grid; place-items: center; }
-  .nh-pille { align-self: flex-start; max-width: 100%; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border: 1.5px solid rgba(197, 216, 225, .55); border-radius: 99px;
+                        .nh-pille { align-self: flex-start; max-width: 100%; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border: 1.5px solid rgba(197, 216, 225, .55); border-radius: 99px;
     background: transparent; color: #fff; font-size: 15px; font-weight: 700; }
   .nh-pille:hover { border-color: rgba(197, 216, 225, .85); }
   .nh-pille .nh-bezug-ico { color: var(--sky); }
   .nh-pille-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .nh-pille-pfeil { display: grid; flex: none; transform: rotate(90deg); color: var(--wm-linie); }
   .nh-kat { display: flex; align-items: center; }
-  .nh-cats { display: flex; gap: 6px; min-width: 0; flex: 1; }
-  .nh-kopf-m .cat { min-height: 36px; height: 36px; padding: 0 12px; font-size: 14.5px; }
-  .nh-kopf-m .cat[aria-pressed="true"] { padding-left: 9px; }
-
+      
   /* schmale Hinweiszeile */
   .nh-zeile1 { width: 100%; display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; background: var(--info-bg); border-radius: 14px; color: var(--navy); font-size: 13.5px; line-height: 1.3; }
   .nh-zeile1.is-blockiert { background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--wm-warn-text); padding: 2px 8px 2px 12px; }
@@ -134,26 +101,12 @@ body.list-open .sidebar { background: var(--bg); }
   .nh-zahlzeile { flex-wrap: nowrap; }
   .nh-zahl-kurz { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .nh-sort { min-height: 40px; }
-  .list .place.nk { width: calc(100% - 24px); margin: 0 12px 8px; min-height: 64px; padding: 10px 14px; gap: 12px; }
-  .nk-ico { width: 40px; height: 40px; }
-  .nk-name { font-size: 16px; }
-  .nk-sub { font-size: 13.5px; }
-  .nk-dist { font-size: 18px; }
-  .nh-meld { margin-top: 2px; }
-  body.view-naehe .list { padding-bottom: var(--bn-space); }
-  /* „In der Nähe“ als Fenster von unten über der Karte (Wischen nach unten oder Karte antippen schließt): Kopf und Liste bilden
-     zusammen das Fenster, die Karte bleibt oben als abgedunkelter Streifen sichtbar. --nh-kopf-h: Höhe des Kopfs (main.js). */
-  body.view-naehe .nh-kopf-m { position: absolute; z-index: 1060; left: 0; right: 0; top: calc(22px + env(safe-area-inset-top)); padding-top: 18px; border-radius: 24px 24px 0 0;
-    animation: nh-fenster-ein .26s ease-out; }
-  body.view-naehe .nh-kopf-m::before { content: ''; position: absolute; top: 7px; left: 50%; width: 44px; height: 5px; margin-left: -22px; border-radius: 3px; background: rgba(255, 255, 255, .4); }
-  body.view-naehe .sidebar { top: calc(22px + env(safe-area-inset-top) + var(--nh-kopf-h, 160px)); overflow: hidden; animation: nh-fenster-ein .26s ease-out;
-    box-shadow: 0 0 0 100vmax rgba(8, 36, 52, .45); }
-  .nh-fuss { padding: 14px 16px 4px; font-size: 13px; color: var(--muted); }
+            .nh-meld { margin-top: 2px; }
+    /* „In der Nähe“ liegt seit 7.72.0 als Sheet über der Karte (bausteine.css, bereiche.css). */
+        .nh-fuss { padding: 14px 16px 4px; font-size: 13px; color: var(--muted); }
   .nh-fuss .version { display: block; margin-top: 4px; }
 }
 
 /* Lange Liste: Einträge außerhalb des Bildschirms erst bei Bedarf layouten (schnelleres Öffnen) */
-.list > li:has(> .place.nk) { content-visibility: auto; contain-intrinsic-size: auto 76px; }
 
 @keyframes nh-fenster-ein { from { transform: translateY(40px); opacity: .6; } to { transform: none; opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { body.view-naehe .sidebar, body.view-naehe .nh-kopf-m { animation: none; } }

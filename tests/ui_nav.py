@@ -152,7 +152,7 @@ def run(b, w, hh):
     check(pg.locator(f'{item("meldungen")} .nav-badge').is_hidden(), f'{tag}: eigene Meldungen zählen nicht als neu')
 
     # ---- Adresse beim Start: Markierung sofort, ohne Animation
-    pg.goto(uf.BASE + '#meldungen'); pg.reload(); pg.wait_for_selector('#meldungsseite:not([hidden])'); pg.wait_for_timeout(300)
+    pg.goto(uf.BASE + '#meldungen'); pg.reload(); pg.wait_for_selector('.wm-sheet.mu-sheet.is-offen'); pg.wait_for_timeout(300)
     check(abs(cx(rect(pg, '#bottomnav .bn-ind')) - cx(rect(pg, item('meldungen')))) <= 1.5 and 'none' in pg.evaluate("document.querySelector('#bottomnav .bn-ind').style.transition"), f'{tag}: Start bei #meldungen: Markierung sofort an der richtigen Stelle')
 
     # ---- Langes Drücken: Beschriftung als Blase, ohne zu navigieren
@@ -163,7 +163,7 @@ def run(b, w, hh):
     tb = rect(pg, '#bottomnav .bn-tip') if tip.count() else None
     check(tip.count() == 1 and tip.inner_text() == 'Gemerkt' and tb['y'] + tb['h'] <= bar['y'] + 1, f'{tag}: langes Drücken zeigt „Gemerkt“ als Blase über dem Symbol')
     pg.mouse.up(); pg.wait_for_timeout(300)
-    check(not pg.url.endswith('#mehr/merkliste') and pg.get_attribute(item('karte'), 'aria-current') == 'page', f'{tag}: langes Drücken löst den Link nicht aus')
+    check(not pg.url.endswith('#gemerkt') and pg.get_attribute(item('karte'), 'aria-current') == 'page', f'{tag}: langes Drücken löst den Link nicht aus')
     pg.wait_for_timeout(1000)
     check(pg.locator('#bottomnav .bn-tip').count() == 0, f'{tag}: Blase verschwindet kurz nach dem Loslassen')
     pg.mouse.click(cx(pe), pe['y'] + pe['h'] / 2); pg.wait_for_timeout(400)
@@ -178,16 +178,13 @@ def run(b, w, hh):
 
     # ---- Nichts verdeckt
     bar = rect(pg, '#bottomnav')
-    for adr, sel in [('#mehr/merkliste', '#mehrseite'), ('#meldungen', '#meldungsseite'), ('#mehr', '#mehrseite')]:
+    # Bereiche als Sheet (Designumbau 3a): nach ganz unten gescrollt liegt der letzte Inhalt über der Leiste
+    for adr, sel in [('#gemerkt', '.gm-sheet'), ('#meldungen', '.mu-sheet'), ('#mehr', '.mh-sheet'), ('#naehe', '.nh-sheet'), ('#mehr/einstellungen', '.ei-sheet')]:
         pg.goto(uf.BASE + adr); pg.reload()
-        pg.wait_for_selector(f'{sel}:not([hidden])'); pg.wait_for_timeout(700)
-        tiefstes = pg.evaluate("""(sel) => { const sc = document.querySelector(sel); sc.scrollTop = sc.scrollHeight;
+        pg.wait_for_selector(f'.wm-sheet{sel}.is-offen'); pg.wait_for_timeout(900)
+        tiefstes = pg.evaluate("""(sel) => { const sc = document.querySelector(`.wm-sheet${sel} .wm-sheet-inhalt`); sc.scrollTop = sc.scrollHeight;
           return Math.max(...[...sc.querySelectorAll('*')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.bottom)); }""", sel)
-        check(tiefstes <= bar['y'] + 1, f'{tag}: {adr[1:]}-Seite: der letzte Inhalt liegt über der Leiste ({tiefstes:.0f} ≤ {bar["y"]:.0f})')
-    for adr in ['#naehe', '#favoriten']:
-        pg.goto(uf.BASE + adr); pg.reload(); pg.wait_for_selector('#sidebar'); pg.wait_for_timeout(700)
-        pb = float(re.sub('px', '', css(pg, '#list', 'paddingBottom')))
-        check(pb >= hh - bar['y'] + 8, f'{tag}: Liste {adr}: unterer Abstand ≥ Leiste + Rand ({pb:.0f} px)')
+        check(tiefstes <= bar['y'] + 1, f'{tag}: {adr[1:]}-Sheet: der letzte Inhalt liegt über der Leiste ({tiefstes:.0f} ≤ {bar["y"]:.0f})')
     pg.goto(uf.BASE + '#karte'); pg.reload(); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(700)
     fab, nb = rect(pg, '#btn-locate'), rect(pg, '#btn-naehe-m')
     check(fab['y'] + fab['h'] <= bar['y'] - 16 and abs(fab['x'] + fab['w'] - (w - 20)) <= 1 and abs(fab['w'] - 48) <= 1 and nb['y'] + nb['h'] <= bar['y'] - 8, f'{tag}: Standort-Knopf (48 px, rechts 20 px) und „In der Nähe“ über der Leiste')
@@ -240,7 +237,7 @@ def sonderfaelle(b):
     ctx, pg = page(b, 1024, 768, mobile=False)
     pg.goto(uf.BASE + '#karte'); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(600)
     texte = [t.strip() for t in pg.locator('#topnav [data-nav]').all_inner_texts()]
-    check(pg.locator('#bottomnav').is_hidden() and pg.locator('#topnav').is_visible() and texte == ['Karte', 'Meldungen', 'Gemerkt', 'Mehr'] and pg.locator('#topnav .nav-badge').count() == 0, f'Desktop: Navigation oben unverändert, keine Leiste unten ({texte})')
+    check(pg.locator('#bottomnav').is_hidden() and pg.locator('#topnav').is_visible() and texte == ['Karte', 'Meldungen', 'Gemerkt', 'Mehr'] and pg.locator('#topnav .nav-badge:not([hidden])').count() == 0, f'Desktop: Navigation oben unverändert, keine Leiste unten ({texte})')
     ctx.close()
 
 with tempfile.TemporaryDirectory() as t:

@@ -2,9 +2,9 @@
 // Nur gewählte Angaben werden gesendet (Netlify-Formular „slip-ergaenzen“); leer = „weiß nicht“.
 // Freigabe in der Verwaltung (/admin/fotos.html → Ergänzungen) schreibt sie nach community/overrides.json.
 import { h } from './dom.js';
-import { icon } from './icons.js';
 import { sendReport } from './forms.js';
 import { displayName } from './model.js';
+import { kopf } from './bausteine.js';
 
 /** Felder des Formulars. Werte sind die Schlüssel, die die Verwaltung kennt (netlify/functions/fotos.mjs → ERGAENZUNG). */
 export const ERG_FELDER = [
@@ -90,9 +90,7 @@ export function slipErgaenzen({ place: p, toast }) {
   zeichneFelder();
 
   const form = h('form', { class: 'ae-form', novalidate: true },
-    h('div', { class: 'ae-kopf' }, h('h2', { id: 'ae-titel', text: 'Angaben ergänzen' }),
-      h('p', { text: [displayName(p), p.water?.name].filter(Boolean).join(' · ') }),
-      h('button', { type: 'button', class: 'ae-zu', 'aria-label': 'Schließen', html: icon('close', 22), onclick: () => schliessen() })),
+    kopf({ titel: 'Angaben ergänzen', titelId: 'ae-titel', unter: [displayName(p), p.water?.name].filter(Boolean).join(' · '), onZu: () => schliessen() }),
     h('p', { class: 'ae-hinweis', text: 'Nur ausfüllen, was du sicher weißt – Leeres bleibt „unbekannt“.' }),
     bekanntZeile, felderBox,
     h('p', { class: 'ae-teil', text: 'Optional' }),

@@ -77,19 +77,12 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -.01em; margin: 0; }
 .sg-msg { padding: 12px 14px; color: var(--muted); font-size: 14px; }
 
 /* ---------------------------------------------------------------- Layout */
-.shell { display: grid; grid-template-columns: 380px 1fr; flex: 1 1 auto; min-height: 0; }
-.sidebar { background: #fff; display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); z-index: 5; }
+.shell { display: grid; grid-template-columns: 1fr; flex: 1 1 auto; min-height: 0; }   /* nur die Karte; Bereiche liegen als Sheet darüber (Designumbau 3a) */
 .map-wrap { position: relative; min-width: 0; }
 #map { position: absolute; inset: 0; background: var(--wm-linie); }
-.sheet-handle { display: none; }
 /* Standortliste nur bei Bedarf (Menü → Standortliste/Favoriten) */
-body:not(.list-open) .shell { grid-template-columns: 1fr; }
-body:not(.list-open) .sidebar { display: none; }
-.list-top { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 16px; border-bottom: 1px solid var(--line); }
-.list-title { font-size: 17px; flex: 1; }
 .version { display: block; margin-top: 4px; }
 .cat-hint { position: absolute; z-index: 1000; top: 12px; left: 50%; transform: translateX(-50%); margin: 0; max-width: calc(100% - 24px); padding: 9px 14px; background: #fff; border-radius: 12px; box-shadow: var(--shadow); font-size: 14px; color: var(--navy); text-align: center; }
-.list-top .list-close, .tabs .list-close { margin-left: auto; align-self: center; width: 40px; height: 40px; min-height: 40px; padding: 0; border-bottom: 0; margin-bottom: 0; color: var(--muted); }
 .filter-hint { margin: 0; align-self: flex-start; max-width: 420px; padding: 8px 12px; background: #fff; border-radius: 12px; box-shadow: var(--shadow); font-size: 14px; color: var(--navy); pointer-events: auto; }
 
 .tabs { display: flex; gap: 4px; padding: 10px 12px 0; border-bottom: 1px solid var(--line); }
@@ -104,7 +97,6 @@ body:not(.list-open) .sidebar { display: none; }
 .list-head { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px 6px; font-size: 14px; }
 .list-head .muted { font-size: var(--wm-t-xs); }
 .list { list-style: none; margin: 0; padding: 0 0 8px; overflow: auto; flex: 1; min-height: 0; overscroll-behavior: contain; }
-.sidebar-foot { margin: 0; padding: 10px 16px; font-size: var(--wm-t-xs); color: var(--muted); border-top: 1px solid var(--line); }
 
 .place { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 16px; min-height: 64px; border: 0; background: none; text-align: left; border-bottom: 1px solid var(--wm-flaeche-2); }
 .place:hover { background: var(--wm-wasser-2); }
@@ -155,7 +147,6 @@ body:not(.list-open) .sidebar { display: none; }
 .pop.is-drop:not([open]) { display: none; }
 .pop.is-sheet { position: fixed; inset: auto 0 0 0; width: 100vw; max-width: 100vw; max-height: 88dvh; border-radius: 24px 24px 0 0; display: flex; flex-direction: column; overflow: hidden; transition: transform .2s ease; }
 .pop.is-sheet:not([open]) { display: none; }
-.pop::backdrop { background: rgba(8, 36, 52, .5); }
 .pop-grip { display: none; }
 .pop.is-sheet .pop-grip { display: block; width: 44px; height: 5px; border-radius: 3px; background: var(--wm-rand); margin: 10px auto 0; flex: none; }
 .sheet-scroll { overflow-y: auto; overscroll-behavior: contain; padding: 14px 18px 16px; min-height: 0; flex: 1 1 auto; }
@@ -412,7 +403,6 @@ body:not(.list-open) .sidebar { display: none; }
 .ph-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: var(--wm-t-xs); color: var(--muted); }
 .ph-report { border: 0; background: none; padding: 4px 0; color: var(--muted); font-size: var(--wm-t-xs); text-decoration: underline; cursor: pointer; }
 .lightbox { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: var(--wm-tinte); color: #fff; }
-.lightbox::backdrop { background: var(--wm-tinte); }
 .lightbox[open] { animation: lb-in .22s ease-out; }
 .lightbox[open] .lb-stage { animation: lb-zoom .32s cubic-bezier(.22, .8, .24, 1); }
 @keyframes lb-in { from { opacity: 0; } }
@@ -525,7 +515,6 @@ a.pegel-box { text-decoration: none; color: inherit; }
 
 /* ---------------------------------------------------------------- Dialoge und Formulare */
 .dialog { border: 0; border-radius: 20px; padding: 0; width: min(94vw, 540px); max-height: 92dvh; box-shadow: var(--shadow-lg); color: var(--ink); overflow: auto; }
-.dialog::backdrop { background: rgba(8, 36, 52, .6); }
 #menu-body, #dlg-body { padding: 24px 22px 22px; }
 .dlg-x { position: absolute; top: 10px; right: 10px; z-index: 3; }
 #menu-title, #dlg-title { font-size: 22px; padding-right: 44px; }
@@ -596,9 +585,7 @@ a.pegel-box { text-decoration: none; color: inherit; }
 
   .shell { display: block; position: relative; overflow: hidden; }
   .map-wrap { position: absolute; inset: 0; }
-  .sidebar { position: absolute; inset: 0; z-index: 1050; border-right: 0; }
-  .sheet-handle { display: none; }
-  .list .place { min-height: 68px; }
+      .list .place { min-height: 68px; }
 
   .detail { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 82%; border-left: 0; border-radius: 24px 24px 0 0; box-shadow: 0 -6px 28px rgba(11, 48, 69, .22); }
   .detail-scroll { max-height: 82dvh; }
@@ -625,16 +612,14 @@ a.pegel-box { text-decoration: none; color: inherit; }
   .toast { bottom: 20px; }
   .has-peek .toast { bottom: calc(var(--peek-h, 180px) + 22px); }
   .has-detail .toast { bottom: calc(82% + 12px); }
-  .is-picking .sidebar { display: none; }
-  .dialog { width: 100vw; max-width: 100vw; max-height: 94dvh; margin: auto 0 0; border-radius: 20px 20px 0 0; }
+    .dialog { width: 100vw; max-width: 100vw; max-height: 94dvh; margin: auto 0 0; border-radius: 20px 20px 0 0; }
   .row2 { grid-template-columns: 1fr 1fr; }
   .facts { grid-template-columns: minmax(100px, 40%) 1fr; }
   .dbtns { grid-template-columns: 1.4fr 1fr 1fr; }
 }
 @media (min-width: 768px) {
   /* Liste und Favoriten als linke Seitenleiste; Detailpanel rechts */
-  .sheet-handle { display: none; }
-}
+  }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -742,7 +727,6 @@ a.pegel-box { text-decoration: none; color: inherit; }
 /* Abschnitt im Detailpanel */
 .meld-block { scroll-margin-top: 90px; }
 .meld-block:focus { outline: none; }
-.meld-kopf { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .meld-liste ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .meld-item { display: flex; gap: 12px; padding: 12px; border-radius: 12px; background: var(--wm-warn-hell); border: 1px solid var(--wm-warn-rand); }
 .meld-item.ton-stop { background: var(--wm-stop-hell); border-color: var(--wm-stop-rand); }
@@ -949,7 +933,6 @@ p.rmenu-links a { display: inline; min-height: 0; }
 /* Fenster „Meldung als unpassend melden?“ – am Handy von unten, am Desktop in der Mitte */
 .um-dlg { width: min(440px, calc(100% - 32px)); max-height: calc(100% - 32px); padding: 0; border: 0; border-radius: 20px; background: #fff; color: var(--ink);
   box-shadow: 0 10px 40px rgba(0, 0, 0, .25); overflow: auto; }
-.um-dlg::backdrop { background: rgba(8, 36, 52, .5); }
 .um-form { padding: 18px 18px 20px; }
 .um-form h2 { margin: 0 40px 4px 0; font-size: 20px; color: var(--navy); line-height: 1.25; }
 .um-zu { position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; color: var(--navy); display: grid; place-items: center; }
@@ -1006,12 +989,7 @@ p.rmenu-links a { display: inline; min-height: 0; }
 
 /* „Angaben ergänzen“ (Slipanlagen) – am Handy von unten, am Desktop in der Mitte */
 .ae-dlg { width: min(480px, calc(100% - 32px)); max-height: 88vh; padding: 0; border: 0; border-radius: 20px; background: var(--wm-flaeche-2); color: var(--ink); box-shadow: 0 10px 40px rgba(0, 0, 0, .25); overflow: auto; }
-.ae-dlg::backdrop { background: rgba(8, 36, 52, .5); }
 .ae-form { display: flex; flex-direction: column; min-height: 100%; }
-.ae-kopf { position: sticky; top: 0; z-index: 1; background: #fff; padding: 16px 56px 12px 18px; }
-.ae-kopf h2 { margin: 0; font-size: 20px; color: var(--navy); }
-.ae-kopf p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
-.ae-zu { position: absolute; right: 8px; top: 8px; width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; color: var(--navy); display: grid; place-items: center; }
 .ae-hinweis { margin: 0; padding: 10px 18px; font-size: 13.5px; color: var(--wm-matt); background: var(--wm-wasser); }
 .ae-bekannt { margin: 12px 14px 0; padding: 8px 8px 8px 12px; border-radius: 12px; background: #fff; display: flex; align-items: center; gap: 10px; font-size: 14px; }
 .ae-bekannt i { width: 8px; height: 8px; border-radius: 50%; background: var(--wm-gut); flex: none; }
@@ -1068,30 +1046,15 @@ p.rmenu-links a { display: inline; min-height: 0; }
 .wxz-warn.wxz-minor .wxz-ico { color: var(--wm-warn-text); }
 .wxz-warn .wxz-text strong { color: var(--wm-warn-text); }
 .wxz-warn .wxz-text small { color: var(--wm-warn-text); }
-.wxd { border: 0; padding: 0; background: #fff; color: var(--ink); box-shadow: var(--shadow-lg); overflow: hidden; flex-direction: column; }
-.wxd:not([open]) { display: none; }
-.wxd[open] { display: flex; }
-.wxd::backdrop { background: rgba(8, 36, 52, .5); }
-.wxd-grip { display: block; flex: none; width: 44px; height: 5px; border-radius: 3px; background: var(--wm-rand); margin: 10px auto 0; }
-.wxd-kopf { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 8px 18px 6px; flex: none; }
-.wxd-kopf h2 { margin: 0; font-size: 22px; line-height: 1.2; color: var(--navy); }
-.wxd-kopf h2:focus { outline: none; }
-.wxd-unter { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
-.wxd-x { width: 44px; height: 44px; flex: none; border: 0; border-radius: 50%; background: var(--wm-flaeche-2); color: var(--navy); display: grid; place-items: center; }
-.wxd-body { overflow-y: auto; overscroll-behavior: contain; padding: 4px 18px calc(22px + env(safe-area-inset-bottom)); min-height: 0; flex: 1 1 auto; }
-@media (max-width: 767px) { .wxd { position: fixed; inset: auto 0 0 0; margin: 0; width: 100vw; max-width: 100vw; max-height: 88dvh; border-radius: 24px 24px 0 0; } }
-@media (min-width: 768px) { .wxd { width: min(94vw, 580px); max-height: 88dvh; border-radius: 20px; } .wxd-grip { display: none; } .wxd-kopf { padding-top: 18px; } }
 
 /* ---------------------------------------------------------------- Schwebende Navigationsleiste unten (Handy): Abstände und Glas-Knöpfe
    Die Leiste liegt über dem Inhalt (css/nav.css, --bn-space); alles am unteren Rand sitzt darüber, Seiten und Listen lassen Platz. */
 @media (max-width: 767px) {
-  .pegelseite { padding-bottom: var(--bn-space); }
-  /* Detail-Blatt: der Inhalt scrollt innerhalb des Blatts (vorher ragte er über den unteren Rand hinaus); unten Platz für die Leiste */
+    /* Detail-Blatt: der Inhalt scrollt innerhalb des Blatts (vorher ragte er über den unteren Rand hinaus); unten Platz für die Leiste */
   .detail:not([hidden]) { display: flex; flex-direction: column; overflow: hidden; }
   .detail-scroll { flex: 1 1 auto; min-height: 0; height: auto; max-height: none; }
   .detail-body { padding-bottom: var(--bn-space); }
-  body.list-open .list { padding-bottom: var(--bn-space); }
-  .peek { bottom: var(--bn-space); }
+    .peek { bottom: var(--bn-space); }
   .banner { bottom: var(--bn-space); }
   .pickbar { bottom: var(--bn-space); }
   .toast { bottom: calc(var(--bn-space) + 8px); }
@@ -1110,15 +1073,9 @@ p.rmenu-links a { display: inline; min-height: 0; }
 }
 
 /* Pegel-Details im Fenster (main.js pegelFenster): der Pegel-Kopf bringt Titel und „×“ selbst mit */
-.wxd-pegel .wxd-body { padding: 0; background: var(--wm-flaeche-2); }
-.wxd-pegel .wxd-grip { position: absolute; z-index: 2; top: 8px; left: 50%; margin: 0 0 0 -22px; background: rgba(255, 255, 255, .45); }
 .wxd-pegel .pd { min-height: 0; }
-@media (min-width: 768px) { .wxd-pegel .wxd-grip { display: none; } .wxd-pegel { width: min(94vw, 620px); } }
 
 /* Fluss im Fenster (main.js flussFenster): Kopf und Inhalt der Flussseite, im Fenster ohne Seitenabstände */
-.wxd-fluss .pf-seite { max-width: none; padding: 0 0 8px; }
-.wxd-fluss .pf-kopf { border-radius: 0; margin: 0 0 14px; padding: 22px 16px 18px 12px; }
-@media (min-width: 768px) { .wxd-fluss { width: min(94vw, 820px); } .wxd-fluss .pf-kopf { padding-top: 18px; } }
 
 /* „X“ zum Leeren in Suchfeldern (js/suchfeld.js); das eigene Kreuz der Browser entfällt */
 input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
@@ -1132,9 +1089,9 @@ input.hat-x { padding-right: calc(var(--x-rechts, 2px) + 44px) !important; }
 /* Fenster von unten (Handy): weich hochfahren statt plötzlich erscheinen (7.54.0) */
 @keyframes sheet-ein { from { transform: translateY(36%); opacity: .4; } to { transform: none; opacity: 1; } }
 @media (max-width: 767px) {
-  .wxd[open], .peek:not([hidden]), .detail:not([hidden]) { animation: sheet-ein .28s cubic-bezier(.2, .8, .2, 1); }
+  .peek:not([hidden]), .detail:not([hidden]) { animation: sheet-ein .28s cubic-bezier(.2, .8, .2, 1); }
 }
-@media (prefers-reduced-motion: reduce) { .wxd[open], .peek:not([hidden]), .detail:not([hidden]) { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .peek:not([hidden]), .detail:not([hidden]) { animation: none; } }
 
 /* ------------------------------------------------------------------ 7.57.0 Zart blau auch für Standort-Details und das Fenster „Wetter und Wind“
    Muster wie die Pegel-Ansicht: hellblauer Grund, weiße Karten, Name mittig, drei gleiche Knöpfe, Warnungen behalten ihre Farbe. */
@@ -1166,13 +1123,6 @@ input.hat-x { padding-right: calc(var(--x-rechts, 2px) + 44px) !important; }
 .detail:not(.is-pegel) footer.source { text-align: center; color: var(--zb-matt); font-size: 13px; border: 0; }
 .detail:not(.is-pegel) .detail-links { justify-content: center; }
 
-.wxd.wxd-wetter { background: var(--zb-grund); }
-.wxd.wxd-wetter .wxd-kopf { display: grid; grid-template-columns: 44px 1fr 44px; text-align: center; padding: 6px 14px 4px; }
-.wxd.wxd-wetter .wxd-kopf > div { grid-column: 2; grid-row: 1; }
-.wxd.wxd-wetter .wxd-x { grid-column: 1; grid-row: 1; width: 38px; height: 38px; background: #fff; box-shadow: var(--zb-schatten); }
-.wxd.wxd-wetter .wxd-kopf h2 { font-size: 26px; font-weight: 500; }
-.wxd.wxd-wetter .wxd-unter { color: var(--zb-matt); }
-.wxd.wxd-wetter .wxd-body { padding: 4px 14px 24px; }
 .wxd.wxd-wetter .wx { display: flex; flex-direction: column; gap: 10px; }
 .wxd.wxd-wetter .wx-alerts { display: flex; flex-direction: column; gap: 8px; margin: 0; }
 .wxd.wxd-wetter .wx-alert { border-radius: 18px; margin: 0; }

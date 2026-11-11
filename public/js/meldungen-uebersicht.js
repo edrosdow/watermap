@@ -1,7 +1,9 @@
 // Bereich „Aktuelle Meldungen“ (#meldungen): alle aktiven Lagemeldungen („Heute vor Ort“) aus einem Abruf (/api/meldungen/liste).
 // Bewerten nutzt die vorhandene Logik (meldungen.js → bestaetigen); offline nur Lesen mit Hinweis auf den gespeicherten Stand.
+// Seit Designumbau 3a (7.72.0) ein Sheet über der Karte: Kopf vom Rahmen (ctx.setzeKopf), Meldung = Ortszeile mit Zustandsmarke, Umschalter wm-seg.
 import { h } from './dom.js';
 import { icon } from './icons.js';
+import { marke } from './bausteine.js';
 import { TYPEN, listeLaden, bestaetigen, schonBewertet, alter, standVon } from './meldungen.js';
 
 // Filter: Schlüssel → Typen (null = alle)
@@ -25,28 +27,29 @@ const TON = { gut: 'vo-gut', warn: 'vo-warn', stop: 'vo-stop' };
 
 /**
  * ctx = { ort(id) → { name, sub, lat, lon } | null, oeffneOrt(id), bezug() → { lat, lon } | null, grenzen() → { south, north, west, east } | null,
- *         position() → Promise<{ lat, lon }> (fragt den Standort ab, Fehler mit Text), freigegeben() → boolean, entfernung(a, b) → m, formatDistance(m), melden(), toast(text), unpassend(meldung, ortName, fertig) }
+ *         position() → Promise<{ lat, lon }> (fragt den Standort ab, Fehler mit Text), freigegeben() → boolean, entfernung(a, b) → m, formatDistance(m), melden(), toast(text), unpassend(meldung, ortName, fertig),
+ *         setzeKopf({ titel, unter, aktion }) }
  */
 export function meldungenSeite(root, ctx) {
   let daten = null, laeuft = null;
 
   async function laden(force = false) {
-    if (!daten) root.replaceChildren(rahmen(h('p', { class: 'bs-leer mu-laden', text: 'Meldungen werden geladen …' })));
+    if (!daten) root.replaceChildren(rahmen(h('p', { class: 'wm-leer mu-laden', text: 'Meldungen werden geladen …' })));
     laeuft ||= listeLaden({ force }).finally(() => { laeuft = null; });
     daten = await laeuft;
     zeichnen();
   }
 
+  /** Kopf über den Sheet-Rahmen (Titel links, ×; Aktualisieren als Zusatzknopf), darunter der Inhalt. */
   function rahmen(...inhalt) {
     const n = daten?.meldungen?.length;
-    return h('div', { class: 'bs-seite mu-seite' },
-      h('header', { class: 'bs-kopf mu-kopf' },
-        h('div', {}, h('h1', { class: 'bs-titel', id: 'bs-titel', tabindex: '-1', text: 'Aktuelle Meldungen' }),
-          h('p', { class: 'bs-unter', text: 'Das berichten Sportbootfahrer aus deinem Revier.' }),
-          n !== undefined ? h('p', { class: 'mu-zahl', text: n ? `${n} aktuelle ${n === 1 ? 'Meldung' : 'Meldungen'}` : 'Keine aktuellen Meldungen' }) : null),
-        h('button', { type: 'button', class: 'mu-neu', 'aria-label': 'Meldungen aktualisieren', html: icon('refresh', 22), onclick: async (e) => {
-          e.currentTarget.classList.add('is-busy'); await laden(true); ctx.toast(daten.offline ? 'Keine Verbindung – letzter gespeicherter Stand.' : 'Meldungen aktualisiert.'); } })),
-      ...inhalt);
+    ctx.setzeKopf?.({ titel: 'Aktuelle Meldungen', titelId: 'mu-titel',
+      unter: n === undefined ? 'Das berichten Sportbootfahrer aus deinem Revier.' : n ? `${n} aktuelle ${n === 1 ? 'Meldung' : 'Meldungen'} · aus deinem Revier` : 'Keine aktuellen Meldungen',
+      aktion: { icon: 'refresh', label: 'Meldungen aktualisieren', onclick: async (e) => {
+        const k = e.currentTarget; k.classList.add('is-busy');
+        await laden(true); k.classList.remove('is-busy');
+        ctx.toast(daten.offline ? 'Keine Verbindung – letzter gespeicherter Stand.' : 'Meldungen aktualisiert.'); } } });
+    return h('div', { class: 'mu-seite' }, ...inhalt);
   }
 
   function auswahl() {
@@ -74,15 +77,17 @@ export function meldungenSeite(root, ctx) {
       try { await bestaetigen(m, stimmt); ctx.toast(stimmt ? 'Danke – als „stimmt noch“ bestätigt.' : 'Danke – als „nicht mehr aktuell“ markiert.'); await laden(false); }
       catch (err) { ctx.toast(err.message); e.currentTarget.disabled = false; }
     } }, text);
-    return h('article', { class: `mu-karte ${TON[t.ton] || 'vo-warn'}`, 'aria-label': `${t.zeile}${o ? `, ${o.name}` : ''}` },
-      h('div', { class: 'mu-oben' },
-        h('span', { class: 'vo-kreis is-typ', style: `--c:${t.farbe}`, html: icon(t.ico, 22), 'aria-hidden': 'true' }),
-        h('div', { class: 'mu-text' },
-          h('h2', { class: 'mu-typ', text: t.zeile }),
-          h('p', { class: 'mu-ort' }, o ? o.name : 'Standort', o?.sub ? h('span', { text: ` · ${o.sub}` }) : null),
-          h('p', { class: 'mu-zeit', text: unter }),
-          m.notiz ? h('p', { class: 'mu-notiz', text: `„${m.notiz}“` }) : null),
-        entf ? h('span', { class: 'mu-entf', text: entf }) : null),
+    // Ortszeile mit Zustandsmarke: Symbol der Art, Ort, Gewässer · Entfernung, Zeit; rechts die Art als Marke (immer mit Wort)
+    const art = marke(t.ton, t.text); art.classList.add('mu-typ');
+    return h('article', { class: `mu-karte wm-gruppe ${TON[t.ton] || 'vo-warn'}`, 'aria-label': `${t.zeile}${o ? `, ${o.name}` : ''}` },
+      h('div', { class: 'wm-zeile mu-oben' },
+        h('span', { class: 'wm-kachel-ico mu-ico', style: `--c:${t.farbe}`, html: icon(t.ico, 20), 'aria-hidden': 'true' }),
+        h('span', { class: 'wm-zeile-text mu-text' },
+          h('strong', { class: 'mu-ort', text: o ? o.name : 'Standort' }),
+          [o?.sub, entf].some(Boolean) ? h('small', { class: 'mu-wo', text: [o?.sub, entf].filter(Boolean).join(' · ') }) : null,
+          h('small', { class: 'mu-zeit', text: unter })),
+        art),
+      m.notiz ? h('p', { class: 'mu-notiz', text: `„${m.notiz}“` }) : null,
       h('div', { class: 'mu-knoepfe' },
         knopf('Stimmt noch', true), knopf('Nicht mehr aktuell', false),
         o ? h('a', { class: 'mu-ort-link', href: `#p=${encodeURIComponent(m.standortId)}`, onclick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); ctx.oeffneOrt(m.standortId); } },
@@ -90,7 +95,7 @@ export function meldungenSeite(root, ctx) {
       bewertet && !daten.offline ? h('p', { class: 'mu-bewertet', text: 'Du hast diese Meldung schon bewertet.' }) : null,
       // nur Meldungen mit Notiz können unpassend sein
       m.notiz && ctx.unpassend && !daten.offline ? h('div', { class: 'mu-unpassend' }, h('button', { type: 'button', class: 'vo-unpassend', 'aria-label': `Notiz „${m.notiz}“ als unpassend melden`,
-        onclick: () => ctx.unpassend(m, o?.name || '', async () => { await laden(false); root.querySelector('#bs-titel')?.focus(); }) },
+        onclick: () => ctx.unpassend(m, o?.name || '', async () => { await laden(false); root.closest('.wm-sheet')?.querySelector('.wm-kopf-titel')?.focus(); }) },
         h('span', { html: icon('flag', 15), 'aria-hidden': 'true' }), h('span', { text: 'Unpassend melden' }))) : null);
   }
 
@@ -112,23 +117,23 @@ export function meldungenSeite(root, ctx) {
 
   function inhaltBauen(liste, bezug, d) {
     if (ui.bereich === 'standort' && !bezug) {
-      return h('div', { class: 'bs-gruppe mu-leer mu-pos' },
+      return h('div', { class: 'wm-leer mu-leer mu-pos' },
         h('p', { class: 'mu-leer-titel', text: ui.pos === 'laeuft' ? 'Standort wird bestimmt …' : 'Standort verwenden?' }),
-        h('p', { class: 'bs-leer', role: ui.pos === 'fehler' ? 'alert' : null, text: ui.pos === 'fehler' ? ui.posFehler
+        h('p', { class: 'mu-leer-text', role: ui.pos === 'fehler' ? 'alert' : null, text: ui.pos === 'fehler' ? ui.posFehler
           : 'Damit zeigen wir Meldungen im Umkreis deines Standorts. Dein Standort bleibt auf deinem Gerät.' }),
-        ui.pos === 'laeuft' ? null : h('button', { type: 'button', class: 'btn btn-primary mu-melden', onclick: positionHolen }, ui.pos === 'fehler' ? 'Erneut versuchen' : 'Standort verwenden'));
+        ui.pos === 'laeuft' ? null : h('button', { type: 'button', class: 'wm-btn is-primaer mu-melden', onclick: positionHolen }, ui.pos === 'fehler' ? 'Erneut versuchen' : 'Standort verwenden'));
     }
     if (!daten.meldungen.length) {
-      return h('div', { class: 'bs-gruppe mu-leer' },
+      return h('div', { class: 'wm-leer mu-leer' },
         h('p', { class: 'mu-leer-titel', text: daten.offline ? 'Keine gespeicherten Meldungen' : 'Gerade keine aktuellen Meldungen' }),
-        h('p', { class: 'bs-leer', text: 'Meldungen gelten 24 Stunden. Bist du an einer Slipanlage? Teile kurz, wie es vor Ort aussieht.' }),
-        h('button', { type: 'button', class: 'btn btn-primary mu-melden', onclick: ctx.melden }, h('span', { html: icon('plus', 18) }), 'Lage melden'));
+        h('p', { class: 'mu-leer-text', text: 'Meldungen gelten 24 Stunden. Bist du an einer Slipanlage? Teile kurz, wie es vor Ort aussieht.' }),
+        h('button', { type: 'button', class: 'wm-btn is-primaer mu-melden', onclick: ctx.melden }, h('span', { html: icon('plus', 18), 'aria-hidden': 'true' }), 'Lage melden'));
     }
     if (!liste.length) {
-      return h('div', { class: 'bs-gruppe mu-leer' },
-        h('p', { class: 'bs-leer', text: ui.bereich === 'karte' ? 'Im Kartenausschnitt gibt es dazu gerade keine Meldungen.'
+      return h('div', { class: 'wm-leer mu-leer' },
+        h('p', { class: 'mu-leer-text', text: ui.bereich === 'karte' ? 'Im Kartenausschnitt gibt es dazu gerade keine Meldungen.'
           : ui.bereich === 'standort' ? `Im Umkreis von ${ui.km} km gibt es dazu gerade keine Meldungen.` : 'Für diesen Filter gibt es gerade keine Meldungen.' }),
-        h('button', { type: 'button', class: 'bs-link', text: 'Alle Meldungen zeigen', onclick: () => { ui.filter = 'alle'; ui.bereich = 'ueberall'; zeichnen(); } }));
+        h('button', { type: 'button', class: 'wm-btn is-leise mu-alle', text: 'Alle Meldungen zeigen', onclick: () => { ui.filter = 'alle'; ui.bereich = 'ueberall'; zeichnen(); } }));
     }
     return h('div', { class: 'mu-liste' }, liste.map(m => karte(m, bezug, d)));
   }
@@ -138,19 +143,22 @@ export function meldungenSeite(root, ctx) {
     const fokus = root.contains(document.activeElement) ? document.activeElement.dataset?.fokus : null;
     const { liste, bezug, d } = auswahl();
     const chips = h('div', { class: 'mu-chips', role: 'group', 'aria-label': 'Nach Art filtern' }, FILTER.map(([k, text, typen]) => {
-      const farbe = typen ? TYPEN[typen[0]]?.textFarbe : null;
-      return h('button', { type: 'button', class: 'mu-chip' + (ui.filter === k ? ' is-an' : ''), 'aria-pressed': String(ui.filter === k), dataset: { fokus: `f-${k}` },
-        style: farbe && ui.filter !== k ? `color:${farbe}` : null, onclick: () => { ui.filter = k; zeichnen(); } },
-        farbe ? h('i', { 'aria-hidden': 'true' }) : null, text);
+      const farbe = typen ? TYPEN[typen[0]]?.farbe : null;
+      return h('button', { type: 'button', class: 'wm-chip mu-chip' + (ui.filter === k ? ' is-an' : ''), 'aria-pressed': String(ui.filter === k), dataset: { fokus: `f-${k}` },
+        style: farbe ? `--punkt: ${farbe}` : null, onclick: () => { ui.filter = k; zeichnen(); } },
+        h('span', { class: 'wm-chip-haken', html: icon('check', 16), 'aria-hidden': 'true' }),
+        farbe ? h('span', { class: 'wm-chip-punkt', 'aria-hidden': 'true' }) : null, text);
     }));
     const kartenOk = !!ctx.grenzen();
-    const seg = h('div', { class: 'mu-seg', role: 'group', 'aria-label': 'Bereich' },
-      [['ueberall', 'Überall'], ['karte', 'Kartenausschnitt'], ['standort', 'Mein Standort']].map(([k, text]) => h('button', { type: 'button', class: ui.bereich === k ? 'is-an' : '', 'aria-pressed': String(ui.bereich === k),
+    const BEREICHE = [['ueberall', 'Überall'], ['karte', 'Kartenausschnitt'], ['standort', 'Mein Standort']];
+    const seg = h('div', { class: 'wm-seg mu-seg', role: 'group', 'aria-label': 'Bereich', style: `--n: 3; --i: ${Math.max(0, BEREICHE.findIndex(b => b[0] === ui.bereich))}` },
+      h('span', { class: 'wm-seg-ind', 'aria-hidden': 'true' }),
+      BEREICHE.map(([k, text]) => h('button', { type: 'button', class: ui.bereich === k ? 'is-an' : '', 'aria-pressed': String(ui.bereich === k),
         dataset: { fokus: `b-${k}` }, disabled: k === 'karte' && !kartenOk, onclick: () => bereichWaehlen(k) }, text)));
     const sort = h('select', { class: 'mu-sort', 'aria-label': 'Sortierung', dataset: { fokus: 'sort' }, onchange: (e) => { ui.sort = e.target.value; zeichnen(); } },
       Object.entries(SORT).filter(([k]) => k !== 'nah' || bezug).map(([k, text]) => h('option', { value: k, selected: ui.sort === k, text })));
     const hinweis = daten.offline
-      ? h('p', { class: 'bs-hinweis mu-offline', role: 'status', text: daten.unbekannt ? 'Offline – noch kein gespeicherter Stand vorhanden.' : `Offline – letzter gespeicherter Stand (${standVon(daten.zeit).replace('Stand von ', '')}). Bewerten ist erst wieder mit Verbindung möglich.` })
+      ? h('p', { class: 'wm-hinweis mu-offline', role: 'status', text: daten.unbekannt ? 'Offline – noch kein gespeicherter Stand vorhanden.' : `Offline – letzter gespeicherter Stand (${standVon(daten.zeit).replace('Stand von ', '')}). Bewerten ist erst wieder mit Verbindung möglich.` })
       : null;
     // Liste und Zählzeile werden beim Ziehen des Reglers allein neu gezeichnet (der Regler bleibt stehen)
     const zaehler = h('p', { class: 'mu-umkreis-zahl', role: 'status' });

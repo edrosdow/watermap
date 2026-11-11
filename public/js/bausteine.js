@@ -112,13 +112,29 @@ const stapel = [];            // offene Sheets, das letzte liegt oben
 const Z_BASIS = 1200;         // unter der Navigation (1500) und dem Toast (1550)
 let escVerdrahtet = false;
 
+// Zurück-Taste (Designumbau 3a): Sheets mit verlauf legen einen Verlaufseintrag { wmSheet: tiefe } an (gleiche Adresse).
+// Zurück → popstate → alle Sheets mit größerer Tiefe schließen. ×/Wischen/Esc → history.back(), wenn der Eintrag noch oben liegt.
+// Programmatisch geschlossene Sheets lassen ihren Eintrag liegen; das nächste Sheet derselben Tiefe übernimmt ihn (replaceState).
+const tiefeImVerlauf = () => (Number.isFinite(history.state?.wmSheet) ? history.state.wmSheet : 0);
+let popVerdrahtet = false;
+function popVerdrahten() {
+  if (popVerdrahtet) return;
+  popVerdrahtet = true;
+  window.addEventListener('popstate', () => {
+    const t = tiefeImVerlauf();
+    for (const s of [...stapel].reverse()) if (s.tiefe && s.tiefe > t) s.schliessen({ ausVerlauf: true });
+  });
+}
+/** Verlaufszustand ersetzen, ohne den Sheet-Eintrag zu verlieren (für das Routing in main.js). */
+export const verlaufsZustand = (extra = {}) => ({ ...(history.state || {}), ...extra });
+
 function escVerdrahten() {
   if (escVerdrahtet) return;
   escVerdrahtet = true;
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || !stapel.length || document.querySelector('dialog[open]')) return;
     e.preventDefault();
-    stapel[stapel.length - 1].schliessen();
+    stapel[stapel.length - 1].schliessen({ durchNutzer: true });
   });
 }
 
@@ -132,16 +148,26 @@ function escVerdrahten() {
  * inhaltFuer(stufe): optional – eigener Inhalt je Stufe (z. B. Pegel: klein = Kurzansicht, groß = Details). Beim Hochziehen aus „klein“
  *   wird schon zu Beginn der Bewegung der große Inhalt gezeigt (kein leeres Blatt), federt es zurück, wieder der kleine.
  * onStufe(stufe): nach jedem Stufenwechsel.
+ * verlauf: true → eigener Eintrag im Browserverlauf, die Zurück-Taste schließt das Sheet (für Sheets ohne eigene Adresse;
+ *   Bereiche mit Adresse wie #meldungen regelt main.js über den Hash).
+ * onZu(info): nach dem Ausfahren; info.durchNutzer = ×, Wischen, Esc oder Zurück-Taste (nicht programmatisch).
+ * onSchliessen(info): sofort beim Schließen (z. B. Navigation und Adresse umstellen, ohne das Ausfahren abzuwarten).
  * Rückgabe: { el, inhalt, schliessen(), stufe(neu?), setzeInhalt(…), setzeKopf(angaben|Element) }
  */
-export function sheetOeffnen({ inhalt = [], kopf: k = null, label = null, stufe = 'gross', klein = null, oben = null, opener = null, onZu = null, klasse = '', inhaltFuer = null, onStufe = null }) {
+export function sheetOeffnen({ inhalt = [], kopf: k = null, label = null, stufe = 'gross', klein = null, oben = null, opener = null, onZu = null, klasse = '', inhaltFuer = null, onStufe = null, verlauf = false, onSchliessen = null }) {
   escVerdrahten();
   const ausloeser = opener || document.activeElement;
-  const s = { offen: true, aktuell: stufe, gezeigt: null, inhaltFuer };
+  const s = { offen: true, aktuell: stufe, gezeigt: null, inhaltFuer, tiefe: 0 };
+  if (verlauf) {
+    popVerdrahten();
+    s.tiefe = stapel.filter(x => x.tiefe).length + 1;
+    const zustand = { ...(history.state || {}), wmSheet: s.tiefe };
+    if (tiefeImVerlauf() >= s.tiefe) history.replaceState(zustand, ''); else history.pushState(zustand, '');
+  }
   const body = h('div', { class: 'wm-sheet-inhalt' }, inhalt);
   // Kopf als Angaben → hier gebaut, × schließt; als fertiges Element ohne × → × wird angehängt (mit × → bleibt beim Aufrufer)
-  const kopfEl = k && !k.nodeType ? kopf({ ...k, onZu: () => s.schliessen() }) : k;
-  if (k?.nodeType && !k.querySelector('.wm-zu')) k.append(h('button', { type: 'button', class: 'wm-rund wm-zu', 'aria-label': 'Schließen', html: icon('close', 20), onclick: () => s.schliessen() }));
+  const kopfEl = k && !k.nodeType ? kopf({ ...k, onZu: () => s.schliessen({ durchNutzer: true }) }) : k;
+  if (k?.nodeType && !k.querySelector('.wm-zu')) k.append(h('button', { type: 'button', class: 'wm-rund wm-zu', 'aria-label': 'Schließen', html: icon('close', 20), onclick: () => s.schliessen({ durchNutzer: true }) }));
   const titel = kopfEl?.querySelector('.wm-kopf-titel');
   const griff = h('button', { type: 'button', class: 'wm-griff', 'aria-label': 'Größe ändern', 'aria-expanded': String(stufe === 'gross'),
     onclick: () => s.stufe(s.aktuell === 'gross' ? 'klein' : 'gross') }, h('span', {}));
@@ -160,6 +186,7 @@ export function sheetOeffnen({ inhalt = [], kopf: k = null, label = null, stufe 
   el.classList.toggle('is-klein', stufe === 'klein');
   document.body.append(el);
   stapel.push(s);
+  stapelMelden();
 
   // einfahren: erst im nächsten Bild die Klasse setzen, damit der Übergang läuft
   void el.offsetHeight;
@@ -179,7 +206,7 @@ export function sheetOeffnen({ inhalt = [], kopf: k = null, label = null, stufe 
     /** Kopf ersetzen (Angaben → kopf() mit ×, oder fertiges Element). */
     setzeKopf(neu) {
       const alt = el.querySelector(':scope > .wm-kopf');
-      const n = neu && !neu.nodeType ? kopf({ ...neu, onZu: () => s.schliessen() }) : neu;
+      const n = neu && !neu.nodeType ? kopf({ ...neu, onZu: () => s.schliessen({ durchNutzer: true }) }) : neu;
       if (alt && n) alt.replaceWith(n); else if (n) griff.after(n);
       const t = n?.querySelector('.wm-kopf-titel');
       if (t && !label) el.setAttribute('aria-labelledby', t.id);
@@ -194,16 +221,20 @@ export function sheetOeffnen({ inhalt = [], kopf: k = null, label = null, stufe 
       if (anders) onStufe?.(neu);
       return neu;
     },
-    schliessen() {
+    schliessen({ durchNutzer = false, ausVerlauf = false } = {}) {
       if (!s.offen) return;
       s.offen = false;
       const i = stapel.indexOf(s); if (i >= 0) stapel.splice(i, 1);
+      stapelMelden();
+      // vom Nutzer geschlossen: den eigenen Verlaufseintrag zurücknehmen (die Zurück-Taste hat das schon getan)
+      if (s.tiefe && durchNutzer && !ausVerlauf && tiefeImVerlauf() === s.tiefe) history.back();
+      onSchliessen?.({ durchNutzer: durchNutzer || ausVerlauf });
       el.style.transform = ''; el.style.transition = '';
       el.classList.remove('is-offen');
       const weg = () => {
         el.remove();
         if (ausloeser && document.contains(ausloeser)) ausloeser.focus({ preventScroll: true });
-        onZu?.();
+        onZu?.({ durchNutzer: durchNutzer || ausVerlauf });
       };
       nachUebergang(el, weg);
     },
@@ -222,6 +253,9 @@ function nachUebergang(el, fn) {
   el.addEventListener('transitionend', f);
   setTimeout(() => f(), 480);
 }
+
+/** body.has-sheet, solange ein Sheet offen ist (Desktop: Standort-Knopf und Kartenknöpfe rücken links neben das Panel). */
+function stapelMelden() { document.body.classList.toggle('has-sheet', stapel.length > 0); }
 
 /** Offene Sheets (oberstes zuletzt) – für Tests und für das Routing in Phase 3. */
 export const offeneSheets = () => stapel.map(s => s.el);
@@ -280,7 +314,7 @@ function wischen(el, body, s) {
     else ziel = Object.entries(stufen).reduce((b, k) => (Math.abs(k[1] - y) < Math.abs(b[1] - y) ? k : b))[0];
     // von der Fingerlage weich in die Zielstufe: Übergang aus der Klasse, Inline-Lage danach entfernen (kein Sprung)
     el.style.transition = '';
-    if (ziel === 'zu') { s.schliessen(); return; }
+    if (ziel === 'zu') { s.schliessen({ durchNutzer: true }); return; }
     el.style.transform = `translate3d(0, ${stufen[ziel]}px, 0)`;
     s.stufe(ziel);
     s.zeigeInhalt(ziel);   // zurückgefedert: wieder der passende Inhalt

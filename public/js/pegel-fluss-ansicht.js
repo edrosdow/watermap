@@ -20,10 +20,6 @@ function trendPfeil(g) {
   if (g.trend === null || g.trend === undefined) return null;
   return h('span', { class: `pf-trend t${g.trend}`, title: TREND[g.trend], 'aria-label': TREND[g.trend], text: PFEIL[g.trend] });
 }
-function fzEtikett(key) {
-  const z = FLUSS_ZUSTAND[key];
-  return h('span', { class: `pz-tag ${z.cls} pf-etikett`, text: z.text });
-}
 /** Etikett eines Pegels in der Liste (Text, nie nur Farbe). */
 function pegelEtikett(g) {
   const t = { hsw: ['über HSW', 'pz-hsw'], high: ['hoch', 'pz-high'], low: ['niedrig', 'pz-low'], normal: ['normal', 'pz-normal'] }[g.state]
@@ -186,13 +182,6 @@ export function flussSeite(root, gr, ctx) {
   const pr = gr.art === 'fluss' ? profil(gr) : null;
   const st = ctx.stand;
   const stand = st.offline ? `Offline · Stand von ${new Date(st.zeit).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}, ${zeitText(st.zeit)} Uhr` : `Stand ${zeitText(st.zeit)}`;
-  // Kompakter Kopf: Zurück, Name und Etikett in einer Zeile, darunter Zusammenfassung und Stand
-  const kopf = h('header', { class: 'pf-kopf' },
-    h('div', { class: 'pf-titel-zeile' },
-      h('button', { type: 'button', class: 'pf-zurueck', 'aria-label': 'Zurück zur Übersicht', html: icon('back', 24), onclick: ctx.back }),
-      h('h1', { id: 'pf-name', class: 'pf-titel', tabindex: '-1', text: gr.name }), fzEtikett(z.key)),
-    h('p', { class: 'pf-zus', text: `${z.kopf} · ${stand}` }));
-
   // Pegelliste (in Fließrichtung; Küste nach Gewässer)
   let offen = false;
   const liste = h('ul', { class: 'pf-liste' });
@@ -257,8 +246,8 @@ export function flussSeite(root, gr, ctx) {
   };
   const profilK = pr ? profilKarte(gr, z, { onOpen: ctx.onOpen, isMobile: ctx.isMobile, zuTide, verlauf: ctx.verlauf }) : null;
   // Raster: Handy Profil · Liste · Slipanlagen · Hinweis; Desktop links Profil (+ Slipanlagen, Hinweis), rechts die Liste
-  // imSheet (Fluss-Sheet, 7.70.0): ohne eigenen Kopf – Titel und Zusammenfassung gehen an den Kopf des Sheet-Rahmens
-  root.replaceChildren(h('div', { class: 'pg-seite pf-seite' + (ctx.imSheet ? ' is-im-sheet' : '') }, ctx.imSheet ? null : kopf,
+  // Nur im Fluss-Sheet (seit 7.70.0): Titel, Zusammenfassung und Stand gehen an den Kopf des Sheet-Rahmens
+  root.replaceChildren(h('div', { class: 'pg-seite pf-seite is-im-sheet' },
     h('div', { class: 'pf-raster' + (profilK ? '' : ' ohne-profil') }, profilK, listenKarte, slipKarte, hinweis)));
   const MARKE = { hsw: 'stop', hoch: 'hoch', 'teils-hoch': 'hoch', niedrig: 'warn', 'teils-niedrig': 'warn', normal: 'gut' };
   return { titel: gr.name, unter: `${z.kopf} · ${stand}`, marke: { zustand: MARKE[z.key] || 'leise', text: FLUSS_ZUSTAND[z.key].text } };

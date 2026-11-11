@@ -59,21 +59,24 @@ def run(b, w, hh):
     pg.evaluate("window.__watermap.selectPlace(window.__watermap.state.places.find(p => p.type === 'slip').id, { full: true })"); pg.wait_for_timeout(400)
     z = pg.locator('#detail .wxz')
     if z.count():
-        z.first.click(); pg.wait_for_selector('dialog.wxd[open]'); pg.wait_for_timeout(400)
-        r = rect(pg, 'dialog.wxd'); wisch(pg, w / 2, r['y'] + 14, 260)
-        check(pg.locator('dialog.wxd[open]').count() == 0 and pg.locator('#detail').is_visible(), f'{tag}: Wetter-Fenster: nach unten gewischt → zu, Standort bleibt offen')
+        z.first.click(); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen'); pg.wait_for_timeout(500)
+        r = rect(pg, '.wm-sheet.wxd-wetter'); wisch(pg, w / 2, r['y'] + 12, 560)
+        pg.wait_for_timeout(300)
+        check(pg.locator('.wm-sheet.wxd-wetter').count() == 0 and pg.locator('#detail').is_visible(), f'{tag}: Wetter-Sheet: nach unten gewischt → zu, Standort bleibt offen')
     else:
         check(False, f'{tag}: Wetter-Zeile nicht gefunden')
-    # In der Nähe: Fenster über der Karte (Handy) – Wischen nach unten oder Karte antippen führt zurück zur Karte
-    pg.goto(uf.BASE + '#naehe'); pg.wait_for_selector('.sidebar .place, .sidebar .nh-leer, .sidebar .nh-zeile1'); pg.wait_for_timeout(500)
-    r = rect(pg, '#naehe-kopf-m'); sb = rect(pg, '.sidebar')
-    check(10 < r['y'] < 40 and abs(sb['y'] - (r['y'] + r['h'])) <= 2 and abs(sb['y'] + sb['h'] - hh) <= 2, f'{tag}: In der Nähe: Kopf und Liste bilden ein Fenster unten, Karte als Streifen darüber (Kopf bei {r["y"]:.0f} px)')
+    # In der Nähe: Sheet über der Karte (Designumbau 3a) – Wischen am Griff nach unten oder die Zurück-Taste führt zur Karte
+    NH = '.wm-sheet.nh-sheet'
+    pg.goto(uf.BASE + '#karte'); pg.wait_for_timeout(300); pg.click('#btn-naehe-m'); pg.wait_for_selector(f'{NH} .place, {NH} .nh-leer'); pg.wait_for_timeout(600)
+    r = rect(pg, NH)
+    check(80 < r['y'] < 160 and abs(r['y'] + r['h'] - hh) <= 2, f'{tag}: In der Nähe: Sheet von unten, Karte und Suche darüber (oben bei {r["y"]:.0f} px)')
     pg.screenshot(path=str(uf.SHOTS / f'wischen_{w}_naehe.png'))
-    wisch(pg, w / 2, r['y'] + 30, 260)
-    check(pg.evaluate("location.hash") in ('', '#karte') and not pg.evaluate("document.body.classList.contains('view-naehe')"), f'{tag}: In der Nähe: nach unten gewischt → Karte')
-    pg.goto(uf.BASE + '#naehe'); pg.wait_for_selector('.sidebar .place, .sidebar .nh-leer, .sidebar .nh-zeile1'); pg.wait_for_timeout(400)
-    pg.touchscreen.tap(w / 2, 10); pg.wait_for_timeout(300)
-    check(not pg.evaluate("document.body.classList.contains('view-naehe')"), f'{tag}: In der Nähe: Tipp auf die Karte oberhalb schließt')
+    wisch(pg, w / 2, r['y'] + 12, 400)
+    pg.wait_for_timeout(300)
+    check(pg.evaluate("location.hash") in ('', '#karte') and pg.locator(NH).count() == 0 and pg.get_attribute('#bottomnav [data-nav=karte]', 'aria-current') == 'page', f'{tag}: In der Nähe: nach unten gewischt → Karte')
+    pg.click('#btn-naehe-m'); pg.wait_for_selector(f'{NH}.is-offen'); pg.wait_for_timeout(400)
+    pg.go_back(); pg.wait_for_selector(NH, state='detached')
+    check(pg.locator(NH).count() == 0, f'{tag}: In der Nähe: Zurück-Taste schließt das Sheet')
     # „X“ im globalen Suchfeld
     pg.goto(uf.BASE + '#karte'); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(300)
     check(pg.locator('.search .such-x').is_hidden(), f'{tag}: Suchfeld leer → kein „X“')

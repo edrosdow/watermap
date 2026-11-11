@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 11.11.2026 · App-Version **7.71.0**
+Stand: 11.11.2026 · App-Version **7.72.0**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.71.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.72.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -272,6 +272,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.69.0 | **Designumbau Phase 1 – gemeinsame Bausteine** (keine sichtbare Änderung): `css/bausteine.css` neu nach dem Prototyp, `js/bausteine.js` (`kopf`, `zeile`, `gruppe`, `aktionen`, `marke`, `hinweis`, `chip`, `seg`, Sheet-Rahmen `sheetOeffnen` mit Stapeln, Einrasten groß/klein, Esc/×/Wischen, Fokus zurück). Rahmen noch nicht genutzt; Pegel-Sheet folgt in 2a, `fenster()` und Standort-Sheet in Phase 3 (Begründung in `DESIGN_SYSTEM.md`). Test `ui_bausteine.py` |
 | 7.70.0 | **Designumbau Phase 2a – Pegel auf die Hauptkarte:** Chip „Pegel“ (Farbpunkt, mindestens eine Ebene), ein Marker mit Cluster und Legende (`pegel-marker.js`), Pegel-Sheet im gemeinsamen Rahmen (`pegel-sheet.js`; Handy klein = Kurzansicht, groß = Details; Desktop Panel), Hauptsuche findet Pegel und Gewässer, Fluss als Sheet. Pegel-Tab entfernt (`pegel-dashboard.js`, `pegel-karte.js`, `#pegelseite`, 309 CSS-Regeln), alte Adressen `#pegel…`/`#pf=` leiten auf die Karte. Navigation Karte · Meldungen · Melden · Gemerkt · Mehr („Gemerkt“ = Merkliste bis Phase 3). `pd-blau` aufgelöst. Ungenutztes `renderGaugeDetail`, `gaugeMarkerHtml`, `GAUGE_STATES` entfernt. Tests: neu `ui_pegel_karte.py` (ersetzt `ui_pegel_dashboard.py`), angepasst `ui_pegel`, `ui_pegel_fluss`, `ui_full`, `ui_bereiche`, `ui_nav`, `ui_ampel`, `ui_wetter`, `ui_smoke`, `nav_test` |
 | 7.71.0 | **Designumbau Phase 2b – Pegel-Ampel im Pegel-Sheet:** Abschnitt „Passt mein Boot?“ (`passt-mein-boot.js`) unter der Aktionsleiste: ohne Mindestpegel Zeile → Formular (−/+ 5 cm, Bootstyp), mit Mindestpegel Hinweiszeile Passt/Knapp/Zu niedrig mit Abstand und Vorschau. Mindestpegel je Pegel (`mindestpegel.js`, `watermap.mindestpegel`, einmalige Übernahme aus `watermap.ampel`), Bootstyp in `watermap.boot.typ`. Ampel in Merkliste, Pegel-Kasten der Slipanlage und Einstellungen; Alarm-Fenster schlägt den Mindestpegel vor, kein neuer Ampel-Alarm mehr (bestehende laufen weiter). `pegel-ampel.html` = Einstiegsseite (`page.css`), leitet `?pegel=`/`#am-alarm` ins Sheet, Mail-Links Bestätigen/Abbestellen weiter dort. `ampel.css` entfernt. Tests: neu `ui_pegel_ampel.py` (ersetzt `ui_ampel.py`) und `mindestpegel_test.mjs`, angepasst `ui_pegel`, `ui_einstellungen`, `ui_nav` |
+| 7.72.0 | **Designumbau Phase 3a – Bereiche als Sheet:** Nähe, Gemerkt (`gemerkt.js`, `#gemerkt`), Meldungen und Mehr als Sheet über der Karte (Handy von unten, Desktop Panel rechts), Einstellungen als Sheet über „Mehr“; keine Seitenleiste und keine Seiten mehr. Wetter-, Alarm- und Pegel-Fenster im Sheet-Rahmen (stapeln sich), Zurück-Taste schließt das oberste Sheet. Abzeichen an „Gemerkt“. Inhalte auf den Bausteinen (Ortszeilen, Marken, Chips, Umschalter); Formulare und Melden-Menü mit `kopf()`. Alte Kopf-Varianten und ihr CSS entfernt (Standort-Sheet folgt in 3b). Behoben: Karte auf dem Desktop volle Breite, Standort-Knopf neben dem Panel. Tests angepasst: `ui_nav`, `ui_bereiche`, `ui_einstellungen`, `ui_naehe`, `ui_wischen`, `ui_wetter`, `ui_pegel`, `ui_pegel_ampel`, `ui_pegel_karte`, `ui_pegel_fluss`, `ui_full`, `ui_smoke`, `ui_karussell`, `nav_test` |
 | 7.54.1 | Pegel-Sheet wischt so flüssig wie auf der Hauptkarte: beim Ziehen nur noch verschoben (`transform`), nicht mehr in der Höhe neu berechnet; zu Beginn einmal auf volle Höhe gestellt und nach unten versetzt, die Größe ändert sich erst beim Einrasten |
 | 7.54.0 | **Fenster von unten wischbar und flüssig:** Das Pegel-Sheet folgt beim Ziehen dem Finger (vorher sprang es erst beim Loslassen) und rastet weich ein (klein · ca. 80 % · ganz · zu; Schwung nimmt die nächste Stufe in Bewegungsrichtung). Alle Fenster von unten (Dialoge, Standort-Vorschau und -Details, Pegel-Sheet) fahren auf dem Handy weich hoch statt plötzlich zu erscheinen (`sheet-ein`, bei „Bewegung reduzieren“ aus). Die übrigen Fenster folgten schon dem Finger (`wischen.js`) |
 | 7.53.0 | **Zart blau** (Rückmeldung: das kräftige Blau passt nicht zur App): gleicher Aufbau wie 7.52.0, aber ganz helles Wasserblau oben, weiße Karten und Knöpfe mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. **Tidepegel** im selben Muster (Name mittig, große Zahl, „● Tide · ↗ auflaufend“, drei Knöpfe Alarm · Merken · Teilen, Karten Gezeiten/Tidekurve/letztes HW·NW, Liste Häfen in der Nähe · Gewässer – alle Pegel · Station und Quelle) |
@@ -331,7 +332,7 @@ Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.
 
 ## 6. Offene Aufgaben
 
-**▶ Hier weitermachen (Stand 11.11.2026, 7.68.0): Designumbau nach `docs/AUFTRAG-designumbau.md`** – Phase 0, 1 und 2a freigegeben (11.11.), Phase 2b erledigt (7.71.0), wartet auf Freigabe; danach Phase 3 (Navigation und alle Bereiche als Sheet, 7.72.0). Nach jeder Phase committen, Vorschau, Bilder 390/1440 px, auf Freigabe warten. Neues Slip-Symbol erledigt (7.68.1).
+**▶ Hier weitermachen (Stand 11.11.2026, 7.68.0): Designumbau nach `docs/AUFTRAG-designumbau.md`** – Phase 0, 1, 2a und 2b freigegeben (11.11.), Phase 3 geteilt (Nutzer 11.11.): 3a erledigt (7.72.0, Bereiche als Sheet), wartet auf Freigabe; danach 3b (Standort-Sheet: Vorschau und Details der Slipanlage im Rahmen, 7.72.1), dann Phase 4. Nach jeder Phase committen, Vorschau, Bilder 390/1440 px, auf Freigabe warten. Neues Slip-Symbol erledigt (7.68.1).
 
 **Früher: Umbau auf das Designsystem „Wasser“ – Phase 4 (abgeschlossen mit Schritt 8)**
 Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Disziplin von A, vom Nutzer gewählt) – vor jeder Oberflächenarbeit lesen.

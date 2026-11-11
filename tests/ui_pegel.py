@@ -217,31 +217,31 @@ with sync_playwright() as p:
         pg.evaluate("(id) => window.__watermap.selectPlace(id, { full: true })", sid); pg.wait_for_selector('#detail .pegel-box', timeout=8000)
         box = pg.locator('#detail .pegel-box')
         check(box.get_attribute('href') == '#karte/pegel/' + KOELN and 'Details ›' in box.inner_text() and 'Pegel-Ampel' not in box.inner_text(), f'{name}: Pegel-Kasten „Details ›“ ({box.inner_text()!r})')
-        box.click(); pg.wait_for_selector('dialog.wxd-pegel[open] .pd-name', timeout=8000)
-        check(pg.inner_text('dialog.wxd-pegel .pd-name') == 'Köln' and 'pegel/' not in pg.url and pg.locator(S).count() == 0 and pg.locator('#detail:not([hidden])').count() == 1,
+        box.click(); pg.wait_for_selector('.wm-sheet.wxd-pegel.is-offen #pd-name', timeout=8000); pg.wait_for_selector(S, state='detached')
+        check(pg.inner_text('.wm-sheet.wxd-pegel #pd-name') == 'Köln' and 'pegel/' not in pg.url and pg.locator(S).count() == 0 and pg.locator('#detail:not([hidden])').count() == 1,
               f'{name}: Klick öffnet die Pegel-Details im Fenster, keine neue Seite ({pg.url[-30:]})')
-        pg.wait_for_selector('dialog.wxd-pegel .gc-line', timeout=8000)
-        check(pg.locator('dialog.wxd-pegel .pd-karte').count() >= 2 and pg.locator('dialog.wxd-pegel .pmb', has_text='Passt mein Boot?').count() == 1 and pg.locator('dialog.wxd-pegel .pd-slips').count() == 1,
+        pg.wait_for_selector('.wm-sheet.wxd-pegel .gc-line', timeout=8000)
+        check(pg.locator('.wm-sheet.wxd-pegel .pd-karte').count() >= 2 and pg.locator('.wm-sheet.wxd-pegel .pmb', has_text='Passt mein Boot?').count() == 1 and pg.locator('.wm-sheet.wxd-pegel .pd-slips').count() == 1,
               f'{name}: Fenster zeigt Skala, Verlauf, „Passt mein Boot?“ und Slipanlagen am Pegel')
-        pg.wait_for_timeout(350)   # Einblenden (.28 s) abwarten
-        r = pg.locator('dialog.wxd-pegel').bounding_box(); vp = pg.viewport_size
+        pg.wait_for_timeout(600)   # Einfahren abwarten
+        r = pg.locator('.wm-sheet.wxd-pegel').bounding_box(); vp = pg.viewport_size
         if mobile: check(abs(r['y'] + r['height'] - vp['height']) <= 1 and r['width'] >= vp['width'] - 1, f'{name}: Fenster sitzt unten, volle Breite')
-        else: check(abs((r['x'] + r['width'] / 2) - vp['width'] / 2) <= 2 and r['width'] <= 621, f'{name}: Fenster mittig, höchstens 620 px')
+        else: check(abs(r['x'] + r['width'] - vp['width']) <= 1 and r['width'] <= 421, f'{name}: Sheet als Panel rechts über der Slipanlage')
         pg.screenshot(path=str(SHOTS / f'{name}_3b_pegel_fenster.png'))
-        pg.locator('dialog.wxd-pegel .pd-icon').first.click(); pg.wait_for_timeout(300)
-        check(pg.locator('dialog.wxd-pegel').count() == 0 and pg.locator('#detail:not([hidden]) .pegel-box').count() == 1 and pg.evaluate("document.activeElement.classList.contains('pegel-box')"),
+        pg.locator('.wm-sheet.wxd-pegel .wm-zu').first.click(); pg.wait_for_timeout(700)
+        check(pg.locator('.wm-sheet.wxd-pegel').count() == 0 and pg.locator('#detail:not([hidden]) .pegel-box').count() == 1 and pg.evaluate("document.activeElement.classList.contains('pegel-box')"),
               f'{name}: „×“ schließt das Fenster, die Slipanlage bleibt offen, Fokus zurück auf den Kasten')
-        box.click(); pg.wait_for_selector('dialog.wxd-pegel[open] .pd-name'); pg.keyboard.press('Escape'); pg.wait_for_timeout(300)
-        check(pg.locator('dialog.wxd-pegel').count() == 0 and pg.locator('#detail:not([hidden])').count() == 1, f'{name}: Escape schließt nur das Fenster')
-        box.click(); pg.wait_for_selector('dialog.wxd-pegel[open] .pm-stern'); pg.click('dialog.wxd-pegel .pm-stern'); pg.wait_for_timeout(300)
-        check(pg.locator('dialog.wxd-pegel[open]').count() == 1 and pg.get_attribute('dialog.wxd-pegel .pm-stern', 'aria-pressed') == 'true', f'{name}: Stern im Fenster setzt „Meine Pegel“ und bleibt im Fenster')
-        pg.click('dialog.wxd-pegel .pm-stern'); pg.wait_for_timeout(200); pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+        box.click(); pg.wait_for_selector('.wm-sheet.wxd-pegel.is-offen #pd-name'); pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
+        check(pg.locator('.wm-sheet.wxd-pegel').count() == 0 and pg.locator('#detail:not([hidden])').count() == 1, f'{name}: Escape schließt nur das Fenster')
+        box.click(); pg.wait_for_selector('.wm-sheet.wxd-pegel.is-offen .pm-stern'); pg.click('.wm-sheet.wxd-pegel .pm-stern'); pg.wait_for_timeout(300)
+        check(pg.locator('.wm-sheet.wxd-pegel.is-offen').count() == 1 and pg.get_attribute('.wm-sheet.wxd-pegel .pm-stern', 'aria-pressed') == 'true', f'{name}: Stern im Fenster setzt „Meine Pegel“ und bleibt im Fenster')
+        pg.click('.wm-sheet.wxd-pegel .pm-stern'); pg.wait_for_timeout(200); pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
 
         # Weitere Zustände
         for uuid, expect in [(STATIONS[1]['uuid'], 'Niedrig'), (STATIONS[2]['uuid'], 'Hoch'),
                              (STATIONS[3]['uuid'], 'Über HSW'), (STATIONS[4]['uuid'], 'veraltet'), (STATIONS[5]['uuid'], 'ohne Kennwerte')]:
             pg.evaluate(f"window.__watermap.selectGauge({json.dumps(uuid)}, {{ fly: false, stufe: 'gross' }})"); pg.wait_for_timeout(400)
-            check(expect in pg.inner_text(S + ' .pd-kopf'), f'{name}: Zustand „{expect}“')
+            check(expect in pg.inner_text(S + ' .pd-oben'), f'{name}: Zustand „{expect}“')
         check(pg.locator(S + ' .pd-zonen').count() == 0, f'{name}: ohne Kennwerte kein leerer Balken')
         pg.evaluate(f"window.__watermap.selectGauge({json.dumps(STATIONS[3]['uuid'])}, {{ fly: false, stufe: 'gross' }})"); pg.wait_for_selector(S + ' .gc-line')
         pg.screenshot(path=str(SHOTS / f'{name}_5_hsw.png'))

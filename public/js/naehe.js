@@ -233,51 +233,34 @@ export function naehe(ctx) {
   }
 
   // ---------------------------------------------------------------- Kopf
-  /** Desktop: Kopf oben in der Seitenleiste (Kategorien stehen in der Werkzeugleiste über der Karte). */
-  function kopf() {
-    const p = punkt();
-    const text = p.art === 'position' ? ['um deine Position', p.name] : p.art === 'kartenmitte' ? ['um Kartenmitte', p.name] : [`um ${p.name}`];
-    const ico = p.art === 'position' ? 'navigate' : p.art === 'kartenmitte' ? 'locate' : 'pin';
-    const aendern = h('button', { type: 'button', class: 'nh-aendern', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', 'aria-controls': 'naehe-bezug',
-      text: 'Ändern', 'aria-label': 'Bezugspunkt ändern', onclick: (e) => fensterOeffnen(e.currentTarget) });
-    return [
-      h('div', { class: 'nh-zeile' },
-        h('h2', { class: 'nh-titel', text: 'In der Nähe' }),
-        h('button', { type: 'button', class: 'nh-knopf', onclick: () => ctx.aufKarte(aktuelleTreffer) },
-          h('span', { html: icon('map', 20), 'aria-hidden': 'true' }), h('span', { text: 'Auf Karte' }))),
-      h('div', { class: 'nh-zeile nh-bezug-zeile' },
-        h('p', { class: 'nh-bezug' }, h('span', { class: 'nh-bezug-ico', html: icon(ico, 16), 'aria-hidden': 'true' }),
-          h('span', { text: positionLaeuft ? 'Position wird bestimmt …' : text.filter(Boolean).join(' · ') })),
-        aendern),
-    ];
-  }
-
-  /** Handy: kompakter Kopf – Titel mit Lupe und Karte, Bezugspunkt als Pille, Kategorien mit Filter-Symbol. */
-  function kopfHandy() {
+  /** Kopfbereich im Sheet (Designumbau 3a): Bezugspunkt als Pille mit Lupe, darunter Kategorien mit Filter-Symbol.
+   *  Titel „In der Nähe“, × und „Auf der Karte zeigen“ stehen im Kopf des Sheet-Rahmens (main.js). */
+  function kopfBereich() {
     const p = punkt();
     const text = positionLaeuft ? 'Position wird bestimmt …' : (p.art === 'position' ? ['um deine Position', p.name] : p.art === 'kartenmitte' ? ['um Kartenmitte', p.name] : [`um ${p.name}`]).filter(Boolean).join(' · ');
     const ico = p.art === 'position' ? 'navigate' : p.art === 'kartenmitte' ? 'locate' : 'pin';
     const n = ctx.filterZahl();
     return [
-      h('div', { class: 'nh-zeile' },
-        h('h2', { class: 'nh-titel', text: 'In der Nähe' }),
-        h('span', { class: 'nh-symbole' },
-          h('button', { type: 'button', class: 'nh-sym', 'aria-label': 'Ort suchen', 'aria-haspopup': 'dialog', html: icon('search', 22), onclick: (e) => fensterOeffnen(e.currentTarget) }),
-          h('button', { type: 'button', class: 'nh-sym', 'aria-label': 'Auf der Karte zeigen', html: icon('map', 22), onclick: () => ctx.aufKarte(aktuelleTreffer) }))),
-      h('button', { type: 'button', class: 'nh-pille', 'aria-haspopup': 'dialog', 'aria-controls': 'naehe-bezug', 'aria-label': `Entfernungen ${text}. Bezugspunkt ändern`,
-        onclick: (e) => fensterOeffnen(e.currentTarget) },
-        h('span', { class: 'nh-bezug-ico', html: icon(ico, 16), 'aria-hidden': 'true' }), h('span', { class: 'nh-pille-text', text }),
-        h('span', { class: 'nh-pille-pfeil', html: icon('chevron', 16), 'aria-hidden': 'true' })),
+      h('div', { class: 'nh-zeile nh-bezug-zeile' },
+        h('button', { type: 'button', class: 'nh-pille', 'aria-haspopup': 'dialog', 'aria-controls': 'naehe-bezug', 'aria-label': `Entfernungen ${text}. Bezugspunkt ändern`,
+          onclick: (e) => fensterOeffnen(e.currentTarget) },
+          h('span', { class: 'nh-bezug-ico', html: icon(ico, 16), 'aria-hidden': 'true' }), h('span', { class: 'nh-pille-text', text }),
+          h('span', { class: 'nh-pille-pfeil', html: icon('chevron', 16), 'aria-hidden': 'true' })),
+        h('button', { type: 'button', class: 'wm-rund nh-sym', 'aria-label': 'Ort suchen', 'aria-haspopup': 'dialog', html: icon('search', 20), onclick: (e) => fensterOeffnen(e.currentTarget) })),
       h('div', { class: 'nh-zeile nh-kat' },
         h('div', { class: 'nh-cats', role: 'group', 'aria-label': 'Kategorien' }, Object.keys(TYPES).map(t => {
           const on = ctx.cats().has(t);
-          return h('button', { type: 'button', class: 'cat nh-cat', style: `--cc: var(--${t})`, 'aria-pressed': String(on), dataset: { cat: t }, onclick: () => ctx.toggleCat(t) },
-            h('span', { class: 'cat-check', html: icon('check', 16), 'aria-hidden': 'true' }), h('span', { class: 'cat-label', text: { slip: 'Slip', marina: 'Häfen', fuel: 'Tanken' }[t] }));
+          return h('button', { type: 'button', class: 'wm-chip nh-cat', style: `--punkt: var(--${t})`, 'aria-pressed': String(on), dataset: { cat: t }, onclick: () => ctx.toggleCat(t) },
+            h('span', { class: 'wm-chip-haken', html: icon('check', 16), 'aria-hidden': 'true' }), h('span', { class: 'wm-chip-punkt', 'aria-hidden': 'true' }),
+            h('span', { class: 'cat-label', text: { slip: 'Slip', marina: 'Häfen', fuel: 'Tanken' }[t] }));
         })),
-        h('button', { type: 'button', class: 'nh-sym nh-filter', 'aria-haspopup': 'dialog', 'aria-label': n ? `Filter, ${n} aktiv` : 'Filter', onclick: (e) => ctx.filterOeffnen(e.currentTarget) },
-          h('span', { html: icon('filter', 22), 'aria-hidden': 'true' }), n ? h('span', { class: 'filter-n', text: String(n) }) : null)),
+        h('button', { type: 'button', class: 'wm-rund nh-sym nh-filter', 'aria-haspopup': 'dialog', 'aria-label': n ? `Filter, ${n} aktiv` : 'Filter', onclick: (e) => ctx.filterOeffnen(e.currentTarget) },
+          h('span', { html: icon('filter', 20), 'aria-hidden': 'true' }), n ? h('span', { class: 'filter-n', text: String(n) }) : null)),
     ];
   }
+
+  /** „Auf der Karte zeigen“ (Knopf im Kopf des Sheets). */
+  const aufKarte = () => ctx.aufKarte(aktuelleTreffer);
 
   /** Handy: schmale Zeile statt Erklär-Karte („×“ blendet sie aus, bis der Bezugspunkt selbst geändert wird). */
   function hinweisHandy() {
@@ -331,20 +314,21 @@ export function naehe(ctx) {
   // Symbol je Typ einmal erzeugen und dann klonen (SVG-Text für jede Karte neu zu parsen kostet bei 120 Einträgen spürbar)
   const symbole = new Map();
   function symbol(type) {
-    if (!symbole.has(type)) symbole.set(type, h('span', { class: `nk-ico bg-${type}`, html: glyphSvg(type, 26), 'aria-hidden': 'true' }));
+    if (!symbole.has(type)) symbole.set(type, h('span', { class: `wm-kachel-ico is-typ bg-${type} nk-ico`, html: glyphSvg(type, 22), 'aria-hidden': 'true' }));
     return symbole.get(type).cloneNode(true);
   }
 
   function karte(p, d) {
     const merkmale = (FILTERS[p.type] || []).filter(f => f.test(p)).slice(0, 2).map(f => f.label);
     const sub = [p.water?.name || p.locality || TYPES[p.type].label, ...merkmale].join(' · ');
-    return h('li', {}, h('button', { type: 'button', class: 'place nk', dataset: { id: p.id }, onclick: () => { scrollMerken = ctx.liste().scrollTop; ctx.waehlen(p); } },
+    // Ortszeile (Bausteine, Designumbau 3a): Symbol-Kachel, Name, Gewässer · Merkmale (+ Lage-Etikett), rechts die Entfernung
+    return h('li', {}, h('button', { type: 'button', class: 'wm-zeile place nk', dataset: { id: p.id }, onclick: () => { scrollMerken = ctx.liste().scrollTop; ctx.waehlen(p); } },
       symbol(p.type),
-      h('span', { class: 'nk-text' },
-        h('span', { class: 'place-name nk-name', text: displayName(p) }),
-        h('span', { class: 'place-sub nk-sub', text: sub }),
+      h('span', { class: 'wm-zeile-text nk-text' },
+        h('strong', { class: 'nk-name', text: displayName(p) }),
+        h('small', { class: 'nk-sub', text: sub }),
         meldEtikett(p)),
-      d !== null ? h('span', { class: 'place-dist nk-dist', text: formatDistance(d) }) : null));
+      d !== null ? h('span', { class: 'wm-zeile-wert nk-dist', text: formatDistance(d) }) : null));
   }
 
   /** Liste in head (Zeile mit Anzahl/Sortierung, Hinweis) und ul zeichnen. */
@@ -402,12 +386,12 @@ export function naehe(ctx) {
 
   /** Handy: Links als letzter Eintrag der Liste (nicht fest unten, nichts unter der Navigation). */
   function fuss() {
-    return h('li', { class: 'nh-fuss nur-handy' },
+    return h('li', { class: 'nh-fuss' },
       h('a', { href: './ueber.html', text: 'Über WaterMap' }), ' · ', h('a', { href: './datenschutz.html', text: 'Datenschutz' }), ' · ', h('a', { href: './impressum.html', text: 'Impressum' }),
       h('span', { class: 'version', text: `Version ${CONFIG.VERSION} · Kartendaten © OpenStreetMap-Mitwirkende (ODbL)` }));
   }
 
-  let ziel = null;   // { kopfHandy, kopfDesktop, head, ul }
+  let ziel = null;   // { kopf, head, ul, aktiv() }
   let zuletzt_ = null;   // { schluessel, erstes } des zuletzt gezeichneten Inhalts
   /**
    * opts.wennNoetig: nur zeichnen, wenn sich etwas geändert hat (Bezugspunkt, Filter, Meldungen, Sortierung, Freigabe) –
@@ -424,8 +408,7 @@ export function naehe(ctx) {
       && schluessel.every((x, i) => x === zuletzt_.schluessel[i]);
     // Kopf (Titel, Bezugspunkt, „Position wird bestimmt …“) ist klein – die Liste nur, wenn sich wirklich etwas geändert hat
     if (!wennNoetig || !gleich || kopfText !== zuletzt_.kopfText) {
-      ziel.kopfHandy.replaceChildren(...kopfHandy());
-      ziel.kopfDesktop.replaceChildren(...kopf().filter(Boolean));
+      ziel.kopf.replaceChildren(...kopfBereich());
     }
     if (wennNoetig && gleich) { zuletzt_.kopfText = kopfText; return; }
     liste(ziel.head, ziel.ul);
@@ -439,31 +422,12 @@ export function naehe(ctx) {
     requestAnimationFrame(() => { ctx.liste().scrollTop = y; });
   }
 
-  // Ziehen nach unten aktualisiert (Handy)
-  function ziehenAktualisiert(el) {
-    let y0 = null, dy = 0;
-    el.addEventListener('touchstart', (e) => { y0 = el.scrollTop <= 0 && ctx.isMobile() ? e.touches[0].clientY : null; dy = 0; }, { passive: true });
-    el.addEventListener('touchmove', (e) => { if (y0 === null) return; dy = e.touches[0].clientY - y0; el.classList.toggle('nh-zieht', dy > 70); }, { passive: true });
-    el.addEventListener('touchend', () => {
-      if (y0 === null) return;
-      el.classList.remove('nh-zieht');
-      if (dy > 70) aktualisieren();
-      y0 = null;
-    });
-  }
-
-  async function aktualisieren() {
-    await geoFreigabe.pruefen();
-    if (bezug?.art === 'position' && freigabe !== 'denied' && (freigabe === 'granted' || entschieden())) await positionHolen();
-    else zeichnen();
-  }
-
   let oeffnetGerade = false;
   geoFreigabe.beobachten(() => { if (!oeffnetGerade) zeichnen(); });   // beim Öffnen zeichnet oeffnen() selbst
 
   return {
     /** Ziele setzen und Ziehen-zum-Aktualisieren anbinden. */
-    binden(z) { ziel = z; ziehenAktualisiert(z.ul); },
+    binden(z) { ziel = z; },
     /** Tab geöffnet: Freigabe prüfen (ohne Dialog), Position nur bei bestehender Freigabe holen. */
     async oeffnen() {
       zeichnen({ wennNoetig: true });
@@ -483,6 +447,7 @@ export function naehe(ctx) {
     /** Unsichtbar vorbereiten (nach dem Start im Leerlauf); Freigabe vorher klären, damit beim Öffnen nichts nachkommt. */
     async vorbereiten() { await geoFreigabe.pruefen(); zeichnen({ wennNoetig: true, vorab: true }); },
     karte,
+    aufKarte,
     get treffer() { return aktuelleTreffer; },
   };
 }

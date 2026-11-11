@@ -38,7 +38,6 @@
     <button type="button" id="btn-report" class="report-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="report-menu"><span id="btn-report-ico"></span><span>Melden</span></button>
   </header>
 
-  <div id="naehe-kopf-m" class="nh-kopf nh-kopf-m"></div>
 
   <div id="toolbar" class="toolbar">
     <div id="cats" class="cats" role="group" aria-label="Kategorien auf der Karte"></div>
@@ -49,25 +48,6 @@
   </div>
 
   <main class="shell">
-    <aside id="sidebar" class="sidebar" aria-label="Standortliste">
-      <button type="button" id="sheet-handle" class="sheet-handle" aria-expanded="false" aria-controls="list">
-        <span class="grip" aria-hidden="true"></span>
-        <span id="count" class="sheet-count">Standorte werden geladen …</span>
-      </button>
-      <div id="tabs" class="list-top">
-        <h2 id="list-title" class="list-title">Liste</h2>
-        <button type="button" id="list-close" class="icon-btn list-close" aria-label="Liste schließen" title="Zur Karte"></button>
-      </div>
-      <div id="naehe-kopf-d" class="nh-kopf nh-kopf-d"></div>
-      <div id="datainfo" class="datainfo"></div>
-      <div id="list-head" class="list-head"></div>
-      <ul id="list" class="list" aria-live="polite"></ul>
-      <p class="sidebar-foot">
-        <a href="./ueber.html">Über WaterMap</a> · <a href="./datenschutz.html">Datenschutz</a> · <a href="./impressum.html">Impressum</a>
-        <span class="version" id="version-list"></span>
-      </p>
-    </aside>
-
     <section class="map-wrap" aria-label="Karte">
       <div id="map" role="region" aria-label="Interaktive Karte"></div>
       <p id="cat-hint" class="cat-hint" hidden>Wähle oben Slipanlagen, Häfen oder Tanken, um sie auf der Karte zu zeigen.</p>
@@ -80,11 +60,9 @@
       <section id="detail" class="detail" aria-label="Standortdetails" hidden></section>
     </section>
   </main>
-  <!-- Kurzmeldungen außerhalb der Karte, damit sie auch auf Pegel-, Meldungs- und Mehr-Seiten sichtbar sind -->
+  <!-- Kurzmeldungen außerhalb der Karte, damit sie auch über den Sheets sichtbar sind -->
   <div id="toast" class="toast" role="status" hidden></div>
 
-  <section id="meldungsseite" class="pegelseite seite" aria-label="Aktuelle Meldungen" tabindex="-1" hidden></section>
-  <section id="mehrseite" class="pegelseite seite" aria-label="Mehr" tabindex="-1" hidden></section>
 
   <nav id="bottomnav" class="bottomnav" aria-label="Hauptnavigation unten"></nav>
 

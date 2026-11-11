@@ -108,9 +108,9 @@ def run(b, w, hh):
     if gew.count(): gew.first.click(); pg.wait_for_timeout(600)
     check(pg.locator('#cats [data-cat=slip]').get_attribute('aria-pressed') == 'true' and pg.locator('#cats [data-cat=pegel]').get_attribute('aria-pressed') == 'true', f'{tag}: Gewässer-Treffer schaltet Pegel und Slipanlagen ein')
 
-    # „Gemerkt“ öffnet (bis Phase 3) die Merkliste
+    # „Gemerkt“ öffnet das Sheet (Designumbau 3a)
     pg.click(f'{nav} [data-nav=gemerkt]'); pg.wait_for_timeout(600)
-    check(pg.evaluate("location.hash") == '#mehr/merkliste' and pg.locator(f'{nav} [data-nav=gemerkt]').get_attribute('aria-current') == 'page', f'{tag}: „Gemerkt“ → Merkliste, Punkt aktiv')
+    check(pg.evaluate("location.hash") == '#gemerkt' and pg.locator('.wm-sheet.gm-sheet.is-offen').count() == 1 and pg.locator(f'{nav} [data-nav=gemerkt]').get_attribute('aria-current') == 'page', f'{tag}: „Gemerkt“ → Sheet, Punkt aktiv')
     check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
     ctx.close()
 

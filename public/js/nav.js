@@ -1,5 +1,5 @@
-// Hauptnavigation (Karte · Meldungen · Melden · Gemerkt · Mehr, Designumbau 2a) – oben auf dem Desktop, unten auf dem Handy.
-// „Gemerkt“ öffnet bis Phase 3 die Merkliste (#mehr/merkliste); „In der Nähe“ liegt unter „Mehr“. Alte Adressen (#naehe, #favoriten) gelten weiter.
+// Hauptnavigation (Karte · Meldungen · Melden · Gemerkt · Mehr, Designumbau 2a/3a) – oben auf dem Desktop, unten auf dem Handy.
+// Außer „Karte“ öffnet jeder Punkt ein Sheet über der Karte; „In der Nähe“ liegt unter „Mehr“. Alte Adressen (#favoriten, #mehr/merkliste) → #gemerkt.
 // Wird von der Karte (main.js) und der Pegel-Ampel (ampel.js) genutzt.
 import { h } from './dom.js';
 import { icon } from './icons.js';
@@ -10,12 +10,13 @@ export const NAV = [
   { id: 'karte', label: 'Karte', top: 'Karte', ico: 'map', href: './#karte' },
   { id: 'meldungen', label: 'Meldungen', top: 'Meldungen', ico: 'chat', href: './#meldungen' },
   { id: 'melden', label: 'Melden', ico: 'plus', href: './#melden', center: true },
-  { id: 'gemerkt', label: 'Gemerkt', top: 'Gemerkt', ico: 'lesezeichen', href: './#mehr/merkliste' },
+  { id: 'gemerkt', label: 'Gemerkt', top: 'Gemerkt', ico: 'lesezeichen', href: './#gemerkt' },
   { id: 'mehr', label: 'Mehr', top: 'Mehr', ico: 'menu', href: './#mehr' },
 ];
 /** Bereiche ohne eigenen Navigationspunkt: welcher Punkt dabei hervorgehoben wird. */
 export const NAV_ZIEL = { naehe: 'mehr', favoriten: 'gemerkt' };
 
+const BADGE = new Set(['meldungen', 'gemerkt']);   // Abzeichen: neue Meldungen, Anzahl gemerkter Orte und Pegel
 const LS_LABELS = 'wm-nav-labels-gesehen';   // die Beschriftungen wurden beim ersten Start schon gezeigt
 const LANGDRUCK_MS = 400;
 const reduziert = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -23,7 +24,7 @@ const reduziert = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)'
 /** Text der Zahl am Abzeichen („99+“ statt riesiger Zahlen). */
 export const badgeText = (n) => (n > 99 ? '99+' : String(n));
 /** Beschriftung eines Navigationspunkts für Screenreader, z. B. „Meldungen, 3 neu“. */
-export const navLabel = (item, badge = 0) => (badge > 0 ? `${item.label}, ${badge > 99 ? 'über 99' : badge} neu` : item.label);
+export const navLabel = (item, badge = 0) => (badge > 0 ? `${item.label}, ${badge > 99 ? 'über 99' : badge}${item.id === 'gemerkt' ? '' : ' neu'}` : item.label);   // Gemerkt: Anzahl, Meldungen: neue
 
 /**
  * Navigation in die Seite einhängen. active: 'karte' | 'pegel' | 'meldungen' | 'mehr' (oder ein Bereich aus NAV_ZIEL)
@@ -40,7 +41,8 @@ export function mountNav({ top, bottom, active, onSelect, reportLink = false }) 
   };
   if (top) {
     top.replaceChildren(...NAV.filter(n => !n.center).map(n => h('a', { class: 'tn-item', href: n.href, dataset: { nav: n.id }, onclick: click(n) },
-      h('span', { class: 'tn-ico', html: icon(n.ico, 20) }), h('span', { text: n.top }))));
+      h('span', { class: 'tn-ico', html: icon(n.ico, 20) }), h('span', { text: n.top }),
+      BADGE.has(n.id) ? h('span', { class: 'nav-badge', hidden: true, 'aria-hidden': 'true' }) : null)));
     // Auf Unterseiten (Pegel-Ampel) führt „+ Melden“ zur Karte und öffnet dort die Auswahl
     if (reportLink) top.append(h('a', { class: 'report-btn', href: './#melden' }, h('span', { html: icon('plus', 20) }), h('span', { text: 'Melden' })));
   }
@@ -51,7 +53,7 @@ export function mountNav({ top, bottom, active, onSelect, reportLink = false }) 
     bottom.replaceChildren(ind, ...NAV.map(n => h('a', { class: 'bn-item' + (n.center ? ' bn-center' : ''), href: n.href, dataset: { nav: n.id }, 'aria-label': n.label,
       'aria-haspopup': n.center ? 'dialog' : null, onclick: click(n) },
       n.center ? h('span', { class: 'bn-plus', html: icon('plus', 28) }) : h('span', { class: 'bn-ico', html: icon(n.ico, 26) }),
-      n.id === 'meldungen' ? h('span', { class: 'nav-badge', hidden: true, 'aria-hidden': 'true' }) : null)));
+      BADGE.has(n.id) ? h('span', { class: 'nav-badge', hidden: true, 'aria-hidden': 'true' }) : null)));
   }
 
   // ---- Markierung: Maße aus den echten Plätzen (relativ zur Leiste)
@@ -161,11 +163,13 @@ export function mountNav({ top, bottom, active, onSelect, reportLink = false }) 
     },
     /** Zahl am Punkt (z. B. neue Meldungen); 0 blendet das Abzeichen aus. */
     setBadge(id, n) {
-      const a = platz(id), b = a?.querySelector('.nav-badge');
-      if (!b) return;
       const zahl = Math.max(0, Math.floor(Number(n) || 0));
-      b.hidden = !zahl; b.textContent = zahl ? badgeText(zahl) : '';
-      a.setAttribute('aria-label', navLabel(NAV.find(x => x.id === id), zahl));
+      for (const a of [platz(id), top?.querySelector(`.tn-item[data-nav="${id}"]`)]) {
+        const b = a?.querySelector('.nav-badge');
+        if (!b) continue;
+        b.hidden = !zahl; b.textContent = zahl ? badgeText(zahl) : '';
+        a.setAttribute('aria-label', navLabel(NAV.find(x => x.id === id), zahl));
+      }
     },
   };
   api.setActive(active);

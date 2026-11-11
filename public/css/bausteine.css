@@ -166,5 +166,11 @@ div.wm-zeile { cursor: default; }
 /* ---------------------------------------------------------------- Fokus nur für Bedienelemente
    Überschriften und Bereiche mit tabindex="-1" bekommen den Fokus nur per Skript (für Screenreader beim Öffnen) –
    sie zeigen keinen Rahmen (Wunsch des Nutzers: kein blauer Rahmen um „Vlotho“ u. ä.). Knöpfe/Links/Felder behalten ihren Fokusring. */
-/* bewusst hohe Spezifität (fünf Attribut-Teile): schlägt bereichseigene Fokusregeln wie „.pa-panel .pd-kopf :focus-visible“ ohne !important */
+/* bewusst hohe Spezifität (fünf Attribut-Teile): schlägt bereichseigene Fokusregeln mit mehreren Klassen ohne !important */
 [tabindex="-1"][tabindex="-1"][tabindex="-1"][tabindex="-1"]:focus, [tabindex="-1"][tabindex="-1"][tabindex="-1"][tabindex="-1"]:focus-visible { outline: none; }
+
+/* Desktop: offenes Sheet (Panel rechts) – Standort-Knopf und Kartenknöpfe rücken links daneben (Designumbau 3a) */
+@media (min-width: 768px) {
+  .has-sheet .fab { right: calc(var(--detail-w, 420px) + var(--wm-3)); }
+  .has-sheet .leaflet-top.leaflet-right, .has-sheet .leaflet-bottom.leaflet-right { right: var(--detail-w, 420px); }
+}
