@@ -273,14 +273,14 @@ export function vorOrtKarte({ standortId, daten, nah, onMehr, onGesendet, onGeae
       const frei = st.meldungen.find(m => m.typ === 'alles_frei');
       const sub = st.offline ? (st.unbekannt ? 'Offline – aktuelle Meldungen nicht verfügbar' : `Offline · ${standVon(st.zeit)}`)
         : frei ? `Zuletzt: „Alles frei“ · ${zeitpunkt(frei.erstelltAm)}` : null;
-      return h('div', { class: 'vo-kopf' + (klein ? ' is-klein' : '') }, kreis('check', 'is-ok'),
-        h('div', { class: 'vo-kopf-text' }, h('strong', { class: 'vo-status vo-ok', text: 'Heute keine Probleme gemeldet' }), sub && !klein ? h('small', { text: sub }) : null));
+      return h('div', { class: 'vo-lage' + (klein ? ' is-klein' : '') }, kreis('check', 'is-ok'),
+        h('div', { class: 'vo-lage-text' }, h('strong', { class: 'vo-status vo-ok', text: 'Heute keine Probleme gemeldet' }), sub && !klein ? h('small', { text: sub }) : null));
     }
     const m = probleme[0], t = TYPEN[m.typ] || TYPEN.hindernis;
     const sub = [alter(m.erstelltAm), m.bestaetigt ? `${m.bestaetigt}× bestätigt` : null, st.offline ? standVon(st.zeit) : null].filter(Boolean).join(' · ');
-    return h('div', { class: 'vo-kopf' + (klein ? ' is-klein' : '') },
+    return h('div', { class: 'vo-lage' + (klein ? ' is-klein' : '') },
       h('span', { class: 'vo-kreis is-typ', style: `--c:${t.farbe}`, html: icon(t.ico, 20), 'aria-hidden': 'true' }),
-      h('div', { class: 'vo-kopf-text' }, h('strong', { class: 'vo-status', text: t.zeile }),
+      h('div', { class: 'vo-lage-text' }, h('strong', { class: 'vo-status', text: t.zeile }),
         h('small', { text: sub }), m.notiz && !klein ? h('p', { class: 'vo-notiz', text: m.notiz }) : null, klein ? null : unpassend(m)));
   }
 
@@ -392,7 +392,7 @@ export function vorOrtKarte({ standortId, daten, nah, onMehr, onGesendet, onGeae
       const frei = st.meldungen.find(m => m.typ === 'alles_frei');
       const sub = st.offline ? `Offline · ${standVon(st.zeit)}` : frei ? `Zuletzt: „Alles frei“ · ${zeitpunkt(frei.erstelltAm)}` : null;
       teile.push(h('div', { class: 'vo-schmal-zeile' }, kreis('check', 'is-ok'),
-        h('div', { class: 'vo-kopf-text' }, h('strong', { class: 'vo-status vo-ok', text: 'Heute keine Probleme gemeldet' }), sub ? h('small', { text: sub }) : null),
+        h('div', { class: 'vo-lage-text' }, h('strong', { class: 'vo-status vo-ok', text: 'Heute keine Probleme gemeldet' }), sub ? h('small', { text: sub }) : null),
         h('button', { type: 'button', class: 'vo-schmal-btn', disabled: !online(), 'aria-label': 'Lage melden', onclick: () => onMehr?.() },
           h('span', { html: icon('pin', 16), 'aria-hidden': 'true' }), h('span', { text: 'Lage melden' }))));
     } else if (st.wahl) {

@@ -52,8 +52,8 @@ def run(b, w, hh):
     check(not pg.evaluate("document.querySelector('#report-menu').open"), f'{tag}: Melden-Menü: nach unten gewischt → geschlossen')
     # Standort-Detail (Blatt)
     pg.evaluate("window.__watermap.selectPlace('node/7000', { full: true })"); pg.wait_for_selector('#detail:not([hidden])'); pg.wait_for_timeout(400)
-    r = rect(pg, '#detail'); wisch(pg, w / 2, r['y'] + 25, 260)
-    check(pg.locator('#detail').is_hidden(), f'{tag}: Standort-Blatt: nach unten gewischt → geschlossen')
+    pg.wait_for_timeout(300); r = rect(pg, '#detail'); wisch(pg, w / 2, r['y'] + 12, 560); pg.wait_for_timeout(300)
+    check(pg.locator('#detail').count() == 0 and pg.evaluate('window.__watermap.state.selectedId') is None, f'{tag}: Standort-Sheet: nach unten gewischt → geschlossen, Auswahl aufgehoben')
     # Wetter-Fenster aus dem Detail
     pg.evaluate("window.__watermap.selectPlace('node/7000', { full: true })"); pg.wait_for_selector('#detail:not([hidden])'); pg.wait_for_timeout(400)
     pg.evaluate("window.__watermap.selectPlace(window.__watermap.state.places.find(p => p.type === 'slip').id, { full: true })"); pg.wait_for_timeout(400)

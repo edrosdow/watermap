@@ -1,5 +1,7 @@
-// Detailansicht eines Standorts (Seitenpanel am Desktop, Bottom Sheet am Smartphone).
+// Detailansicht eines Standorts im Sheet-Rahmen (Designumbau 3b, 7.72.1): Handy von unten (Stufe klein = Kopf, Aktionen, „Details“),
+// Desktop Panel rechts. Kopf (Titel links, ×) kommt vom Rahmen; renderDetail liefert die Angaben dafür und den Inhalt.
 import { h } from './dom.js';
+import { aktionen } from './bausteine.js';
 import { icon, glyphSvg } from './icons.js';
 import {
   TYPES, UNKNOWN, FILTERS, displayName, subtitle, describeFacts, describePrices, bootPunkte, formatDate, navUrl,
@@ -58,39 +60,41 @@ export function tagRow(tags) {
   return tags.length ? h('div', { class: 'dtags' }, tags.map(t => h('span', { class: 'dtag' + (t.good ? ' is-good' : '') + (t.cls ? ' ' + t.cls : ''), text: t.text }))) : null;
 }
 
-/** „Route“ – Straßen-Navigation bis zum Standort (keine Wasserroute). */
-export function routeLink(p, cls = 'dbtn dbtn-primary') {
-  return h('a', { class: cls, href: navUrl(p), target: '_blank', rel: 'noopener noreferrer', title: 'Route über Straßen bis zum Standort (keine Wasserroute)' },
-    h('span', { html: icon('navigate', 18) }), h('span', { text: 'Route' }));
+/** Kopf-Angaben für den Sheet-Rahmen: Name, „Slipanlage · Weser · 4,3 km“. */
+export function detailKopf(p, user) {
+  const dist = user ? haversine(user.lat, user.lon, p.lat, p.lon) : null;
+  return { titel: displayName(p), titelId: 'detail-name', unter: [TYPES[p.type].label, p.water?.name || null, dist !== null ? formatDistance(dist) : null].filter(Boolean).join(' · ') };
 }
 
+/** Rückgabe: [kopf-Angaben, Inhalt]. actions.details(): Stufe „groß“ (Knopf „Details“, nur in der Stufe „klein“ sichtbar). */
 export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, pegel, vorOrt }) {
   const isFav = favorites.has(p.id);
-  const dist = user ? haversine(user.lat, user.lon, p.lat, p.lon) : null;
-  const kicker = [TYPES[p.type].label, p.water?.name || null].filter(Boolean).join(' · ');
   const ort = p.locality ? (p.locality_kind === 'nearest' ? `bei ${p.locality}` : p.locality) : null;
 
-  const head = h('header', { class: 'detail-head dh' },
-    h('div', { class: 'detail-title' },
-      h('p', { class: `dh-kicker k-${p.type}`, text: kicker }),
-      h('h2', { id: 'detail-name', text: displayName(p) }),
-      // Eine Unterzeile: „bei Bünde · OpenStreetMap · 4,3 km“ (Ort, Herkunft, Entfernung)
-      h('div', { class: 'dh-meta' }, ort ? h('span', { text: `${ort} ·` }) : null, trustLine(p),
-        dist !== null ? h('span', { title: 'Luftlinie von deinem Standort', text: `· ${formatDistance(dist)}` }) : null)),
-    h('button', { type: 'button', class: 'dh-close', 'aria-label': 'Details schließen', title: 'Schließen', html: icon('close', 22), onclick: actions.close }));
-
   const body = h('div', { class: 'detail-body' });
+  // Ort und Herkunft („bei Bünde · OpenStreetMap · ungeprüft“) als kleine Zeile unter dem Kopf
+  body.append(h('div', { class: 'st-meta' }, ort ? h('span', { text: `${ort} ·` }) : null, trustLine(p)));
   if (vorOrt?.zeile) body.append(vorOrt.zeile);   // wichtigste Lagemeldung („Heute vor Ort“)
   const slip = p.type === 'slip';
   const tags = tagRow(placeTags(p, 4));
   if (tags && !slip) body.append(tags);   // Slipanlagen: Etiketten erst nach den Knöpfen
 
-  // Route · Merken · Teilen
-  body.append(h('div', { class: 'dbtns' },
-    routeLink(p),
-    h('button', { type: 'button', class: 'dbtn fav', 'aria-pressed': String(isFav), title: isFav ? 'Aus Favoriten entfernen' : 'Als Favorit speichern', onclick: actions.onFavorite },
-      h('span', { html: icon('star', 18, isFav) }), h('span', { text: isFav ? 'Gemerkt' : 'Merken' })),
-    h('button', { type: 'button', class: 'dbtn', title: 'Link teilen', onclick: actions.share }, h('span', { html: icon('share', 18) }), h('span', { text: 'Teilen' }))));
+  // Aktionsleiste (Bausteine): Route (primär) · Merken · Teilen
+  const leiste = aktionen([
+    { icon: 'navigate', text: 'Route', primaer: true, href: navUrl(p) },
+    { icon: 'star', text: isFav ? 'Gemerkt' : 'Merken', gemerkt: isFav, onclick: actions.onFavorite },
+    { icon: 'share', text: 'Teilen', onclick: actions.share },
+  ]);
+  leiste.classList.add('dbtns');
+  const route = leiste.querySelector('a');
+  Object.assign(route, { target: '_blank', rel: 'noopener noreferrer', title: 'Route über Straßen bis zum Standort (keine Wasserroute)' });
+  const fav = leiste.querySelectorAll('.wm-aktion')[1];
+  fav.classList.add('fav'); fav.title = isFav ? 'Aus „Gemerkt“ entfernen' : 'Merken';
+  if (isFav) fav.querySelector('span').innerHTML = icon('star', 22, true);
+  leiste.querySelectorAll('.wm-aktion')[2].title = 'Link teilen';
+  body.append(leiste);
+  // Handy, Stufe „klein“: „Details“ öffnet die Stufe „groß“; bis hierher reicht die Stufe „klein“
+  body.append(h('button', { type: 'button', class: 'wm-btn is-primaer st-details', onclick: actions.details }, 'Details'), h('span', { class: 'st-klein-ende', 'aria-hidden': 'true' }));
   if (tags && slip) body.append(tags);
 
   // Pegel am selben Gewässer (wird nachgeladen; ohne Pegel bleibt der Platz leer)
@@ -186,7 +190,7 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
   body.append(h('div', { class: 'detail-links' },
     h('button', { type: 'button', onclick: actions.report, text: 'Fehler melden' })));
 
-  return [head, body];
+  return [detailKopf(p, user), body];
 }
 
 /** „Wichtig für dein Boot“: sechs Angaben mit Ampel (Text, nie nur Farbe), fehlende Angaben zum Ergänzen. */
@@ -196,7 +200,7 @@ function bootBox(p, actions) {
   const TON = { ok: 'passt', warn: 'mit Einschränkung', stop: 'nicht möglich', unb: 'unbekannt' };
   const extra = [p.opening_hours ? `Öffnungszeiten: ${p.opening_hours}` : null, p.operator ? `Betreiber: ${p.operator}` : null].filter(Boolean);
   return h('section', { class: 'wb', 'aria-labelledby': 'wb-titel' },
-    h('div', { class: 'wb-kopf' }, h('span', { class: 'wb-ico', html: icon('boat', 18), 'aria-hidden': 'true' }), h('h3', { id: 'wb-titel', text: 'Wichtig für dein Boot' })),
+    h('h3', { class: 'wm-abschnitt wb-titel', id: 'wb-titel', text: 'Wichtig für dein Boot' }),
     h('ul', { class: 'wb-liste' }, punkte.map(x => h('li', { class: `wb-p is-${x.ton}` },
       h('i', { 'aria-hidden': 'true' }),
       h('div', {}, h('small', { text: x.titel }), h('strong', { text: x.wert }), h('span', { class: 'sr-only', text: ` (${TON[x.ton]})` }))))),

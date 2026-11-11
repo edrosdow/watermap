@@ -192,7 +192,6 @@
 .pd .gc-svg { width: 100%; height: auto; }
 
 /* Detail im Panel über der Karte */
-.detail.is-pegel { background: var(--wm-flaeche-2); }
 .pd.is-eingebettet .pd-oben { padding: 4px 16px 34px; }
 .pd.is-eingebettet .pd-wert strong { font-size: 54px; }
 .pd.is-eingebettet .pd-body { padding: 0 12px 16px; }
@@ -245,9 +244,7 @@
   .pd-aend { font-size: 14px; }
   .pd-zeit { font-size: 13.5px; }
   .pd-body { padding: 0 12px 8px; }
-  .detail.is-pegel { max-height: 92%; }
-  .detail.is-pegel .detail-scroll { max-height: 92dvh; }
-}
+    }
 
 /* Wetter im Pegel-Panel */
 .pd-wetter.block { margin: 0; border: 0; }
@@ -719,7 +716,6 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pz-hsw.pd-zdot, .pd-zst.pz-hsw i { background: var(--wm-stop); }
 /* Details */
 .pd.pd { background: var(--pd-blau); color: var(--navy); min-height: 100%; }
-.detail.is-pegel:has(.pd) { background: var(--wm-wasser); }
 .pd.pd .pd-oben { background: transparent; color: var(--navy); text-align: center; padding: 4px 16px 6px; border-radius: 0; }
 .pd.pd .pd-ort { margin: 2px 0 0; color: var(--pd-matt); font-size: 14px; }
 .pd.pd .pd-ort.is-alt { color: var(--wm-tanke-text); font-weight: 600; }
@@ -892,8 +888,7 @@ details.pd-zeile[open] { padding-bottom: 10px; }
 .has-detail .pk-legende, .is-picking .pk-legende { display: none; }
 @media (max-width: 767px) {
   .pk-legende { bottom: calc(var(--bn-space) + 70px); }
-  .has-peek .pk-legende { display: none; }
-}
+  }
 /* Kategorie-Chips: Farbpunkt links, aktiv Häkchen statt Punkt (DESIGN_SYSTEM.md 5, Chip) */
 .cat-pegel { --cc: var(--wm-gut); }
 .cat-punkt { flex: none; width: 10px; height: 10px; border-radius: var(--wm-r-rund); background: var(--cc); }

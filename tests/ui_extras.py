@@ -156,7 +156,7 @@ with sync_playwright() as p:
 
         # Standort öffnen → keine Umgebungsliste mehr (7.43.0), keine Live-Abfrage
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])}, {{ full: true }})")
-        pg.wait_for_selector('#detail h2', timeout=8000); pg.wait_for_timeout(600)
+        pg.wait_for_selector('#detail-name', timeout=8000); pg.wait_for_timeout(600)
         check(pg.locator('#detail .nearby-list').count() == 0 and 'Umgebung (bis' not in pg.inner_text('#detail'), f'{name}: keine Liste „Umgebung“ im Standort-Detail')
         check(not live['queries'], f'{name}: keine Live-Abfrage der Umgebung')
 
@@ -181,7 +181,7 @@ with sync_playwright() as p:
                        ['Kran', None, 'Kran bis 10 t'], ['Öffnungszeiten', None, '']], f'{name}: Marina-Felder werden gefüllt, Rest als eigene Zeilen ({rows})')
         fb.scroll_into_view_if_needed(); pg.screenshot(path=str(SHOTS / f'{name}_0_hafeninfo.png'))
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])}, {{ full: true }})")
-        pg.wait_for_selector('#detail h2', timeout=8000)
+        pg.wait_for_selector('#detail-name', timeout=8000)
 
         # Eintrag öffnen → Detail
         pg.evaluate("window.__watermap.setExtras('wasser', true).then(() => window.__watermap.selectExtra('node/9000001', { fly: false }))"); pg.wait_for_selector('#detail .facts', timeout=8000)
@@ -199,7 +199,7 @@ with sync_playwright() as p:
         pg.evaluate("window.__watermap.selectExtra('node/9000004', { fly: false })"); pg.wait_for_timeout(150)
         d = pg.inner_text('#detail')
         check('Rollstuhlgerecht' in d and 'Wickeltisch' in d and 'Nicht bekannt' in d, f'{name}: Unbekanntes bleibt „Nicht bekannt“')
-        pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
         check(pg.locator('#detail').is_hidden(), f'{name}: Escape schließt')
 
         pg.evaluate("window.__watermap.setExtras('wasser', false)"); pg.wait_for_timeout(200)

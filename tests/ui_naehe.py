@@ -259,7 +259,7 @@ def run(b, w, hh, mobile):
         liste.evaluate('e => e.scrollTop = 300'); pg.wait_for_timeout(100)
         y = liste.evaluate('e => e.scrollTop')
         ziel = pg.locator('.place.nk').nth(4); zid = ziel.get_attribute('data-id')
-        ziel.click(); pg.wait_for_selector('#peek:not([hidden])'); pg.wait_for_timeout(300)
+        ziel.click(); pg.wait_for_selector('#detail.is-klein.is-offen'); pg.wait_for_timeout(300)
         check(pg.locator(f'{nav} [data-nav=karte]').get_attribute('aria-current') == 'page' and pg.evaluate('window.__watermap.state.selectedId') == zid, f'{tag}: Tipp → Karte, Vorschau des Standorts')
         pg.go_back(); pg.wait_for_selector('.place.nk'); pg.wait_for_timeout(300)
         y2 = liste.evaluate('e => e.scrollTop')

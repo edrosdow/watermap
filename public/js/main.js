@@ -9,7 +9,7 @@ import { loadMapLibraries, createMap } from './map.js';
 import { buildIndex, searchLocal, geocode } from './search.js';
 import { favorites, prefs } from './favorites.js';
 import { openForm } from './forms.js';
-import { renderDetail, placeTags, tagRow, routeLink } from './detail.js';
+import { renderDetail } from './detail.js';
 import { mountNav, popover } from './nav.js';
 import { wischenZuMachen } from './wischen.js';
 import { suchfelderMitX } from './suchfeld.js';
@@ -31,7 +31,7 @@ import { meldungenSeite } from './meldungen-uebersicht.js';
 import { unpassendMelden } from './meldung-unpassend.js';
 import { slipErgaenzen } from './slip-ergaenzen.js';
 import { imGebiet, aufGebietBeschneiden, gebietLaden } from './gebiet.js';
-import { sheetOeffnen, offeneSheets, kopf } from './bausteine.js';
+import { sheetOeffnen, offeneSheets, kopf, marke } from './bausteine.js';
 import { pegelSheet, slipsAmPegel, pegelSuche } from './pegel-sheet.js';
 import { weatherSection, wetterZeile } from './wetter.js';
 import { GROUPS, loadExtras, renderExtraDetail, glyph } from './extras.js';
@@ -40,7 +40,7 @@ import { enrichFacts } from './hafeninfo.js';
 const state = {
   places: [], byId: new Map(), index: [], meta: null, issues: [], invalid: 0,
   cats: new Set(), subs: new Set(), tab: 'list',   // cats: sichtbare Kategorien (Start: keine – der Nutzer wählt)
-  view: 'karte', peekId: null,                     // view: karte | naehe | gemerkt | meldungen | mehr (steht in der Adresse; außer Karte je ein Sheet)
+  view: 'karte',                     // view: karte | naehe | gemerkt | meldungen | mehr (steht in der Adresse; außer Karte je ein Sheet)
   mehrSeite: null,                                                                   // „Mehr“: null | 'einstellungen' (Sheet über „Mehr“)
   meld: new Map(), meldOffline: false, meldOnly: false,   // „Heute vor Ort“: Standort-ID → { n, typ }
   selectedId: null, user: null,
@@ -54,7 +54,7 @@ const el = {
   // „In der Nähe“: Kopfbereich, Zählzeile, Liste und Datenstand – werden beim Öffnen in das Sheet gehängt (Designumbau 3a)
   naeheKopf: h('div', { id: 'naehe-steuer', class: 'nh-steuer' }), listHead: h('div', { id: 'list-head', class: 'list-head' }),
   list: h('ul', { id: 'list', class: 'list wm-gruppe', 'aria-live': 'polite' }), datainfo: h('div', { id: 'datainfo', class: 'datainfo' }),
-  toolbar: $('#toolbar'), detail: $('#detail'), peek: $('#peek'), mapEl: $('#map'), dlg: $('#dlg'),
+  toolbar: $('#toolbar'), mapEl: $('#map'), dlg: $('#dlg'),
   q: $('#q'), suggest: $('#suggest'), banner: $('#banner'), pickbar: $('#pickbar'),
 };
 
@@ -96,7 +96,7 @@ async function init() {
     state.map = createMap(el.mapEl, {
       useCluster: libs.cluster,
       onMoveEnd: debounce(() => { renderList(); updateInview(); ansichtMerken(); }, 180),
-      onMapClick: () => { if (state.view === 'naehe' && isMobile()) { setView('karte'); return; } if (state.selectedId || state.gaugeId || state.extraId || state.peekId) closeDetail(); },
+      onMapClick: () => { if (state.view === 'naehe' && isMobile()) { setView('karte'); return; } if (state.selectedId || state.gaugeId || state.extraId) closeDetail(); },
       onMarkerClick: (id) => selectPlace(id),
       onAusserhalb: () => toast(CONFIG.GEBIET.hinweis),
     });
@@ -177,8 +177,7 @@ function lageMelden(p, { distance = null, zurueck = false } = {}) {
     onBack: zurueck ? () => { renderReportMenu({ fragen: false }); reportPop.open($(isMobile() ? '#bottomnav [data-nav="melden"]' : '#btn-report')); } : null,
     onSent: (liste) => {
       meldLokal(p.id, liste);
-      if (state.peekId === p.id) showPeek(p);
-      else if (state.selectedId === p.id && !el.detail.hidden) showDetail(p, { scrollTo: 'vor-ort' });
+      if (state.selectedId === p.id && standort) showDetail(p, { scrollTo: 'vor-ort' });
     },
   });
 }
@@ -449,14 +448,14 @@ function leereKategorie() {
 }
 
 // ============================================================ Auswahl und Details
-/** Handy: so viel vom unteren Kartenrand deckt die Vorschau-Karte samt schwebender Navigationsleiste ab. */
-function peekVerdeckt() {
-  const k = el.mapEl.getBoundingClientRect(), p = el.peek.getBoundingClientRect();
-  return p.height ? Math.max(0, Math.round(k.bottom - p.top)) : 0;
-}
+/** Freie Fläche der Karte neben bzw. über dem Standort-Sheet (für das Hinrücken). */
 function detailInset() {
-  if (isMobile()) return state.peekId ? { bottom: (peekVerdeckt() || el.peek.offsetHeight) + 16, top: 16 } : { bottom: Math.round(el.mapEl.offsetHeight * 0.6), top: 16 };
-  return { right: el.detail.offsetWidth + 24, top: 16 };
+  const sh = standort?.sheet;
+  if (isMobile()) {
+    const klein = parseFloat(sh?.el.style.getPropertyValue('--wm-sheet-klein')) || window.innerHeight * 0.45;
+    return sh?.stufe() === 'gross' ? { top: 120, bottom: window.innerHeight - 180 } : { top: 120, bottom: klein + 16 };
+  }
+  return { right: (sh?.el.offsetWidth || 420) + 24, top: 16 };
 }
 
 function selectPlace(id, { fly = true, updateHash = true, full = false } = {}) {
@@ -470,9 +469,9 @@ function selectPlace(id, { fly = true, updateHash = true, full = false } = {}) {
   if (!state.cats.has(p.type)) toggleCat(p.type, true);   // z. B. Link oder Suche: Kategorie des Standorts einblenden
   state.selectedId = id;
   if (state.map) { state.map.select(id); }
-  // Handy: erst die kompakte Vorschau über der Navigation, „Details“ öffnet das Panel
-  if (isMobile() && !full && !pick) { closeDetailPanel(); showPeek(p); } else { hidePeek(); showDetail(p); }
-  if (state.map && fly) state.map.reveal(p, { zoom: 15, inset: detailInset() });
+  // Standort-Sheet: Handy erst Stufe „klein“ (Kopf, Aktionen, „Details“), Desktop Panel rechts
+  showDetail(p, { stufe: isMobile() && !full && !pick ? 'klein' : 'gross' });
+  if (state.map && fly) setTimeout(() => state.map?.reveal(p, { zoom: 15, inset: detailInset() }), 60);   // nach dem Messen der Stufe „klein“
   if (updateHash) setSelHash('p', id);
   $$('.place', el.list).forEach(b => b.classList.toggle('is-selected', b.dataset.id === id));
   announce(`${displayName(p)} ausgewählt`);
@@ -480,8 +479,8 @@ function selectPlace(id, { fly = true, updateHash = true, full = false } = {}) {
   return true;
 }
 
-function showDetail(p, { scrollTo = null } = {}) {
-  const [head, body] = renderDetail(p, {
+function showDetail(p, { scrollTo = null, stufe = null } = {}) {
+  const [kopf, body] = renderDetail(p, {
     user: state.user,
     enrichFacts: enrichFacts(state.meta, p.id),
     weather: p.type === 'slip' ? wetterZeile(p.lat, p.lon, { name: displayName(p) }) : weatherSection(p.lat, p.lon),   // Slipanlagen: Zeile + Fenster
@@ -493,13 +492,23 @@ function showDetail(p, { scrollTo = null } = {}) {
       addPhoto: () => openReport('foto-einreichen', { standort_id: p.id }),
       reportPhoto: (ph) => openReport('fehler-melden', { standort_id: p.id, art: 'foto', details: `Foto unpassend: ${ph.url}\nGrund: ` }),
       ergaenzen: () => slipErgaenzen({ place: p, toast }),
+      details: () => standort?.sheet.stufe('gross'),
     },
     pegel: pegelInfo(p).then(info => info && pegelBox(info)),
     vorOrt: p.type === 'slip' ? vorOrtTeile(p) : null,   // „Heute vor Ort“ nur bei Slipanlagen
   });
-  mountDetail(head, body, 'p:' + p.id);
+  standortZeigen({ kopf, body, key: 'p:' + p.id, stufe: scrollTo ? 'gross' : stufe });
+  // Handy, Stufe „klein“: aktuelle Lagemeldung als Zeile über „Details“ (wie früher in der Vorschau-Karte); Tipp → „Heute vor Ort“
+  if (p.type === 'slip' && state.meld.has(p.id)) standortLaden(p.id).then((d) => {
+    if (state.selectedId !== p.id || !body.isConnected) return;
+    const z = statusZeile(d.meldungen, { offline: d.offline, zeit: d.zeit, onOpen: () => showDetail(p, { scrollTo: 'vor-ort' }) });
+    if (!z) return;
+    z.classList.add('st-lage');
+    body.querySelector('.st-details')?.before(z);
+    standortKleinMessen();
+  });
   if (scrollTo === 'vor-ort') setTimeout(() => {
-    const sec = el.detail.querySelector('#heute-vor-ort');
+    const sec = standort?.sheet.inhalt.querySelector('#heute-vor-ort');
     sec?.scrollIntoView({ block: 'start' }); sec?.focus({ preventScroll: true });
   }, 0);
 }
@@ -524,55 +533,10 @@ function vorOrtTeile(p) {
   return { zeile: null, section };
 }
 
-// ---- Vorschau-Karte (Handy)
-function showPeek(p) {
-  state.peekId = p.id;
-  const isFav = favorites.has(p.id);
-  const dist = state.user ? haversine(state.user.lat, state.user.lon, p.lat, p.lon) : null;
-  const sub = [p.water?.name || p.locality || TYPES[p.type].label, dist !== null ? `${formatDistance(dist)} entfernt` : null].filter(Boolean).join(' · ');
-  const tags = h('div', { class: 'peek-tags' }, tagRow(placeTags(p, 3)));
-  const details = h('button', { type: 'button', class: 'dbtn', text: 'Details', onclick: () => { hidePeek(); showDetail(p); el.detail.focus({ preventScroll: true }); } });
-  const card = h('div', { class: 'peek-card' },
-    h('span', { class: `peek-ico bg-${p.type}`, html: glyphSvg(p.type, 28) }),
-    h('div', { class: 'peek-text' }, h('h2', { class: 'peek-name', id: 'peek-name', text: displayName(p) }), h('p', { class: 'peek-sub', text: sub }), tags),
-    h('button', { type: 'button', class: 'peek-fav', 'aria-pressed': String(isFav), 'aria-label': isFav ? 'Aus Favoriten entfernen' : 'Als Favorit speichern', html: icon('star', 22, isFav),
-      onclick: () => { favorites.toggle(p.id); showPeek(p); renderList(); updateTabs(); state.map?.refresh(p.id); } }),
-    h('div', { class: 'peek-meld' }),
-    h('div', { class: 'peek-actions' }, routeLink(p), details));
-  clear(el.peek).append(card);
-  el.peek.setAttribute('aria-labelledby', 'peek-name');
-  el.peek.hidden = false;
-  document.body.classList.add('has-peek');
-  document.body.style.setProperty('--peek-h', `${el.peek.offsetHeight}px`);
-  if (p.type === 'slip' && state.meld.has(p.id)) {
-    standortLaden(p.id).then((d) => {
-      if (state.peekId !== p.id) return;
-      meldStandortGeladen(p.id, d);
-      const z = statusZeile(d.meldungen, { offline: d.offline, zeit: d.zeit, onOpen: () => { hidePeek(); showDetail(p, { scrollTo: 'vor-ort' }); } });
-      card.querySelector('.peek-meld').replaceChildren(...[z].filter(Boolean));
-      document.body.style.setProperty('--peek-h', `${el.peek.offsetHeight}px`);
-    });
-  }
-  // Pegel-Etikett nur, wenn für diesen Pegel ein Mindestpegel gespeichert ist („Passt mein Boot?“)
-  pegelInfo(p).then((info) => {
-    if (!info?.ampel || state.peekId !== p.id) return;
-    const row = tags.querySelector('.dtags') || tags.appendChild(h('div', { class: 'dtags' }));
-    row.append(h('span', { class: `dtag ${AMPEL_KLASSE[info.ampel.zustand].cls}`, text: `Pegel: ${info.ampel.wort}` }));
-    document.body.style.setProperty('--peek-h', `${el.peek.offsetHeight}px`);
-  });
-}
-
-function hidePeek() {
-  if (!state.peekId && el.peek.hidden) return;
-  state.peekId = null;
-  el.peek.hidden = true; clear(el.peek);
-  document.body.classList.remove('has-peek');
-}
-
 // ---- Pegel am selben Gewässer (nächster PEGELONLINE-Pegel, siehe naechsterPegel)
 function allGauges() { return pegelLaden().then(st => st.gauges); }
 // „Passt mein Boot?“ (Mindestpegel je Pegel, mindestpegel.js) → Klassen des Pegel-Kastens und des Etiketts in der Vorschau
-const AMPEL_KLASSE = { gut: { cls: 'is-good', box: 'is-gruen' }, warn: { cls: 'is-warn', box: '' }, stop: { cls: 'is-bad', box: 'is-rot' } };
+const AMPEL_KLASSE = { gut: { box: 'is-gruen' }, warn: { box: 'is-warn' }, stop: { box: 'is-rot' } };
 const pegelCache = new Map();
 function pegelInfo(p) {
   if (!pegelCache.has(p.id)) pegelCache.set(p.id, allGauges().then(list => naechsterPegel(p, list)).catch(() => null));
@@ -581,14 +545,16 @@ function pegelInfo(p) {
 
 function pegelBox({ g, d, ampel }) {
   const trend = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' }[g.trend];
-  const weit = d > 2000 ? `Pegel ${formatDistance(d)} entfernt` : null;   // weiter weg: ehrlich dazusagen
-  // ganzer Kasten öffnet die Pegel-Details in einem Fenster über der Standortansicht (wie „Wetter und Wind“); neuer Tab bleibt möglich
-  return h('a', { class: 'pegel-box ' + (ampel ? AMPEL_KLASSE[ampel.zustand].box : 'is-neutral'), href: `#karte/pegel/${encodeURIComponent(g.id)}`, 'aria-haspopup': 'dialog',
+  const weit = d > 2000 ? `${formatDistance(d)} entfernt` : null;   // weiter weg: ehrlich dazusagen
+  // Ortszeile (Bausteine, Designumbau 3b): öffnet die Pegel-Details als Sheet über dem Standort; neuer Tab bleibt möglich
+  const a = h('a', { class: 'wm-zeile pegel-box ' + (ampel ? AMPEL_KLASSE[ampel.zustand].box : 'is-neutral'), href: `#karte/pegel/${encodeURIComponent(g.id)}`, 'aria-haspopup': 'dialog',
     onclick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); pegelFenster(g, e.currentTarget); } },
-    h('div', {},
-      h('p', {}, h('strong', { text: `Pegel ${g.name}: ${fmtN(Math.round(g.value))} ${g.unit}${trend ? `, ${trend}` : ''}` })),
-      h('small', { text: [ampel ? `Passt mein Boot? ${ampel.satz}` : 'Verlauf, Kennwerte und Trend', weit].filter(Boolean).join(' · ') })),
-    h('span', { class: 'pegel-box-mehr', text: 'Details ›' }));
+    h('span', { class: 'wm-kachel-ico', html: icon('gauge', 20), 'aria-hidden': 'true' }),
+    h('span', { class: 'wm-zeile-text' }, h('strong', { text: `Pegel ${g.name}` }),
+      h('small', { text: [ampel ? `Passt mein Boot? ${ampel.satz}` : [PEGEL_ZUSTAND[pegelZustand(g)]?.text, trend].filter(Boolean).join(' · '), weit].filter(Boolean).join(' · ') })),
+    ampel ? marke(ampel.zustand, ampel.wort) : h('span', { class: 'wm-zeile-wert', text: `${fmtN(Math.round(g.value))} ${g.unit}` }),
+    h('span', { class: 'wm-pfeil', html: icon('chevron', 18), 'aria-hidden': 'true' }));
+  return h('div', { class: 'wm-gruppe pegel-gruppe' }, a);
 }
 
 /** Pegel-Details im Fenster über der Standortansicht: dieselbe Darstellung wie im Kartenpanel, „×“ führt zurück zum Standort. */
@@ -645,23 +611,50 @@ async function pegelFensterOeffnen(id, opener = document.activeElement) {
 }
 
 
-/** key: wer gezeigt wird – nur beim Neuzeichnen desselben Eintrags bleibt die Scroll-Position erhalten
- *  (sonst öffnete ein anderer Standort mitten im Panel und der Kopf überdeckte die ersten Zeilen). */
-function mountDetail(head, body, key = '') {
-  const scroll = el.detail.querySelector('.detail-scroll');
-  const prev = scroll && el.detail.dataset.key === key ? scroll.scrollTop : 0;
-  el.detail.dataset.key = key;
-  clear(el.detail).append(h('div', { class: 'detail-scroll' }, head, body));
-  el.detail.hidden = false;
-  el.detail.setAttribute('aria-labelledby', 'detail-name');
-  document.body.classList.add('has-detail');
-  if (prev) el.detail.querySelector('.detail-scroll').scrollTop = prev;
-  if (!el.detail.dataset.opened) { el.detail.dataset.opened = '1'; el.detail.tabIndex = -1; el.detail.focus({ preventScroll: true }); }
+// ============================================================ Standort-Sheet (Designumbau 3b, 7.72.1)
+// Slipanlagen, Häfen, Tankstellen und Zusatzorte im gemeinsamen Rahmen: Handy von unten (Stufe „klein“ = Kopf, Aktionen, „Details“;
+// ersetzt die frühere Vorschau-Karte), Desktop Panel rechts. Wetter- und Pegel-Fenster legen sich darüber. Das Sheet trägt die id „detail“.
+let standort = null;   // { sheet, key }
+
+/** Inhalt zeigen; ein offenes Sheet tauscht Kopf und Inhalt (gleicher Eintrag: Scroll-Stand bleibt). stufe: 'klein' | 'gross' | null (beibehalten). */
+function standortZeigen({ kopf, body, key, stufe = null }) {
+  if (standort?.sheet.offen) {
+    const sh = standort.sheet, top = standort.key === key ? sh.inhalt.scrollTop : 0;
+    sh.setzeKopf(kopf); sh.setzeInhalt(body); sh.inhalt.scrollTop = top;
+    if (stufe && sh.stufe() !== stufe) sh.stufe(stufe);
+  } else {
+    const sh = sheetOeffnen({ inhalt: body, kopf, stufe: stufe || 'gross', klasse: 'st-sheet', opener: document.activeElement,
+      onStufe: (x) => { if (x === 'klein') standortKleinMessen(); },
+      onSchliessen: ({ durchNutzer }) => {
+        if (standort?.sheet === sh) { standort = null; document.body.classList.remove('has-detail'); }
+        if (durchNutzer) closeDetail();   // ×, Wischen, Esc: Auswahl und Adresse zurücksetzen
+      } });
+    sh.el.id = 'detail';
+    standort = { sheet: sh };
+    document.body.classList.add('has-detail');
+  }
+  standort.key = key;
+  if (standort.sheet.stufe() === 'klein') standortKleinMessen();
 }
 
-function closeDetailPanel() {
-  el.detail.hidden = true; clear(el.detail); delete el.detail.dataset.opened; el.detail.classList.remove('is-pegel');
+/** Handy, Stufe „klein“: Höhe bis unter den Knopf „Details“ (+ Platz der schwebenden Navigation). */
+function standortKleinMessen() {
+  const sh = standort?.sheet;
+  if (!sh || !isMobile()) return;
+  requestAnimationFrame(() => {
+    const ende = sh.inhalt.querySelector('.st-klein-ende');
+    if (!ende) return;
+    const nav = document.querySelector('#bottomnav');
+    const navPlatz = nav && nav.getClientRects().length ? Math.max(0, window.innerHeight - nav.getBoundingClientRect().top) + 8 : 16;
+    sh.el.style.setProperty('--wm-sheet-klein', `${Math.ceil(ende.getBoundingClientRect().bottom - sh.el.getBoundingClientRect().top + 4 + navPlatz)}px`);
+  });
+}
+
+/** Standort-Sheet schließen (ohne Auswahl und Adresse zu ändern). */
+function standortZu() {
+  const s = standort; standort = null;
   document.body.classList.remove('has-detail');
+  s?.sheet.schliessen();
 }
 
 function closeDetail() {
@@ -669,8 +662,7 @@ function closeDetail() {
   state.selectedId = null;
   pegelZu();
   if (state.extraId) { state.extraId = null; state.map?.selectExtra(null); }
-  closeDetailPanel();
-  hidePeek();
+  standortZu();
   if (state.map) state.map.select(null);
   setSelHash(null);
   $$('.place', el.list).forEach(b => b.classList.remove('is-selected'));
@@ -754,7 +746,7 @@ function selectGauge(id, { fly = true, stufe = null } = {}) {
   if (state.view !== 'karte') setView('karte');
   if (state.selectedId) { state.selectedId = null; state.map?.select(null); $$('.place', el.list).forEach(b => b.classList.remove('is-selected')); }
   if (state.extraId) { state.extraId = null; state.map?.selectExtra(null); }
-  hidePeek(); closeDetailPanel();
+  standortZu();
   state.gaugeId = id;
   state.map?.selectGauge(id);
   const sh = pegelBlatt.oeffnen(g, { stufe });
@@ -1005,10 +997,9 @@ function selectExtra(id, { fly = true } = {}) {
   pegelZu();
   state.extraId = id;
   state.map?.selectExtra(id);
-  const [head, body] = renderExtraDetail(x, { close: closeDetail, user: state.user });
-  mountDetail(head, body, 'x:' + id);
-  if (state.map && fly) state.map.reveal(x, { zoom: 16, inset: detailInset() });
-  hidePeek();
+  const [kopf, body] = renderExtraDetail(x, { close: closeDetail, user: state.user });
+  standortZeigen({ kopf, body, key: 'x:' + id, stufe: 'gross' });
+  if (state.map && fly) setTimeout(() => state.map?.reveal(x, { zoom: 16, inset: detailInset() }), 60);
   setSelHash('x', id);
   announce(`${x.name || 'Eintrag'} ausgewählt`);
   return true;
@@ -1070,7 +1061,7 @@ function setView(view, { push = true, spaeter = false, sofort = false } = {}) {
   const changed = view !== state.view;
   const vorher = state.view;
   // ein Bereich legt sich über die Karte: Auswahl (Standort, Pegel) vorher schließen – so bleibt nur ein Panel rechts
-  if (view !== 'karte' && (state.selectedId || state.gaugeId || state.extraId || state.peekId)) closeDetail();
+  if (view !== 'karte' && (state.selectedId || state.gaugeId || state.extraId)) closeDetail();
   state.view = view;
   if (view !== 'mehr') state.mehrSeite = null;
   const neu = view === 'karte' ? (bereichZu(), false) : bereichOeffnen(view);
@@ -1119,7 +1110,7 @@ function handleHash({ initial = false } = {}) {
   selHash = sel;
   writeHash(false);
   if (!sel) {
-    if (!initial && (state.selectedId || state.gaugeId || state.extraId || state.peekId)) closeDetail();
+    if (!initial && (state.selectedId || state.gaugeId || state.extraId)) closeDetail();
     return;
   }
   const { k, id } = sel;
@@ -1167,8 +1158,7 @@ async function locate({ fly = true } = {}) {
     if (state.map) { state.map.showUser(pos.lat, pos.lon, pos.accuracy); if (fly && drin) state.map.flyTo(pos.lat, pos.lon, 11); }
     if (!drin) toast(`Dein Standort liegt außerhalb des Kartengebiets. ${CONFIG.GEBIET.hinweis}`);
     renderList();
-    if (state.peekId) showPeek(state.byId.get(state.peekId));
-    else if (state.selectedId) showDetail(state.byId.get(state.selectedId));
+    if (state.selectedId && standort) showDetail(state.byId.get(state.selectedId));   // Entfernung im Kopf
     if (drin) announce('Karte auf deinen Standort ausgerichtet');
     return pos;
   } catch (e) { if (/verweigert/.test(e.message)) geoFreigabe.merken(false); toast(e.message); throw e; }
@@ -1195,7 +1185,7 @@ function pickLocation(initial) {
   bar.append(h('p', { text: 'Tippe auf die Karte, wo die Rampe ins Wasser führt. Zoome vorher nah heran.' }), h('div', { class: 'btn-row' }, cancel, confirm));
   el.pickbar.hidden = false;
   document.body.classList.add('is-picking');
-  if (el.detail && !el.detail.hidden) el.detail.hidden = true;
+  if (standort) standort.sheet.el.hidden = true;   // Standort-Sheet während der Wahl ausblenden
   const promise = state.map.pickLocation(initial);
   const api = state.map.pickApi;
   api.onPick = () => { confirm.disabled = false; };
@@ -1203,7 +1193,7 @@ function pickLocation(initial) {
   cancel.onclick = () => api.cancel();
   return promise.finally(() => {
     el.pickbar.hidden = true; document.body.classList.remove('is-picking');
-    if (state.selectedId) el.detail.hidden = false;
+    if (standort) standort.sheet.el.hidden = false;
   });
 }
 
@@ -1447,8 +1437,7 @@ function renderReportMenu({ fragen = false } = {}) {
         closeMenu();
         toast('Danke! Deine Meldung ist jetzt sichtbar.');
         meldLokal(p.id, j.meldungen || []);
-        if (state.peekId === p.id) showPeek(p);
-        else if (state.selectedId === p.id && !el.detail.hidden) showDetail(p, { scrollTo: 'vor-ort' });
+        if (state.selectedId === p.id && standort) showDetail(p, { scrollTo: 'vor-ort' });
       } catch (ex) {
         busy = false; btn.removeAttribute('aria-busy');
         for (const b of knoepfe.children) b.disabled = false;
@@ -1507,10 +1496,10 @@ function wireStatic() {
   $('#btn-locate').addEventListener('click', () => locate().catch(() => {}));
   suchfelderMitX();
   document.addEventListener('wm-toast', (e) => toast(e.detail));
-  wischenZuMachen({ mobil: isMobile, schliessen: { '#peek': closeDetail, '#detail': closeDetail } });   // Bereiche: Wischen regelt der Sheet-Rahmen
+  wischenZuMachen({ mobil: isMobile });   // Dialoge von unten (Filter, Melden, Formulare); Sheets wischt der Rahmen (bausteine.js)
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || el.dlg.open || filterPop.isOpen || reportPop.isOpen || $('#naehe-bezug[open]') || $('#pa-pop[open]') || $('dialog.lightbox[open]') || el.suggest.offsetParent || offeneSheets().length) return;
-    if (state.selectedId || state.gaugeId || state.extraId || state.peekId) closeDetail();
+    if (state.selectedId || state.gaugeId || state.extraId) closeDetail();
   });
   window.addEventListener('resize', debounce(() => state.map?.invalidate(), 150));
   window.addEventListener('online', updateOnline); window.addEventListener('offline', updateOnline);

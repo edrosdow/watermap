@@ -230,14 +230,8 @@ const NOTES = {
 export function renderExtraDetail(x, { close, user }) {
   const k = KINDS[x.kind];
   const dist = user ? formatDistance(haversine(user.lat, user.lon, x.lat, x.lon)) : null;
-  const head = h('header', { class: 'detail-head' },
-    h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Schließen', title: 'Schließen', html: icon('close', 22), onclick: close }),
-    h('div', { class: 'detail-title' },
-      h('span', { class: 'badge', style: `background:${kindColor(x.kind)}`, html: glyph(x.kind, 16) }, h('span', { text: k.label })),
-      h('h2', { id: 'detail-name', text: extraTitle(x) }),
-      extraShort(x) ? h('p', { class: 'detail-sub', text: extraShort(x) }) : null,
-      dist ? h('p', { class: 'detail-sub', text: `${dist} Luftlinie von deinem Standort` }) : null),
-    h('span', { class: 'detail-spacer' }));
+  // Kopf im Sheet-Rahmen (Designumbau 3b): Name links, Art · Kurzangabe · Entfernung darunter, × rechts
+  const head = { titel: extraTitle(x), titelId: 'detail-name', unter: [k.label, extraShort(x), dist ? `${dist} Luftlinie` : null].filter(Boolean).join(' · ') };
 
   const body = h('div', { class: 'detail-body' });
   const note = NOTES[x.kind];

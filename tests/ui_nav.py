@@ -190,12 +190,12 @@ def run(b, w, hh):
     check(fab['y'] + fab['h'] <= bar['y'] - 16 and abs(fab['x'] + fab['w'] - (w - 20)) <= 1 and abs(fab['w'] - 48) <= 1 and nb['y'] + nb['h'] <= bar['y'] - 8, f'{tag}: Standort-Knopf (48 px, rechts 20 px) und „In der Nähe“ über der Leiste')
     gl = pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('#btn-locate')); return { bg: s.backgroundColor, bf: s.backdropFilter || s.webkitBackdropFilter || '', r: s.borderTopLeftRadius }; })()")
     check(gl['bg'] == 'rgba(255, 255, 255, 0.82)' and 'blur(22px)' in gl['bf'] and gl['r'] in ('50%', '24px'), f'{tag}: Standort-Knopf im Glas-Stil ({gl})')
-    pg.evaluate("window.__watermap.selectPlace('node/1')"); pg.wait_for_selector('#peek:not([hidden])'); pg.wait_for_timeout(300)
-    pk = rect(pg, '#peek')
-    check(pk['y'] + pk['h'] <= bar['y'] - 8, f'{tag}: Vorschau-Karte über der Leiste ({pk["y"] + pk["h"]:.0f} ≤ {bar["y"]:.0f})')
-    pg.evaluate("window.__watermap.selectPlace('node/1', { full: true })"); pg.wait_for_selector('#detail:not([hidden])'); pg.wait_for_timeout(400)
+    pg.evaluate("window.__watermap.selectPlace('node/1')"); pg.wait_for_selector('#detail.is-klein.is-offen'); pg.wait_for_timeout(700)
+    pk = rect(pg, '#detail .st-details')
+    check(pk['y'] + pk['h'] <= bar['y'] - 4, f'{tag}: Stufe „klein“: „Details“ über der Leiste ({pk["y"] + pk["h"]:.0f} ≤ {bar["y"]:.0f})')
+    pg.evaluate("window.__watermap.selectPlace('node/1', { full: true })"); pg.wait_for_selector('#detail.is-offen:not(.is-klein)'); pg.wait_for_timeout(700)
     over = pg.evaluate("(() => { const b = document.querySelector('#bottomnav').getBoundingClientRect(); const e = document.elementFromPoint(b.x + b.width / 2, b.y + b.height * 0.2); return !!e.closest('#bottomnav'); })()")
-    letzter = pg.evaluate("""() => { const sc = document.querySelector('#detail .detail-scroll'); sc.scrollTop = sc.scrollHeight;
+    letzter = pg.evaluate("""() => { const sc = document.querySelector('#detail .wm-sheet-inhalt'); sc.scrollTop = sc.scrollHeight;
       return Math.max(...[...document.querySelectorAll('#detail .detail-body > *')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.bottom)); }""")
     check(over and letzter <= bar['y'] + 1, f'{tag}: Detail reicht bis unten, die Leiste schwebt darüber; der letzte Inhalt liegt frei ({letzter:.0f} ≤ {bar["y"]:.0f})')
     pg.screenshot(path=str(SHOTS / f'nav_{w}_4detail.png'))

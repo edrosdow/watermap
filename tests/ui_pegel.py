@@ -216,7 +216,7 @@ with sync_playwright() as p:
             p.water = { name: 'Rhein' }; p.lat = g.lat + 0.01; p.lon = g.lon; return p.id; }""", KOELN)
         pg.evaluate("(id) => window.__watermap.selectPlace(id, { full: true })", sid); pg.wait_for_selector('#detail .pegel-box', timeout=8000)
         box = pg.locator('#detail .pegel-box')
-        check(box.get_attribute('href') == '#karte/pegel/' + KOELN and 'Details ›' in box.inner_text() and 'Pegel-Ampel' not in box.inner_text(), f'{name}: Pegel-Kasten „Details ›“ ({box.inner_text()!r})')
+        check(box.get_attribute('href') == '#karte/pegel/' + KOELN and '312 cm' in box.inner_text() and 'wm-zeile' in box.get_attribute('class') and 'Pegel-Ampel' not in box.inner_text(), f'{name}: Pegel als Ortszeile mit Wert ({box.inner_text()!r})')
         box.click(); pg.wait_for_selector('.wm-sheet.wxd-pegel.is-offen #pd-name', timeout=8000); pg.wait_for_selector(S, state='detached')
         check(pg.inner_text('.wm-sheet.wxd-pegel #pd-name') == 'Köln' and 'pegel/' not in pg.url and pg.locator(S).count() == 0 and pg.locator('#detail:not([hidden])').count() == 1,
               f'{name}: Klick öffnet die Pegel-Details im Fenster, keine neue Seite ({pg.url[-30:]})')

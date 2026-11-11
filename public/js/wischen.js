@@ -1,4 +1,4 @@
-// Wischen nach unten schließt jedes Fenster, das auf dem Handy von unten aufgeht (Dialoge, Standort-Blatt und -Vorschau).
+// Wischen nach unten schließt jedes Fenster, das auf dem Handy von unten aufgeht (Dialoge: Filter, Melden, Formulare). Sheets wischt der Rahmen (bausteine.js).
 // Ein gemeinsamer Handler am Dokument: kein Verdrahten pro Fenster, neue Fenster funktionieren automatisch.
 const SCHWELLE = 10;       // px, ab hier gilt die Bewegung als Wischen
 const WEIT = 110;          // px Weg, ab dem losgelassen wird → schließen

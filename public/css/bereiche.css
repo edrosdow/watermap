@@ -322,3 +322,25 @@ a.ei-reihe-text { display: flex; flex-direction: column; color: inherit; text-de
 .pf-oben { position: relative; padding: var(--wm-5) var(--wm-4) 0; }
 .pf-oben > .wm-kopf { padding: 0 0 var(--wm-2) var(--wm-1); }
 #dlg-body > .wm-kopf, .ae-form > .wm-kopf, #report-body > .wm-kopf, .pf-oben > .wm-kopf { text-align: left; }
+
+/* ================================================================ Standort-Sheet (Designumbau 3b, 7.72.1, main.js standortZeigen)
+   Slipanlagen, Häfen, Tankstellen, Zusatzorte im gemeinsamen Rahmen; Handy Stufe „klein“ = Kopf, Aktionen, „Details“. Nur Tokens. */
+.st-sheet .detail-body { display: flex; flex-direction: column; gap: var(--wm-3); padding: 0; }
+.st-sheet .st-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--wm-1); margin-top: calc(-1 * var(--wm-2)); font-size: var(--wm-t-s); color: var(--wm-matt); }
+.st-sheet .st-meta .trust { display: inline-flex; align-items: center; gap: var(--wm-1); min-height: 32px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.st-sheet .trust-tip { display: block; margin-top: var(--wm-1); font-size: var(--wm-t-s); }
+.st-sheet .st-details { display: none; width: 100%; }
+.st-sheet.is-klein .st-details { display: inline-flex; }
+@media (min-width: 768px) { .st-sheet.is-klein .st-details { display: none; } }
+.st-sheet .st-klein-ende { display: block; height: 0; }
+.st-sheet .pegel-gruppe .wm-zeile { color: var(--wm-tinte); text-decoration: none; }
+.st-sheet .pegel-box.is-gruen .wm-kachel-ico { background: var(--wm-gut-hell); color: var(--wm-gut-text); }
+.st-sheet .pegel-box.is-warn .wm-kachel-ico { background: var(--wm-warn-hell); color: var(--wm-warn-text); }
+.st-sheet .pegel-box.is-rot .wm-kachel-ico { background: var(--wm-stop-hell); color: var(--wm-stop-text); }
+.st-sheet .wxz.wm-zeile { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); color: var(--wm-tinte); text-align: left; font: inherit; cursor: pointer; }
+.st-sheet .wxz.wxz-warn .wm-kachel-ico { background: var(--wm-stop-hell); color: var(--sev, var(--wm-stop)); }
+.st-sheet .wb { margin: 0; }
+.st-sheet .wb-titel { margin: 0 var(--wm-1) var(--wm-2); }
+.st-sheet .wb-p small { font-size: var(--wm-t-xs); font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }
+.st-sheet:not(.is-klein) .st-lage { display: none; }
+@media (min-width: 768px) { .st-sheet .st-lage { display: none; } }

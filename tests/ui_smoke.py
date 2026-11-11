@@ -77,9 +77,9 @@ with sync_playwright() as p:
         # Detail
         pg.click('.place >> nth=0')
         if mobile:   # Handy: erst die Vorschau-Karte, „Details“ öffnet das Panel
-            pg.wait_for_selector('#peek:not([hidden])')
+            pg.wait_for_selector('#detail.is-klein.is-offen')
             check(pg.locator('.nh-sheet.is-offen').count() == 0 and pg.locator('#bottomnav [data-nav=karte]').get_attribute('aria-current') == 'page', f'{name}: Antippen in der Liste zeigt die Karte mit Vorschau')
-            pg.click('#peek button:has-text("Details")')
+            pg.click('#detail .st-details')
         pg.wait_for_selector('#detail:not([hidden])')
         txt = pg.inner_text('#detail')
         check('Nicht bekannt' not in txt and (pg.locator('#detail .facts-more').is_visible() or pg.locator('#detail .wb').count() == 1), f'{name}: unbekannte Angaben eingeklappt bzw. „Wichtig für dein Boot“')
@@ -88,7 +88,7 @@ with sync_playwright() as p:
         else:
             pg.click('#detail .facts-more')
             check('Nicht bekannt' in pg.inner_text('#detail'), f'{name}: aufgeklappt als "Nicht bekannt"')
-        check('keine Wasserroute' in (pg.get_attribute('#detail .dbtn-primary', 'title') or ''), f'{name}: Hinweis Straßenroute ≠ Wasserroute')
+        check('keine Wasserroute' in (pg.get_attribute('#detail .wm-aktion.is-primaer', 'title') or ''), f'{name}: Hinweis Straßenroute ≠ Wasserroute')
         check(pg.locator('#detail', has_text='OpenStreetMap-Route').count() == 0, f'{name}: keine OpenStreetMap-Route')
         check('OpenStreetMap · ungeprüft' in txt and 'nicht vor ort geprüft' not in txt.lower(), f'{name}: OSM-Herkunft dezent')
         pg.click('#detail .trust')

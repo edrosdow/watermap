@@ -52,7 +52,7 @@ with sync_playwright() as p:
         pg.on('console', lambda m: errors.append(m.text) if m.type == 'error' and 'Failed to load resource' not in m.text else None)   # Kacheln sind absichtlich blockiert
         pg.goto(f'http://127.0.0.1:{PORT}/#p={MANY}')
         if pg.viewport_size['width'] < 768:   # Handy: Deep-Link zeigt erst die Vorschau-Karte
-            pg.locator('#peek button', has_text='Details').click()
+            pg.locator('#detail .st-details').click()
         frame = pg.locator('#detail .ph-frame'); frame.wait_for()
         count = lambda: pg.inner_text('#detail .ph-count')
         src = lambda: pg.get_attribute('#detail .ph-frame img >> nth=-1', 'src')   # beim Wechsel liegen kurz zwei Bilder übereinander
@@ -124,12 +124,12 @@ with sync_playwright() as p:
         # „Foto hinzufügen“ direkt unter den Fotos; unten nur noch „Fehler melden“
         check(pg.is_visible('#detail .photos .ph-add') and pg.locator('#detail .detail-links button', has_text='Foto hinzufügen').count() == 0, f'{name}: „Foto hinzufügen“ im Fotobereich')
         # Etikett wandert beim Scrollen nicht über den festen Kopf
-        lage = None if mobile else pg.evaluate("""() => { const k = document.querySelector('#detail .ph-kat'), kopf = document.querySelector('#detail .detail-head');
+        lage = None if mobile else pg.evaluate("""() => { const k = document.querySelector('#detail .ph-kat'), kopf = document.querySelector('#detail .wm-kopf');
           const sc = [k.parentElement]; let e = k.parentElement; while (e && e !== document.body) { if (/(auto|scroll)/.test(getComputedStyle(e).overflowY) && e.scrollHeight > e.clientHeight) { sc.push(e); break; } e = e.parentElement; }
           const box = sc[sc.length - 1]; const kb = kopf.getBoundingClientRect();
           box.scrollTop += k.getBoundingClientRect().top - (kb.top + kb.height / 2);
           const r = k.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-          return { unterKopf: r.top < kb.bottom && r.bottom > kb.top, trifftKopf: !!hit?.closest('.detail-head') }; }""")
+          return { unterKopf: r.top < kb.bottom && r.bottom > kb.top, trifftKopf: !!hit?.closest('.wm-kopf') }; }""")
         if not mobile: check(lage['unterKopf'] and lage['trifftKopf'], f'{name}: Etikett verschwindet beim Scrollen unter dem festen Kopf ({lage})')
         check(pg.evaluate("getComputedStyle(document.querySelector('#detail .ph-frame')).isolation") == 'isolate', f'{name}: Fotorahmen hält Etikett und Pfeile unter dem Kopf (isolation)')
         # Standort mit einem Foto: keine Pfeile, kein Zähler

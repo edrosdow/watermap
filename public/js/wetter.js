@@ -188,11 +188,12 @@ export function kurzwerte({ current, alerts }) {
  * zeigt die Zeile sie (Farbe + Symbol + Text) – `warnung` löst dann mit true auf, damit die Zeile nach oben rücken kann.
  */
 export function wetterZeile(lat, lon, { name = '' } = {}) {
-  const ico = h('span', { class: 'wxz-ico', html: icon('gauge', 22), 'aria-hidden': 'true' });
+  const ico = h('span', { class: 'wxz-ico wm-kachel-ico', html: icon('gauge', 20), 'aria-hidden': 'true' });
   const titel = h('strong', { text: 'Wetter und Wind' });
   const sub = h('small', { text: 'Wird geladen …' });
-  const zeile = h('button', { type: 'button', class: 'wxz', 'aria-haspopup': 'dialog', onclick: () => wetterFenster({ lat, lon, name, opener: zeile }) },
-    ico, h('span', { class: 'wxz-text' }, titel, sub), h('span', { class: 'wxz-pfeil', html: icon('chevron', 18), 'aria-hidden': 'true' }));
+  // Ortszeile (Bausteine, Designumbau 3b) im Standort-Sheet; öffnet das Wetter-Sheet darüber
+  const zeile = h('button', { type: 'button', class: 'wxz wm-zeile', 'aria-haspopup': 'dialog', onclick: () => wetterFenster({ lat, lon, name, opener: zeile }) },
+    ico, h('span', { class: 'wxz-text wm-zeile-text' }, titel, sub), h('span', { class: 'wxz-pfeil wm-pfeil', html: icon('chevron', 18), 'aria-hidden': 'true' }));
   const warnung = loadWeather(lat, lon).then((d) => {
     const a = d.alerts?.list[0];
     const wind = d.current && d.current.wind !== null ? `${beaufort(d.current.wind)} Bft${d.current.dir !== null ? ` ${compass(d.current.dir)}` : ''}` : null;
