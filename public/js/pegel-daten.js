@@ -80,16 +80,6 @@ export const wtAenderungLaden = (id) => gemerkt('wt:' + id, () => loadReihe(id, 
   return vor && last.t - vor.t <= 26 * 3600e3 ? Math.round((last.v - vor.v) * 10) / 10 : null;
 }).catch(() => null);
 
-/** Trend (-1/0/1) aus den letzten 2 Stunden der Messreihe (ab 2 cm Änderung); null, wenn sie nicht reicht. */
-export function trendAusVerlauf(pts) {
-  if (!pts || pts.length < 2) return null;
-  const last = pts[pts.length - 1];
-  const vorher = [...pts].reverse().find(p => p.t <= last.t - 2 * 3600e3);
-  if (!vorher || last.t - vorher.t > 4 * 3600e3) return null;
-  const d = last.v - vorher.v;
-  return d >= 2 ? 1 : d <= -2 ? -1 : 0;
-}
-
 /** Änderung in 24 h (cm) aus einer Messreihe; null, wenn sie nicht reicht. */
 export function aenderung24h(pts) {
   if (!pts || pts.length < 2) return null;
@@ -100,11 +90,6 @@ export function aenderung24h(pts) {
   for (const p of pts) { if (Math.abs(p.t - ziel) < Math.abs(best.t - ziel)) best = p; if (p.t > ziel) break; }
   return Math.round(last.v - best.v);
 }
-
-/** Ab dieser Änderung in 24 h (cm) gilt ein Pegel als steigend bzw. fallend; darunter „nahezu unverändert“. */
-export const TREND24_SCHWELLE_CM = 3;
-/** Richtung aus der Änderung in 24 h: 1 | 0 | -1, null ohne Wert. Kleine Schwankungen zählen nicht. */
-export const richtung24 = (d) => (d === null || d === undefined || !Number.isFinite(d) ? null : d >= TREND24_SCHWELLE_CM ? 1 : d <= -TREND24_SCHWELLE_CM ? -1 : 0);
 
 // ------------------------------------------------------------------ Meine Pegel (getrennt von den Standort-Favoriten)
 let memory = null;

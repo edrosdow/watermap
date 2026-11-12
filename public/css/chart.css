@@ -2,20 +2,20 @@
 .gc-wrap { position: relative; padding-top: 30px; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }   /* langes Drücken: kein Auswahlmenü */   /* Platz für den Tooltip, damit er nichts verdeckt */
 .gc-svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
 .gc-grid { stroke: var(--wm-linie); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.gc-axis, .gc-reflabel { font-size: 10.5px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.gc-axis, .gc-reflabel { font-size: 10.5px; fill: var(--wm-matt); font-variant-numeric: tabular-nums; }
 .gc-reflabel { font-weight: 700; }
 .gc-ref { stroke: var(--wm-leise); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .gc-ref.is-hsw { stroke: var(--wm-stop); }
 .gc-line { fill: none; stroke: var(--wm-petrol); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .gc-area { fill: var(--wm-petrol); opacity: .08; }
-.gc-dot { fill: var(--wm-petrol); stroke: #fff; stroke-width: 2; }
-.gc-cross { stroke: var(--muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.gc-tip { position: absolute; top: 0; transform: translateX(-50%); background: var(--navy); color: #fff; font-size: var(--wm-t-xs); font-weight: 600; padding: 5px 9px; border-radius: 8px; max-width: 100%; width: max-content; text-align: center; pointer-events: none; font-variant-numeric: tabular-nums; }
-.gc-table { font-size: 13px; margin-top: 6px; }
-.gc-table summary { cursor: pointer; color: var(--wm-petrol-tief); font-weight: 600; padding: 6px 0; }
+.gc-dot { fill: var(--wm-petrol); stroke: var(--wm-flaeche); stroke-width: 2; }
+.gc-cross { stroke: var(--wm-matt); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.gc-tip { position: absolute; top: 0; transform: translateX(-50%); background: var(--wm-tinte); color: var(--wm-flaeche); font-size: var(--wm-t-xs); font-weight: 700; padding: 5px 9px; border-radius: var(--wm-r-s); max-width: 100%; width: max-content; text-align: center; pointer-events: none; font-variant-numeric: tabular-nums; }
+.gc-table { font-size: var(--wm-t-xs); margin-top: 6px; }
+.gc-table summary { cursor: pointer; color: var(--wm-petrol-tief); font-weight: 700; padding: 6px 0; }
 .gc-table table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .gc-table th, .gc-table td { text-align: left; padding: 5px 4px; border-bottom: 1px solid var(--wm-flaeche-2); }
-.gc-table th { color: var(--muted); font-weight: 600; }
+.gc-table th { color: var(--wm-matt); font-weight: 700; }
 .gc-threshold { stroke: var(--wm-stop); stroke-width: 1.5; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
 .gc-threshold-label { fill: var(--wm-stop); }
 
@@ -23,9 +23,9 @@
 .gc-vorh-bg { fill: var(--wm-flaeche-2); }
 .gc-tief { fill: var(--wm-warn-hell); opacity: .75; }
 .gc-vorh { fill: none; stroke: var(--wm-petrol); stroke-width: 2; stroke-dasharray: 5 4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-.gc-jetzt { stroke: var(--navy, var(--wm-navy)); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-.gc-jetzt-text { font-size: 10px; font-weight: 800; fill: var(--navy, var(--wm-navy)); }
+.gc-jetzt { stroke: var(--wm-tinte); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.gc-jetzt-text { font-size: 10px; font-weight: 700; fill: var(--wm-tinte); }
 /* Messlücken (7.49.0) */
 .gc-luecke { stroke: none; }
 .gc-schraffur { stroke: var(--wm-rand); stroke-width: 2; }
-.gc-luecken-text { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.gc-luecken-text { margin: 4px 0 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }

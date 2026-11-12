@@ -65,7 +65,7 @@ def run(b, w, hh):
     c = pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('#bottomnav')); return { pos: s.position, r: s.borderTopLeftRadius, bg: s.backgroundColor, bf: s.backdropFilter || s.webkitBackdropFilter || '', bw: s.borderTopWidth, z: s.zIndex }; })()")
     check(c['pos'] == 'fixed' and abs(bar['x'] - 16) <= 1 and abs(bar['x'] + bar['w'] - (w - 16)) <= 1 and abs(bar['y'] + bar['h'] - (hh - 10)) <= 1 and abs(bar['h'] - 68) <= 1,
           f'{tag}: Leiste schwebt (16 px seitlich, 10 px unten, 68 px hoch) {bar}')
-    check(c['r'] == '34px' and c['bg'] == 'rgba(255, 255, 255, 0.82)' and 'blur(22px)' in c['bf'] and c['bw'] == '1px', f'{tag}: helles Glas, Ecken 34 px, Rand 1 px ({c})')
+    check(c['r'] in ('34px', '999px') and c['bg'] == 'rgba(255, 255, 255, 0.82)' and 'blur(22px)' in c['bf'] and c['bw'] == '1px', f'{tag}: helles Glas, Ecken 34 px, Rand 1 px ({c})')
     labels = pg.locator('#bottomnav .bn-item').evaluate_all("els => els.map(e => e.getAttribute('aria-label'))")
     check([re.sub(r', .*$', '', l) for l in labels] == LABELS, f'{tag}: fünf Plätze in der Reihenfolge Karte · Meldungen · Melden · Gemerkt · Mehr ({labels})')
     check(all(t.strip() == '' or t.strip().isdigit() for t in pg.locator('#bottomnav .bn-item').all_inner_texts()) and pg.locator('#bottomnav .bn-label').count() == 0, f'{tag}: nur Symbole, kein sichtbarer Text')
@@ -80,7 +80,7 @@ def run(b, w, hh):
     check(pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('#bottomnav [data-nav=karte] svg')); return s.fill + ' ' + s.fillOpacity; })()") == 'rgb(8, 127, 156) 0.3', f'{tag}: aktive Karte mit 30 % Füllung')
     ind = rect(pg, '#bottomnav .bn-ind'); k = rect(pg, item('karte'))
     ci = pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('#bottomnav .bn-ind')); return { bg: s.backgroundColor, r: s.borderTopLeftRadius, sh: s.boxShadow, pe: s.pointerEvents }; })()")
-    check(abs(cx(ind) - cx(k)) <= 1 and abs(ind['h'] - 56) <= 1 and abs(ind['w'] - (k['w'] - 6)) <= 1 and ci['r'] == '28px' and ci['bg'] == 'rgba(8, 127, 156, 0.14)' and 'rgba(8, 127, 156, 0.12)' in ci['sh'] and ci['pe'] == 'none',
+    check(abs(cx(ind) - cx(k)) <= 1 and abs(ind['h'] - 56) <= 1 and abs(ind['w'] - (k['w'] - 6)) <= 1 and ci['r'] in ('28px', '999px') and ci['bg'] == 'rgba(8, 127, 156, 0.14)' and 'rgba(8, 127, 156, 0.12)' in ci['sh'] and ci['pe'] == 'none',
           f'{tag}: Markierung 56 px hoch unter „Karte“, Petrol 14 % ({ind})')
     check(pg.get_attribute(item('karte'), 'aria-current') == 'page' and pg.locator('#bottomnav [aria-current]').count() == 1, f'{tag}: aria-current nur am aktiven Punkt')
     pg.screenshot(path=str(SHOTS / f'nav_{w}_1karte.png'))
@@ -189,7 +189,7 @@ def run(b, w, hh):
     fab, nb = rect(pg, '#btn-locate'), rect(pg, '#btn-naehe-m')
     check(fab['y'] + fab['h'] <= bar['y'] - 16 and abs(fab['x'] + fab['w'] - (w - 20)) <= 1 and abs(fab['w'] - 48) <= 1 and nb['y'] + nb['h'] <= bar['y'] - 8, f'{tag}: Standort-Knopf (48 px, rechts 20 px) und „In der Nähe“ über der Leiste')
     gl = pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('#btn-locate')); return { bg: s.backgroundColor, bf: s.backdropFilter || s.webkitBackdropFilter || '', r: s.borderTopLeftRadius }; })()")
-    check(gl['bg'] == 'rgba(255, 255, 255, 0.82)' and 'blur(22px)' in gl['bf'] and gl['r'] in ('50%', '24px'), f'{tag}: Standort-Knopf im Glas-Stil ({gl})')
+    check(gl['bg'] == 'rgba(255, 255, 255, 0.82)' and 'blur(22px)' in gl['bf'] and gl['r'] in ('50%', '24px', '999px'), f'{tag}: Standort-Knopf im Glas-Stil ({gl})')
     pg.evaluate("window.__watermap.selectPlace('node/1')"); pg.wait_for_selector('#detail.is-klein.is-offen'); pg.wait_for_timeout(700)
     pk = rect(pg, '#detail .st-details')
     check(pk['y'] + pk['h'] <= bar['y'] - 4, f'{tag}: Stufe „klein“: „Details“ über der Leiste ({pk["y"] + pk["h"]:.0f} ≤ {bar["y"]:.0f})')

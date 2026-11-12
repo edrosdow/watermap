@@ -6,31 +6,19 @@ import { formatTime } from './pegel.js';
 import { auswerten, TENDENZ } from './gezeiten.js';
 import { vorhersageLaden, kommende, hoehe, inText, tagUhr, standText, ART } from './gezeiten-bsh.js';
 import { fmt, kmText, zusatzKacheln, glasKnopf, alarmKnopf, merkKnopf, stammdaten, grosserWert } from './pegel-ansicht.js';
+import { svgFarbe } from './farben.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const uhr = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 function svg(tag, attrs = {}, ...kinder) {
   const el = document.createElementNS(SVG_NS, tag);
-  for (const [k, v] of Object.entries(attrs)) if (v !== null && v !== undefined) el.setAttribute(k, v);
+  for (const [k, v] of Object.entries(attrs)) if (v !== null && v !== undefined && !svgFarbe(el, k, v)) el.setAttribute(k, v);
   for (const k of kinder.flat()) if (k) el.append(k.nodeType ? k : document.createTextNode(String(k)));
   return el;
 }
 
 /** „↗ auflaufend“ als Text (null, wenn unbekannt). */
 export const tendenzText = (a) => (a?.tendenz ? `${TENDENZ[a.tendenz].pfeil} ${TENDENZ[a.tendenz].text}` : null);
-
-/** Kurzinfo für Karten: „HW 02:07 · NW 08:20“ (die letzten gemessenen). */
-export function letzteText(a) {
-  if (!a) return null;
-  const teile = [a.hw && { t: a.hw.t, s: `HW ${uhr(a.hw.t)}` }, a.nw && { t: a.nw.t, s: `NW ${uhr(a.nw.t)}` }].filter(Boolean).sort((x, y) => x.t - y.t);
-  return teile.length ? `zuletzt ${teile.map(x => x.s).join(' · ')}` : null;
-}
-
-/** Kurzinfo „nächstes HW 14:32 · NW 20:41“ aus der BSH-Vorhersage (null ohne). */
-export function naechsteText(v) {
-  const k = kommende(v?.d).slice(0, 2);
-  return k.length ? `nächstes ${k.map(e => `${e.typ} ${tagUhr(e.t)}`).join(' · ')}` : null;
-}
 
 const LIZENZ_URL = 'https://creativecommons.org/licenses/by/4.0/deed.de';
 
@@ -61,29 +49,29 @@ function kurveZeichnen(box, g, pts, a, v) {
   const vorher = ve.length ? `, Vorhersage: ${ve.map(e => `${ART[e.typ]} ${uhr(e.t)} Uhr ${fmt(hoehe(e))} cm`).join(', ')}` : '';
   const s = svg('svg', { class: 'pt-svg', viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img',
     'aria-label': `Tidekurve der letzten 24 Stunden: ${a?.extreme.map(e => `${ART[e.typ]} ${uhr(e.t)} Uhr ${fmt(e.v)} cm`).join(', ') || 'keine Hoch- und Niedrigwasser erkannt'}. Jetzt ${fmt(g.value)} cm${a?.tendenz ? `, ${TENDENZ[a.tendenz].text}` : ''}${vorher}.` });
-  if (vk.length) s.append(svg('rect', { class: 'pt-zukunft', x: xs(jetzt), y: T - 6, width: W - R - xs(jetzt), height: H - B - T + 6, fill: '#EEF1F3' }));
-  s.append(svg('path', { d: `${pfad}L${xs(teil[teil.length - 1].t).toFixed(1)},${H - B}L${xs(teil[0].t).toFixed(1)},${H - B}Z`, fill: '#E3F1F5' }));
+  if (vk.length) s.append(svg('rect', { class: 'pt-zukunft', x: xs(jetzt), y: T - 6, width: W - R - xs(jetzt), height: H - B - T + 6, fill: 'var(--wm-flaeche-2)' }));
+  s.append(svg('path', { d: `${pfad}L${xs(teil[teil.length - 1].t).toFixed(1)},${H - B}L${xs(teil[0].t).toFixed(1)},${H - B}Z`, fill: 'var(--wm-petrol-hell)' }));
   for (const k of ['MThw', 'MTnw']) {
     if (!Number.isFinite(r[k])) continue;
-    s.append(svg('line', { x1: L, x2: W - R, y1: ys(r[k]), y2: ys(r[k]), stroke: '#8A9BA6', 'stroke-width': 1.2, 'stroke-dasharray': '5 4' }),
+    s.append(svg('line', { x1: L, x2: W - R, y1: ys(r[k]), y2: ys(r[k]), stroke: 'var(--wm-leise)', 'stroke-width': 1.2, 'stroke-dasharray': '5 4' }),
       svg('text', { x: L + 2, y: ys(r[k]) + (k === 'MThw' ? -5 : 14), class: 'pt-ax' }, k));
   }
-  s.append(svg('path', { d: pfad, fill: 'none', stroke: '#087F9C', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }));
-  if (vk.length) s.append(svg('path', { class: 'pt-vorhersage', d: linie([{ t: jetzt, v: g.value }, ...vk]), fill: 'none', stroke: '#087F9C', 'stroke-width': 2, 'stroke-dasharray': '6 5', 'stroke-linejoin': 'round' }));
+  s.append(svg('path', { d: pfad, fill: 'none', stroke: 'var(--wm-petrol)', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }));
+  if (vk.length) s.append(svg('path', { class: 'pt-vorhersage', d: linie([{ t: jetzt, v: g.value }, ...vk]), fill: 'none', stroke: 'var(--wm-petrol)', 'stroke-width': 2, 'stroke-dasharray': '6 5', 'stroke-linejoin': 'round' }));
   const zeit = (x, y, typ, t) => svg('text', { x: Math.max(18, Math.min(W - 18, x)), y: typ === 'HW' ? y - 9 : y + 18, 'text-anchor': 'middle', class: 'pt-zeit' }, uhr(t));
   for (const e of a?.extreme || []) {
     const x = xs(e.t), y = ys(e.v);
-    s.append(svg('circle', { cx: x, cy: y, r: 4.5, fill: '#0B3045' }), zeit(x, y, e.typ, e.t));
+    s.append(svg('circle', { cx: x, cy: y, r: 4.5, fill: 'var(--wm-tinte)' }), zeit(x, y, e.typ, e.t));
   }
   for (const e of vk.length ? ve : []) {
     const x = xs(e.t), y = ys(hoehe(e));
-    s.append(svg('circle', { class: 'pt-vh-punkt', cx: x, cy: y, r: 4.5, fill: '#fff', stroke: '#0B3045', 'stroke-width': 2 }), zeit(x, y, e.typ, e.t));
+    s.append(svg('circle', { class: 'pt-vh-punkt', cx: x, cy: y, r: 4.5, fill: 'var(--wm-flaeche)', stroke: 'var(--wm-tinte)', 'stroke-width': 2 }), zeit(x, y, e.typ, e.t));
   }
   const xj = xs(jetzt), yj = ys(g.value);
-  s.append(svg('line', { x1: xj, x2: xj, y1: T - 6, y2: H - B, stroke: '#0B3045', 'stroke-width': 1.5 }),
-    svg('rect', { x: Math.min(xj - 18, W - R - 36), y: 2, width: 36, height: 18, rx: 9, fill: '#0B3045' }),
+  s.append(svg('line', { x1: xj, x2: xj, y1: T - 6, y2: H - B, stroke: 'var(--wm-tinte)', 'stroke-width': 1.5 }),
+    svg('rect', { x: Math.min(xj - 18, W - R - 36), y: 2, width: 36, height: 18, rx: 9, fill: 'var(--wm-tinte)' }),
     svg('text', { x: Math.min(xj, W - R - 18), y: 15, 'text-anchor': 'middle', class: 'pt-jetzt' }, 'jetzt'),
-    svg('circle', { cx: xj, cy: yj, r: 5.5, fill: '#087F9C', stroke: '#fff', 'stroke-width': 2 }));
+    svg('circle', { cx: xj, cy: yj, r: 5.5, fill: 'var(--wm-petrol)', stroke: 'var(--wm-flaeche)', 'stroke-width': 2 }));
   box.replaceChildren(s);
   return vk.length > 0;
 }

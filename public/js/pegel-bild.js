@@ -1,9 +1,9 @@
+import { tok } from './farben.js';
 // „Als Bild teilen“: ein Bild (1080 × 1350) mit Name, Gewässer, Wert, Zustand, Mini-Kurve (7 Tage, Vorhersage gestrichelt),
 // Datum/Uhrzeit, „WaterMap“ und Quellenangabe. Teilen über die Web Share API (Datei), sonst Herunterladen.
 const W = 1080, H = 1350;
 // Farben aus tokens.css (Canvas kennt keine CSS-Variablen); Ersatzwerte = Token-Werte
-const tok = (name, ersatz) => (typeof document !== 'undefined' && getComputedStyle(document.documentElement).getPropertyValue(name).trim()) || ersatz;
-const FARBE = () => ({ low: tok('--wm-warn', '#C27A00'), normal: tok('--wm-gut', '#1E9E5A'), high: tok('--wm-hoch', '#D23B21'), hsw: tok('--wm-stop', '#B42318') });
+const FARBE = () => ({ low: tok('--wm-warn'), normal: tok('--wm-gut'), high: tok('--wm-hoch'), hsw: tok('--wm-stop') });
 const TEXT = { low: 'Niedrig', normal: 'Normal', high: 'Hoch', hsw: 'Über HSW', tide: 'Tide', old: 'Veraltet' };
 
 function rundRechteck(c, x, y, w, h, r) {
@@ -16,23 +16,23 @@ export function pegelBild({ g, zustand, trend = '', pts = [], wv = [], jetzt = D
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const c = cv.getContext('2d');
   const font = (px, w = 700) => `${w} ${px}px 'Atkinson Hyperlegible Next', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
-  c.fillStyle = tok('--wm-flaeche-2', '#F1F6F8'); c.fillRect(0, 0, W, H);
-  c.fillStyle = tok('--wm-navy', '#0B3045'); c.fillRect(0, 0, W, 420);
-  c.fillStyle = tok('--wm-petrol-hell', '#DDF0F5'); c.font = font(38, 800); c.fillText(`PEGEL · ${(g.water || '').toUpperCase()}`, 80, 130);
-  c.fillStyle = '#fff'; c.font = font(92, 800); c.fillText(g.name, 80, 240, W - 160);
-  c.fillStyle = tok('--wm-linie', '#E3EBEF'); c.font = font(36, 500);
+  c.fillStyle = tok('--wm-flaeche-2'); c.fillRect(0, 0, W, H);
+  c.fillStyle = tok('--wm-navy'); c.fillRect(0, 0, W, 420);
+  c.fillStyle = tok('--wm-petrol-hell'); c.font = font(38, 800); c.fillText(`PEGEL · ${(g.water || '').toUpperCase()}`, 80, 130);
+  c.fillStyle = tok('--wm-flaeche'); c.font = font(92, 800); c.fillText(g.name, 80, 240, W - 160);
+  c.fillStyle = tok('--wm-linie'); c.font = font(36, 500);
   c.fillText(`Stand ${new Date(g.time || jetzt).toLocaleString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr`, 80, 320);
   // Wert und Zustand
-  c.fillStyle = tok('--wm-tinte', '#0E2E42'); c.font = font(220, 800);
+  c.fillStyle = tok('--wm-tinte'); c.font = font(220, 800);
   const wert = Math.round(g.value).toLocaleString('de-DE');
   c.fillText(wert, 80, 690);
   const ww = c.measureText(wert).width;
   c.font = font(64, 700); c.fillText(g.unit || 'cm', 100 + ww, 690);
-  const farbe = FARBE()[zustand] || tok('--wm-leise', '#7C8F9C'), label = TEXT[zustand] || 'ohne Einordnung';
+  const farbe = FARBE()[zustand] || tok('--wm-leise'), label = TEXT[zustand] || 'ohne Einordnung';
   c.font = font(46, 800); const lw = c.measureText(label).width;
   rundRechteck(c, 80, 740, lw + 80, 84, 42); c.fillStyle = farbe; c.fill();
-  c.fillStyle = zustand in FARBE() ? '#fff' : tok('--wm-tinte', '#0E2E42'); c.fillText(label, 120, 798);
-  if (trend) { c.fillStyle = tok('--wm-matt', '#526676'); c.font = font(42, 700); c.fillText(trend, 80 + lw + 120, 798, W - lw - 280); }
+  c.fillStyle = zustand in FARBE() ? tok('--wm-flaeche') : tok('--wm-tinte'); c.fillText(label, 120, 798);
+  if (trend) { c.fillStyle = tok('--wm-matt'); c.font = font(42, 700); c.fillText(trend, 80 + lw + 120, 798, W - lw - 280); }
   // Kurve
   const alle = [...pts, ...wv.filter(p => p.t > (pts[pts.length - 1]?.t ?? 0))];
   if (alle.length > 1) {
@@ -40,21 +40,21 @@ export function pegelBild({ g, zustand, trend = '', pts = [], wv = [], jetzt = D
     const vs = alle.map(p => p.v), lo = Math.min(...vs), hi = Math.max(...vs), sp = Math.max(hi - lo, 10);
     const t0 = alle[0].t, t1 = alle[alle.length - 1].t;
     const x = (t) => x0 + (t - t0) / Math.max(t1 - t0, 1) * (x1 - x0), y = (v) => y1 - (v - lo) / sp * (y1 - y0);
-    rundRechteck(c, 50, 860, W - 100, 330, 32); c.fillStyle = '#fff'; c.fill();
-    c.lineWidth = 7; c.lineJoin = 'round'; c.lineCap = 'round'; c.strokeStyle = tok('--wm-petrol', '#0B7C93');
+    rundRechteck(c, 50, 860, W - 100, 330, 32); c.fillStyle = tok('--wm-flaeche'); c.fill();
+    c.lineWidth = 7; c.lineJoin = 'round'; c.lineCap = 'round'; c.strokeStyle = tok('--wm-petrol');
     c.beginPath(); pts.forEach((p, i) => (i ? c.lineTo(x(p.t), y(p.v)) : c.moveTo(x(p.t), y(p.v)))); c.stroke();
     if (wv.length && pts.length) {
       c.setLineDash([18, 14]); c.beginPath(); const l = pts[pts.length - 1]; c.moveTo(x(l.t), y(l.v));
       wv.filter(p => p.t > l.t).forEach(p => c.lineTo(x(p.t), y(p.v))); c.stroke(); c.setLineDash([]);
     }
     const l = pts[pts.length - 1];
-    if (l) { c.fillStyle = tok('--wm-petrol', '#0B7C93'); c.beginPath(); c.arc(x(l.t), y(l.v), 12, 0, 2 * Math.PI); c.fill(); }
-    c.fillStyle = tok('--wm-matt', '#526676'); c.font = font(30, 600);
+    if (l) { c.fillStyle = tok('--wm-petrol'); c.beginPath(); c.arc(x(l.t), y(l.v), 12, 0, 2 * Math.PI); c.fill(); }
+    c.fillStyle = tok('--wm-matt'); c.font = font(30, 600);
     c.fillText(wv.length ? '7 Tage gemessen · Vorhersage gestrichelt' : '7 Tage gemessen', 80, 1180);
   }
   // Fuß
-  c.fillStyle = tok('--wm-tinte', '#0E2E42'); c.font = font(52, 800); c.fillText('WaterMap', 80, 1280);
-  c.fillStyle = tok('--wm-matt', '#526676'); c.font = font(28, 500); c.textAlign = 'right';
+  c.fillStyle = tok('--wm-tinte'); c.font = font(52, 800); c.fillText('WaterMap', 80, 1280);
+  c.fillStyle = tok('--wm-matt'); c.font = font(28, 500); c.textAlign = 'right';
   c.fillText('Daten: WSV/PEGELONLINE · ohne Gewähr', W - 80, 1280); c.textAlign = 'left';
   return cv;
 }

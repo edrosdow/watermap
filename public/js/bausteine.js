@@ -140,9 +140,6 @@ function popVerdrahten() {
     for (const s of [...stapel].reverse()) if (s.tiefe && s.tiefe > t) s.schliessen({ ausVerlauf: true });
   });
 }
-/** Verlaufszustand ersetzen, ohne den Sheet-Eintrag zu verlieren (für das Routing in main.js). */
-export const verlaufsZustand = (extra = {}) => ({ ...(history.state || {}), ...extra });
-
 function escVerdrahten() {
   if (escVerdrahtet) return;
   escVerdrahtet = true;

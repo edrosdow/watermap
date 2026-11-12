@@ -2,11 +2,8 @@
 // Desktop Panel rechts. Kopf (Titel links, ×) kommt vom Rahmen; renderDetail liefert die Angaben dafür und den Inhalt.
 import { h } from './dom.js';
 import { aktionen } from './bausteine.js';
-import { icon, glyphSvg } from './icons.js';
-import {
-  TYPES, UNKNOWN, FILTERS, displayName, subtitle, describeFacts, describePrices, bootPunkte, formatDate, navUrl,
-  osmUrl, safeHttpUrl, safeTel, formatDistance, haversine,
-} from './model.js';
+import { icon } from './icons.js';
+import { TYPES, UNKNOWN, FILTERS, displayName, describeFacts, describePrices, bootPunkte, formatDate, navUrl, osmUrl, safeHttpUrl, safeTel, formatDistance, haversine } from './model.js';
 import { favorites } from './favorites.js';
 import { CONFIG } from './config.js';
 import { photoCarousel } from './photos.js';

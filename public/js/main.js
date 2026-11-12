@@ -1,12 +1,10 @@
 import { CONFIG } from './config.js';
 import { h, $, $$, clear, debounce, announce } from './dom.js';
-import { icon, glyphSvg, logoSvg } from './icons.js';
-import {
-  TYPES, TYPE_KEYS, FILTERS, filterCounts, displayName, subtitle, haversine, formatDistance, formatDate,
-} from './model.js';
+import { icon, logoSvg } from './icons.js';
+import { TYPES, TYPE_KEYS, FILTERS, filterCounts, displayName, haversine, formatDistance, formatDate } from './model.js';
 import { loadAll } from './data.js';
 import { loadMapLibraries, createMap } from './map.js';
-import { buildIndex, searchLocal, geocode } from './search.js';
+import { buildIndex } from './search.js';
 import { favorites, prefs } from './favorites.js';
 import { openForm } from './forms.js';
 import { renderDetail } from './detail.js';
@@ -15,28 +13,30 @@ import { wischenZuMachen } from './wischen.js';
 import { suchfelderMitX } from './suchfeld.js';
 import { ampel as bootAmpel, mindestAlle } from './mindestpegel.js';
 import { alarmFenster } from './alarm.js';
-import { aktivLaden, ausgeblendetAnzahl, ausgeblendetZuruecksetzen, gesehenSetzen, listeLaden, neueAnzahl, senden, standortLaden, statusZeile, vorOrtKarte, zusammenfassen, TYPEN as MELD_TYPEN } from './meldungen.js';
+import { aktivLaden, ausgeblendetAnzahl, ausgeblendetZuruecksetzen, gesehenSetzen, listeLaden, neueAnzahl, standortLaden, statusZeile, vorOrtKarte, zusammenfassen } from './meldungen.js';
 import { openLageForm } from './lage-form.js';
 import { naehe, geoFreigabe } from './naehe.js';
 import { gruppieren, gruppeZu, naechsterPegel } from './pegel-fluss.js';
 import { flussSeite } from './pegel-fluss-ansicht.js';
 import { istTidepegel } from './gezeiten.js';
 import { pegelLaden, pegelStand, verlaufLaden, meinePegel } from './pegel-daten.js';
-import { pegelDetail, etikett as pegelEtikett, fmt as pegelFmt, trendText, trendKlasse, sternKnopf, zustand as pegelZustand, ZUSTAND as PEGEL_ZUSTAND } from './pegel-ansicht.js';
-import { LEGENDE, ZOOM_AUSWAHL } from './pegel-marker.js';
+import { pegelDetail, fmt as pegelFmt, zustand as pegelZustand, ZUSTAND as PEGEL_ZUSTAND } from './pegel-ansicht.js';
+import { LEGENDE } from './pegel-marker.js';
 import { mehrInhalt } from './mehr.js';
 import { gemerkt as gemerktZeichnen, gemerktFrisch } from './gemerkt.js';
 import { einstellungenSeite, EINSTELLUNGEN_KOPF, profilZeile, startArt, startArtSetzen, ansichtLesen, ansichtSchreiben, allesLoeschen } from './einstellungen.js';
 import { meldungenSeite } from './meldungen-uebersicht.js';
 import { unpassendMelden } from './meldung-unpassend.js';
 import { slipErgaenzen } from './slip-ergaenzen.js';
-import { imGebiet, aufGebietBeschneiden, gebietLaden } from './gebiet.js';
+import { imGebiet, gebietLaden } from './gebiet.js';
 import { sheetOeffnen, offeneSheets, kopf, marke, zeile, gruppe } from './bausteine.js';
-import { staffeln, merkFlug, sternPop, markerPlopp, hakenSvg, ruhig } from './bewegung.js';
-import { pegelSheet, slipsAmPegel, pegelSuche } from './pegel-sheet.js';
+import { staffeln, merkFlug, sternPop, markerPlopp, hakenSvg } from './bewegung.js';
+import { pegelSheet, slipsAmPegel } from './pegel-sheet.js';
 import { weatherSection, wetterZeile } from './wetter.js';
-import { GROUPS, loadExtras, renderExtraDetail, glyph } from './extras.js';
+import { GROUPS, loadExtras, renderExtraDetail } from './extras.js';
 import { enrichFacts } from './hafeninfo.js';
+import { sucheEinrichten } from './suche-ui.js';
+import { meldenEinrichten } from './melden-menue.js';
 
 const state = {
   places: [], byId: new Map(), index: [], meta: null, issues: [], invalid: 0,
@@ -80,7 +80,8 @@ async function init() {
   if (!state.cats.size) state.cats.add('slip');   // mindestens eine Kategorie ist immer aktiv
   nav = mountNav({ top: $('#topnav'), bottom: $('#bottomnav'), active: 'karte', onSelect: onNav });
   filterPop = popover($('#filter-panel'), { isMobile });
-  reportPop = meldenSheet();
+  melden = meldenEinrichten({ state, choosePlaceFor, lageMelden, meldLokal, openReport, requestUserPos, showDetail, toast, standortOffen: () => !!standort });
+  reportPop = melden.reportPop;
   renderSkeleton();
   wireStatic();
   nah = naehe(naeheCtx());
@@ -934,7 +935,7 @@ function einstellungenCtx() {
   const fmtZeit = (ms) => new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
   return {
     cats: state.cats,
-    katLabels: { slip: { label: 'Slipanlagen', farbe: 'var(--slip)' }, marina: { label: 'Häfen', farbe: 'var(--marina)' }, fuel: { label: 'Tankstellen', farbe: 'var(--fuel)' } },
+    katLabels: { slip: { label: 'Slipanlagen', farbe: 'var(--wm-slip)' }, marina: { label: 'Häfen', farbe: 'var(--wm-hafen)' }, fuel: { label: 'Tankstellen', farbe: 'var(--wm-tanke)' } },
     toggleCat: (t) => toggleCat(t),
     setStart: (art) => { startArtSetzen(art); ansichtMerken(); },
     bezug: () => nah?.bezugArt || 'kartenmitte',
@@ -1267,275 +1268,15 @@ function openReport(formName, preset = {}) {
   openForm(formName, ctx, preset);
 }
 
-// ============================================================ Suche
-let suggestItems = [], suggestIdx = -1, geoCtrl = null;
+// ============================================================ Suche (suche-ui.js)
+let suche = null;
+function wireSearch() { suche = sucheEinrichten({ state, el, isMobile, selectGauge, selectPlace, setGauges, setView, toast, toggleCat, closeDetail }); }
+function pegelAusSuche(id) { return suche.pegelAusSuche(id); }
 
-function renderSuggest(local, extra) {
-  const ul = clear(el.suggest);
-  suggestItems = [];
-  const q = el.q.value.trim();
-  if (!q) { el.suggest.hidden = true; return; }
-  const add = (node, run) => { suggestItems.push(run); ul.append(h('li', { role: 'option', id: `sg-${suggestItems.length - 1}`, 'aria-selected': 'false' }, node)); };
-  // Pegel und Gewässer (Designumbau 2a): Stationsliste aus dem Zwischenspeicher; fehlt sie, einmal laden und neu zeichnen
-  const stand = pegelStand();
-  if (!stand && state.mapOk && q.length >= 2 && !suggestPegelLaedt) {
-    suggestPegelLaedt = true;
-    pegelLaden().then(() => { if (el.q.value.trim() === q && !el.suggest.hidden) renderSuggest(local, extra); }, () => {}).finally(() => { suggestPegelLaedt = false; });
-  }
-  const pt = state.mapOk && stand ? pegelSuche(stand.gauges, q, state.user) : { gewaesser: [], pegel: [] };
-  for (const w of pt.gewaesser) {
-    add(h('button', { type: 'button', class: 'sg', tabindex: '-1' }, h('span', { class: 'sg-ico', html: icon('welle', 18) }),
-      h('span', { class: 'place-text' }, h('span', { class: 'place-name', text: w.name }), h('span', { class: 'place-sub', text: `Gewässer · ${w.liste.length} Pegel und Slipanlagen zeigen` }))),
-      () => { endSearch(); gewaesserZeigen(w); });
-  }
-  for (const g of pt.pegel) {
-    const z = PEGEL_ZUSTAND[pegelZustand(g)]?.text;
-    add(h('button', { type: 'button', class: 'sg', tabindex: '-1' }, h('span', { class: 'sg-ico sg-pegel', html: icon('gauge', 18) }),
-      h('span', { class: 'place-text' }, h('span', { class: 'place-name', text: g.name }),
-        h('span', { class: 'place-sub', text: [`Pegel · ${g.water || ''}`.replace(/ · $/, ''), `${pegelFmt(g.value)} ${g.unit}${z ? `, ${z}` : ''}`].join(' · ') }))),
-      () => { endSearch(); pegelAusSuche(g.id); });
-  }
-  for (const p of local) {
-    add(h('button', { type: 'button', class: 'sg', tabindex: '-1' },
-      h('span', { class: `place-ico small bg-${p.type}`, html: glyphSvg(p.type, 18) }),
-      h('span', { class: 'place-text' }, h('span', { class: 'place-name', text: displayName(p) }), h('span', { class: 'place-sub', text: [TYPES[p.type].label, subtitle(p)].filter(Boolean).join(' · ') }))),
-      () => { endSearch(); selectPlace(p.id); });
-  }
-  for (const g of extra.results || []) {
-    add(h('button', { type: 'button', class: 'sg', tabindex: '-1' }, h('span', { class: 'sg-ico', html: icon('pin', 18) }), h('span', { class: 'place-text' }, h('span', { class: 'place-name', text: g.name }), h('span', { class: 'place-sub', text: 'Ort' }))), () => { endSearch(); goToGeo(g); });
-  }
-  if (q.length >= 2 && !extra.results) {
-    add(h('button', { type: 'button', class: 'sg', tabindex: '-1' }, h('span', { class: 'sg-ico', html: icon('search', 18) }), h('span', { class: 'place-text' }, h('span', { class: 'place-name', text: `Ort „${q}“ suchen` }), h('span', { class: 'place-sub', text: 'Städte, Orte, Gewässer' }))), () => runGeocode(q));
-  }
-  if (extra.message) ul.append(h('li', { class: 'sg-msg', text: extra.message }));
-  const warZu = el.suggest.hidden;
-  el.suggest.hidden = !ul.children.length;
-  if (warZu && !el.suggest.hidden) staffeln(ul.children, { schritt: 45, max: 10 });   // Vorschläge: Zeilen versetzt (Karte fällt per CSS ein)
-  el.q.setAttribute('aria-expanded', String(!el.suggest.hidden));
-  suggestIdx = -1;
-}
-
-function endSearch() { el.suggest.hidden = true; el.q.setAttribute('aria-expanded', 'false'); el.q.blur(); }
-let suggestPegelLaedt = false;
-
-/** Pegel aus der Suche: Chip „Pegel“ an, hinfliegen, Sheet öffnen. */
-async function pegelAusSuche(id) {
-  setView('karte');
-  if (!state.gaugesOn || !state.gauges) await setGauges(true);
-  if (!selectGauge(id)) toast('Dieser Pegel wurde nicht gefunden.');
-}
-
-/** Gewässer aus der Suche: Pegel und Slipanlagen einschalten, das Gewässer zeigen (alle seine Pegel im Bild). */
-async function gewaesserZeigen(w) {
-  setView('karte');
-  closeDetail();
-  if (!state.cats.has('slip')) toggleCat('slip', true);
-  if (!state.gaugesOn || !state.gauges) await setGauges(true);
-  state.map?.fitBounds(w.liste.map(g => [g.lat, g.lon]), { maxZoom: 11 });
-  announce(`${w.name}: ${w.liste.length} Pegel und die Slipanlagen auf der Karte`);
-}
-
-function goToGeo(g) {
-  if (!state.map) { toast('Die Karte ist nicht verfügbar.'); return; }
-  if (!imGebiet(g.lat, g.lon)) { toast(CONFIG.GEBIET.hinweis); return; }
-  // Große Treffer (z. B. Bundesländer, Flüsse) auf das Kartengebiet beschneiden
-  const box = g.bbox && g.bbox.length === 4 && g.bbox.every(Number.isFinite) ? aufGebietBeschneiden([[g.bbox[0], g.bbox[2]], [g.bbox[1], g.bbox[3]]]) : null;
-  if (box) state.map.fitBounds(box, { maxZoom: 13 });
-  else state.map.flyTo(g.lat, g.lon, 12);
-  closeDetail();
-}
-
-async function runGeocode(q, { auto = false } = {}) {
-  if (geoCtrl) geoCtrl.abort();
-  geoCtrl = new AbortController();
-  renderSuggest(searchLocal(state.index, q), { message: 'Suche läuft …' });
-  try {
-    const alle = await geocode(q, { signal: geoCtrl.signal });
-    // nicht nur auf die Länderkennung verlassen: Position muss im Kartengebiet liegen
-    await gebietLaden().catch(() => {});
-    const results = alle.filter(r => imGebiet(r.lat, r.lon)).slice(0, 5);
-    if (alle.length && !results.length) { renderSuggest(searchLocal(state.index, q), { message: CONFIG.GEBIET.hinweis }); return; }
-    if (!results.length) { renderSuggest(searchLocal(state.index, q), { message: 'Nichts gefunden. Prüfe die Schreibweise oder suche einen größeren Ort.' }); return; }
-    if (auto) { endSearch(); goToGeo(results[0]); return; }
-    renderSuggest(searchLocal(state.index, q), { results });
-  } catch (e) {
-    if (e.name === 'AbortError') return;
-    renderSuggest(searchLocal(state.index, q), { message: navigator.onLine ? 'Die Ortssuche ist gerade nicht erreichbar. Standorte findest du weiterhin über den Namen.' : 'Du bist offline. Die Ortssuche braucht eine Verbindung.' });
-  }
-}
-
-/** Handy: Suche als Lupe rechts, ein Tipp dehnt sie zur Pille (Designumbau 4). Desktop: Suchfeld wie bisher offen in der Kopfleiste. */
-const kopfzeile = $('.app-header'), lupe = $('#search-form .search-btn');
-const sucheZu = () => kopfzeile.classList.contains('such-zu');
-function sucheZustand() {
-  const zu = isMobile() && sucheZu();
-  lupe.setAttribute('aria-expanded', String(!zu)); lupe.setAttribute('aria-label', isMobile() ? (zu ? 'Suche öffnen' : 'Suche schließen') : 'Suchen');
-  el.q.tabIndex = zu ? -1 : 0;
-}
-function sucheOeffnen() {
-  if (!sucheZu()) return;
-  kopfzeile.classList.remove('such-zu'); sucheZustand();
-  if (document.activeElement !== el.q) el.q.focus();   // Tastatur geht auf
-}
-function sucheSchliessen({ fokus = true } = {}) {
-  if (sucheZu() || !isMobile()) return;
-  el.q.value = ''; el.q.dispatchEvent(new Event('input'));
-  endSearch();
-  kopfzeile.classList.add('such-zu'); sucheZustand();
-  if (fokus) lupe.focus({ preventScroll: true });
-}
-
-function wireSearch() {
-  kopfzeile.classList.add('such-zu'); sucheZustand();
-  window.matchMedia('(max-width: 767px)').addEventListener?.('change', () => sucheZustand());
-  // Lupe ist ein normaler Knopf (kein submit): Enter im Feld sendet das Formular, ohne die Lupe auszulösen
-  lupe.addEventListener('click', (e) => {
-    if (!isMobile()) { $('#search-form').requestSubmit(); return; }   // Desktop: Suchen
-    e.preventDefault();
-    if (sucheZu()) sucheOeffnen(); else sucheSchliessen();
-  });
-  el.q.addEventListener('focus', () => { if (isMobile()) sucheOeffnen(); });
-  el.q.addEventListener('input', debounce(() => {
-    const q = el.q.value.trim();
-    if (geoCtrl) geoCtrl.abort();
-    renderSuggest(q ? searchLocal(state.index, q) : [], {});
-  }, 100));
-  el.q.addEventListener('focus', () => { if (el.q.value.trim()) renderSuggest(searchLocal(state.index, el.q.value.trim()), {}); });
-  el.q.addEventListener('keydown', (e) => {
-    const n = suggestItems.length;
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      if (!n) return; e.preventDefault();
-      suggestIdx = (suggestIdx + (e.key === 'ArrowDown' ? 1 : -1) + n) % n;
-      $$('#suggest [role=option]').forEach((li, i) => { li.setAttribute('aria-selected', String(i === suggestIdx)); li.classList.toggle('is-active', i === suggestIdx); });
-      el.q.setAttribute('aria-activedescendant', `sg-${suggestIdx}`);
-    } else if (e.key === 'Escape') { if (!el.suggest.hidden) el.suggest.hidden = true; else sucheSchliessen(); }
-  });
-  $('#search-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const q = el.q.value.trim();
-    if (!q) return;
-    if (suggestIdx >= 0 && suggestItems[suggestIdx]) { suggestItems[suggestIdx](); return; }
-    const local = searchLocal(state.index, q);
-    const exact = local.find(p => displayName(p).toLowerCase() === q.toLowerCase());
-    if (exact) { endSearch(); selectPlace(exact.id); return; }
-    runGeocode(q, { auto: true });
-  });
-  el.suggest.addEventListener('click', (e) => {
-    const li = e.target.closest('[role=option]');
-    if (li) suggestItems[Number(li.id.slice(3))]?.();
-  });
-  document.addEventListener('click', (e) => { if (!e.target.closest('.search')) { el.suggest.hidden = true; } });
-}
-
-// ============================================================ Melden
-function closeMenu() { reportPop?.close(); }
-
-/** „Melden“ im gemeinsamen Sheet-Rahmen (Designumbau, 7.73.1): Handy von unten, Desktop Panel rechts; × , Wischen, Esc und die
- *  Zurück-Taste schließen. Inhalt baut renderReportMenu in meldenRoot. Schnittstelle wie das frühere Popover. */
-const meldenRoot = h('div', { class: 'rm-inhalt' });
-function meldenSheet() {
-  let sh = null;
-  const api = {
-    get isOpen() { return !!sh?.offen; },
-    open(opener = null) {
-      if (sh?.offen) return;
-      sh = sheetOeffnen({ inhalt: meldenRoot, kopf: { titel: 'Was möchtest du melden?', titelId: 'report-title' }, klasse: 'rm-sheet', stufe: 'gross', verlauf: true, opener,
-        onSchliessen: () => { sh = null; } });
-      sh.el.id = 'report-menu';
-      staffeln(meldenRoot.querySelectorAll('.lage-karte, .wm-gruppe, .wm-abschnitt'), { schritt: 55, max: 8 });   // Abschnitte erscheinen versetzt
-    },
-    // programmatisch (eine Meldung startet): ohne history.back – sonst nähme die Zurück-Taste den nächsten Schritt mit
-    close({ nutzer = false } = {}) { const s0 = sh; sh = null; s0?.schliessen({ durchNutzer: nutzer }); },
-    toggle(opener) { if (sh?.offen) api.close({ nutzer: true }); else api.open(opener); },
-  };
-  return api;
-}
-
-const LAGE_NEU_BIS = Date.parse('2026-11-22T00:00:00Z');   // Etikett „NEU“ 30 Tage nach Einführung
-const LAGE_RADIUS_M = 300;
-
-/** Nächster Standort (alle Kategorien) im Umkreis von 300 m. */
-function standortInDerNaehe(pos) {
-  let best = null;
-  for (const p of state.places) {
-    if (p.type !== 'slip') continue;   // Lagemeldungen nur für Slipanlagen
-    const d = haversine(pos.lat, pos.lon, p.lat, p.lon);
-    if (d <= LAGE_RADIUS_M && (!best || d < best.d)) best = { p, d };
-  }
-  return best;
-}
-
-/**
- * „Was möchtest du melden?“ – oben „Lage vor Ort melden“ (mit Standortvorschlag), darunter die vier Meldungen und die Links.
- * fragen: Position jetzt abfragen (nur beim Öffnen durch den Nutzer, nie im Hintergrund).
- */
-function renderReportMenu({ fragen = false } = {}) {
-  const body = clear(meldenRoot);
-  const offline = navigator.onLine === false;
-  // Ortszeile (Baustein) mit farbiger Kachel; Klassen menu-item/rm-item bleiben für Tests und Fokus
-  const item = (ico, cls, label, unter, run, { online = false } = {}) => {
-    const z = zeile({ ico, icoKlasse: `rm-ico ${cls}`, titel: label, unter: online && offline ? 'Offline – gerade nicht möglich' : unter, onClick: () => { closeMenu(); run(); } });
-    z.classList.add('menu-item', 'rm-item'); z.disabled = online && offline;
-    return z;
-  };
-  const abschnitt = (text) => h('h3', { class: 'wm-abschnitt rm-abschnitt', text });
-  const frage = h('div', { class: 'lage-frage', hidden: true });
-  const lageBtn = h('button', { type: 'button', class: 'lage-main', disabled: offline, onclick: () => { closeMenu(); choosePlaceFor('lage-melden'); } },
-    h('span', { class: 'lage-ico', html: icon('pin', 24) }),
-    h('span', { class: 'lage-text' }, h('strong', { text: 'Lage vor Ort melden' }), h('small', { text: offline ? 'Offline – gerade nicht möglich' : 'Parkplatz, Wartezeit, Rampe, Sperrung' })),
-    Date.now() < LAGE_NEU_BIS ? h('span', { class: 'lage-neu', text: 'NEU' }) : null);
-  body.append(
-    abschnitt('Gerade vor Ort'),
-    h('div', { class: 'lage-karte' }, lageBtn, frage),
-    abschnitt('Standort verbessern'),
-    gruppe([
-      item('camera', 'rm-foto', 'Foto einreichen', 'Zeig anderen, wie es dort aussieht', () => choosePlaceFor('foto-einreichen')),
-      item('doc', 'rm-ergaenzen', 'Angaben ergänzen', 'Gebühr, Rampe, Parken …', () => choosePlaceFor('slip-ergaenzen'), { online: true }),
-      item('plus', 'rm-slip', 'Neue Slipanlage melden', 'Fehlt eine auf der Karte?', () => openReport('slipanlage-melden'))], { label: 'Standort verbessern' }),
-    abschnitt('Fehler und Hinweise'),
-    gruppe([
-      item('flag', 'rm-fehler', 'Fehler oder Hinweis melden', 'Falsche Angabe, geschlossen, Sonstiges', () => choosePlaceFor('fehler-melden', { art: 'sonstiges' }))], { label: 'Fehler und Hinweise' }),
-    h('p', { class: 'rmenu-links' },
-      h('a', { href: './ueber.html', text: 'Über WaterMap' }), ' · ', h('a', { href: './datenschutz.html', text: 'Datenschutz' }), ' · ', h('a', { href: './impressum.html', text: 'Impressum' })),
-    h('p', { class: 'muted small rm-version', text: `Version ${CONFIG.VERSION}` }));
-  if (!fragen || offline || !('geolocation' in navigator)) return;
-  // Position nur jetzt (Nutzer hat „Melden“ geöffnet); abgelehnt → still bei der Standortauswahl bleiben
-  requestUserPos().then((pos) => {
-    state.user = pos;
-    const near = standortInDerNaehe(pos);
-    if (!near || !reportPop.isOpen) return;
-    const { p, d } = near;
-    const status = h('p', { class: 'lage-status', role: 'status', 'aria-live': 'polite', hidden: true });
-    let busy = false;
-    // Ein Tipp sendet die Meldung sofort (ohne Notiz); „mehr“ öffnet das Formular mit Notiz
-    const schnell = async (typ, btn) => {
-      if (busy) return;
-      busy = true; btn.setAttribute('aria-busy', 'true'); status.hidden = true;
-      for (const b of knoepfe.children) b.disabled = true;
-      try {
-        const j = await senden(p.id, typ, '');
-        closeMenu();
-        toast('Danke! Deine Meldung ist jetzt sichtbar.');
-        meldLokal(p.id, j.meldungen || []);
-        if (state.selectedId === p.id && standort) showDetail(p, { scrollTo: 'vor-ort' });
-      } catch (ex) {
-        busy = false; btn.removeAttribute('aria-busy');
-        for (const b of knoepfe.children) b.disabled = false;
-        status.textContent = ex.message; status.hidden = false;
-      }
-    };
-    const knoepfe = h('div', { class: 'lage-schnell', role: 'group', 'aria-label': 'Wie ist die Lage?' },
-      Object.entries(MELD_TYPEN).map(([typ, t]) => h('button', { type: 'button', class: `lage-typ lage-${t.ton}`, dataset: { typ }, onclick: (e) => schnell(typ, e.currentTarget) },
-        h('span', { html: icon(t.ico, 22), 'aria-hidden': 'true' }), h('span', { text: t.text }))));
-    frage.replaceChildren(
-      h('p', {}, 'Wie ist es gerade an der ', h('strong', { text: displayName(p) }), p.water?.name ? `, ${p.water.name}?` : '?', h('span', { class: 'lage-dist', text: ` · ${formatDistance(d)} entfernt` })),
-      knoepfe, status,
-      h('div', { class: 'lage-schnell-fuss' },
-        h('span', {}, 'Mit Notiz: ', h('button', { type: 'button', class: 'lage-link lage-mehr', text: 'mehr', onclick: () => { closeMenu(); lageMelden(p, { distance: d, zurueck: true }); } })),
-        h('button', { type: 'button', class: 'lage-link lage-anders', text: 'Anderer Standort', onclick: () => { closeMenu(); choosePlaceFor('lage-melden'); } })));
-    frage.hidden = false;
-  }).catch(() => { /* ohne Position: Eintrag startet die Standortauswahl */ });
-}
+// ============================================================ Melden (melden-menue.js)
+let melden = null;
+function closeMenu() { melden?.closeMenu(); }
+function renderReportMenu(o) { melden.renderReportMenu(o); }
 
 // ============================================================ Tabs, Sheet, Hilfen
 /** „Gemerkt“ und sein Abzeichen aktuell halten (Stern an anderer Stelle, Rückgängig, anderer Tab). */

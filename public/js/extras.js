@@ -2,7 +2,6 @@
 // Toiletten, Wasser, Gastronomie, Rastplätze und Parkplätze (Ebene „Service“). Datei: data/osm/extras.geojson.
 // Text aus den Daten wird nur als Text eingefügt.
 import { CONFIG } from './config.js';
-import { abfrage } from './umgebung-abfrage.js';
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { haversine, formatDistance, navUrl, safeHttpUrl, safeTel, UNKNOWN } from './model.js';
@@ -94,77 +93,7 @@ function normalize(f) {
     opening_hours: p.opening_hours || null, operator: p.operator || null, website: p.website || null, phone: p.phone || null, osm: p.osm || null };
 }
 
-// ------------------------------------------------------------------ „Umgebung“ live aus OpenStreetMap
-// Beim Öffnen eines Standorts fragt die App den Umkreis über die eigene Netlify-Funktion ab
-// (netlify/functions/umgebung.mjs → Overpass API): keine IP-Adressen der Besucher bei Dritten, der Import bleibt klein.
-// Klappt das nicht (offline, Overpass überlastet), bleiben die importierten Daten.
-const LIVE_KINDS = new Set(['lock', 'toilets', 'water', 'food', 'rest', 'parking', 'shop']);   // diese Arten deckt die Abfrage ab
-const LIVE_TIMEOUT_MS = 22000;   // die Funktion fragt mehrere Overpass-Server gleichzeitig
-const DIREKT_TIMEOUT_MS = 18000;
-const NOT_PUBLIC = new Set(['private', 'no', 'customers', 'permit', 'military', 'agricultural', 'forestry', 'delivery']);
-const liveCache = new Map();
-
 const tri = (v) => (v === 'yes' ? true : v === 'no' ? false : null);
-
-/** OSM-Element (mit center bei Flächen) → Eintrag wie aus extras.geojson; null, wenn unpassend. */
-export function fromOsm(el) {
-  const t = el?.tags || {};
-  const lat = el.lat ?? el.center?.lat, lon = el.lon ?? el.center?.lon;
-  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !['node', 'way', 'relation'].includes(el.type) || !Number.isInteger(el.id)) return null;
-  let kind = null, sub = null;
-  if (t.lock === 'yes' || t['seamark:type'] === 'lock_basin') kind = 'lock';
-  else if (t.amenity === 'toilets') kind = 'toilets';
-  else if (t.amenity === 'drinking_water' || t.amenity === 'water_point') { kind = 'water'; sub = t.amenity; }
-  else if (['restaurant', 'cafe', 'biergarten', 'fast_food', 'pub'].includes(t.amenity)) { kind = 'food'; sub = t.amenity; }
-  else if (t.shop === 'kiosk') { kind = 'food'; sub = 'kiosk'; }
-  else if (t.shop === 'supermarket' || t.shop === 'convenience') { kind = 'shop'; sub = t.shop; }
-  else if (['camp_site', 'caravan_site', 'picnic_site'].includes(t.tourism) || t.leisure === 'picnic_site') { kind = 'rest'; sub = t.tourism || 'picnic_site'; }
-  else if (t.amenity === 'parking') kind = 'parking';
-  if (!kind) return null;
-  if (kind !== 'lock' && NOT_PUBLIC.has(String(t.access || '').trim().toLowerCase())) return null;
-  if (t.disused === 'yes' || t.abandoned === 'yes') return null;
-  const attrs = {};
-  if (sub) attrs.sub = sub;
-  if (kind === 'toilets') { attrs.wheelchair = tri(t.wheelchair); attrs.changing_table = tri(t.changing_table); }
-  if (kind === 'water') attrs.drinkable = sub === 'water_point' ? tri(t.drinking_water) : true;
-  if (kind === 'parking') { const c = parseInt(t.capacity, 10); if (c > 0) attrs.capacity = c; attrs.trailer = tri(t.trailer); }
-  if (kind === 'food' && t.cuisine) attrs.cuisine = String(t.cuisine).slice(0, 60);
-  for (const k of Object.keys(attrs)) if (attrs[k] === null) delete attrs[k];
-  return normalize({ type: 'Feature', id: `${el.type}/${el.id}`, geometry: { type: 'Point', coordinates: [lon, lat] },
-    properties: { kind, name: t.name || (kind === 'lock' ? t.lock_name : null) || null, attrs, fee: tri(t.fee), opening_hours: t.opening_hours || null,
-      operator: t.operator || null, website: /^https?:\/\//i.test(t.website || '') ? t.website : null, phone: t.phone || t['contact:phone'] || null,
-      osm: { type: el.type, id: el.id } } });
-}
-
-/** Einrichtungen im Umkreis live von Overpass (Promise mit Liste); wirft bei Fehler oder Zeitüberschreitung. */
-export function liveNearby(lat, lon, radius, { fetchFn = fetch } = {}) {
-  const key = `${lat.toFixed(4)},${lon.toFixed(4)},${radius}`;
-  if (liveCache.has(key)) return liveCache.get(key);
-  const holen = (url, opts, ms) => {
-    const ctl = typeof AbortController === 'function' ? new AbortController() : null;
-    const timer = ctl && setTimeout(() => ctl.abort(), ms);
-    return fetchFn(url, { ...opts, signal: ctl?.signal })
-      .catch((e) => { throw new Error(`${new URL(url, location.href).host}: ${e?.name === 'AbortError' ? 'Zeitüberschreitung' : 'nicht erreichbar'}`); })
-      .then(r => { if (!r.ok) throw new Error(`${new URL(url, location.href).host}: HTTP ${r.status}`); return r.json(); })
-      .then(j => {
-        if (!Array.isArray(j?.elements)) throw new Error('unerwartete Antwort');
-        // Overpass meldet Überlastung oft mit HTTP 200, leerer Liste und „runtime error“ – das ist kein leeres Ergebnis
-        if (!j.elements.length && /runtime error/i.test(j.remark || '')) throw new Error(`${new URL(url, location.href).host}: überlastet`);
-        return j.elements;
-      })
-      .finally(() => timer && clearTimeout(timer));
-  };
-  // Zuerst direkt beim Overpass-Server (Rechenzentrums-Adressen wie Netlify lehnt overpass-api.de ab),
-  // sonst über unsere Netlify-Funktion mit Ausweich-Servern.
-  const p = holen(CONFIG.OVERPASS_API, { method: 'POST', body: 'data=' + encodeURIComponent(abfrage(lat, lon, radius)),
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' } }, DIREKT_TIMEOUT_MS)
-    .catch((e1) => holen(`${CONFIG.UMGEBUNG_API}?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}`, { headers: { Accept: 'application/json' } }, LIVE_TIMEOUT_MS)
-      .catch((e2) => { throw new Error(`${e1.message}; ${e2.message}`); }))
-    .then(els => els.map(fromOsm).filter(Boolean));
-  liveCache.set(key, p);
-  p.catch(() => liveCache.delete(key));
-  return p;
-}
 
 /** Extras im Umkreis (Meter), nach Entfernung sortiert. */
 export function nearby(list, lat, lon, radius, exclude) {
@@ -260,38 +189,3 @@ export function renderExtraDetail(x, { close, user }) {
   return [head, body];
 }
 
-/** Abschnitt „Umgebung“ für die Detailansicht eines Standorts. */
-export function nearbySection(listPromise, lat, lon, { onSelect, exclude, live = true }) {
-  const R = CONFIG.NEARBY_EXTRAS_M;
-  const box = h('div', { class: 'nearby-list', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Wird geladen …' }));
-  const section = h('section', { class: 'block' }, h('h3', { text: `Umgebung (bis ${R} m)` }), box);
-  const imported = listPromise.catch(() => null);
-  let liveFehler = '';
-  const fresh = live ? liveNearby(lat, lon, R).catch((e) => { liveFehler = e?.message || 'Fehler'; return null; }) : Promise.resolve(null);
-  let final = false;
-  const draw = (near) => {
-    if (!near.length) { box.replaceChildren(h('p', { class: 'unknown', text: 'Keine weiteren Einrichtungen in unseren Daten gefunden.' })); return; }
-    const shown = near.slice(0, CONFIG.NEARBY_EXTRAS_MAX);
-    box.replaceChildren(h('ul', {}, shown.map(({ x, d }) => h('li', {},
-      h('button', { type: 'button', class: 'nearby-item', onclick: () => onSelect(x.id, x) },
-        h('span', { class: 'nearby-ico', style: `background:${kindColor(x.kind)}`, html: glyph(x.kind, 15) }),
-        h('span', { class: 'nearby-text' }, h('span', { class: 'nearby-name', text: extraTitle(x) }),
-          h('span', { class: 'nearby-sub', text: [x.name && !SUB[x.attrs.sub] ? KINDS[x.kind].label : '', extraShort(x)].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' · ') })),
-        h('span', { class: 'nearby-dist', text: formatDistance(d) }))))),
-      ...(near.length > shown.length ? [h('p', { class: 'muted small', text: `… und ${near.length - shown.length} weitere.` })] : []));   // replaceChildren macht aus null den Text „null“
-  };
-  // Importierte Daten sofort zeigen (falls vorhanden), die Live-Abfrage ersetzt sie
-  imported.then((list) => { if (!final && list) { box.removeAttribute('aria-busy'); draw(nearby(list, lat, lon, R, exclude)); } });
-  Promise.all([imported, fresh]).then(([list, liveList]) => {
-    final = true;
-    box.removeAttribute('aria-busy');
-    if (!list && !liveList) { box.replaceChildren(h('p', { class: 'unknown', text: 'Konnte nicht geladen werden.' })); return; }
-    // Live deckt Schleusen und Service ab; Brücken, Wehre, Kanu-Einstiege und Verleihe kommen aus dem Import
-    const base = (list || []).filter(x => !liveList || !LIVE_KINDS.has(x.kind));
-    const ids = new Set();
-    const all = [...(liveList || []), ...base].filter(x => !ids.has(x.id) && ids.add(x.id));
-    draw(nearby(all, lat, lon, R, exclude));
-    if (liveFehler) box.append(h('p', { class: 'muted small nearby-hinweis', text: `Live-Abfrage bei OpenStreetMap fehlgeschlagen (${liveFehler}) – angezeigt werden nur unsere gespeicherten Daten.` }));
-  });
-  return section;
-}

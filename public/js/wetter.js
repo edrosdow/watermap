@@ -18,10 +18,10 @@ export const compass = (deg) => DIRS[Math.round(((deg % 360) + 360) % 360 / 22.5
 
 // Warnstufen des DWD (gelb, orange, rot, violett) – nie allein über Farbe: Symbol + Text gehören dazu
 export const SEVERITY = {
-  minor:    { label: 'Wetterwarnung', rank: 1, color: '#FAB219' },
-  moderate: { label: 'Markante Wetterwarnung', rank: 2, color: '#EC835A' },
-  severe:   { label: 'Unwetterwarnung', rank: 3, color: '#D03B3B' },
-  extreme:  { label: 'Extreme Unwetterwarnung', rank: 4, color: '#8B1A6B' },
+  minor:    { label: 'Wetterwarnung', rank: 1, color: 'var(--wm-sonne)' },
+  moderate: { label: 'Markante Wetterwarnung', rank: 2, color: 'var(--wm-warn)' },
+  severe:   { label: 'Unwetterwarnung', rank: 3, color: 'var(--wm-stop)' },
+  extreme:  { label: 'Extreme Unwetterwarnung', rank: 4, color: 'var(--wm-extrem)' },
 };
 
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
@@ -81,26 +81,6 @@ function normHours(raw, now) {
     rain: num(w.precipitation), prob: num(w.precipitation_probability),
   })).filter(x => Number.isFinite(x.t) && x.t >= now - 3600e3 && x.wind !== null).sort((a, b) => a.t - b.t);
   return list.length ? list : null;
-}
-
-const cacheTage = new Map();
-
-/** Stundenwerte für die nächsten Tage (Wochenend-Ausblick im Pegel-Tab): ab heute 0 Uhr bis `tage` Tage voraus; null, wenn nicht erreichbar. */
-export function loadWetterStunden(lat, lon, { tage = 8, now = Date.now() } = {}) {
-  const key = `${lat.toFixed(2)},${lon.toFixed(2)},${tage}`;
-  const hit = cacheTage.get(key);
-  if (hit && now - hit.at < CONFIG.WETTER_CACHE_MIN * 60e3) return hit.promise;
-  const von = new Date(now); von.setHours(0, 0, 0, 0);
-  const bis = new Date(von.getTime() + tage * 86400e3);
-  const pos = { lat: lat.toFixed(4), lon: lon.toFixed(4) };
-  const promise = getJson('weather', { ...pos, date: von.toISOString(), last_date: bis.toISOString() }).then((raw) => {
-    const list = (raw?.weather || []).map(w => ({
-      t: Date.parse(w.timestamp), temp: num(w.temperature), icon: w.icon || null, wind: num(w.wind_speed), gust: num(w.wind_gust_speed),
-    })).filter(x => Number.isFinite(x.t)).sort((a, b) => a.t - b.t);
-    return list.length ? list : null;
-  }).catch(() => { cacheTage.delete(key); return null; });
-  cacheTage.set(key, { at: now, promise });
-  return promise;
 }
 
 function normAlerts(raw) {

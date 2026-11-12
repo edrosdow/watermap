@@ -1,7 +1,7 @@
 // Tests der Fluss-Logik (public/js/pegel-fluss.js): Gruppierung Küste/Tide/Kanäle, Zustand eines Flusses, rel, Profil.
 // Start: node tests/pegel_fluss_test.mjs
 import assert from 'node:assert/strict';
-import { naechsterPegel, slug, rel, gruppieren, gruppeZu, flussZustand, kachelnSortieren, punkte, profil, flussKm, istKueste, slipsAmFluss, artikel, flussReihenfolge, abschnitt } from '../public/js/pegel-fluss.js';
+import { naechsterPegel, slug, rel, gruppieren, gruppeZu, flussZustand, punkte, profil, flussKm, istKueste, slipsAmFluss, artikel, flussReihenfolge, abschnitt } from '../public/js/pegel-fluss.js';
 import { schoenerName, umlautVerdacht } from '../public/js/pegel-namen.js';
 
 const R = { MNW: 100, MW: 200, MHW: 300, HSW: 400 };
@@ -63,13 +63,6 @@ assert.equal(alt.key, 'keine', 'nur veraltete Werte → keine aktuellen Daten');
 assert.equal(flussZustand(gr.kueste).key, 'kueste');
 assert.equal(flussZustand(gr.ohne[0]).key, 'ohne');
 
-// Kacheln: Meine Pegel zuerst, dann Schwere, dann Anzahl
-const A = { name: 'Aaa', slug: 'a', art: 'fluss', pegel: [P('A', 1, 200, 'normal'), P('A', 2, 200, 'normal'), P('A', 3, 200, 'normal')] };
-const B = { name: 'Bbb', slug: 'b', art: 'fluss', pegel: [P('B', 1, 450, 'hsw')] };
-const C = { name: 'Ccc', slug: 'c', art: 'fluss', pegel: [P('C', 1, 50, 'low')] };
-const D = { name: 'Ddd', slug: 'd', art: 'fluss', pegel: [P('D', 1, 50, 'low'), P('D', 2, 50, 'low')] };
-assert.deepEqual(kachelnSortieren([A, C, B, D]).map(f => f.name), ['Bbb', 'Ddd', 'Ccc', 'Aaa'], 'Schwere, dann Anzahl');
-assert.deepEqual(kachelnSortieren([A, C, B, D], [A.pegel[1].id]).map(f => f.name), ['Aaa', 'Bbb', 'Ddd', 'Ccc'], 'Meine Pegel zuerst');
 
 // Punktreihe: höchstens 12, gleichmäßig, erster und letzter dabei
 const viele = fluss(...Array.from({ length: 30 }, (_, i) => P('X', i, 200, 'normal')));

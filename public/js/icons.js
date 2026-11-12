@@ -1,5 +1,5 @@
 // Alle Symbole als SVG-Text. Es werden nur eigene, feste Strings eingefügt – nie Daten aus Nutzereingaben.
-export const COLORS = { slip: '#087F9C', marina: '#16619B', fuel: '#D78B23' };
+export const COLORS = { slip: 'var(--wm-slip)', marina: 'var(--wm-hafen)', fuel: 'var(--wm-tanke)' };
 
 // Zeichen innerhalb des Kartenmarkers (Koordinatensystem 44 × 54, Pin-Kreis Mitte 22/21).
 const GLYPH = {
@@ -7,31 +7,31 @@ const GLYPH = {
   // (eigener Entwurf nach Vorlage des Nutzers, Variante F, 7.68.1). Boot und Trailer um 16,7° gedreht
   // (Drehpunkt = Radmitte), parallel zur Rampe; Bug den Hang hinauf, Heck zum Wasser.
   slip: `
-    <path d="M8.5 24.2 33.5 31.7v1.8H8.5z" fill="#fff" opacity=".95"/>
+    <path d="M8.5 24.2 33.5 31.7v1.8H8.5z" opacity=".95" style="fill:var(--wm-flaeche)"/>
     <g transform="rotate(16.7 21 24)">
-      <path d="M9.4 23h23.2" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/>
-      <path d="M9.4 15.8H34L32.9 19.9Q32.6 20.6 31.9 20.6H15Q10.8 20.6 9.4 15.8z" fill="#fff"/>
-      <path d="M21.6 15.8l2.6-2.6h3.2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-      <circle cx="21" cy="24" r="2.3" fill="#087F9C" stroke="#fff" stroke-width="1.9"/>
+      <path d="M9.4 23h23.2" stroke-width="2.3" stroke-linecap="round" style="stroke:var(--wm-flaeche)"/>
+      <path d="M9.4 15.8H34L32.9 19.9Q32.6 20.6 31.9 20.6H15Q10.8 20.6 9.4 15.8z" style="fill:var(--wm-flaeche)"/>
+      <path d="M21.6 15.8l2.6-2.6h3.2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none" style="stroke:var(--wm-flaeche)"/>
+      <circle cx="21" cy="24" r="2.3" stroke-width="1.9" style="fill:var(--wm-slip);stroke:var(--wm-flaeche)"/>
     </g>
-    <path d="M11.5 36q2.5-2.5 5 0t5 0 5 0 5 0" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/>`,
+    <path d="M11.5 36q2.5-2.5 5 0t5 0 5 0 5 0" stroke-width="2" stroke-linecap="round" fill="none" style="stroke:var(--wm-flaeche)"/>`,
   marina: `
-    <circle cx="22" cy="12.2" r="2.7" stroke="#fff" stroke-width="2.2" fill="none"/>
-    <path d="M22 15v18M16 19.5h12" stroke="#fff" stroke-width="2.3" stroke-linecap="round" fill="none"/>
-    <path d="M10.5 24.5c0 7 5 9.5 11.5 9.5s11.5-2.5 11.5-9.5M10.5 24.5l-2.7 3.4M33.5 24.5l2.7 3.4" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+    <circle cx="22" cy="12.2" r="2.7" stroke-width="2.2" fill="none" style="stroke:var(--wm-flaeche)"/>
+    <path d="M22 15v18M16 19.5h12" stroke-width="2.3" stroke-linecap="round" fill="none" style="stroke:var(--wm-flaeche)"/>
+    <path d="M10.5 24.5c0 7 5 9.5 11.5 9.5s11.5-2.5 11.5-9.5M10.5 24.5l-2.7 3.4M33.5 24.5l2.7 3.4" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" fill="none" style="stroke:var(--wm-flaeche)"/>`,
   fuel: `
-    <rect x="12" y="11" width="14" height="22" rx="2" stroke="#fff" stroke-width="2.3" fill="none"/>
-    <path d="M15 15h8v6h-8z" fill="#fff"/>
-    <path d="M26 17.5c5 0 7 2.2 7 6.5v4.5a2.4 2.4 0 0 1-4.8 0V25" stroke="#fff" stroke-width="2.2" stroke-linecap="round" fill="none"/>
-    <path d="M10 34.5h18" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/>`,
+    <rect x="12" y="11" width="14" height="22" rx="2" stroke-width="2.3" fill="none" style="stroke:var(--wm-flaeche)"/>
+    <path d="M15 15h8v6h-8z" style="fill:var(--wm-flaeche)"/>
+    <path d="M26 17.5c5 0 7 2.2 7 6.5v4.5a2.4 2.4 0 0 1-4.8 0V25" stroke-width="2.2" stroke-linecap="round" fill="none" style="stroke:var(--wm-flaeche)"/>
+    <path d="M10 34.5h18" stroke-width="2.3" stroke-linecap="round" style="stroke:var(--wm-flaeche)"/>`,
 };
 
 /** Kartenmarker (Pin) für eine Kategorie. */
 export function pinSvg(type, { size = 1, selected = false } = {}) {
   const w = Math.round(44 * size), h = Math.round(54 * size);
-  const color = COLORS[type] || '#0B3045';
+  const color = COLORS[type] || 'var(--wm-tinte)';
   return `<svg class="pin${selected ? ' is-selected' : ''}" width="${w}" height="${h}" viewBox="0 0 44 54" aria-hidden="true" focusable="false">
-    <path d="M22 51.5C18.5 45 3.2 31.5 3.2 21.2a18.8 18.8 0 1 1 37.6 0C40.8 31.5 25.5 45 22 51.5Z" fill="${color}" stroke="#fff" stroke-width="2.8"/>
+    <path d="M22 51.5C18.5 45 3.2 31.5 3.2 21.2a18.8 18.8 0 1 1 37.6 0C40.8 31.5 25.5 45 22 51.5Z" style="fill:${color};stroke:var(--wm-flaeche)" stroke-width="2.8"/>
     ${GLYPH[type] || ''}</svg>`;
 }
 

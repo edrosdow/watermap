@@ -1,16 +1,10 @@
 // Tests: Trend aus PEGELONLINE (auch als Text), Ersatz aus dem Verlauf, Änderung in 24 h, Messlücken. Start: node tests/pegel_trend_test.mjs
 import assert from 'node:assert/strict';
-import { trendAusVerlauf, aenderung24h, richtung24, TREND24_SCHWELLE_CM } from '../public/js/pegel-daten.js';
+import { aenderung24h } from '../public/js/pegel-daten.js';
 import { normalizeStation, messluecken } from '../public/js/pegel.js';
 
 const H = 3600e3;
 const reihe = (f, stunden = 4) => Array.from({ length: stunden * 4 + 1 }, (_, i) => ({ t: i * 0.25 * H, v: f(i) }));
-assert.equal(trendAusVerlauf(reihe(i => 100 + i)), 1, 'steigend');
-assert.equal(trendAusVerlauf(reihe(i => 100 - i)), -1, 'fallend');
-assert.equal(trendAusVerlauf(reihe(() => 100)), 0, 'gleich');
-assert.equal(trendAusVerlauf(reihe(i => 100 + i * 0.1)), 0, 'unter 2 cm in 2 h: gleich');
-assert.equal(trendAusVerlauf([{ t: 0, v: 1 }]), null, 'zu kurz');
-assert.equal(trendAusVerlauf(reihe(i => i, 1)), null, 'unter 2 h: kein Trend');
 
 const st = (trend) => ({ uuid: 'x', latitude: 50, longitude: 7, water: { shortname: 'RHEIN' },
   timeseries: [{ shortname: 'W', unit: 'cm', currentMeasurement: { timestamp: new Date().toISOString(), value: 100, ...(trend === undefined ? {} : { trend }) } }] });
@@ -31,12 +25,6 @@ assert.deepEqual(t2.tideRoh, ['MHThw=700 cm']);
 assert.ok(!normalizeStation(tideSt([{ shortname: 'MNW', unit: 'cm', value: 100 }])).tide, 'MNW ist kein Tidekennwert');
 
 // Pegelkarte (7.49.0): Richtung aus der Änderung in 24 h, Messlücken
-// Richtung: kleine Änderungen zählen nicht als steigend/fallend
-assert.equal(TREND24_SCHWELLE_CM, 3);
-assert.equal(richtung24(6), 1); assert.equal(richtung24(3), 1);
-assert.equal(richtung24(-3), -1); assert.equal(richtung24(-40), -1);
-assert.equal(richtung24(2), 0); assert.equal(richtung24(-2), 0); assert.equal(richtung24(0), 0);
-assert.equal(richtung24(null), null); assert.equal(richtung24(undefined), null); assert.equal(richtung24(NaN), null);
 
 // Änderung in 24 h aus Messwerten mit unterschiedlichem Abstand
 const t0 = Date.UTC(2026, 10, 1, 12);

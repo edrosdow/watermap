@@ -19,14 +19,14 @@ Die Standorte für **ganz Deutschland** (16 Bundesländer) kommen per Import aus
 
 „Heute vor Ort“: Lagemeldungen (24 h sichtbar) über `netlify/functions/meldungen.mjs` + Netlify Blobs – Einrichtung in `docs/HEUTE-VOR-ORT.md`.
 
-„In der Nähe“ (500 m um einen Standort) fragt Campingplätze, Parkplätze, Toiletten, Gastronomie, Supermärkte und Schleusen live bei OpenStreetMap ab (direkt aus dem Browser bei overpass-api.de; Rückfall: Netlify-Funktion `netlify/functions/umgebung.mjs` mit Ausweich-Servern); der Import liefert Brücken, Wehre, Kanu-Einstiege und Verleihe und dient als Rückfall.
+„In der Nähe“ (Bereich `#naehe`) zeigt Slipanlagen, Häfen und Tankstellen im Umkreis; Schleusen, Brücken, Kanu-Einstiege und Service kommen aus dem Import (`osm/extras.geojson`).
 
 Details: [docs/DATEN-AKTUALISIEREN.md](docs/DATEN-AKTUALISIEREN.md). Fehlt ein Bundesland, weil die Overpass-Server ausfallen, bricht der Import ab und die alten Daten bleiben.
 
 ## Pegel
 Bereich „In der Nähe“ unter `#naehe` (`js/naehe.js`, Stil `css/naehe.css`; alter Link `#liste` geht weiter): Standorte im Umkreis von 25 km (bei weniger als 5 Treffern 50 bzw. 100 km) um „Meine Position“, die Kartenmitte oder einen gesuchten Ort. Die Standortfreigabe wird vorher geprüft (Permissions API); der Browser-Dialog kommt erst auf „Position verwenden“. Gespeichert wird nur die Wahl des Bezugspunkts, nie die Position; der Ortsname kommt lokal aus den WaterMap-Daten.
 
-Bereich „Pegel“ unter `#pegel` (`js/pegel-dashboard.js`, Darstellung `js/pegel-ansicht.js`, Daten `js/pegel-daten.js`, Stil `css/pegel.css`): Lage heute, „Meine Pegel“ (eigene Liste im Browser, getrennt von den Favoriten), Flüsse im Überblick, alle Pegel als Tabelle. Detailseite `#pegel/<UUID>`; Pegel auf der Karte `#karte/pegel/<UUID>` (alter Link `#g=<UUID>` geht weiter). Eine gemeinsame Stationsliste für Karte und Dashboard, alle 15 Min. aktualisiert; Verläufe nur für sichtbare Karten und die Detailseite. Offline: letzter gespeicherter Stand mit „Stand von …“. Flussseite `#pegel/fluss/<name>` (`js/pegel-fluss.js` Logik, `js/pegel-fluss-ansicht.js` Darstellung): Profil des Wasserstands entlang des Flusses und alle Pegel nach Flusskilometer; Küstengewässer laut `CONFIG.PEGEL_KUESTE`.
+Pegel liegen seit dem Designumbau auf der Hauptkarte (Chip „Pegel“, `js/pegel-marker.js`); ein Tipp öffnet das Pegel-Sheet (`js/pegel-sheet.js`, Cockpit `js/pegel-ansicht.js`, Daten `js/pegel-daten.js`, Stil `css/pegel.css`). Adresse `#karte/pegel/<UUID>`; alte Adressen (`#pegel`, `#pegel/<UUID>`, `#g=<UUID>`) führen dorthin. Flüsse: `#pegel/fluss/<name>`.
 
 ## Pegel-Ampel
 Seit 7.71.0 ein Abschnitt „Passt mein Boot?“ im Pegel-Sheet (`js/passt-mein-boot.js`, Speicher `js/mindestpegel.js`, Logik in `js/ampel-logik.js`): Mindestpegel je Pegel (`watermap.mindestpegel`) → Passt/Knapp/Zu niedrig mit Abstand und Vorschau; sichtbar auch in „Gemerkt“ und am Pegel-Kasten der Slipanlage. `/pegel-ampel` ist nur noch Einstiegsseite für Suchmaschinen (`?pegel=` leitet ins Sheet, Bestätigen/Abbestellen der Alarm-Mails läuft weiter dort). Puffer (20 cm), Trendschwelle und Prognosezeitraum stehen als Konstanten oben in `ampel-logik.js`. Weitere Prüfungen (z. B. Brücken) werden an `PRUEFUNGEN` angehängt. Alte Links `/pegel-ampel?pegel=<PEGELONLINE-UUID>` führen ins Pegel-Sheet.
@@ -37,7 +37,7 @@ Seit 7.71.0 ein Abschnitt „Passt mein Boot?“ im Pegel-Sheet (`js/passt-mein-
 | Pfad | Inhalt |
 |---|---|
 | `public/` | Die Web-App (das wird veröffentlicht) |
-| `public/js/` | Programmcode: `main.js` (Ablauf), `map.js` (Leaflet), `data.js`, `model.js`, `forms.js`, `detail.js`, `search.js`, `icons.js`, `config.js` |
+| `public/js/` | Programmcode (ES-Module, kein Build): `main.js` (Start, Routing), `suche-ui.js`, `melden-menue.js`, `bausteine.js`, `map.js` u. a. – Übersicht in `watermap-stand.md` |
 | `public/data/osm/` | Standorte aus OpenStreetMap (GeoJSON, wird vom Import überschrieben) |
 | `public/data/community/` | Geprüfte Community-Daten (wird **nie** vom Import überschrieben) |
 | `netlify/` | Netlify-Funktionen (Foto-Verwaltung, Pegel-Alarm); `package.json` nur dafür |
@@ -64,6 +64,7 @@ python3 -I tests/ui_gebiet.py                   # Kartengebiet Deutschland mit e
 node tests/gebiet_test.mjs                      # Kartengebiet: Punkte, Suchtreffer, Kacheln
 node tests/foto_kategorien_test.mjs             # Foto-Kategorien: Zuordnung, Filter
 node tests/nav_test.mjs                        # Navigation: Beschriftung, Abzeichen-Zahl, „neu“-Zählung
+node tests/design_tokens_test.mjs               # Wächter: nur Tokens in public/css und public/js (Ausnahmen begründet im Test)
 ```
 Die Oberflächentests laufen mit einem Leaflet-Ersatz. Siehe [docs/STATUS.md](docs/STATUS.md) für das, was damit **nicht** geprüft ist.
 

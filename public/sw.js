@@ -3,7 +3,7 @@
 //  * eigene Dateien (Seite, Skripte, Daten): erst Netzwerk, bei Ausfall Zwischenspeicher → Updates kommen sofort an
 //  * Bibliotheken von CDN und bereits gesehene Kartenkacheln: Zwischenspeicher zuerst (mit Obergrenze)
 // Offline heißt deshalb: Standortliste und Details funktionieren; Kartenkacheln nur dort, wo man vorher war.
-const VERSION = 'v7.73.1';
+const VERSION = 'v7.74.0';
 const SHELL = `watermap-shell-${VERSION}`;
 const TILES = `watermap-tiles-${VERSION}`;
 const LIBS = `watermap-libs-${VERSION}`;
@@ -12,7 +12,7 @@ const MAX_TILES = 400;
 const SHELL_FILES = [
   './', './index.html', './css/tokens.css', './css/bausteine.css', './fonts/atkinson-next-latin.woff2', './fonts/atkinson-next-latin-ext.woff2', './css/app.css', './css/chart.css', './css/nav.css', './css/pegel.css', './css/naehe.css', './css/bereiche.css', './css/page.css', './css/bewegung.css', './pegel-ampel.html', './manifest.webmanifest',
   './js/main.js', './js/config.js', './js/dom.js', './js/icons.js', './js/model.js', './js/data.js',
-  './js/map.js', './js/search.js', './js/favorites.js', './js/forms.js', './js/photo-form.js', './js/nav.js', './js/wischen.js', './js/bausteine.js', './js/suchfeld.js', './js/meldungen.js', './js/lage-form.js', './js/pegel-daten.js', './js/pegel-ansicht.js', './js/pegel-sheet.js', './js/pegel-marker.js', './js/pegel-bild.js', './js/alarm.js', './js/pegel-vorhersage.js', './js/pegel-einordnung.js', './js/pegel-fluss.js', './js/pegel-fluss-ansicht.js', './js/pegel-namen.js', './js/gezeiten.js', './js/gezeiten-bsh.js', './js/pegel-tide-ansicht.js', './js/naehe.js', './js/mehr.js', './js/gemerkt.js', './js/bewegung.js', './js/einstellungen.js', './js/meldungen-uebersicht.js', './js/meldung-unpassend.js', './js/slip-ergaenzen.js', './js/gebiet.js', './js/detail.js', './js/pegel.js', './js/wetter.js', './js/chart.js', './js/extras.js', './js/umgebung-abfrage.js', './js/hafeninfo.js', './js/photos.js', './js/foto-kategorien.js', './js/ampel.js', './js/ampel-logik.js', './js/mindestpegel.js', './js/passt-mein-boot.js',
+  './js/map.js', './js/search.js', './js/favorites.js', './js/forms.js', './js/photo-form.js', './js/nav.js', './js/wischen.js', './js/bausteine.js', './js/suchfeld.js', './js/meldungen.js', './js/lage-form.js', './js/pegel-daten.js', './js/pegel-ansicht.js', './js/pegel-sheet.js', './js/pegel-marker.js', './js/pegel-bild.js', './js/alarm.js', './js/pegel-vorhersage.js', './js/pegel-einordnung.js', './js/pegel-fluss.js', './js/pegel-fluss-ansicht.js', './js/pegel-namen.js', './js/gezeiten.js', './js/gezeiten-bsh.js', './js/pegel-tide-ansicht.js', './js/naehe.js', './js/mehr.js', './js/gemerkt.js', './js/bewegung.js', './js/farben.js', './js/suche-ui.js', './js/melden-menue.js', './js/einstellungen.js', './js/meldungen-uebersicht.js', './js/meldung-unpassend.js', './js/slip-ergaenzen.js', './js/gebiet.js', './js/detail.js', './js/pegel.js', './js/wetter.js', './js/chart.js', './js/extras.js', './js/umgebung-abfrage.js', './js/hafeninfo.js', './js/photos.js', './js/foto-kategorien.js', './js/ampel.js', './js/ampel-logik.js', './js/mindestpegel.js', './js/passt-mein-boot.js',
   './icons/icon-192.png', './icons/favicon.svg',
   './vendor/leaflet/leaflet.js', './vendor/leaflet/leaflet.css',
   './vendor/markercluster/leaflet.markercluster.js', './vendor/markercluster/MarkerCluster.css',

@@ -1,12 +1,11 @@
 // Bausteine für Pegel: Zustands-Etikett, Skala, Klartext, Kennwerte und das Pegel-Cockpit (Detailansicht).
 // Zustand nach den amtlichen Kennwerten des jeweiligen Pegels (PEGELONLINE) – nicht nach dem eigenen Boot.
-import { CONFIG } from './config.js';
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { historyChart, formatTime } from './pegel.js';
 import { aenderung24h, meinePegel, zusatzLaden, vorhersageWLaden, wtAenderungLaden, verlauf30Laden } from './pegel-daten.js';
 import { vorhersageSatz } from './pegel-vorhersage.js';
-import { einordnungSatz, tendenz, tendenzText as tendenzTextKurz, aenderungKurz, zonenLage, ZONEN } from './pegel-einordnung.js';
+import { tendenz, tendenzText as tendenzTextKurz, aenderungKurz, zonenLage, ZONEN } from './pegel-einordnung.js';
 import { pegelBild, bildTeilen } from './pegel-bild.js';
 import { alarmFenster, alarmStatus } from './alarm.js';
 import { istTidepegel } from './gezeiten.js';
@@ -40,13 +39,6 @@ export const etikett = (g) => { const z = ZUSTAND[zustand(g)]; return h('span', 
 const TREND_TEXT = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' };
 const TREND_PFEIL = { 1: '↗', 0: '→', '-1': '↘' };
 export const trendText = (g, { kurz = false } = {}) => (g.trend === null ? '' : `${TREND_PFEIL[g.trend]} ${kurz && g.trend === 0 ? 'gleich' : TREND_TEXT[g.trend]}`);
-export const trendKlasse = (g) => (g.trend === 1 ? 'pt-up' : g.trend === -1 ? 'pt-down' : 'pt-flat');
-
-/** Erklärsatz aus den vorhandenen Kennwerten (pegel-einordnung.js); ohne Kennwerte ein Hinweis. */
-export function klartext(g) {
-  return einordnungSatz(g) || 'Für diesen Pegel gibt es keine amtlichen Kennwerte – eine Einordnung ist nicht möglich.';
-}
-
 const KW = ['MNW', 'MW', 'MHW', 'HSW'];
 export const KW_NAME = { MNW: 'Mittleres Niedrigwasser', MW: 'Mittelwasser', MHW: 'Mittleres Hochwasser', HSW: 'Höchster Schifffahrtswasserstand' };
 
@@ -86,20 +78,8 @@ export function stammdaten(g) {
     g.number ? h('a', { class: 'pd-link', href: `https://www.pegelonline.wsv.de/gast/stammdaten?pegelnr=${encodeURIComponent(g.number)}`, target: '_blank', rel: 'noopener noreferrer', text: 'Pegel bei PEGELONLINE ↗' }) : null);
 }
 
-export function sternKnopf(g, { klein = false, onChange } = {}) {
-  const an = meinePegel.hat(g.id);
-  const b = h('button', { type: 'button', class: 'pm-stern' + (klein ? ' is-klein' : '') + (an ? ' is-on' : ''), 'aria-pressed': String(an),
-    'aria-label': an ? `${g.name} aus „Meine Pegel“ entfernen` : `${g.name} zu „Meine Pegel“ hinzufügen`, html: icon('star', klein ? 20 : 24, an) });
-  b.onclick = (e) => { e.stopPropagation(); meinePegel.umschalten(g.id); onChange?.(); };
-  return b;
-}
-
-
 const fmt1 = (v) => v.toLocaleString('de-DE', { maximumFractionDigits: 1 });
 const signiert = (v, e) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${fmt1(Math.abs(v))} ${e}`;
-/** Kurztexte für Etiketten: „Wasser 13 °C“, „Abfluss 624 m³/s“ (nur was der Pegel liefert). */
-export const zusatzEtiketten = (z) => [z?.wt ? `Wasser ${fmt1(Math.round(z.wt.v * 10) / 10)} °C` : null, z?.q ? `Abfluss ${fmt(z.q.v)} m³/s` : null].filter(Boolean);
-
 /** Kacheln „Wassertemperatur“ und „Abfluss“ im Pegel-Fenster – nur, wenn der Pegel sie liefert (sonst unsichtbar). */
 export function zusatzKacheln(g) {
   const box = h('div', { class: 'pd-zusatz', hidden: true });

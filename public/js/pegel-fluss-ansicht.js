@@ -2,15 +2,16 @@
 import { h } from './dom.js';
 import { icon, glyphSvg } from './icons.js';
 import { fmt } from './pegel-ansicht.js';
-import { FLUSS_ZUSTAND, flussZustand, punkte, profil, slipsAmFluss, artikel, abschnitt } from './pegel-fluss.js';
+import { FLUSS_ZUSTAND, flussZustand, profil, slipsAmFluss, artikel, abschnitt } from './pegel-fluss.js';
 import { istTidepegel, tendenz } from './gezeiten.js';
 import { vorhersageLaden, bshOrte, hatBsh, kommende, tagUhr } from './gezeiten-bsh.js';
 import { CONFIG } from './config.js';
+import { svgFarbe } from './farben.js';
 
 const PFEIL = { 1: '↗', 0: '→', '-1': '↘' };
 const TREND = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' };
 // Werte = tokens.css (SVG-Attribute kennen keine CSS-Variablen): stop, hoch, warn, gut, Gründe, tinte
-const FT = { stop: '#B42318', hoch: '#D23B21', warn: '#C27A00', gut: '#1E9E5A', stopHell: '#FDECEA', gutHell: '#E3F5EA', warnHell: '#FFF1D6', tinte: '#0E2E42' };
+const FT = { stop: 'var(--wm-stop)', hoch: 'var(--wm-hoch)', warn: 'var(--wm-warn)', gut: 'var(--wm-gut)', stopHell: 'var(--wm-stop-hell)', gutHell: 'var(--wm-gut-hell)', warnHell: 'var(--wm-warn-hell)', tinte: 'var(--wm-tinte)' };
 const PUNKT_FARBE = { hsw: FT.stop, high: FT.hoch, low: FT.warn, normal: FT.gut };
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const kmZahl = (km) => km.toLocaleString('de-DE', { maximumFractionDigits: 1 });
@@ -30,7 +31,7 @@ function pegelEtikett(g) {
 // ------------------------------------------------------------------ Profil (SVG)
 function svg(tag, attrs = {}, ...kinder) {
   const el = document.createElementNS(SVG_NS, tag);
-  for (const [k, v] of Object.entries(attrs)) if (v !== null && v !== undefined) el.setAttribute(k, v);
+  for (const [k, v] of Object.entries(attrs)) if (v !== null && v !== undefined && !svgFarbe(el, k, v)) el.setAttribute(k, v);
   for (const k of kinder.flat()) if (k) el.append(k.nodeType ? k : document.createTextNode(String(k)));
   return el;
 }
@@ -72,7 +73,7 @@ function profilZeichnen(box, pr, opts) {
   };
   for (const p of pts) {
     const ist = p.g.id === opts.hervorId;
-    const kreis = svg('circle', { cx: xs(p.pos), cy: ys(p.y), r: ist ? 6.5 : handy ? 4 : 5, fill: PUNKT_FARBE[p.g.state], stroke: ist ? FT.tinte : '#fff', 'stroke-width': ist ? 2.5 : 1.5, class: 'pf-punkt' + (ist ? ' is-hervor' : '') });
+    const kreis = svg('circle', { cx: xs(p.pos), cy: ys(p.y), r: ist ? 6.5 : handy ? 4 : 5, fill: PUNKT_FARBE[p.g.state], stroke: ist ? FT.tinte : 'var(--wm-flaeche)', 'stroke-width': ist ? 2.5 : 1.5, class: 'pf-punkt' + (ist ? ' is-hervor' : '') });
     const ziel = svg('circle', { cx: xs(p.pos), cy: ys(p.y), r: 16, fill: 'transparent', class: 'pf-ziel', tabindex: 0, role: 'button',
       'aria-label': `${p.g.name}: ${fmt(p.g.value)} ${p.g.unit}, ${pegelEtikett(p.g).textContent}. Details öffnen` });
     ziel.addEventListener('mouseenter', () => { if (!opts.isMobile()) zeigeBlase(p, false); });

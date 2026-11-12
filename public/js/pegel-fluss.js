@@ -166,14 +166,6 @@ export function flussZustand(gr) {
   return { key: 'normal', n, hoch, niedrig, hsw, hervor: null, hervorArt: null, kachel: 'keine Auffälligkeiten', kopf: `Alle ${n} bewerteten Pegel im Normalbereich` };
 }
 
-/** Kacheln: zuerst Flüsse mit „Meine Pegel“, dann nach Schwere, dann nach Anzahl Pegel. Küste kommt separat ans Ende. */
-export function kachelnSortieren(fluesse, meineIds = []) {
-  const meine = new Set(meineIds);
-  return fluesse.map(f => ({ ...f, zustand: flussZustand(f), meine: f.pegel.some(g => meine.has(g.id)) }))
-    .sort((a, b) => (b.meine - a.meine) || FLUSS_ZUSTAND[a.zustand.key].rang - FLUSS_ZUSTAND[b.zustand.key].rang
-      || b.pegel.length - a.pegel.length || a.name.localeCompare(b.name, 'de'));
-}
-
 /** Punktreihe der Kachel: bewertete Pegel nach km, höchstens max (gleichmäßig ausgewählt). */
 export function punkte(gr, max = 12) {
   const b = gr.pegel.filter(bewertet);

@@ -42,6 +42,7 @@
   --wm-warn: #C27A00;  --wm-warn-text: #8A5300;  --wm-warn-hell: #FFF1D6;
   --wm-hoch: #D23B21;
   --wm-stop: #B42318;  --wm-stop-text: #A33A1C;  --wm-stop-hell: #FDECEA;
+  --wm-extrem: #8B1A6B;   /* nur Wetterwarnung „extrem“ (DWD-Stufe 4) */
   /* Rahmen im Zustand (Hinweise, Meldungskarten): Punkt 35 % auf Weiß */
   --wm-gut-rand: color-mix(in srgb, var(--wm-gut) 35%, var(--wm-flaeche));
   --wm-warn-rand: color-mix(in srgb, var(--wm-warn) 35%, var(--wm-flaeche));

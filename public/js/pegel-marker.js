@@ -11,8 +11,6 @@ const MIT_FARBE = new Set(['low', 'normal', 'high', 'hsw']);
 const WELLE = '<svg class="pk-welle" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M2 9c3-3 5 3 8 0s5 3 8 0 3 2 4 1M2 16c3-3 5 3 8 0s5 3 8 0 3 2 4 1"/></svg>';
 export const ZOOM_MIT_ZAHL = 8;
 export const ZOOM_OHNE_CLUSTER = 10;
-export const ZOOM_AUSWAHL = 11;
-
 /** Legende (Wort + Farbe) – für die aufklappbare Pille unten links. */
 export const LEGENDE = [['zwischen MNW und MHW', FARBE.normal], ['unter MNW', FARBE.low], ['über MHW', FARBE.high], ['über HSW', FARBE.hsw], ['ohne Kennwerte', FARBE.neutral]];
 

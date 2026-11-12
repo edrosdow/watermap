@@ -88,8 +88,6 @@ div.wm-zeile { cursor: default; }
 .wm-marke.is-stop { background: var(--wm-stop-hell); color: var(--wm-stop-text); } .wm-marke.is-stop i { background: var(--wm-stop); }
 
 /* ---------------------------------------------------------------- Chip mit Farbpunkt; aktiv: Punkt schrumpft, Häkchen wächst */
-.wm-chips { display: flex; gap: var(--wm-2); overflow-x: auto; scrollbar-width: none; }
-.wm-chips::-webkit-scrollbar { display: none; }
 .wm-chip { flex: none; height: 40px; padding: 0 14px; border: 0; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten);
   display: inline-flex; align-items: center; font: inherit; font-size: var(--wm-t-s); font-weight: 700; white-space: nowrap; cursor: pointer;
   transition: background-color var(--wm-mittel) var(--wm-sanft), color var(--wm-mittel) var(--wm-sanft), transform var(--wm-kurz) var(--wm-sanft); }
@@ -110,18 +108,8 @@ div.wm-zeile { cursor: default; }
 .wm-seg button[aria-pressed="true"] { color: var(--wm-tinte); }
 
 /* ---------------------------------------------------------------- Karte (weiß, mit Titel) und Fakten */
-.wm-karte { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); padding: 14px 14px var(--wm-3); }
-.wm-karte-titel { margin: 0 0 10px; font-size: var(--wm-t-m); font-weight: 700; }
-.wm-fakten { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--wm-2); }
-.wm-fakt { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); padding: var(--wm-3) 14px; }
-.wm-fakt small { display: block; font-size: var(--wm-t-s); color: var(--wm-matt); }
-.wm-fakt strong { font-size: var(--wm-t-m); }
 
 /* ---------------------------------------------------------------- Großer Wert */
-.wm-held { padding: 2px 0 var(--wm-1); text-align: center; }
-.wm-held-zahl { font-size: var(--wm-t-held); line-height: 1; font-weight: 300; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.wm-held-zahl small { margin-left: var(--wm-1); font-size: var(--wm-t-xxl); font-weight: 400; letter-spacing: 0; }
-.wm-held-zeile { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 10px; font-size: var(--wm-t-s); color: var(--wm-matt); }
 
 /* ---------------------------------------------------------------- Knopf und Formular (für Phase 2b/3) */
 .wm-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--wm-2); min-height: 48px; padding: 0 var(--wm-5);

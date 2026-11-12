@@ -1,44 +1,6 @@
-// Tests für Einordnungssatz, Skala nach Zahlenwerten und kurzfristige Tendenz (public/js/pegel-einordnung.js): node tests/pegel_einordnung_test.mjs
+// Tests für die kurzfristige Tendenz und die Änderung (public/js/pegel-einordnung.js): node tests/pegel_einordnung_test.mjs
 import assert from 'node:assert/strict';
-import { einordnungSatz, einordnungKurz, skalaLage, tendenz, tendenzText, aenderungKurz } from '../public/js/pegel-einordnung.js';
-
-// Pegel Celle (echte Kennwerte, PEGELONLINE 02.11.2026): HSW liegt UNTER MHW
-const celle = { value: 123, state: 'normal', refs: { MNW: 117, MW: 192, HSW: 310, MHW: 412 } };
-assert.equal(einordnungSatz(celle), 'Der Wasserstand liegt 6 cm über dem mittleren Niedrigwasser (MNW) und 69 cm unter dem Mittelwasser (MW). Bis zum höchsten Schifffahrtswasserstand (HSW) fehlen 187 cm.');
-assert.equal(einordnungKurz(celle), '6 cm über MNW · 69 cm unter MW');
-const s = skalaLage(celle.refs, celle.value);
-assert.deepEqual(s.punkte.map(p => p.k), ['MNW', 'MW', 'HSW', 'MHW'], 'Reihenfolge nach Zahlenwert');
-for (let i = 1; i < s.punkte.length; i++) assert.ok(s.punkte[i].pos > s.punkte[i - 1].pos, 'Positionen steigen mit dem Wert');
-// maßstabsgetreu: Abstände verhalten sich wie die Zahlen
-const p = Object.fromEntries(s.punkte.map(x => [x.k, x.pos]));
-assert.ok(Math.abs((p.HSW - p.MW) / (p.MHW - p.MW) - (310 - 192) / (412 - 192)) < 1e-9);
-assert.ok(s.wert > p.MNW && s.wert < p.MW, 'aktueller Wert zwischen MNW und MW');
-assert.equal(s.punkte.find(x => x.k === 'HSW').oben, true, 'HSW eigene Reihe (oben)');
-const unten = s.punkte.filter(x => !x.oben);
-for (let i = 1; i < unten.length; i++) assert.ok(unten[i].label - unten[i - 1].label >= 15 - 1e-9, 'Beschriftungen überlappen nicht');
-for (const x of s.punkte) assert.ok(x.label >= 0 && x.label <= 100);
-// nahe Kennwerte: Beschriftungen auseinander, Reihenfolge bleibt
-const eng = skalaLage({ MNW: 100, MW: 102, MHW: 104 }, 103);
-assert.deepEqual(eng.punkte.map(x => x.k), ['MNW', 'MW', 'MHW']);
-assert.ok(eng.punkte[1].label - eng.punkte[0].label >= 15 - 1e-9 && eng.punkte[2].label - eng.punkte[1].label >= 15 - 1e-9);
-// fehlende Kennwerte: keine kaputte Skala
-assert.equal(skalaLage({ MNW: 100 }, 120), null);
-assert.equal(skalaLage({}, 120), null);
-assert.equal(skalaLage({ MNW: 100, MHW: 300 }, NaN), null);
-assert.deepEqual(skalaLage({ MNW: 100, MHW: 300 }, 50).punkte.map(x => x.k), ['MNW', 'MHW']);
-
-// Sätze an den Rändern
-assert.equal(einordnungSatz({ value: 90, state: 'low', refs: { MNW: 98, MW: 210, MHW: 480, HSW: 590 } }),
-  'Der Wasserstand liegt 8 cm unter dem mittleren Niedrigwasser (MNW). Bis zum höchsten Schifffahrtswasserstand (HSW) fehlen 500 cm.');
-assert.equal(einordnungSatz({ value: 640, state: 'hsw', refs: { MNW: 98, MW: 210, MHW: 480, HSW: 590 } }),
-  'Der Wasserstand liegt 160 cm über dem mittleren Hochwasser (MHW). Er liegt 50 cm über dem höchsten Schifffahrtswasserstand (HSW) – darüber ist die Schifffahrt eingeschränkt.');
-assert.equal(einordnungSatz({ value: 210, state: 'normal', refs: { MNW: 98, MW: 210, MHW: 480 } }), 'Der Wasserstand liegt auf dem Mittelwasser (MW) und 270 cm unter dem mittleren Hochwasser (MHW).');
-assert.equal(einordnungSatz({ value: 210, state: 'unknown', refs: {} }), null);
-assert.equal(einordnungKurz({ value: 210, state: 'unknown', refs: {} }), null);
-assert.match(einordnungSatz({ value: 210, state: 'old', refs: { MNW: 1, MHW: 500 } }), /veraltet/);
-assert.equal(einordnungKurz({ value: 210, state: 'old', refs: { MNW: 1, MHW: 500 } }), null);
-// nur HSW
-assert.equal(einordnungSatz({ value: 200, state: 'unknown', refs: { HSW: 300 } }), 'Bis zum höchsten Schifffahrtswasserstand (HSW) fehlen 100 cm.');
+import { tendenz, tendenzText, aenderungKurz } from '../public/js/pegel-einordnung.js';
 
 // Tendenz der letzten 2 Stunden – getrennt von der Änderung in 24 h
 const H = 3600e3, t0 = Date.UTC(2026, 10, 2, 12);

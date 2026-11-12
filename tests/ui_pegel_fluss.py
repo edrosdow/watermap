@@ -141,12 +141,12 @@ def run(b, w, hh, mobile):
     abst = [round(b - a, 1) for a, b in zip(cx, cx[1:])]
     check(max(abst) - min(abst) < 0.5, f'{tag}: gleiche Abstände in Fließrichtung ({abst[:3]})')
     # Höhe: MNW-Linie im Bild, MHW (alle Werte weit darunter) nicht – stattdessen Hinweis
-    mnw = pg.locator('.pf-svg line[stroke="#C27A00"]')
+    mnw = pg.locator('.pf-svg line[style*="--wm-warn)"]')
     y_mnw = float(mnw.get_attribute('y1'))
     cy = [float(c.get_attribute('cy')) for c in pg.locator('.pf-punkt').all()]
     check(cy[1] > y_mnw and cy[-1] < y_mnw, f'{tag}: unter MNW unterhalb, normal oberhalb der MNW-Linie')
-    check(pg.locator('.pf-svg line[stroke="#D23B21"]').count() == 0 and 'MHW liegt weiter oben ↑' in pg.locator('.pf-svg').text_content(), f'{tag}: MHW außerhalb → Hinweis „MHW liegt weiter oben ↑“')
-    check(pg.locator('.pf-svg rect[fill="#FFF1D6"]').count() == 1 and pg.locator('.pf-svg rect[fill="#E3F5EA"]').count() == 1, f'{tag}: Flächen niedrig (gelb) und normal (grün)')
+    check(pg.locator('.pf-svg line[style*="--wm-hoch)"]').count() == 0 and 'MHW liegt weiter oben ↑' in pg.locator('.pf-svg').text_content(), f'{tag}: MHW außerhalb → Hinweis „MHW liegt weiter oben ↑“')
+    check(pg.locator('.pf-svg rect[style*="--wm-warn-hell)"]').count() == 1 and pg.locator('.pf-svg rect[style*="--wm-gut-hell)"]').count() == 1, f'{tag}: Flächen niedrig (gelb) und normal (grün)')
     tz = pg.locator('.pf-tidezeile')
     check(tz.is_visible() and 'Ab Neu Darchau 2 Tidepegel' in tz.inner_text() and tz.bounding_box()['height'] >= 44, f'{tag}: Tide-Zeile unter dem Diagramm')
     # Liste

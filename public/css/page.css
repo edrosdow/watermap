@@ -12,8 +12,8 @@ main { max-width: 760px; margin: 0 auto var(--wm-12); padding: var(--wm-6) var(-
   border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
 @media (max-width: 767px) { main { margin: 0 var(--wm-3) var(--wm-8); } }
 @media (min-width: 768px) {
-  header { background: var(--wm-navy); padding: var(--wm-4) var(--wm-5); }
-  header a { color: #fff; }
+  header { background: var(--wm-tinte); padding: var(--wm-4) var(--wm-5); }
+  header a { color: var(--wm-flaeche); }
   header small { color: var(--wm-petrol-hell); }
   main { margin-top: var(--wm-8); padding: var(--wm-8) var(--wm-8) var(--wm-8); }
 }
@@ -27,7 +27,6 @@ a { color: var(--wm-petrol); text-underline-offset: 2px; }
 a:hover { color: var(--wm-petrol-tief); }
 code { font-size: var(--wm-t-s); background: var(--wm-flaeche-2); border-radius: var(--wm-r-s); padding: 0 var(--wm-1); }
 
-.todo { margin: var(--wm-4) 0; padding: var(--wm-3) var(--wm-4); background: var(--wm-warn-hell); border: 1.5px solid var(--wm-warn); border-radius: var(--wm-r-s); color: var(--wm-warn-text); }
 .ph { background: var(--wm-warn-hell); color: var(--wm-warn-text); padding: 0 var(--wm-1); border-radius: var(--wm-r-s); font-weight: 700; }
 
 footer { margin-top: var(--wm-8); padding-top: var(--wm-4); border-top: 1px solid var(--wm-linie); font-size: var(--wm-t-s); color: var(--wm-matt); }

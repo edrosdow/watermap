@@ -7,6 +7,7 @@ import { pinSvg } from './icons.js';
 import { favorites } from './favorites.js';
 import { displayName, TYPES } from './model.js';
 import { gebietLaden, kachelNoetig, imGebiet } from './gebiet.js';
+import { tok } from './farben.js';
 
 // ------------------------------------------------------------------ Bibliotheken laden
 function loadCss(urls) {
@@ -83,7 +84,7 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, onAusserha
     pane.style.zIndex = 250; pane.style.pointerEvents = 'none';
     const welt = [[-85, -180], [-85, 180], [85, 180], [85, -180]];
     L.polygon([welt, ...g.anzeige], { pane: 'wm-maske', renderer: L.canvas({ pane: 'wm-maske', padding: 0.5 }), interactive: false,
-      color: '#0B3045', opacity: 0.4, weight: 1.3, fillColor: G.maske, fillOpacity: G.nachbarn ?? 1, smoothFactor: 1 }).addTo(map);
+      color: tok('--wm-tinte'), opacity: 0.4, weight: 1.3, fillColor: G.maske, fillOpacity: G.nachbarn ?? 1, smoothFactor: 1 }).addTo(map);
   }, () => { /* ohne Grenze bleibt das Rechteck */ });
 
   let meld = new Map();   // Standort-ID → { n, typ } aktiver Lagemeldungen („Heute vor Ort“)
@@ -272,8 +273,8 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, onAusserha
     showUser(lat, lon, accuracy) {
       if (userMarker) userMarker.remove();
       userMarker = L.layerGroup([
-        L.circle([lat, lon], { radius: Math.min(accuracy || 0, 2000), color: '#087F9C', weight: 1, fillOpacity: 0.08, interactive: false }),
-        L.circleMarker([lat, lon], { radius: 7, color: '#fff', weight: 3, fillColor: '#087F9C', fillOpacity: 1, interactive: false }),
+        L.circle([lat, lon], { radius: Math.min(accuracy || 0, 2000), color: tok('--wm-petrol'), weight: 1, fillOpacity: 0.08, interactive: false }),
+        L.circleMarker([lat, lon], { radius: 7, color: tok('--wm-flaeche'), weight: 3, fillColor: tok('--wm-petrol'), fillOpacity: 1, interactive: false }),
       ]).addTo(map);
     },
 

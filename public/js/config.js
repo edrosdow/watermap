@@ -1,10 +1,6 @@
 // Zentrale Einstellungen. Hier – und nur hier – werden Dienste und Grenzwerte angepasst.
-// Entwicklungsmodus: lokal und in Netlify-Vorschauen (deploy-preview-…), nie auf der Live-Seite
-const host = typeof location !== 'undefined' ? location.hostname : '';
-export const ENTWICKLUNG = /^(localhost|127\.0\.0\.1)$|^deploy-preview-/.test(host);
-
 export const CONFIG = {
-  VERSION: '7.73.1',
+  VERSION: '7.74.0',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -34,7 +30,6 @@ export const CONFIG = {
     strassenRand: 1.5,  // ab Zoom 9 Kacheln nur bis so viele Grad um Deutschland (keine fremden Straßenkarten)
     hinweis: 'WaterMap ist derzeit auf Deutschland sowie die deutschen Nord- und Ostseegebiete begrenzt.',
   },
-  GERMANY_VIEW: { center: [51.1, 10.4], zoom: 6 },
   FALLBACK_VIEW: { center: [51.45, 7.55], zoom: 8 },
 
   // Pegelstände (PEGELONLINE der WSV). Abruf über die eigene Domain; Netlify leitet weiter (public/_redirects).
@@ -49,7 +44,6 @@ export const CONFIG = {
   GEZEITEN_BSH_AKTIV: true,
   GEZEITEN_BASE: '/api/gezeiten',
   GEZEITEN_OFFLINE_STUNDEN: 24,      // so lange wird die letzte Vorhersage offline noch gezeigt
-  GEZEITEN_KUESTE_PEGEL: { id: 'aad49293-242a-43ad-a8b1-e91d7792c4b2', number: '5990020', name: 'Cuxhaven' },   // Küsten-Kachel
   PEGEL_ATTRIBUTION: 'Pegel: <a href="https://www.pegelonline.wsv.de" target="_blank" rel="noopener noreferrer">WSV/PEGELONLINE</a>',
 
   // Wetter und Wind (DWD-Daten über Bright Sky). Abruf über die eigene Domain (public/_redirects).
@@ -59,12 +53,7 @@ export const CONFIG = {
   WETTER_GUST_HINT_KMH: 39,
   HOCHWASSER_AKTIV: false,     // Hochwasserwarnungen (Länderportale) – erst nach Prüfung der Quelle einschalten    // ab 6 Bft Böen ein Hinweis (gerade für kleine Boote)
 
-  // „In der Nähe“ (Schleusen, Toiletten, Parkplätze … aus osm/extras.geojson)
-  NEARBY_EXTRAS_M: 500,
-  OVERPASS_API: 'https://overpass-api.de/api/interpreter',   // „In der Nähe“ direkt aus dem Browser
   VOR_ORT_RADIUS_M: 1000,   // „Heute vor Ort“: so nah gilt man als „vor Ort“ (nur Bedienhilfe, der Server prüft keine Position)
-  UMGEBUNG_API: '/.netlify/functions/umgebung',   // „In der Nähe“ live aus OSM (Umkreis NEARBY_EXTRAS_M, fest in der Funktion)
-  NEARBY_EXTRAS_MAX: 12,
 
   // Hafeninfos von den Websites (data/hafeninfo.json): ab diesem Alter als möglicherweise veraltet markieren
   HAFENINFO_STALE_DAYS: 365,

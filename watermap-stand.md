@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 11.11.2026 · App-Version **7.73.1**
+Stand: 11.11.2026 · App-Version **7.74.0**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.73.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.74.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -32,51 +32,44 @@ Die App ist eine installierbare PWA, auf Deutsch, und nutzt nur kostenlose Diens
 
   | Adresse | Ziel |
   |---|---|
-  | `#karte` (Standard) | Karte |
-  | `#naehe` | In der Nähe (alter Link `#liste` geht weiter; in der Navigation unter „Mehr“) |
-  | `#favoriten` | Favoriten (alter Link, geht weiter; Einstieg jetzt „Mehr › Merkliste“) |
-  | `#meldungen` | Aktuelle Meldungen (alle aktiven Lagemeldungen) |
-  | `#mehr` | Mehr (In der Nähe, Merkliste, Hilfe, Über, Rechtliches) |
-  | `#mehr/merkliste` | Merkliste: gespeicherte Orte (Favoriten) und „Meine Pegel“ |
-  | `#pegel` | Pegel-Dashboard |
-  | `#pegel/<id>` | Pegel-Detailseite |
-  | `#pegel/fluss/<name>` | Flussseite (Profil + Pegelliste; `kueste` = Küstenpegel) |
-  | `#karte/pegel/<id>` | Pegel auf der Karte (alter Link `#g=<id>` geht weiter) |
-  | `#melden` | Melden-Auswahl |
-  | `p=` / `x=` | Standort bzw. Extra |
+  | `#karte` (Standard) | Karte (Chips Slip/Häfen/Tanken/Pegel) |
+  | `#p=<id>` / `#x=<id>` | Standort bzw. Extra (Sheet über der Karte) |
+  | `#karte/pegel/<id>` | Pegel-Sheet auf der Karte (`/alarm` öffnet das Alarm-Fenster; alt: `#g=`, `#pegel/<id>`, `#pf=`) |
+  | `#pegel/fluss/<name>` | Flussfenster über der Karte (`kueste` = Küstenpegel) |
+  | `#pegel`, `#pegel/karte`, `#pegel/suche` | alte Adressen des Pegel-Tabs → Karte mit Chip „Pegel“ (bzw. Suche offen) |
+  | `#meldungen` | Aktuelle Meldungen (Sheet) |
+  | `#gemerkt` | Gemerkt: Orte und Pegel (alt: `#favoriten`, `#mehr/merkliste`) |
+  | `#mehr` | Mehr (Mein WaterMap, In der Nähe, Hilfe, Über, Rechtliches) |
+  | `#mehr/einstellungen` | Einstellungen „Mein WaterMap“ |
+  | `#naehe` | In der Nähe (alt: `#liste`) |
+  | `#melden` | Menü „Was möchtest du melden?“ |
+
+  Navigation unten (Handy): Karte · Meldungen · Melden · Gemerkt · Mehr; oben (Desktop) dieselben Ziele, „Melden“ als Knopf rechts. Alle Bereiche sind Sheets über der Karte (`sheetOeffnen` in `bausteine.js`).
 
 - **Wichtige Module:**
 
   | Modul | Aufgabe |
   |---|---|
-  | `main.js` | Ablauf, Zustand, Routing |
+  | `main.js` | Start, Zustand, Routing (Hash), Auswahl, Bereiche, Filter |
+  | `suche-ui.js` | Suche: Vorschläge (Pegel, Gewässer, Orte, Ortssuche), Tastatur, Lupe → Suchfeld (Handy) |
+  | `melden-menue.js` | Menü „Was möchtest du melden?“ im Sheet, Schnellmeldung „Lage vor Ort“ |
+  | `bausteine.js` | Bausteine: `sheetOeffnen`, Kopf, Ortszeile, Gruppe, Marke, Umschalter (`wm-seg`) |
+  | `bewegung.js` | Animationen (versetzte Listen, Hochzählen, Merk-Flug, Marker-Plopp, Haken) |
+  | `farben.js` | Tokens zur Laufzeit für Canvas/Leaflet, `var()` in SVG als `style` |
   | `map.js` | Leaflet: Marker, Cluster, Pegel, Melde-Abzeichen |
-  | `nav.js` | Navigation oben/unten (Karte, Pegel, Melden, Meldungen, Mehr), Popover (Bottom Sheet / Dropdown) |
-  | `meldungen-uebersicht.js` | Bereich „Aktuelle Meldungen“: Filter, Kartenausschnitt, Mein Standort mit Umkreis-Regler, Sortierung, Bewerten, offline letzter Stand |
-  | `slip-ergaenzen.js` | Formular „Angaben ergänzen“ für Slipanlagen (Netlify-Formular `slip-ergaenzen`) |
-  | `gebiet.js` | Kartengebiet Deutschland: Grenze laden, Punktprüfung, Kachelauswahl (siehe `docs/KARTENGEBIET.md`) |
-  | `meldung-unpassend.js` | Fenster „Unpassend melden“ für Lagemeldungen (Hinweis über Netlify Forms, lokal ausblenden) |
-  | `mehr.js` | Bereich „Mehr“ und Merkliste (liest nur Favoriten und „Meine Pegel“, keine eigene Datenhaltung) |
-  | `detail.js` | Detailansicht der Standorte |
-  | `data.js`, `model.js` | Daten laden und zusammenführen |
-  | `forms.js`, `photo-form.js`, `lage-form.js` | Formulare |
-  | `pegel.js` | PEGELONLINE-Anbindung, Diagramm |
-  | `pegel-daten.js` | gemeinsame Stationsliste, Verläufe, „Meine Pegel“ |
-  | `naehe.js` | „In der Nähe“: Bezugspunkt, Standortfreigabe, Liste, Fenster „Entfernungen messen ab …“ |
-  | `pegel-ansicht.js` | Skala, Kennwerte, Pegel-Cockpit (`pegelDetail`: Verlauf 24 h / 7 Tage / 30 Tage, Vorhersage, Zusatzwerte, Stammdaten) |
-  | `pegel-dashboard.js` | Pegel-Tab als Kartenanwendung: Kopf „Pegelstände“, Suche (Pegel, Gewässer, Ort), Filter, Panel bzw. Bottom Sheet (gewählter Pegel, Meine Pegel, Pegel im Ausschnitt) |
-  | `pegel-karte.js` | Karte im Pegel-Tab: Wert-Pillen (Farbe nur mit Kennwerten), Cluster, Filter, Auswahl, „im Ausschnitt“ |
-  | `pegel-bild.js` | „Als Bild teilen“: Canvas 1080 × 1350, Web Share API oder Download |
-  | `suchfeld.js` | „X“ zum Leeren in allen Suchfeldern |
-  | `alarm.js` | Pegel-Alarm-Fenster (unter/über, Push oder E-Mail), Alarme dieses Geräts |
-  | `pegel-einordnung.js` | Einordnungssatz, Skala nach Zahlenwerten (HSW eigene Reihe), Tendenz 2 h (reine Logik, `tests/pegel_einordnung_test.mjs`) |
-  | `pegel-vorhersage.js` | Satz zur Wasserstandsvorhersage (auch für die Push-Nachricht) |
-  | `pegel-fluss.js` | Flüsse: Gruppierung (Küste/Kanäle), Zustand, rel, Profil-Daten (ohne Oberfläche) |
-  | `pegel-fluss-ansicht.js` | Flussseite (#pegel/fluss/…; per Link und aus dem Cockpit) |
-  | `meldungen.js` | Lagemeldungen „Heute vor Ort“ |
-  | `wetter.js` | Wetter und Wind |
-  | `umgebung-abfrage.js` | „In der Nähe“ |
-  | `ampel.js`, `ampel-logik.js` | Pegel-Ampel |
+  | `nav.js` | Navigation oben/unten, Abzeichen, Popover (Filter) |
+  | `detail.js`, `extras.js` | Standort-Sheet bzw. Extras (Schleusen, Service …) |
+  | `gemerkt.js`, `mehr.js`, `einstellungen.js`, `naehe.js` | Bereiche Gemerkt, Mehr, Einstellungen, In der Nähe |
+  | `meldungen-uebersicht.js`, `meldungen.js`, `lage-form.js`, `meldung-unpassend.js` | Aktuelle Meldungen, Lagemeldungen „Heute vor Ort“ |
+  | `forms.js`, `photo-form.js`, `slip-ergaenzen.js` | Formulare (Netlify Forms) |
+  | `data.js`, `model.js`, `search.js`, `gebiet.js` | Daten laden, Modell, Suche, Kartengebiet Deutschland |
+  | `pegel.js`, `pegel-daten.js` | PEGELONLINE, Verlaufsdiagramm, Stationsliste, „Meine Pegel“ |
+  | `pegel-sheet.js`, `pegel-ansicht.js`, `pegel-marker.js` | Pegel-Sheet (klein/groß), Cockpit, Wert-Pillen auf der Karte |
+  | `pegel-einordnung.js`, `pegel-vorhersage.js`, `pegel-fluss.js`, `pegel-fluss-ansicht.js`, `pegel-tide-ansicht.js` | Tendenz/Einordnung, Vorhersage, Flüsse, Tide |
+  | `passt-mein-boot.js`, `mindestpegel.js`, `ampel-logik.js`, `alarm.js` | „Passt mein Boot?“, Mindestpegel, Alarm |
+  | `wetter.js` | Wetter und Wind (DWD-Warnungen) |
+  | `pegel-bild.js` | „Als Bild teilen“ (Canvas) |
+  | `umgebung-abfrage.js` | Overpass-Abfrage, nur noch für `netlify/functions/umgebung.mjs` |
 
 - **Gespeicherte Nutzerdaten** liegen nur im Browser (localStorage), es gibt keine Konten. Dazu gehören:
   - Favoriten
@@ -116,7 +109,7 @@ Die App ist eine installierbare PWA, auf Deutsch, und nutzt nur kostenlose Diens
 | `pegel-alarm-pruefen.mjs` | stündliche Alarm-Prüfung |
 | `meldungen.mjs` | Lagemeldungen: `GET /api/meldungen?standort=`, `GET /api/meldungen/aktiv`, `POST /api/meldungen`, `POST /api/meldungen/<id>/bestaetigen` |
 | `meldungen-aufraeumen.mjs` | räumt stündlich die Lagemeldungen auf |
-| `umgebung.mjs` | Overpass-Rückfall |
+| `umgebung.mjs` | Overpass-Rückfall – seit 7.74.0 von der App nicht mehr aufgerufen (Löschen nach Rückfrage) |
 
 Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar. Der Blob-Store heißt `meldungen` (Produktion) bzw. `meldungen-vorschau` (Vorschau).
 
@@ -276,6 +269,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.72.1 | **Designumbau Phase 3b – Standort-Sheet:** Vorschau und Details von Slipanlage, Hafen, Tankstelle und Zusatzorten im gemeinsamen Sheet-Rahmen (Handy: Stufe „klein“ mit Route/Merken/Teilen, Lagemeldung und „Details“ statt der Vorschau-Karte; Desktop Panel rechts). Pegel- und Wetterzeile als Ortszeilen, Kopf mit Titel links und ×. `#peek` und das alte `#detail`-Panel samt CSS entfernt; letzte alte Kopf-Varianten weg. Tests angepasst: `ui_full`, `ui_meldungen`, `ui_nav`, `ui_karussell`, `ui_smoke`, `ui_wischen`, `ui_extras`, `ui_pegel`, `ui_naehe` |
 | 7.73.0 | **Designumbau Phase 4 – Animationen:** Lupe → Suchfeld (Handy), Marker wachsen und ploppen ein, Sheet-Inhalt gleitet ein, Stern-Flug zu „Gemerkt“ mit Abzeichen-Sprung und „Rückgängig“ beim Entfernen, Chips mit gleitendem Punkt/Häkchen, alle Umschalter `wm-seg`, Pegelwert zählt hoch, Kurve zeichnet sich, Listen erscheinen versetzt, Haken zeichnet sich nach dem Senden; „Bewegung reduzieren“ beachtet. Neu `css/bewegung.css`, `js/bewegung.js`, Test `ui_bewegung.py`. Behoben: Enter im Suchfeld (Handy), Desktop-Panel unter umbrechender Chip-Zeile, Toast-Lage bei offenem Standort, Fehler bei „24 Std.“ ohne Messreihe |
 | 7.73.1 | **Melden angepasst:** Menü „Was möchtest du melden?“ im Sheet-Rahmen mit Ortszeilen, Abschnitte erscheinen versetzt, Zurück-Taste schließt; Formulare fahren mit Feder ein, Titel links; „Lage melden“ unverändert. Tests angepasst (`ui_full`, `ui_meldungen`, `ui_nav`, `ui_smoke`, `ui_wischen`) |
+| 7.74.0 | **Designumbau Phase 5 – Aufräumen:** CSS-Werte auf Tokens (Schrift, Gewicht, Radius, Schatten, Navy, alte Variablen), JS-Farben über Tokens (`farben.js`, neu `--wm-extrem`), Breakpoints 400/1199 aufgelöst; tote CSS-Regeln (~650 Zeilen) und verwaiste JS-Funktionen entfernt (u. a. `nearbySection`, `liveNearby`, `loadWetterStunden`, `skalaLage`); `main.js` entlastet (`suche-ui.js`, `melden-menue.js`). Neu: Wächter-Test `design_tokens_test.mjs` |
 | 7.54.1 | Pegel-Sheet wischt so flüssig wie auf der Hauptkarte: beim Ziehen nur noch verschoben (`transform`), nicht mehr in der Höhe neu berechnet; zu Beginn einmal auf volle Höhe gestellt und nach unten versetzt, die Größe ändert sich erst beim Einrasten |
 | 7.54.0 | **Fenster von unten wischbar und flüssig:** Das Pegel-Sheet folgt beim Ziehen dem Finger (vorher sprang es erst beim Loslassen) und rastet weich ein (klein · ca. 80 % · ganz · zu; Schwung nimmt die nächste Stufe in Bewegungsrichtung). Alle Fenster von unten (Dialoge, Standort-Vorschau und -Details, Pegel-Sheet) fahren auf dem Handy weich hoch statt plötzlich zu erscheinen (`sheet-ein`, bei „Bewegung reduzieren“ aus). Die übrigen Fenster folgten schon dem Finger (`wischen.js`) |
 | 7.53.0 | **Zart blau** (Rückmeldung: das kräftige Blau passt nicht zur App): gleicher Aufbau wie 7.52.0, aber ganz helles Wasserblau oben, weiße Karten und Knöpfe mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. **Tidepegel** im selben Muster (Name mittig, große Zahl, „● Tide · ↗ auflaufend“, drei Knöpfe Alarm · Merken · Teilen, Karten Gezeiten/Tidekurve/letztes HW·NW, Liste Häfen in der Nähe · Gewässer – alle Pegel · Station und Quelle) |
@@ -335,7 +329,7 @@ Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.
 
 ## 6. Offene Aufgaben
 
-**▶ Hier weitermachen (Stand 12.11.2026, 7.73.1 in der Vorschau): Designumbau nach `docs/AUFTRAG-designumbau.md`** – Phase 0, 1, 2a, 2b, 3a und 3b freigegeben (11./12.11.; Phase 3 auf Nutzerwunsch in 3a Bereiche und 3b Standort-Sheet geteilt), Phase 4 freigegeben (12.11.); auf Wunsch „Melden“ angepasst (7.73.1, Menü als Sheet, Formulare mit Animation), **wartet auf Freigabe**; danach Phase 5 (Aufräumen, 7.74.0: Schriftgrößen/Gewichte/Radien/Schatten auf Tokens, Wächter-Test, verwaiste Funktionen, main.js entlasten, Doku), dann nach „übernehmen“ 8.0.0. Offene Fragen an den Nutzer (bei der Abnahme genannt, noch ohne Antwort): „Meine Position“-Knopf auf dem Handy bei offenem Standort ausgeblendet; „In der Nähe“ zeigt auf kleinen Handys (667 px) nur 2 Einträge ohne Scrollen. Tests unter Windows einzeln laufen lassen; der Testserver lädt gelegentlich > 30 s (dann wiederholen). Nach jeder Phase committen, Vorschau, Bilder 390/1440 px, auf Freigabe warten. Neues Slip-Symbol erledigt (7.68.1).
+**▶ Hier weitermachen (Stand 12.11.2026, 7.74.0 in der Vorschau): Designumbau nach `docs/AUFTRAG-designumbau.md`** – Phase 0, 1, 2a, 2b, 3a und 3b freigegeben (11./12.11.; Phase 3 auf Nutzerwunsch in 3a Bereiche und 3b Standort-Sheet geteilt), Phase 4 und Melden (7.73.1) freigegeben (12.11.), Phase 5 erledigt (7.74.0, Aufräumen), **wartet auf Freigabe**; danach nach „übernehmen“ 8.0.0. Offen: Netlify-Funktion `umgebung.mjs` ist seit 7.74.0 ungenutzt – löschen nur nach Rückfrage. Offene Fragen an den Nutzer (bei der Abnahme genannt, noch ohne Antwort): „Meine Position“-Knopf auf dem Handy bei offenem Standort ausgeblendet; „In der Nähe“ zeigt auf kleinen Handys (667 px) nur 2 Einträge ohne Scrollen. Tests unter Windows einzeln laufen lassen; der Testserver lädt gelegentlich > 30 s (dann wiederholen). Nach jeder Phase committen, Vorschau, Bilder 390/1440 px, auf Freigabe warten. Neues Slip-Symbol erledigt (7.68.1).
 
 **Früher: Umbau auf das Designsystem „Wasser“ – Phase 4 (abgeschlossen mit Schritt 8)**
 Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Disziplin von A, vom Nutzer gewählt) – vor jeder Oberflächenarbeit lesen.

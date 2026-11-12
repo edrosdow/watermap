@@ -8,6 +8,7 @@ import { prefs } from './favorites.js';
 import { hakenSvg } from './bewegung.js';
 import { openPhotoForm } from './photo-form.js';
 import { kopf } from './bausteine.js';
+import { tok } from './farben.js';
 
 const YNU = [['', 'Nicht bekannt'], ['ja', 'Ja'], ['nein', 'Nein']];
 
@@ -100,7 +101,7 @@ export async function prepareImage(file) {
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = hgt;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, hgt);
+  ctx.fillStyle = tok('--wm-flaeche'); ctx.fillRect(0, 0, w, hgt);
   ctx.drawImage(bitmap, 0, 0, w, hgt);
   bitmap.close?.();
   const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.86));
