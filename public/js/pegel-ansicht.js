@@ -11,7 +11,8 @@ import { istTidepegel } from './gezeiten.js';
 import { tideDetail } from './pegel-tide-ansicht.js';
 import { passtMeinBoot } from './passt-mein-boot.js';
 import { hochzaehlen, merkFlug, sternPop } from './bewegung.js';
-import { seg } from './bausteine.js';
+import { seg, sheetOeffnen, zeile, gruppe } from './bausteine.js';
+import { pegelBild, bildTeilen } from './pegel-bild.js';
 
 export const fmt = (v) => Math.round(v).toLocaleString('de-DE');
 export const kmText = (g) => (g.km !== null && g.km !== undefined ? `km ${g.km.toLocaleString('de-DE', { maximumFractionDigits: 1 })}` : '');
@@ -131,6 +132,35 @@ export function merkKnopf(g, onChange) {
   return knopf;
 }
 
+/**
+ * Knopf „Teilen“ (8.0.4): kleines Sheet mit „Link teilen“ und „Als Bild teilen“ (Bild mit Wert, Zustand und 7-Tage-Kurve).
+ * daten(): Promise<{ pts, wv }> für das Bild; tide: Zustand „Tide“ statt Niedrig/Normal/Hoch.
+ */
+export function teilenMenue(g, { onShare, daten, tide = false, opener = null }) {
+  let sh = null;
+  const link = zeile({ ico: 'share', titel: 'Link teilen', unter: 'Link zu diesem Pegel senden oder kopieren', onClick: () => { sh?.schliessen(); onShare?.(); } });
+  const bild = zeile({ ico: 'image', titel: 'Als Bild teilen', unter: 'Wert, Zustand und Verlauf als Bild', onClick: async () => {
+    bild.disabled = true;
+    try {
+      const { pts, wv } = await daten();
+      const letzte = pts?.[pts.length - 1]?.t ?? 0;
+      const cv = pegelBild({ g, zustand: tide ? 'tide' : zustand(g), trend: tide ? '' : trendText(g), pts: (pts || []).filter(p => p.t >= letzte - 7 * 864e5), wv: wv || [] });
+      sh?.schliessen();
+      await bildTeilen(cv, `Pegel-${g.name.replace(/[^\p{L}\p{N}]+/gu, '-')}.png`, `Pegel ${g.name}`);
+    } catch { /* ohne Bild bleibt alles, wie es war */ } finally { bild.disabled = false; }
+  } });
+  const liste = gruppe([link, bild]);
+  sh = sheetOeffnen({ inhalt: liste, kopf: { titel: 'Pegel teilen', titelId: 'pt-teilen-titel', unter: g.name }, klasse: 'pd-teilen-sheet', stufe: 'klein', opener, verlauf: true,
+    onSchliessen: () => { sh = null; } });
+  requestAnimationFrame(() => {   // Stufe „klein“ genau so hoch wie die zwei Zeilen (plus Platz für die Navigation)
+    if (!sh) return;
+    const nav = document.querySelector('#bottomnav');
+    const navPlatz = nav && nav.getClientRects().length ? Math.max(0, window.innerHeight - nav.getBoundingClientRect().top) + 8 : 16;
+    sh.el.style.setProperty('--wm-sheet-klein', `${Math.ceil(liste.getBoundingClientRect().bottom - sh.el.getBoundingClientRect().top + 16 + navPlatz)}px`);
+  });
+  return sh;
+}
+
 /** Großer Wert; beim Öffnen zählen die letzten 36 Einheiten hoch (Designumbau 4, nicht bei veralteten Werten). */
 export function grosserWert(g, alt = false) {
   const el = h('strong', { text: fmt(g.value) });
@@ -161,7 +191,8 @@ export function pegelDetail(g, opts) {
     h('p', { class: 'pd-zeile-kopf' }, h('span', { class: `pd-zdot ${ZUSTAND[z].cls}`, 'aria-hidden': 'true' }), h('b', { text: ZUSTAND[z].text.replace(/^ü/, 'Ü') }),
       alt ? null : h('span', { class: 'pd-tz' }, ' · 2 Std. ', tend, ' · 24 Std. ', aend24)),
     h('div', { class: 'pd-knoepfe' }, alarmKnopf(g), merkKnopf(g, opts.onStern),
-      glasKnopf('pd-teilen', icon('share', 20), 'Teilen', { onclick: opts.onShare, 'aria-label': 'Pegel teilen' })));
+      glasKnopf('pd-teilen', icon('share', 20), 'Teilen', { 'aria-label': 'Pegel teilen', 'aria-haspopup': 'dialog',
+        onclick: (e) => teilenMenue(g, { onShare: opts.onShare, opener: e.currentTarget, daten: async () => ({ pts: await opts.verlauf.catch(() => []), wv: await vorhersage }) }) })));
 
   const body = h('div', { class: 'pd-body' });
 

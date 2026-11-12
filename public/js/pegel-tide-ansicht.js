@@ -5,7 +5,7 @@ import { icon } from './icons.js';
 import { formatTime } from './pegel.js';
 import { auswerten, TENDENZ } from './gezeiten.js';
 import { vorhersageLaden, kommende, hoehe, inText, tagUhr, standText, ART } from './gezeiten-bsh.js';
-import { fmt, kmText, zusatzKacheln, glasKnopf, alarmKnopf, merkKnopf, grosserWert, quelleZeile } from './pegel-ansicht.js';
+import { fmt, kmText, zusatzKacheln, glasKnopf, alarmKnopf, merkKnopf, grosserWert, quelleZeile, teilenMenue } from './pegel-ansicht.js';
 import { svgFarbe } from './farben.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -116,7 +116,8 @@ export function tideDetail(g, opts) {
     h('p', { class: 'pd-wert' }, grosserWert(g, alt), h('span', { text: g.unit })),
     h('p', { class: 'pd-zeile-kopf' }, h('span', { class: 'pd-zdot pz-tide', 'aria-hidden': 'true' }), h('b', { class: 'pz-tag-text', text: alt ? 'veraltet' : 'Tide' }), alt ? null : tend),
     h('div', { class: 'pd-knoepfe' }, alarmKnopf(g), merkKnopf(g, opts.onStern),
-      glasKnopf('pd-teilen', icon('share', 20), 'Teilen', { onclick: opts.onShare, 'aria-label': 'Pegel teilen' })));
+      glasKnopf('pd-teilen', icon('share', 20), 'Teilen', { 'aria-label': 'Pegel teilen', 'aria-haspopup': 'dialog',
+        onclick: (e) => teilenMenue(g, { onShare: opts.onShare, opener: e.currentTarget, tide: true, daten: async () => ({ pts: await opts.verlauf.catch(() => []), wv: [] }) }) })));
 
   const box = h('div', { class: 'pt-kurve', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Tidekurve wird geladen …' }));
   const achse = h('p', { class: 'pt-achse' });
