@@ -175,7 +175,7 @@ with sync_playwright() as p:
         pg.wait_for_selector(S + ' .pd-tz b:not(:text("…"))')
         tz = pg.inner_text(S + ' .pd-tz')
         check('312' in txt and 'Normal' in txt and re.search(r'2 Std\. [+−±]\d+ cm\s*·\s*24 Std\. [+−±]\d+ cm', tz), f'{name}: Wert, Zustand, Tendenz (2 h) und Änderung 24 h als Text ({tz!r})')
-        check(pg.locator(S + ' .pd-zmark').count() == 1 and pg.locator(S + ' .pd-zgrenzen span').count() == 2, f'{name}: Einordnung mit Punkt, MNW und MHW')
+        check(pg.locator(S + ' .pd-zmark').count() == 1 and pg.locator(S + ' .pd-znamen small').count() == 3 and 'unter ' in pg.locator(S + ' .pd-znamen').inner_text(), f'{name}: Einordnung mit Punkt, MNW und MHW')
         d = pg.locator(S + ' .gc-line').get_attribute('d')
         check(d.count('M') == 2, f'{name}: Messlücke unterbricht die Linie ({d.count("M")} Abschnitte)')
         check('#karte/pegel/' + KOELN in pg.url, f'{name}: Adresse #karte/pegel/…')
