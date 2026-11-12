@@ -6,13 +6,13 @@ import { historyChart, formatTime } from './pegel.js';
 import { aenderung24h, meinePegel, zusatzLaden, vorhersageWLaden, wtAenderungLaden, verlauf30Laden } from './pegel-daten.js';
 import { vorhersageSatz } from './pegel-vorhersage.js';
 import { tendenz, tendenzText as tendenzTextKurz, aenderungKurz, zonenLage, ZONEN } from './pegel-einordnung.js';
-import { pegelBild, bildTeilen } from './pegel-bild.js';
 import { alarmFenster, alarmStatus } from './alarm.js';
 import { istTidepegel } from './gezeiten.js';
 import { tideDetail } from './pegel-tide-ansicht.js';
 import { passtMeinBoot } from './passt-mein-boot.js';
 import { hochzaehlen, merkFlug, sternPop } from './bewegung.js';
-import { seg } from './bausteine.js';
+import { seg, sheetOeffnen, zeile, gruppe } from './bausteine.js';
+import { pegelBild, bildTeilen } from './pegel-bild.js';
 
 export const fmt = (v) => Math.round(v).toLocaleString('de-DE');
 export const kmText = (g) => (g.km !== null && g.km !== undefined ? `km ${g.km.toLocaleString('de-DE', { maximumFractionDigits: 1 })}` : '');
@@ -42,6 +42,7 @@ export const trendText = (g, { kurz = false } = {}) => (g.trend === null ? '' : 
 const KW = ['MNW', 'MW', 'MHW', 'HSW'];
 export const KW_NAME = { MNW: 'Mittleres Niedrigwasser', MW: 'Mittelwasser', MHW: 'Mittleres Hochwasser', HSW: 'Höchster Schifffahrtswasserstand' };
 
+const KW_PUNKT = { NNW: 'pz-low', MNW: 'pz-low', MW: 'pz-normal', MHW: 'pz-high', HHW: 'pz-high', HSW: 'pz-hsw' };
 const KURZNAME = { NNW: 'niedrigster', MNW: 'mittl. Niedrigwasser', MW: 'Mittelwasser', MHW: 'mittl. Hochwasser', HHW: 'höchster', HSW: 'höchster Schifffahrtsw.' };
 
 /** Karte „Einordnung“: Zustand groß, Balken Niedrig · Normal · Hoch mit Punkt (nur mit MNW und MHW), darunter die Grenzen. */
@@ -62,20 +63,21 @@ export function einordnungKarte(g) {
 export function kennwerteKarte(g) {
   const keys = KW.filter(k => g.refs[k] !== undefined);
   if (!keys.length) return null;
-  const zeile = (k, name, v) => h('li', {}, h('b', { text: k }), h('span', { text: KURZNAME[k] || name }), h('strong', { text: `${fmt(v)} ${g.unit}` }));
-  const liste = h('ul', { class: 'pd-kwl' }, keys.map(k => ({ k, v: g.refs[k] })).sort((a, b) => a.v - b.v).map(({ k, v }) => zeile(k, KW_NAME[k], v)));
-  zusatzLaden(g.id).then((z) => { if (z?.kennwerte?.length) liste.replaceChildren(...z.kennwerte.map(c => zeile(c.k, c.name, c.v))); });
+  // 8.0.3: von hoch nach niedrig wie eine Pegellatte, Farbpunkt je Bereich, der aktuelle Wert als hervorgehobene Zeile dazwischen
+  const zeile = (k, name, v, cls, extra = '') => h('li', { class: extra }, h('i', { class: `pd-zdot ${cls}`, 'aria-hidden': 'true' }), h('b', { text: k }), h('span', { text: name }), h('strong', { text: `${fmt(v)} ${g.unit}` }));
+  const jetzt = g.state !== 'old' && Number.isFinite(g.value) ? { k: 'Jetzt', name: 'aktueller Wert', v: g.value, jetzt: true } : null;
+  const fuellen = (eintraege) => liste.replaceChildren(...[...eintraege, ...(jetzt ? [jetzt] : [])].sort((a, b) => b.v - a.v || (a.jetzt ? -1 : 1))
+    .map(e => e.jetzt ? zeile(e.k, e.name, e.v, ZUSTAND[zustand(g)].cls, 'is-jetzt') : zeile(e.k, KURZNAME[e.k] || e.name, e.v, KW_PUNKT[e.k] || 'pz-none')));
+  const liste = h('ul', { class: 'pd-kwl' });
+  fuellen(keys.map(k => ({ k, v: g.refs[k], name: KW_NAME[k] })));
+  zusatzLaden(g.id).then((z) => { if (z?.kennwerte?.length) fuellen(z.kennwerte.map(c => ({ k: c.k, v: c.v, name: c.name }))); });
   return h('section', { class: 'pd-karte pd-kennwerte', 'aria-label': 'Kennwerte' }, h('h2', { class: 'pd-ct', text: 'Kennwerte' }), liste);
 }
 
-/** Station und Quelle (aufklappbar in der Liste). */
-export function stammdaten(g) {
-  const zeilen = [['Gewässer', g.water], ['Flusskilometer', g.km !== null && g.km !== undefined ? g.km.toLocaleString('de-DE', { maximumFractionDigits: 3 }) : null],
-    ['Pegelnummer', g.number], ['Zuständig', g.agency], ['Letzte Messung', g.time ? formatTime(g.time) : null]].filter(([, v]) => v);
-  return h('details', { class: 'pd-zeile pd-stamm' }, h('summary', {}, h('span', { html: icon('info', 18), 'aria-hidden': 'true' }), 'Station und Quelle'),
-    h('dl', { class: 'pd-kw-liste' }, zeilen.flatMap(([k, v]) => [h('dt', { text: k }), h('dd', { text: String(v) })])),
-    h('p', { class: 'pd-hinweis', text: 'Daten: WSV/PEGELONLINE. Der Pegel ist nicht die Wassertiefe; Niedrig/Normal/Hoch beziehen sich auf die Kennwerte dieses Pegels (MNW, MW, MHW sind Mittelwerte, keine Warnstufen).' }),
-    g.number ? h('a', { class: 'pd-link', href: `https://www.pegelonline.wsv.de/gast/stammdaten?pegelnr=${encodeURIComponent(g.number)}`, target: '_blank', rel: 'noopener noreferrer', text: 'Pegel bei PEGELONLINE ↗' }) : null);
+/** Quellenangabe unter den Pegel-Details (8.0.3): klein und grau, mit Pegelnummer und Link zu PEGELONLINE. text: eigener Satz (Tide). */
+export function quelleZeile(g, text = 'Daten: WSV/PEGELONLINE. Der Pegel ist nicht die Wassertiefe; Niedrig/Normal/Hoch beziehen sich auf MNW und MHW dieses Pegels.') {
+  return h('p', { class: 'pd-quelle' }, text, g.number ? ' ' : null,
+    g.number ? h('a', { href: `https://www.pegelonline.wsv.de/gast/stammdaten?pegelnr=${encodeURIComponent(g.number)}`, target: '_blank', rel: 'noopener noreferrer', text: `Pegel ${g.number} bei PEGELONLINE ↗` }) : null);
 }
 
 const fmt1 = (v) => v.toLocaleString('de-DE', { maximumFractionDigits: 1 });
@@ -130,16 +132,33 @@ export function merkKnopf(g, onChange) {
   return knopf;
 }
 
-/** Zeile „Als Bild teilen“: Bild mit Wert, Zustand und Kurve erzeugen und teilen bzw. herunterladen. */
-function bildZeile(g, daten) {
-  return h('button', { type: 'button', class: 'pd-zeile pd-bild', onclick: async (e) => {
-    const btn = e.currentTarget; btn.disabled = true;
+/**
+ * Knopf „Teilen“ (8.0.4): kleines Sheet mit „Link teilen“ und „Als Bild teilen“ (Bild mit Wert, Zustand und 7-Tage-Kurve).
+ * daten(): Promise<{ pts, wv }> für das Bild; tide: Zustand „Tide“ statt Niedrig/Normal/Hoch.
+ */
+export function teilenMenue(g, { onShare, daten, tide = false, opener = null }) {
+  let sh = null;
+  const link = zeile({ ico: 'share', titel: 'Link teilen', unter: 'Link zu diesem Pegel senden oder kopieren', onClick: () => { sh?.schliessen(); onShare?.(); } });
+  const bild = zeile({ ico: 'image', titel: 'Als Bild teilen', unter: 'Wert, Zustand und Verlauf als Bild', onClick: async () => {
+    bild.disabled = true;
     try {
       const { pts, wv } = await daten();
-      const cv = pegelBild({ g, zustand: zustand(g), trend: trendText(g), pts: (pts || []).filter(p => p.t >= (pts?.[pts.length - 1]?.t ?? 0) - 7 * 864e5), wv: wv || [] });
+      const letzte = pts?.[pts.length - 1]?.t ?? 0;
+      const cv = pegelBild({ g, zustand: tide ? 'tide' : zustand(g), trend: tide ? '' : trendText(g), pts: (pts || []).filter(p => p.t >= letzte - 7 * 864e5), wv: wv || [] });
+      sh?.schliessen();
       await bildTeilen(cv, `Pegel-${g.name.replace(/[^\p{L}\p{N}]+/gu, '-')}.png`, `Pegel ${g.name}`);
-    } catch { /* ohne Bild bleibt alles, wie es war */ } finally { btn.disabled = false; }
-  } }, h('span', { html: icon('image', 18), 'aria-hidden': 'true' }), 'Als Bild teilen');
+    } catch { /* ohne Bild bleibt alles, wie es war */ } finally { bild.disabled = false; }
+  } });
+  const liste = gruppe([link, bild]);
+  sh = sheetOeffnen({ inhalt: liste, kopf: { titel: 'Pegel teilen', titelId: 'pt-teilen-titel', unter: g.name }, klasse: 'pd-teilen-sheet', stufe: 'klein', opener, verlauf: true,
+    onSchliessen: () => { sh = null; } });
+  requestAnimationFrame(() => {   // Stufe „klein“ genau so hoch wie die zwei Zeilen (plus Platz für die Navigation)
+    if (!sh) return;
+    const nav = document.querySelector('#bottomnav');
+    const navPlatz = nav && nav.getClientRects().length ? Math.max(0, window.innerHeight - nav.getBoundingClientRect().top) + 8 : 16;
+    sh.el.style.setProperty('--wm-sheet-klein', `${Math.ceil(liste.getBoundingClientRect().bottom - sh.el.getBoundingClientRect().top + 16 + navPlatz)}px`);
+  });
+  return sh;
 }
 
 /** Großer Wert; beim Öffnen zählen die letzten 36 Einheiten hoch (Designumbau 4, nicht bei veralteten Werten). */
@@ -157,7 +176,7 @@ export function kicker(art, g) {
 
 /**
  * Pegel-Details im Sheet-Rahmen (Pegel-Sheet auf der Karte, Pegel-Fenster über Slipanlage und Gemerkt).
- * opts = { verlauf: Promise<pts>, onShare, onKarte, slips: [{p, d}], onSlip(p), onStern, eingebettet, wetter }
+ * opts = { verlauf: Promise<pts>, onShare, onStern, eingebettet, wetter }
  */
 export function pegelDetail(g, opts) {
   if (istTidepegel(g)) return tideDetail(g, opts);   // Tidepegel: Tidekurve und Einordnung statt MNW/MHW-Skala
@@ -172,7 +191,8 @@ export function pegelDetail(g, opts) {
     h('p', { class: 'pd-zeile-kopf' }, h('span', { class: `pd-zdot ${ZUSTAND[z].cls}`, 'aria-hidden': 'true' }), h('b', { text: ZUSTAND[z].text.replace(/^ü/, 'Ü') }),
       alt ? null : h('span', { class: 'pd-tz' }, ' · 2 Std. ', tend, ' · 24 Std. ', aend24)),
     h('div', { class: 'pd-knoepfe' }, alarmKnopf(g), merkKnopf(g, opts.onStern),
-      glasKnopf('pd-teilen', icon('share', 20), 'Teilen', { onclick: opts.onShare, 'aria-label': 'Pegel teilen' })));
+      glasKnopf('pd-teilen', icon('share', 20), 'Teilen', { 'aria-label': 'Pegel teilen', 'aria-haspopup': 'dialog',
+        onclick: (e) => teilenMenue(g, { onShare: opts.onShare, opener: e.currentTarget, daten: async () => ({ pts: await opts.verlauf.catch(() => []), wv: await vorhersage }) }) })));
 
   const body = h('div', { class: 'pd-body' });
 
@@ -219,8 +239,8 @@ export function pegelDetail(g, opts) {
   body.append(h('section', { class: 'pd-karte pd-verlauf', 'aria-label': 'Verlauf' }, h('h2', { class: 'pd-ct', text: 'Verlauf' }), umschalter, chart, vorhInfo, vorhSatz));
   const vorhersage = vorhersageWLaden(g.id);
   vorhersage.then((v) => { wv = v; wvFertig = true; zeichnen(); });
-  // „Passt mein Boot?“ (Designumbau 2b): direkt unter der Aktionsleiste, vor dem Verlauf
-  body.prepend(passtMeinBoot(g, { verlauf: opts.verlauf, vorhersage }));
+  // „Passt mein Boot?“ und „Wetter und Wind“ (8.0.3, Nutzer): nicht im Vordergrund, sondern unten nach den Kennwerten
+  const pmb = passtMeinBoot(g, { verlauf: opts.verlauf, vorhersage });
   if (bereich === '30d') verlauf30Laden(g.id).then((pts) => { alle30 = pts; zeichnen(); }, () => { fehler30 = true; zeichnen(); });
   opts.verlauf.then((pts) => {
     alle = pts; zeichnen();
@@ -236,23 +256,11 @@ export function pegelDetail(g, opts) {
   body.append(einordnungKarte(g), zusatzKacheln(g));
   const kw = kennwerteKarte(g);
   if (kw) body.append(kw);
+  body.append(pmb);
+  if (opts.wetter) body.append(opts.wetter);
 
-  // Wetter am Pegel (nur im Kartenpanel)
-  if (opts.wetter) { opts.wetter.classList.add('pd-karte', 'pd-wetter'); body.append(opts.wetter); }
 
-  // Liste: Als Bild teilen, Slipanlagen, Station und Quelle
-  const zeilen = [
-    bildZeile(g, async () => ({ pts: await opts.verlauf.catch(() => []), wv: await vorhersage })),
-  ];
-  if (opts.slips || opts.onKarte) {
-    zeilen.push(h('details', { class: 'pd-zeile pd-slipbox' }, h('summary', {}, h('span', { html: icon('pin', 18), 'aria-hidden': 'true' }), 'Slipanlagen in der Nähe', opts.slips?.length ? h('em', { text: String(opts.slips.length) }) : null),
-      opts.slips?.length
-        ? h('ul', { class: 'pd-slips' }, opts.slips.map(({ p, d, name }) => h('li', {}, h('button', { type: 'button', onclick: () => opts.onSlip?.(p) },
-          h('span', { class: 'pd-slip-name', text: name }), h('span', { class: 'pd-slip-km', text: d < 1000 ? `${Math.round(d / 10) * 10} m` : `${(d / 1000).toLocaleString('de-DE', { maximumFractionDigits: 1 })} km` })))))
-        : h('p', { class: 'pd-leer', text: 'Keine Slipanlage am selben Gewässer in der Nähe bekannt.' }),
-      opts.onKarte ? h('button', { type: 'button', class: 'pd-link', onclick: opts.onKarte, text: 'Auf der Hauptkarte zeigen ›' }) : null));
-  }
-  zeilen.push(stammdaten(g));
-  body.append(h('section', { class: 'pd-karte pd-liste', 'aria-label': 'Weiteres' }, zeilen));
+  // 8.0.3 (Nutzer): keine Liste mehr am Ende – nur die Quellenangabe als kleine Zeile (Lizenz WSV/PEGELONLINE)
+  body.append(quelleZeile(g));
   return h('article', { class: `pd ${ZUSTAND[z].cls}` + (opts.eingebettet ? ' is-eingebettet' : ''), 'aria-labelledby': 'pd-name' }, kopf, body);
 }

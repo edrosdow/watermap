@@ -184,10 +184,16 @@
 .pt-legende span { display: inline-flex; align-items: center; gap: 8px; }
 .pt-legende i { display: inline-block; width: 22px; height: 0; border-top: 3px solid var(--wm-slip); }
 .pt-legende i.is-mittel { border-top: 1.5px dashed var(--wm-leise); }
-.pt-einordnung { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.pt-einordnung > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.pt-einordnung strong { font-size: var(--wm-t-l); color: var(--wm-tinte); }
-.pt-einordnung small { font-size: var(--wm-t-s); color: var(--wm-tinte); }
+/* Letzte Tide (8.0.3): Überschrift, zwei Kacheln wie „Gezeiten“, Tidehub darunter */
+.pt-lt-reihe { display: grid; grid-template-columns: 1fr 1fr; gap: var(--wm-2); margin-top: var(--wm-3); }
+.pt-lt-reihe > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: var(--wm-3); border-radius: var(--wm-r-s); background: var(--wm-flaeche-2); }
+.pt-einordnung strong { font-size: var(--wm-t-l); color: var(--wm-tinte); font-variant-numeric: tabular-nums; }
+.pt-einordnung small { font-size: var(--wm-t-s); color: var(--wm-matt); }
+.pt-lt-wert { font-size: var(--wm-t-m); font-weight: 700; color: var(--wm-tinte); font-variant-numeric: tabular-nums; }
+.pt-lt-hub { margin: var(--wm-3) 0 0; font-size: var(--wm-t-s); color: var(--wm-matt); }
+.pt-lt-hub b { color: var(--wm-tinte); }
+/* Liste unter dem Tidepegel: normale Zeilen (Symbol links, Text, Pfeil rechts) */
+.pd-zeile.pt-weiter { font-weight: 700; }
 .pd-oben.is-tide .pt-tendenz { color: var(--wm-flaeche); font-weight: 700; }
 .pt-legende i.is-vorhersage { border-top: 2.5px dashed var(--wm-slip); }
 .pt-klein.is-alt { color: var(--wm-warn-text); }
@@ -197,6 +203,7 @@
 .pt-gz-kachel { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 12px 14px; border-radius: var(--wm-r-s); background: var(--wm-wasser); }
 .pt-gz-kachel.is-nw { background: var(--wm-flaeche-2); }
 .pt-gz-zeit { font-size: var(--wm-t-xl); line-height: 1.15; color: var(--wm-tinte); font-weight: 700; font-variant-numeric: tabular-nums; }
+.pt-gz-tag { font-size: var(--wm-t-s); font-weight: 400; color: var(--wm-matt); }
 .pt-gz-in { font-size: var(--wm-t-m); font-weight: 700; color: var(--wm-slip); }
 .pt-gz-kachel small { font-size: var(--wm-t-s); color: var(--wm-tinte); }
 .pt-gz-pillen { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 12px 0 0; padding: 0; }
@@ -420,13 +427,19 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pd.pd .pd-z-sub { margin: 2px 0 0; font-size: var(--wm-t-xs); color: var(--pd-matt); }
 .pd.pd .pd-z-sub:empty { display: none; }
 /* Kennwerte */
+.pd-quelle { margin: var(--wm-1) var(--wm-1) 0; font-size: var(--wm-t-xs); line-height: 1.45; color: var(--wm-matt); }
+.pd-quelle a { color: inherit; font-weight: 700; }
 .pd-kwl { list-style: none; margin: 0; padding: 0; }
-.pd-kwl li { display: flex; align-items: baseline; gap: 10px; padding: 8px 0; border-top: 1px solid var(--pd-linie); }
-.pd-kwl li:first-child { border-top: 0; padding-top: 2px; }
-.pd-kwl b { font-weight: 400; font-size: var(--wm-t-m); min-width: 44px; }
-.pd-kwl span { flex: 1; min-width: 0; font-size: var(--wm-t-xs); color: var(--pd-matt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pd-kwl strong { font-weight: 700; font-size: var(--wm-t-m); white-space: nowrap; }
-/* Liste unten */
+/* Kennwerte (8.0.3): wie eine Pegellatte von hoch nach niedrig, Farbpunkt je Bereich, Kürzel als Plakette, „Jetzt“ hervorgehoben */
+.pd-kwl li { display: flex; align-items: center; gap: var(--wm-3); min-height: 44px; padding: 0 var(--wm-2); border-top: 1px solid var(--pd-linie); }
+.pd-kwl li:first-child, .pd-kwl li.is-jetzt, .pd-kwl li.is-jetzt + li { border-top-color: transparent; }
+.pd-kwl b { flex: none; min-width: 52px; padding: 2px var(--wm-2); border-radius: var(--wm-r-rund); background: var(--wm-flaeche-2); font-size: var(--wm-t-s); font-weight: 700; text-align: center; color: var(--wm-tinte); }
+.pd-kwl span { flex: 1; min-width: 0; font-size: var(--wm-t-s); color: var(--pd-matt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pd-kwl strong { font-weight: 700; font-size: var(--wm-t-m); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pd-kwl li.is-jetzt { border-radius: var(--wm-r-s); background: var(--wm-wasser); }
+.pd-kwl li.is-jetzt b { background: var(--wm-tinte); color: var(--wm-flaeche); }
+.pd-kwl li.is-jetzt span { color: var(--wm-tinte); }
+.pd-kwl .pd-zdot { flex: none; }
 .pd.pd .pd-liste { padding: 0 14px; }
 .pd-zeile { display: flex; align-items: center; gap: 10px; min-height: 50px; width: 100%; border: 0; border-top: 1px solid var(--pd-linie); background: none; color: var(--wm-tinte); font: inherit; font-size: var(--wm-t-m); font-weight: 400; text-decoration: none; text-align: left; cursor: pointer; padding: 0; }
 .pd-liste > .pd-zeile:first-child { border-top: 0; }
@@ -549,7 +562,7 @@ details.pd-zeile[open] { padding-bottom: 10px; }
 .pks-zahlen b { color: var(--wm-tinte); }
 .pks-details { width: 100%; }
 /* Details im Sheet: Kopf ohne eigenen Namen und × (stehen im Sheet-Kopf) */
-.wm-sheet .pd { background: none; }
+.wm-sheet .pd { background: none; flex-shrink: 0; }   /* 8.0.3: nicht auf die Sheet-Höhe stauchen – sonst ragt das Ende unter die Navigation */
 .wm-sheet .pd-oben { padding-top: 0; text-align: center; }
 /* Breite wie im Slip-Sheet (8.0.1): der Rand kommt allein vom Sheet (--wm-4), keine zweiten Seitenränder; Knopfabstand wie .wm-aktionen */
 .wm-sheet .pd.pd .pd-oben, .wm-sheet .pd.pd .pd-body { padding-left: 0; padding-right: 0; }

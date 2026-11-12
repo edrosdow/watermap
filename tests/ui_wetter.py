@@ -202,8 +202,10 @@ with sync_playwright() as p:
         # Pegel-Detail enthält ebenfalls Wetter
         pg.evaluate("window.__watermap.setGauges(true)"); next((True for _ in range(60) if pg.evaluate('!!window.__watermap.state.gauges') or pg.wait_for_timeout(100)), None)   # Cluster zeichnen nur Marker im Ausschnitt
         pg.evaluate("window.__watermap.selectGauge('a6ee8177-107b-47dd-bcfd-30960ccc6e9c', { fly: false, stufe: 'gross' })")
-        pg.wait_for_selector('.pks-sheet .wx-wind', timeout=8000)
-        check('pegel' in pg.inner_text('.pks-sheet .wm-kopf').lower() and pg.locator('.pks-sheet .wx-block').count() == 1, f'{name}: Wetter auch im Pegel-Sheet')
+        pg.wait_for_selector('.pks-sheet .wxz', timeout=8000)   # 8.0.3: Zeile wie im Slip-Sheet, unten nach „Passt mein Boot?“
+        pg.wait_for_function("!document.querySelector('.pks-sheet .wxz small').textContent.includes('geladen')", timeout=8000)
+        check('pegel' in pg.inner_text('.pks-sheet .wm-kopf').lower() and pg.locator('.pks-sheet .wxz').count() == 1 and pg.locator('.pks-sheet .wx-block').count() == 0
+              and 'Bft' in pg.inner_text('.pks-sheet .wxz'), f'{name}: Wetter im Pegel-Sheet als Zeile mit Kurzwerten ({pg.inner_text(".pks-sheet .wxz")!r})')
         pg.evaluate("window.__watermap.setGauges(false)")
 
         # Dienst gestört (neuer Ort, damit nichts aus dem Zwischenspeicher kommt)

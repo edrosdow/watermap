@@ -77,6 +77,18 @@ def run(b, w, hh):
     else:
         check(info['details'] and info['r'][1] == w and info['r'][2] == 420, f'{tag}: Desktop – Panel rechts mit allen Details {info["r"]}')
     pg.screenshot(path=str(SHOTS / f'pegelkarte_{w}_gross.png'))
+    # Teilen (8.0.4): kleines Sheet mit „Link teilen“ und „Als Bild teilen“
+    pg.click(SHEET + ' .pd-teilen'); pg.wait_for_selector('.pd-teilen-sheet.is-offen'); pg.wait_for_timeout(500)
+    zt = pg.locator('.pd-teilen-sheet .wm-zeile').all_inner_texts()
+    check(len(zt) == 2 and 'Link teilen' in zt[0] and 'Als Bild teilen' in zt[1], f'{tag}: „Teilen“ öffnet „Pegel teilen“ mit Link und Bild {zt}')
+    if not mobile:
+        with pg.expect_download(timeout=15000) as dl: pg.locator('.pd-teilen-sheet .wm-zeile', has_text='Als Bild').click()
+        pg.wait_for_timeout(600)
+        check(dl.value.suggested_filename == 'Pegel-Vlotho.png' and pg.locator('.pd-teilen-sheet.is-offen').count() == 0 and pg.locator(SHEET + '.is-offen').count() == 1,
+              f'{tag}: „Als Bild teilen“ lädt das Bild herunter, Teilen-Sheet zu, Pegel-Sheet bleibt')
+    else:
+        pg.click('.pd-teilen-sheet .wm-zu'); pg.wait_for_timeout(600)
+        check(pg.locator('.pd-teilen-sheet.is-offen').count() == 0 and pg.locator(SHEET + '.is-offen').count() == 1, f'{tag}: × schließt nur „Pegel teilen“')
     pg.click(SHEET + ' .wm-zu'); pg.wait_for_timeout(700)
     check(pg.locator(SHEET).count() == 0 and pg.evaluate("location.hash") in ('', '#karte') and not pg.locator('.pk-pille.is-gewaehlt').count(), f'{tag}: × schließt, Auswahl und Adresse zurückgesetzt')
 
