@@ -53,10 +53,10 @@ def run(b, w, hh):
     check(pg.locator(S + ' .pmb .wm-hinweis.is-stop').count() == 1, f'{tag}: Hinweiszeile im Zustand „stop“')
     check(json.loads(pg.evaluate("localStorage.getItem('watermap.mindestpegel')")) == {G: 150}, f'{tag}: watermap.mindestpegel geschrieben')
     check(pg.locator(S + ' a[href*="pegel-ampel"]').count() == 0, f'{tag}: kein Link mehr auf die Ampel-Seite')
-    # Reihenfolge: direkt unter der Aktionsleiste, vor dem Verlauf
-    reihe = pg.locator(S + ' .pd').evaluate("""p => { const a = p.querySelector('.pd-knoepfe'), m = p.querySelector('.pmb'), v = p.querySelector('.pd-verlauf');
-        return !!(a.compareDocumentPosition(m) & 4) && !!(m.compareDocumentPosition(v) & 4); }""")
-    check(reihe, f'{tag}: Abschnitt zwischen Aktionsleiste und Verlauf')
+    # Reihenfolge (8.0.3, Nutzer): unten nach den Kennwerten, vor „Wetter und Wind“
+    reihe = pg.locator(S + ' .pd').evaluate("""p => { const k = p.querySelector('.pd-kennwerte'), m = p.querySelector('.pmb'), v = p.querySelector('.pd-verlauf'), w = p.querySelector('.wxz');
+        return !!(v.compareDocumentPosition(m) & 4) && (!k || !!(k.compareDocumentPosition(m) & 4)) && (!w || !!(m.compareDocumentPosition(w) & 4)); }""")
+    check(reihe, f'{tag}: Abschnitt nach Verlauf und Kennwerten, vor „Wetter und Wind“')
     pg.locator(S + ' .pmb').screenshot(path=str(SHOTS / f'pmb_{w}_mit.png'))
 
     # ---- Ändern → Entfernen → Zeile „Mindestpegel festlegen“

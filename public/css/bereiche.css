@@ -325,8 +325,8 @@ a.ei-reihe-text { display: flex; flex-direction: column; color: inherit; text-de
 .st-sheet .pegel-box.is-gruen .wm-kachel-ico { background: var(--wm-gut-hell); color: var(--wm-gut-text); }
 .st-sheet .pegel-box.is-warn .wm-kachel-ico { background: var(--wm-warn-hell); color: var(--wm-warn-text); }
 .st-sheet .pegel-box.is-rot .wm-kachel-ico { background: var(--wm-stop-hell); color: var(--wm-stop-text); }
-.st-sheet .wxz.wm-zeile { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); color: var(--wm-tinte); text-align: left; font: inherit; cursor: pointer; }
-.st-sheet .wxz.wxz-warn .wm-kachel-ico { background: var(--wm-stop-hell); color: var(--sev, var(--wm-stop)); }
+.st-sheet .wxz.wm-zeile, .pks-sheet .wxz.wm-zeile { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); color: var(--wm-tinte); text-align: left; font: inherit; cursor: pointer; }
+.st-sheet .wxz.wxz-warn .wm-kachel-ico, .pks-sheet .wxz.wxz-warn .wm-kachel-ico { background: var(--wm-stop-hell); color: var(--sev, var(--wm-stop)); }
 .st-sheet .wb { margin: 0; }
 .st-sheet .wb-titel { margin: 0 var(--wm-1) var(--wm-2); }
 .st-sheet .wb-p small { font-size: var(--wm-t-xs); font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }

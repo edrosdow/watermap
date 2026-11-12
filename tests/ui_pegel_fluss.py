@@ -210,16 +210,16 @@ def run(b, w, hh, mobile):
     tk = pg.locator('.pt-svg')
     check('jetzt' in (tk.text_content() or '') and 'MThw' in (tk.text_content() or '') and tk.locator('circle').count() >= 3, f'{tag}: Tidekurve mit „jetzt“, MThw und Hoch-/Niedrigwassern')
     eo = pg.inner_text('.pt-einordnung')
-    check('letztes Hochwasser' in eo and 'letztes Niedrigwasser' in eo and re.search(r'Tidehub \d+ cm', eo) and 'mittleren Tide' in eo, f'{tag}: Einordnung ({eo!r})')
-    check('Häfen in der Nähe' in pg.inner_text('.pd-liste') and 'alle Pegel' in pg.inner_text('.pd-liste') and [t.strip() for t in pg.locator('.pd-knoepfe .pd-kb').all_inner_texts()] == ['Alarm', 'Merken', 'Teilen'], f'{tag}: gleiches Muster: drei Knöpfe, Liste mit Häfen und Gewässer')
-    check('nicht für die Navigation' in pg.inner_text('.pd-body > .pd-hinweis') and 'BSH' in pg.inner_text('.pd-body > .pd-hinweis'), f'{tag}: Hinweis ohne Gewähr, Quelle BSH')
+    check('Letzte Tide' in eo and 'Hochwasser' in eo and 'Niedrigwasser' in eo and re.search(r'Tidehub \d+ cm', eo) and 'mittleren' not in eo, f'{tag}: Einordnung ({eo!r})')
+    check(pg.locator('.pd-liste').count() == 0 and 'PEGELONLINE' in pg.inner_text(PEGEL + ' .pd-quelle') and [t.strip() for t in pg.locator('.pd-knoepfe .pd-kb').all_inner_texts()] == ['Alarm', 'Merken', 'Teilen'], f'{tag}: gleiches Muster: drei Knöpfe, keine Liste, Quelle als Zeile')
+    check('nicht für die Navigation' in pg.inner_text('.pd-body > .pd-quelle') and 'BSH' in pg.inner_text('.pd-body > .pd-quelle'), f'{tag}: Hinweis ohne Gewähr, Quelle BSH')
     # Gezeiten (BSH): nächstes HW/NW, drei weitere als Pillen, Vorhersage gestrichelt in der Kurve
     pg.wait_for_selector('.pt-gezeiten', timeout=5000); pg.wait_for_timeout(200)
     gz = pg.inner_text('.pt-gezeiten')
-    check('Nächstes Hochwasser' in gz and 'Nächstes Niedrigwasser' in gz and re.search(r'in 1 Std\. (9|10|11) Min\.', gz) and '718 cm · +0,5 bis +0,75 m zum Mittel' in gz
-          and '368 cm (Gezeitenrechnung)' in gz, f'{tag}: Gezeiten-Karte ({gz[:160]!r})')
-    check(pg.locator('.pt-gz-pillen li').count() == 3 and 'Vorhersage BSH · Stand' in gz and 'nicht für die Navigation' in gz
-          and pg.locator('.pt-gz-quelle a', has_text='CC BY 4.0').count() == 1, f'{tag}: drei weitere Termine, Stand, Lizenz')
+    check('Hochwasser' in gz and 'Niedrigwasser' in gz and re.search(r'in 1 Std\. (9|10|11) Min\.', gz) and '718 cm' in gz
+          and '368 cm' in gz and 'zum Mittel' not in gz and 'Gezeitenrechnung' not in gz, f'{tag}: Gezeiten-Karte ({gz[:160]!r})')
+    check(pg.locator('.pt-gz-pillen li').count() == 3 and 'Vorhersage BSH · Stand' in gz and 'nicht für die Navigation' in pg.inner_text(PEGEL + ' .pd-quelle')
+          and pg.locator(PEGEL + ' .pd-quelle a', has_text='CC BY 4.0').count() == 1, f'{tag}: drei weitere Termine, Stand, Lizenz')
     check(pg.locator('.pt-svg .pt-vorhersage').count() == 1 and pg.locator('.pt-svg .pt-zukunft').count() == 1 and pg.locator('.pt-svg .pt-vh-punkt').count() >= 1
           and '12 h Vorhersage' in pg.inner_text('.pt-kurve + .pt-achse, .pd-karte-kopf >> nth=1') + pg.inner_text('.pd-body'), f'{tag}: Vorhersage gestrichelt in der Tidekurve')
     gb, kb = pg.locator('.pt-gezeiten').bounding_box(), pg.locator('.pt-kurve').bounding_box()
@@ -236,10 +236,6 @@ def run(b, w, hh, mobile):
     details(pg, f'#pegel/{U(21)}', mobile); pg.wait_for_selector('.pt-svg', timeout=8000); pg.wait_for_timeout(500)
     check(pg.locator('.pt-gezeiten').count() == 0 and pg.locator('.pt-vorhersage').count() == 0 and '24 h gemessen' in pg.inner_text('.pd-body'), f'{tag}: BSH nicht erreichbar → nur Messwerte')
     bsh['aus'] = False
-    pg.locator('.pd-kachel', has_text='alle Pegel').click(); pg.wait_for_selector(FLUSS + ' #pf-name')
-    check('Elbe' in pg.inner_text(FLUSS + ' .wm-kopf') and pg.locator(PEGEL).count() == 1, f'{tag}: Kachel „Elbe – alle Pegel“ öffnet das Fluss-Sheet über dem Pegel-Sheet')
-    pg.keyboard.press('Escape'); pg.wait_for_timeout(600)
-    check(pg.locator(FLUSS).count() == 0 and pg.locator(PEGEL).count() == 1, f'{tag}: Esc schließt nur das Fluss-Sheet')
     if mobile:   # Kurzansicht (Stufe klein): Tidepegel mit auf-/ablaufend statt 2 Std./24 Std.
         oeffne(pg, f'#pegel/{U(21)}'); pg.wait_for_selector(PEGEL + ' .pks-kurz .pks-kurve-svg', timeout=8000); pg.wait_for_timeout(300)
         check('Tide' in pg.inner_text('.pks-trend') and 'auflaufend' in pg.inner_text('.pks-zahlen'), f'{tag}: Tidepegel kompakt mit „auflaufend“ statt 2 Std./24 Std. ({pg.inner_text(".pks-trend")!r})')

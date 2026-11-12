@@ -742,7 +742,7 @@ async function refreshGauges() {
 /** Pegel-Sheet (Designumbau 2a): Handy von unten (klein: Kurzansicht, groß: Details), Desktop Panel rechts. */
 const pegelBlatt = pegelSheet({
   places: () => state.places, mobil: isMobile,
-  wetter: (g) => weatherSection(g.lat, g.lon),
+  wetter: (g) => wetterZeile(g.lat, g.lon, { name: g.name }).zeile,   // wie im Slip-Sheet: Zeile, öffnet das Wetter-Sheet
   share: (g) => sharePegel(g, true),
   slip: (p) => selectPlace(p.id, { full: !isMobile() }),
   fluss: (slug) => flussFenster(slug),

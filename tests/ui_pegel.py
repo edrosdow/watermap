@@ -219,8 +219,8 @@ with sync_playwright() as p:
         check(pg.inner_text('.wm-sheet.wxd-pegel #pd-name') == 'Köln' and 'pegel/' not in pg.url and pg.locator(S).count() == 0 and pg.locator('#detail:not([hidden])').count() == 1,
               f'{name}: Klick öffnet die Pegel-Details im Fenster, keine neue Seite ({pg.url[-30:]})')
         pg.wait_for_selector('.wm-sheet.wxd-pegel .gc-line', timeout=8000)
-        check(pg.locator('.wm-sheet.wxd-pegel .pd-karte').count() >= 2 and pg.locator('.wm-sheet.wxd-pegel .pmb', has_text='Passt mein Boot?').count() == 1 and pg.locator('.wm-sheet.wxd-pegel .pd-slips').count() == 1,
-              f'{name}: Fenster zeigt Skala, Verlauf, „Passt mein Boot?“ und Slipanlagen am Pegel')
+        check(pg.locator('.wm-sheet.wxd-pegel .pd-karte').count() >= 2 and pg.locator('.wm-sheet.wxd-pegel .pmb', has_text='Passt mein Boot?').count() == 1 and pg.locator('.wm-sheet.wxd-pegel .pd-liste').count() == 0 and 'PEGELONLINE' in pg.inner_text('.wm-sheet.wxd-pegel .pd-quelle'),
+              f'{name}: Fenster zeigt Skala, Verlauf, „Passt mein Boot?“, keine Liste, Quelle als Zeile')
         pg.wait_for_timeout(600)   # Einfahren abwarten
         r = pg.locator('.wm-sheet.wxd-pegel').bounding_box(); vp = pg.viewport_size
         if mobile: check(abs(r['y'] + r['height'] - vp['height']) <= 1 and r['width'] >= vp['width'] - 1, f'{name}: Fenster sitzt unten, volle Breite')

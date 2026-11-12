@@ -5,7 +5,7 @@ import { icon } from './icons.js';
 import { formatTime } from './pegel.js';
 import { auswerten, TENDENZ } from './gezeiten.js';
 import { vorhersageLaden, kommende, hoehe, inText, tagUhr, standText, ART } from './gezeiten-bsh.js';
-import { fmt, kmText, zusatzKacheln, glasKnopf, alarmKnopf, merkKnopf, stammdaten, grosserWert } from './pegel-ansicht.js';
+import { fmt, kmText, zusatzKacheln, glasKnopf, alarmKnopf, merkKnopf, grosserWert, quelleZeile } from './pegel-ansicht.js';
 import { svgFarbe } from './farben.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -54,11 +54,16 @@ function kurveZeichnen(box, g, pts, a, v) {
   for (const k of ['MThw', 'MTnw']) {
     if (!Number.isFinite(r[k])) continue;
     s.append(svg('line', { x1: L, x2: W - R, y1: ys(r[k]), y2: ys(r[k]), stroke: 'var(--wm-leise)', 'stroke-width': 1.2, 'stroke-dasharray': '5 4' }),
-      svg('text', { x: L + 2, y: ys(r[k]) + (k === 'MThw' ? -5 : 14), class: 'pt-ax' }, k));
+      svg('text', { x: W - R - 2, y: ys(r[k]) + (k === 'MThw' ? -5 : 14), 'text-anchor': 'end', class: 'pt-ax' }, k));
   }
   s.append(svg('path', { d: pfad, fill: 'none', stroke: 'var(--wm-petrol)', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }));
   if (vk.length) s.append(svg('path', { class: 'pt-vorhersage', d: linie([{ t: jetzt, v: g.value }, ...vk]), fill: 'none', stroke: 'var(--wm-petrol)', 'stroke-width': 2, 'stroke-dasharray': '6 5', 'stroke-linejoin': 'round' }));
-  const zeit = (x, y, typ, t) => svg('text', { x: Math.max(18, Math.min(W - 18, x)), y: typ === 'HW' ? y - 9 : y + 18, 'text-anchor': 'middle', class: 'pt-zeit' }, uhr(t));
+  const xjetzt = xs(jetzt);
+  const zeit = (x, y, typ, t) => {   // über HW, unter NW – außer die Beschriftung läge auf der Plakette „jetzt“ (oben, ±40 px): dann unter den Punkt
+    if (typ === 'HW' && y < 64 && Math.abs(x - xjetzt) < 44)   // neben den Punkt, weg von Linie und Plakette „jetzt“
+      return svg('text', { x: x > xjetzt ? x + 9 : x - 9, y: y + 4, 'text-anchor': x > xjetzt ? 'start' : 'end', class: 'pt-zeit' }, uhr(t));
+    return svg('text', { x: Math.max(18, Math.min(W - 18, x)), y: typ === 'HW' ? y - 9 : y + 18, 'text-anchor': 'middle', class: 'pt-zeit' }, uhr(t));
+  };
   for (const e of a?.extreme || []) {
     const x = xs(e.t), y = ys(e.v);
     s.append(svg('circle', { cx: x, cy: y, r: 4.5, fill: 'var(--wm-tinte)' }), zeit(x, y, e.typ, e.t));
@@ -80,29 +85,29 @@ function kurveZeichnen(box, g, pts, a, v) {
 function gezeitenKarte(v) {
   const k = kommende(v.d);
   if (!k.length) return null;
-  const kachel = (e) => h('div', { class: `pt-gz-kachel is-${e.typ.toLowerCase()}` },
-    h('span', { class: 'pt-klein', text: `Nächstes ${ART[e.typ]}` }),
-    h('strong', { class: 'pt-gz-zeit', text: tagUhr(e.t) }),
-    h('span', { class: 'pt-gz-in', text: inText(e.t) }),
-    h('small', { text: e.vh !== undefined ? [`${fmt(e.vh)} cm`, e.abw ? `${e.abw} zum Mittel` : null].filter(Boolean).join(' · ') : `${fmt(e.astro)} cm (Gezeitenrechnung)` }));
+  // 8.0.3 (Nutzer: weniger Text): Art und Tag, Uhrzeit groß, „in …“, nur der Wert
+  const kachel = (e) => {
+    const tu = tagUhr(e.t), m = tu.match(/^(.*?)\s*(\d\d:\d\d)$/);
+    return h('div', { class: `pt-gz-kachel is-${e.typ.toLowerCase()}` },
+      h('span', { class: 'pt-klein', text: ART[e.typ] }),
+      h('strong', { class: 'pt-gz-zeit' }, m ? m[2] : tu, m?.[1] ? h('span', { class: 'pt-gz-tag', text: ` ${m[1]}` }) : null),
+      h('span', { class: 'pt-gz-in', text: inText(e.t) }),
+      h('small', { text: `${fmt(e.vh ?? e.astro)} cm` }));
+  };
   const erste = k.slice(0, 2), weitere = k.slice(2, 5);
   return h('section', { class: 'pd-karte pt-gezeiten', 'aria-labelledby': 'pt-gz-t' },
     h('div', { class: 'pd-karte-kopf' }, h('h2', { id: 'pt-gz-t', class: 'pd-ct', text: 'Gezeiten' }), h('span', { class: 'pt-klein' + (v.offline ? ' is-alt' : ''), text: `Vorhersage BSH · ${standText(v)}` })),
     h('div', { class: 'pt-gz-reihe' }, erste.map(kachel)),
-    weitere.length ? h('ul', { class: 'pt-gz-pillen', 'aria-label': 'Danach' }, weitere.map(e => h('li', { text: `${e.typ} ${tagUhr(e.t)}` }))) : null,
-    v.d.zusatz || v.d.text ? h('p', { class: 'pt-gz-text', text: [v.d.text, v.d.zusatz].filter(Boolean).join(' ') }) : null,
-    h('p', { class: 'pt-gz-quelle' }, 'Gezeitenvorhersage: ', h('a', { href: v.d.link || 'https://wasserstand.bsh.de/', target: '_blank', rel: 'noopener noreferrer', text: 'BSH' }),
-      ' (', h('a', { href: LIZENZ_URL, target: '_blank', rel: 'noopener noreferrer', text: 'CC BY 4.0' }), '). Angaben ohne Gewähr, nicht für die Navigation.'));
+    weitere.length ? h('ul', { class: 'pt-gz-pillen', 'aria-label': 'Danach' }, weitere.map(e => h('li', { text: `${e.typ} ${tagUhr(e.t)}` }))) : null);
 }
 
 /**
  * Detailseite eines Tidepegels. opts wie pegelDetail: { verlauf, onBack, backLabel, onShare, onKarte, onFluss, onStern, eingebettet, wetter }
  */
-const HINWEIS = 'Messwerte: WSV/PEGELONLINE. Angaben ohne Gewähr, nicht für die Navigation. Wind kann Hoch- und Niedrigwasser deutlich verschieben.';
-const HINWEIS_BSH = 'Messwerte: WSV/PEGELONLINE. Gezeitenvorhersage: BSH (CC BY 4.0). Angaben ohne Gewähr, nicht für die Navigation. Wind kann Hoch- und Niedrigwasser deutlich verschieben.';
+const HINWEIS = 'Messwerte: WSV/PEGELONLINE. Ohne Gewähr, nicht für die Navigation.';
 
 export function tideDetail(g, opts) {
-  const quelle = h('p', { class: 'pd-hinweis', text: HINWEIS });
+  const quelle = quelleZeile(g, HINWEIS);   // 8.0.3: keine Liste mehr, Quelle als kleine Zeile mit Link
   const tend = h('span', { class: 'pd-tz pt-tendenz' });
   const alt = g.state === 'old';
   // Kopf wie bei allen Pegeln: Name, Ort und Zeit, große Zahl, Zustandszeile, drei Knöpfe
@@ -137,7 +142,11 @@ export function tideDetail(g, opts) {
   vorhersageLaden(g).then((x) => {
     v = x;
     const karte = x ? gezeitenKarte(x) : null;
-    if (karte) { gzPlatz.replaceChildren(karte); quelle.textContent = HINWEIS_BSH; }
+    if (karte) {   // Quelle BSH mit Lizenz-Link in der Quellenzeile (8.0.3, statt eigener Zeilen in der Karte)
+      gzPlatz.replaceChildren(karte);
+      const link = (href, text) => h('a', { href, target: '_blank', rel: 'noopener noreferrer', text });
+      quelle.firstChild.replaceWith('Messwerte: WSV/PEGELONLINE · Gezeiten: ', link(x.d.link || 'https://wasserstand.bsh.de/', 'BSH'), ' (', link(LIZENZ_URL, 'CC BY 4.0'), '). Ohne Gewähr, nicht für die Navigation.');
+    }
     zeichnen();
   }, () => {});
   opts.verlauf.then((p) => {
@@ -147,12 +156,11 @@ export function tideDetail(g, opts) {
     tend.textContent = tendenzText(a) ? ` · ${tendenzText(a)}` : '';
     achse.replaceChildren(h('span', { text: tagStunde(p[p.length - 1].t - 24 * 3600e3) }), h('span', { text: 'jetzt' }));
     requestAnimationFrame(zeichnen);
-    const spalte = (titel, e, text) => h('div', {}, h('span', { class: 'pt-klein', text: titel }),
-      h('strong', { text: e ? `${uhr(e.t)} · ${fmt(e.v)} cm` : '–' }), text ? h('small', { text }) : null);
+    const spalte = (titel, e) => h('div', {}, h('span', { class: 'pt-klein', text: titel }),   // 8.0.3: ohne erklärenden Satz
+      h('strong', { text: e ? `${uhr(e.t)} Uhr` : '–' }), e ? h('span', { class: 'pt-lt-wert', text: `${fmt(e.v)} cm` }) : null);
     if (a?.hw || a?.nw) {
       einordnung.hidden = false;
-      einordnung.replaceChildren(spalte('letztes Hochwasser', a.hw, a.hwText),
-        spalte('letztes Niedrigwasser', a.nw, [a.nwText, a.tidehub !== null ? `Tidehub ${fmt(a.tidehub)} cm` : null].filter(Boolean).join(' · ')));
+      einordnung.replaceChildren(h('h2', { class: 'pd-ct', text: 'Letzte Tide' }), h('div', { class: 'pt-lt-reihe' }, spalte('Hochwasser', a.hw), spalte('Niedrigwasser', a.nw)), a.tidehub !== null ? h('p', { class: 'pt-lt-hub' }, 'Tidehub ', h('b', { text: `${fmt(a.tidehub)} cm` })) : null);
     }
   }, () => { box.removeAttribute('aria-busy'); box.replaceChildren(h('p', { class: 'unknown', text: 'Tidekurve konnte nicht geladen werden.' })); });
   let w = 0;
@@ -162,13 +170,7 @@ export function tideDetail(g, opts) {
   });
   ro.observe(box);
 
-  const chev = () => h('span', { class: 'pd-chev', html: icon('chevron', 16), 'aria-hidden': 'true' });
-  const body = h('div', { class: 'pd-body' }, gzPlatz, kurvenKarte, einordnung, zusatzKacheln(g));
-  if (opts.wetter) { opts.wetter.classList.add('pd-karte', 'pd-wetter'); body.append(opts.wetter); }
-  body.append(h('section', { class: 'pd-karte pd-liste', 'aria-label': 'Weiteres' },
-    opts.onKarte ? h('button', { type: 'button', class: 'pd-zeile pd-kachel', onclick: opts.onKarte }, h('span', { html: icon('map', 18), 'aria-hidden': 'true' }), 'Häfen in der Nähe', chev()) : null,
-    opts.onFluss ? h('button', { type: 'button', class: 'pd-zeile pd-kachel', onclick: opts.onFluss }, h('span', { html: icon('welle', 18), 'aria-hidden': 'true' }), `${g.water || 'Gewässer'} – alle Pegel`, chev()) : null,
-    stammdaten(g)));
+  const body = h('div', { class: 'pd-body' }, gzPlatz, kurvenKarte, einordnung, zusatzKacheln(g), opts.wetter || null);   // Wetter-Zeile unten (8.0.3, Nutzer)
   body.append(quelle);
   return h('article', { class: 'pd pz-tide' + (opts.eingebettet ? ' is-eingebettet' : ''), 'aria-labelledby': 'pd-name' }, kopf, body);
 }
