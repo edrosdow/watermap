@@ -282,13 +282,6 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -.01em; margin: 0; }
 .ph-add { display: flex; align-items: center; justify-content: center; gap: 8px; width: calc(100% - 32px); min-height: 48px; margin: 4px 16px 0; border: 1.5px solid var(--wm-rand); border-radius: var(--wm-r-s);
   background: var(--wm-flaeche); color: var(--wm-petrol-tief); font-weight: 700; font-size: var(--wm-t-m); }
 .ph-add:hover { background: var(--wm-flaeche-2); }
-.ph-leer { display: flex; align-items: center; gap: 14px; padding: 16px; border: 1.5px dashed var(--wm-rand); border-radius: var(--wm-r-m); background: var(--wm-wasser-2); }
-.ph-leer-ico { width: 48px; height: 48px; border-radius: var(--wm-r-s); background: var(--wm-wasser); color: var(--wm-petrol-tief); display: grid; place-items: center; flex: none; }
-.ph-leer-text { flex: 1; min-width: 0; }
-.ph-leer-text strong { display: block; color: var(--wm-tinte); font-size: var(--wm-t-m); }
-.ph-leer-text small { color: var(--wm-matt); font-size: var(--wm-t-s); }
-.ph-leer-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 0; border-radius: var(--wm-r-s); background: var(--wm-petrol-tief); color: var(--wm-flaeche); font-weight: 700; font-size: var(--wm-t-s); }
-.ph-leer-btn:hover { background: var(--wm-petrol-tief); }
 .ph-frame { position: relative; isolation: isolate; aspect-ratio: 4 / 3; background: var(--wm-linie); overflow: hidden; touch-action: pan-y; user-select: none; }
 .ph-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; -webkit-user-drag: none; will-change: transform; }
 .ph-frame:focus-visible { outline: 3px solid var(--wm-slip); outline-offset: -3px; }
@@ -393,8 +386,6 @@ a.pegel-box { text-decoration: none; color: inherit; }
 .contact-chips { flex-direction: row; flex-wrap: wrap; gap: 8px; }
 .contact-chips .contact { min-height: 40px; padding: 0 14px; border-radius: var(--wm-r-rund); background: var(--wm-flaeche-2); color: var(--wm-tinte); font-weight: 700; font-size: var(--wm-t-s); text-decoration: none; gap: 7px; }
 .contact-chips .contact:hover { background: var(--wm-linie); }
-.coords-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.coords-row .coords { display: inline-flex; align-items: center; gap: 6px; font-size: var(--wm-t-s); }
 .source p { margin: 0 0 4px; }
 
 /* ---------------------------------------------------------------- Dialoge und Formulare */
@@ -513,11 +504,6 @@ a.pegel-box { text-decoration: none; color: inherit; }
 .pf-drop-title { margin: 0; font-weight: 700; font-size: var(--wm-t-m); }
 .pf-drop-sub { margin: 4px 0 16px; font-size: var(--wm-t-xs); color: var(--pf-muted); }
 .pf-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
-.pf-btn { min-height: 48px; border-radius: var(--wm-r-s); font-weight: 700; font-size: var(--wm-t-m); display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-.pf-btn-fill { background: var(--pf-petrol); color: var(--wm-flaeche); border: 0; }
-.pf-btn-fill:hover { background: var(--wm-petrol-tief); }
-.pf-btn-line { background: var(--wm-flaeche); color: var(--pf-navy); border: 1px solid var(--pf-line); }
-.pf-btn-line:hover { background: var(--pf-bg); }
 .pf-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .pf-preview { position: relative; height: 216px; border-radius: var(--wm-r-m); overflow: hidden; background: var(--pf-bg); }
 .pf-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -557,6 +543,23 @@ a.pegel-box { text-decoration: none; color: inherit; }
 .pf-done h2 { margin: 0; font-size: var(--wm-t-l); }
 .pf-done h2:focus { outline: none; }
 .pf-done p { margin: 0 0 8px; max-width: 360px; }
+/* „Foto hinzufügen“ im gemeinsamen Sheet-Rahmen (8.0.7): Karten und Kacheln wie in „Wie ist die Lage?“, Fuß ohne eigene Leiste */
+.pf-sheet { --pf-navy: var(--wm-tinte); --pf-bg: var(--wm-flaeche-2); --pf-petrol: var(--wm-petrol); --pf-line: var(--wm-linie); --pf-muted: var(--wm-matt); }
+.pf-sheet .pf-form { flex: none; min-height: auto; gap: var(--wm-4); }   /* nicht auf die Sheet-Höhe stauchen */
+.pf-sheet .pf-scroll { flex: none; min-height: auto; overflow: visible; padding: 0; gap: var(--wm-4); }
+.pf-sheet .pf-place { background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
+.pf-sheet .pf-drop { border: 1.5px dashed var(--wm-rand); background: var(--wm-flaeche); }
+.pf-sheet .pf-pick .wm-btn { width: 100%; }
+.pf-sheet .pf-kats { gap: var(--wm-2); }
+.pf-sheet .pf-kat { border: 0; border-radius: var(--wm-r-m); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
+.pf-sheet .pf-kat:hover { background: var(--wm-flaeche-2); }
+.pf-sheet .pf-kat-ico { color: var(--wm-petrol-tief); }
+.pf-sheet .pf-kat[aria-pressed="true"] { background: var(--wm-tinte); color: var(--wm-flaeche); }
+.pf-sheet .pf-kat[aria-pressed="true"] .pf-kat-ico { color: var(--wm-flaeche); }
+.pf-sheet .pf-label { font-size: var(--wm-t-s); }
+.pf-sheet .pf-foot { padding: 0; border: 0; background: none; gap: var(--wm-2); }
+.pf-sheet .pf-send { min-height: 48px; border-radius: var(--wm-r-m); }
+.pf-sheet .pf-done { padding: var(--wm-6) 0; }
 @media (min-width: 768px) { .pf-grip { display: none; } .pf-head { padding-top: 18px; } }
 
 /* ---------------------------------------------------------------- Heute vor Ort (Lagemeldungen) */
@@ -583,30 +586,31 @@ a.pegel-box { text-decoration: none; color: inherit; }
 /* Abschnitt im Detailpanel */
 
 /* Melden-Sheet: hervorgehobene Karte „Lage vor Ort melden“ */
-.lage-karte { background: var(--wm-navy); color: #fff; border-radius: 20px; padding: 8px; margin-bottom: 14px; }
-.lage-main { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 8px; border: 0; border-radius: 14px; background: transparent; color: #fff; text-align: left; }
-.lage-main:hover:not(:disabled) { background: rgba(255, 255, 255, .06); }
+/* „Lage vor Ort melden“ im Melden-Menü (8.0.5): helle Karte wie alle Gruppen, Schnellknöpfe wie im Formular (keine Ausnahme mehr) */
+.lage-karte { background: var(--wm-flaeche); color: var(--wm-tinte); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); padding: var(--wm-2); margin-bottom: var(--wm-3); }
+.lage-main { display: flex; align-items: center; gap: var(--wm-3); width: 100%; min-height: 64px; padding: var(--wm-2); border: 0; border-radius: var(--wm-r-s); background: transparent; color: var(--wm-tinte); text-align: left; }
+.lage-main:hover:not(:disabled) { background: var(--wm-flaeche-2); }
 .lage-main:disabled { opacity: .6; cursor: default; }
-.lage-ico { width: 48px; height: 48px; border-radius: 14px; background: #163F57; color: var(--wm-petrol-hell); display: grid; place-items: center; flex: none; }
+.lage-ico { width: 40px; height: 40px; border-radius: var(--wm-r-s); background: var(--wm-wasser); color: var(--wm-petrol-tief); display: grid; place-items: center; flex: none; }
 .lage-text { flex: 1; display: flex; flex-direction: column; }
 .lage-text strong { font-size: var(--wm-t-m); }
-.lage-text small { color: #C5D8E1; font-size: var(--wm-t-s); }
-.lage-neu { flex: none; padding: 3px 9px; border-radius: 99px; background: var(--wm-petrol-hell); color: var(--wm-navy); font-size: var(--wm-t-xs); font-weight: 700; letter-spacing: .03em; }
-.lage-frage { margin: 4px 4px 4px; padding: 12px; border-radius: 14px; background: #163F57; }
-.lage-frage p { margin: 0 0 10px; font-size: var(--wm-t-m); }
-.lage-dist { color: #C5D8E1; }
-.lage-schnell { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.lage-typ { min-height: 64px; padding: 6px 4px; border: 0; border-radius: 12px; background: #fff; color: var(--wm-navy); font-weight: 700; font-size: var(--wm-t-xs); line-height: 1.2;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; }
+.lage-text small { color: var(--wm-matt); font-size: var(--wm-t-s); }
+.lage-neu { flex: none; padding: 2px var(--wm-2); border-radius: var(--wm-r-rund); background: var(--wm-wasser); color: var(--wm-petrol-tief); font-size: var(--wm-t-xs); font-weight: 700; }
+.lage-frage { margin: var(--wm-1); padding: var(--wm-3); border-radius: var(--wm-r-s); background: var(--wm-flaeche-2); }
+.lage-frage p { margin: 0 0 var(--wm-3); font-size: var(--wm-t-m); }
+.lage-dist { color: var(--wm-matt); }
+.lage-schnell { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--wm-2); }
+.lage-typ { min-height: 64px; padding: var(--wm-2) var(--wm-1); border: 0; border-radius: var(--wm-r-m); background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-weight: 700; font-size: var(--wm-t-xs); line-height: 1.2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--wm-1); text-align: center; }
 .lage-typ:disabled { opacity: .55; }
-.lage-typ[aria-busy="true"] { opacity: 1; outline: 3px solid var(--wm-petrol-hell); }
-.lage-gut svg { color: #15803D; }
-.lage-warn svg { color: #B45309; }
+.lage-typ[aria-busy="true"] { opacity: 1; background: var(--wm-tinte); color: var(--wm-flaeche); }
+.lage-typ[aria-busy="true"] svg { color: var(--wm-flaeche); }
+.lage-gut svg { color: var(--wm-gut-text); }
+.lage-warn svg { color: var(--wm-warn-text); }
 .lage-stop svg { color: var(--wm-stop); }
-.lage-status { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--wm-stop-hell); color: #8A1C12; font-size: var(--wm-t-s); font-weight: 700; }
-.lage-schnell-fuss { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px; font-size: var(--wm-t-s); color: #C5D8E1; }
-.lage-link { min-height: 44px; padding: 0 2px; border: 0; background: none; color: #fff; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
-.lage-karte :focus-visible { outline-color: var(--wm-petrol-hell); }
+.lage-status { margin: var(--wm-2) 0 0; padding: var(--wm-2) var(--wm-3); border-radius: var(--wm-r-s); background: var(--wm-stop-hell); color: var(--wm-stop-text); font-size: var(--wm-t-s); font-weight: 700; }
+.lage-schnell-fuss { display: flex; justify-content: space-between; align-items: center; gap: var(--wm-2); margin-top: var(--wm-1); font-size: var(--wm-t-s); color: var(--wm-matt); }
+.lage-link { min-height: 44px; padding: 0 2px; border: 0; background: none; color: var(--wm-petrol-tief); font: inherit; font-weight: 700; }
 .rm-ico.rm-slip { background: var(--wm-wasser); color: var(--wm-slip); }
 .rm-ico.rm-foto { background: var(--wm-linie); color: var(--wm-petrol-tief); }
 .rm-ico.rm-fehler { background: var(--wm-stop-hell); color: var(--wm-stop); }
@@ -615,36 +619,32 @@ p.rmenu-links { display: block; text-align: center; border-top: 0; color: var(--
 p.rmenu-links a { display: inline; min-height: 0; }
 .rm-version { text-align: center; margin: 4px 0 0; }
 
-/* „Wie ist die Lage?“ (lage-form.js; nutzt die Grundform von „Foto hinzufügen“) */
-.lf-head { gap: 4px; }
-.lf-back { width: 44px; height: 44px; border: 0; border-radius: var(--wm-r-rund); background: none; color: var(--wm-tinte); display: grid; place-items: center; margin-left: -10px; flex: none; }
-.lf-back:hover { background: var(--wm-flaeche-2); }
-.dialog-lage .pf-title { flex: 1; }
+/* „Wie ist die Lage?“ (lage-form.js) – 8.0.6 im gemeinsamen Sheet-Rahmen: Kopf mit Ort, Kacheln, Notiz (wm-feld), Senden (wm-btn) */
+.lf-form { display: flex; flex-direction: column; gap: var(--wm-4); }
+.lf-note-head label { font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-tinte); }
+.lf-opt { font-weight: 400; color: var(--wm-matt); }
+.lf-status { margin: 0; font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-stop-text); text-align: center; }
+.lf-send { width: 100%; }
+.lf-hinweis { margin: calc(-1 * var(--wm-2)) 0 0; font-size: var(--wm-t-xs); color: var(--wm-matt); text-align: center; }
 .lf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.lf-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 76px; padding: 10px 6px; border-radius: var(--wm-r-m);
-  border: 1.5px solid var(--wm-linie); background: var(--wm-flaeche); color: var(--wm-tinte); font-weight: 700; font-size: var(--wm-t-m); }
+/* Kacheln (8.0.5) wie die Schnellknöpfe im Menü: weiß mit Schatten, Symbol in der Zustandsfarbe, gewählt dunkel (wie aktive Chips) */
+.lf-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--wm-2); min-height: 76px; padding: var(--wm-3) var(--wm-2); border-radius: var(--wm-r-m);
+  border: 0; background: var(--wm-flaeche); box-shadow: var(--wm-schatten); color: var(--wm-tinte); font-weight: 700; font-size: var(--wm-t-m); }
 .lf-tile svg { display: block; }
-.lf-tile:hover { border-color: var(--wm-rand); }
-.lf-gut { background: var(--wm-flaeche-2); border-color: var(--wm-gut-rand); color: var(--wm-gut-text); }
+.lf-tile:hover { background: var(--wm-flaeche-2); }
 .lf-gut .lf-ico { color: var(--wm-gut-text); }
-.lf-stop { background: var(--wm-stop-hell); border-color: var(--wm-stop-rand); color: var(--wm-stop-text); }
+.lf-warn .lf-ico { color: var(--wm-warn-text); }
 .lf-stop .lf-ico { color: var(--wm-stop); }
-.lf-tile[aria-pressed="true"] { background: var(--wm-tinte); border-color: var(--wm-tinte); color: var(--wm-flaeche); }
+.lf-tile[aria-pressed="true"] { background: var(--wm-tinte); color: var(--wm-flaeche); }
 .lf-tile[aria-pressed="true"] .lf-ico { color: var(--wm-flaeche); }
 .lf-note-head { display: flex; justify-content: space-between; align-items: baseline; }
 .lf-count { font-size: var(--wm-t-xs); color: var(--wm-matt); font-variant-numeric: tabular-nums; }
-#lf-note { min-height: 48px; border: 1px solid var(--wm-rand); border-radius: var(--wm-r-s); padding: 0 14px; font-size: var(--wm-t-m); width: 100%; color: var(--wm-tinte); }
-#lf-note:focus { border-color: var(--wm-slip); outline: 2px solid rgba(8, 127, 156, .25); }
-.lf-send.is-ready { background: var(--wm-slip); }
-.lf-send.is-ready:hover { background: var(--wm-petrol-tief); }
 
 /* „Heute vor Ort“ als Karte im Detailpanel (meldungen.js → vorOrtKarte) */
-.vo-karte { background: var(--wm-flaeche); border: 1.5px solid var(--wm-linie); border-radius: var(--wm-r-m); overflow: hidden; scroll-margin-top: 150px; }
+.vo-karte { background: var(--wm-flaeche); border: 0; box-shadow: var(--wm-schatten); border-radius: var(--wm-r-m); overflow: hidden; scroll-margin-top: 150px; }
 .vo-karte:focus { outline: none; }
 .vo-karte:focus-visible { outline: 3px solid var(--wm-fokus); outline-offset: 2px; }
-.vo-karte.vo-warn { border-color: var(--wm-warn-rand); }
-.vo-karte.vo-stop { border-color: var(--wm-stop-rand); }
-.vo-karte.is-edit { border: 2px solid var(--wm-tinte); box-shadow: var(--wm-schatten); }
+.vo-karte.is-edit { box-shadow: var(--wm-schatten); }   /* 8.0.5: ohne dicken dunklen Rahmen */
 .vo-laden { margin: 0; padding: 14px; }
 .vo-oben { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
 .vo-warn .vo-oben { background: var(--wm-warn-hell); }
@@ -670,8 +670,9 @@ p.rmenu-links a { display: inline; min-height: 0; }
 .vo-frage-text { font-size: var(--wm-t-m); color: var(--wm-warn-text); }
 .vo-stop .vo-frage-text { color: var(--wm-stop-text); }
 .vo-pillen { display: inline-flex; align-items: center; gap: 8px; }
-.vo-pille { min-height: 44px; padding: 0 18px; border-radius: var(--wm-r-rund); border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); font-weight: 700; font-size: var(--wm-t-m); box-shadow: var(--wm-schatten); }
-.vo-pille:hover:not(:disabled) { background: var(--wm-wasser-2); }
+.vo-pille { position: relative; min-height: 40px; padding: 0 var(--wm-4); border-radius: var(--wm-r-rund); border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); font-weight: 700; font-size: var(--wm-t-s); box-shadow: var(--wm-schatten); }   /* wie wm-chip (8.0.5) */
+.vo-pille::after { content: ""; position: absolute; inset: -2px -1px; }   /* Trefferfläche ≥ 44 px */
+.vo-pille:hover:not(:disabled) { background: var(--wm-flaeche-2); }
 .vo-pille:disabled { opacity: .55; cursor: default; }
 .vo-danke { font-size: var(--wm-t-s); color: var(--wm-gut-text); font-weight: 700; }
 .vo-danke:empty { display: none; }
@@ -692,24 +693,22 @@ p.rmenu-links a { display: inline; min-height: 0; }
 .vo-unten-kopf strong { font-size: var(--wm-t-m); color: var(--wm-tinte); }
 .vo-unten-kopf small { font-size: var(--wm-t-xs); color: var(--wm-matt); }
 .vo-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.vo-chip { position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border-radius: var(--wm-r-rund); border: 1.5px solid var(--wm-linie);
-  background: var(--wm-flaeche); color: var(--wm-tinte); font-weight: 700; font-size: var(--wm-t-m); }
+/* Auswahl-Chips (8.0.5): ein Stil wie wm-chip – weiß mit Schatten, ohne Rahmen; Zustand nur über die Symbolfarbe */
+.vo-chip { position: relative; display: inline-flex; align-items: center; gap: var(--wm-1); min-height: 40px; padding: 0 var(--wm-4); border-radius: var(--wm-r-rund); border: 0;
+  background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-weight: 700; font-size: var(--wm-t-s); }
 .vo-chip::after { content: ""; position: absolute; inset: -2px -1px; }   /* Trefferfläche ≥ 44 px */
 .vo-chip svg { display: block; }
-.vo-chip:hover:not(:disabled) { border-color: var(--wm-rand); }
+.vo-chip:hover:not(:disabled) { background: var(--wm-flaeche-2); }
 .vo-chip:disabled { opacity: .5; cursor: default; }
-.vo-chip-gut { border-color: var(--wm-gut-rand); color: var(--wm-gut-text); }
 .vo-chip-gut svg { color: var(--wm-gut-text); }
-.vo-chip-stop { border-color: var(--wm-stop-rand); color: var(--wm-stop-text); }
-.vo-chip-mehr { background: var(--wm-tinte); border-color: var(--wm-tinte); color: var(--wm-flaeche); }
-.vo-chip-mehr:hover:not(:disabled) { background: var(--wm-tinte); border-color: var(--wm-tinte); }
+.vo-chip-stop svg { color: var(--wm-stop); }
 .vo-melden { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 14px; border: 0; border-top: 1px solid var(--wm-linie);
   background: var(--wm-wasser); text-align: left; color: var(--wm-tinte); }
 .vo-melden:active:not(:disabled) { background: var(--wm-petrol-hell); }
 .vo-melden:hover:not(:disabled) { background: var(--wm-wasser); }
 .vo-melden:disabled { opacity: .6; cursor: default; }
 .vo-melden:focus-visible { outline: 3px solid var(--wm-fokus); outline-offset: -3px; }
-.vo-melden-ico { width: 40px; height: 40px; border-radius: var(--wm-r-s); background: var(--wm-slip); color: var(--wm-flaeche); display: grid; place-items: center; flex: none; }
+.vo-melden-ico { width: 40px; height: 40px; border-radius: var(--wm-r-s); background: var(--wm-flaeche); color: var(--wm-petrol-tief); display: grid; place-items: center; flex: none; }
 .vo-melden-ico svg { display: block; }
 .vo-melden-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .vo-melden-text strong { font-size: var(--wm-t-m); color: var(--wm-tinte); }
@@ -719,13 +718,13 @@ p.rmenu-links a { display: inline; min-height: 0; }
 .vo-edit-kopf { display: flex; justify-content: space-between; align-items: center; }
 .vo-edit-kopf strong { font-size: var(--wm-t-m); color: var(--wm-tinte); }
 .vo-aendern { min-height: 44px; padding: 0 4px; border: 0; background: none; color: var(--wm-petrol-tief); font-weight: 700; font-size: var(--wm-t-m); }
-.vo-wahl { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; border-radius: var(--wm-r-s); background: var(--wm-tinte); color: var(--wm-flaeche); font-weight: 700; font-size: var(--wm-t-m); }
+.vo-wahl { align-self: flex-start; display: inline-flex; align-items: center; gap: var(--wm-2); min-height: 40px; padding: 0 var(--wm-4); border-radius: var(--wm-r-rund); background: var(--wm-tinte); color: var(--wm-flaeche); font-weight: 700; font-size: var(--wm-t-s); }   /* wie ein aktiver Chip (8.0.5) */
 .vo-wahl svg { display: block; }
 .vo-notizfeld { min-height: 48px; border: 1px solid var(--wm-linie); border-radius: var(--wm-r-s); padding: 0 14px; font-size: var(--wm-t-m); width: 100%; color: var(--wm-tinte); }
 .vo-notizfeld:focus { border-color: var(--wm-slip); outline: 2px solid rgba(8, 127, 156, .25); }
 .vo-edit-knoepfe { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
-.vo-abbrechen, .vo-senden { min-height: 50px; border-radius: var(--wm-r-s); font-weight: 700; font-size: var(--wm-t-m); }
-.vo-abbrechen { border: 1.5px solid var(--wm-linie); background: var(--wm-flaeche); color: var(--wm-tinte); }
+.vo-abbrechen, .vo-senden { min-height: 48px; border-radius: var(--wm-r-m); font-weight: 700; font-size: var(--wm-t-m); }
+.vo-abbrechen { border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); }
 .vo-senden { border: 0; background: var(--wm-slip); color: var(--wm-flaeche); }
 .vo-senden:hover:not(:disabled) { background: var(--wm-petrol-tief); }
 .vo-senden:disabled { opacity: .7; cursor: progress; }
@@ -790,18 +789,20 @@ p.rmenu-links a { display: inline; min-height: 0; }
 #map .leaflet-tile-container img.leaflet-tile { width: 256.5px !important; height: 256.5px !important; mix-blend-mode: normal; }
 
 /* „Wichtig für dein Boot“ (Slipanlagen) */
-.wb { margin: 14px 0 4px; border: 1px solid var(--wm-linie); border-radius: var(--wm-r-m); background: var(--wm-flaeche); overflow: hidden; }
-.wb-liste { list-style: none; margin: 0; padding: 0 6px 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.wb-p { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border-radius: var(--wm-r-s); background: var(--wm-flaeche-2); min-width: 0; }
-.wb-p i { width: 10px; height: 10px; border-radius: var(--wm-r-rund); flex: none; margin-top: 5px; background: var(--wm-leise); }
+/* „Wichtig für dein Boot“ (8.0.5): Karte wie die Pegel-Karten (weiß, Schatten), bekannte Werte fett, unbekannte grau und normal */
+.wb { margin: 0; border-radius: var(--wm-r-m); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); overflow: hidden; }
+.wb-titel.wb-titel { margin: 0; padding: var(--wm-3) var(--wm-4) var(--wm-2); font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-matt); }
+.wb-liste { list-style: none; margin: 0; padding: 0 var(--wm-3) var(--wm-3); display: grid; grid-template-columns: 1fr 1fr; gap: var(--wm-2); }
+.wb-p { display: flex; gap: var(--wm-2); align-items: flex-start; padding: var(--wm-2) var(--wm-3); border-radius: var(--wm-r-s); background: var(--wm-flaeche-2); min-width: 0; }
+.wb-p i { width: 10px; height: 10px; border-radius: var(--wm-r-rund); flex: none; margin-top: 5px; background: var(--wm-rand); }
 .wb-p.is-ok i { background: var(--wm-gut); } .wb-p.is-warn i { background: var(--wm-warn); } .wb-p.is-stop i { background: var(--wm-stop); }
 .wb-p div { display: flex; flex-direction: column; min-width: 0; }
-.wb-p small { color: var(--wm-matt); font-size: var(--wm-t-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-.wb-p strong { color: var(--wm-tinte); font-size: var(--wm-t-m); overflow-wrap: anywhere; }
-.wb-p.is-unb strong { color: var(--wm-matt); font-weight: 700; }
-.wb-extra { margin: 0; padding: 4px 14px 8px; color: var(--wm-matt); font-size: var(--wm-t-s); overflow-wrap: anywhere; }
-.wb-fuss { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 2px 8px 2px 14px; border-top: 1px solid var(--wm-flaeche-2); color: var(--wm-matt); font-size: var(--wm-t-xs); }
-.wb-link { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 6px; margin-left: auto; border: 0; background: none; color: var(--wm-petrol-tief); font-weight: 700; font-size: var(--wm-t-s); }
+.wb-p small { color: var(--wm-matt); font-size: var(--wm-t-xs); font-weight: 400; }
+.wb-p strong { color: var(--wm-tinte); font-size: var(--wm-t-m); font-weight: 700; overflow-wrap: anywhere; }
+.wb-p.is-unb strong { color: var(--wm-matt); font-weight: 400; }
+.wb-extra { margin: 0; padding: 0 var(--wm-4) var(--wm-3); color: var(--wm-matt); font-size: var(--wm-t-s); overflow-wrap: anywhere; }
+.wb-fuss { display: flex; justify-content: space-between; align-items: center; gap: var(--wm-2); flex-wrap: wrap; padding: 0 var(--wm-2) 0 var(--wm-4); border-top: 1px solid var(--wm-linie); color: var(--wm-matt); font-size: var(--wm-t-xs); }
+.wb-link { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 var(--wm-2); margin-left: auto; border: 0; background: none; color: var(--wm-petrol-tief); font-weight: 700; font-size: var(--wm-t-s); }
 .wb-link span { display: grid; }
 @media (max-width: 767px) {
   .wb-p { padding: 8px; gap: 8px; }
@@ -810,37 +811,32 @@ p.rmenu-links a { display: inline; min-height: 0; }
 }
 
 /* „Angaben ergänzen“ (Slipanlagen) – am Handy von unten, am Desktop in der Mitte */
-.ae-dlg { width: min(480px, calc(100% - 32px)); max-height: 88vh; padding: 0; border: 0; border-radius: var(--wm-r-m); background: var(--wm-flaeche-2); color: var(--wm-tinte); box-shadow: var(--wm-schatten); overflow: auto; }
-.ae-form { display: flex; flex-direction: column; min-height: 100%; }
-.ae-hinweis { margin: 0; padding: 10px 18px; font-size: var(--wm-t-s); color: var(--wm-matt); background: var(--wm-wasser); }
-.ae-bekannt { margin: 12px 14px 0; padding: 8px 8px 8px 12px; border-radius: var(--wm-r-s); background: var(--wm-flaeche); display: flex; align-items: center; gap: 10px; font-size: var(--wm-t-s); }
+/* 8.0.6: im gemeinsamen Sheet-Rahmen; je Angabe eine weiße Karte, Auswahl als Chips (umbrechend), Felder wie wm-eingabe */
+.ae-form { display: flex; flex-direction: column; gap: var(--wm-3); }
+.ae-hinweis { margin: 0 var(--wm-1); font-size: var(--wm-t-s); color: var(--wm-matt); }
+.ae-bekannt { padding: var(--wm-2) var(--wm-2) var(--wm-2) var(--wm-4); border-radius: var(--wm-r-m); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); display: flex; align-items: center; gap: var(--wm-3); font-size: var(--wm-t-s); }
 .ae-bekannt i { width: 8px; height: 8px; border-radius: var(--wm-r-rund); background: var(--wm-gut); flex: none; }
 .ae-bekannt > span { flex: 1; color: var(--wm-matt); overflow-wrap: anywhere; } .ae-bekannt strong { color: var(--wm-tinte); }
-.ae-aendern { border: 0; background: none; min-height: 40px; padding: 0 8px; color: var(--wm-petrol-tief); font-weight: 700; font-size: var(--wm-t-s); }
-.ae-teil { margin: 14px 18px 6px; font-size: var(--wm-t-xs); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--wm-matt); }
-.ae-feld { display: block; margin: 0 14px 8px; padding: 12px; border: 0; border-radius: var(--wm-r-s); background: var(--wm-flaeche); min-width: 0; }
-.ae-feld legend, .ae-legende { float: left; width: 100%; margin-bottom: 8px; padding: 0; font-size: var(--wm-t-m); font-weight: 700; color: var(--wm-tinte); }
+.ae-aendern { border: 0; background: none; min-height: 44px; padding: 0 var(--wm-2); color: var(--wm-petrol-tief); font-weight: 700; font-size: var(--wm-t-s); }
+.ae-felder { display: flex; flex-direction: column; gap: var(--wm-3); }
+.ae-teil { margin: var(--wm-2) var(--wm-1) 0; font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-matt); }
+.ae-feld { display: block; margin: 0; padding: var(--wm-3) var(--wm-4) var(--wm-4); border: 0; border-radius: var(--wm-r-m); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); min-width: 0; }
+.ae-feld legend { float: left; width: 100%; margin-bottom: var(--wm-3); padding: 0; font-size: var(--wm-t-m); font-weight: 700; color: var(--wm-tinte); }
 .ae-feld legend + * { clear: both; }
-.ae-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--wm-flaeche-2); border-radius: var(--wm-r-s); padding: 3px; gap: 3px; }
-.ae-opt { min-height: 40px; border: 0; border-radius: var(--wm-r-s); background: none; font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-matt); padding: 0 4px; line-height: 1.15; }
-.ae-opt[aria-pressed="true"] { background: var(--wm-tinte); color: var(--wm-flaeche); }
-.ae-opt:focus-visible { outline: 3px solid var(--wm-fokus); outline-offset: 1px; }
-.ae-tipp { margin: 6px 2px 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }
-.ae-paar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; clear: both; }
-.ae-wahl { display: flex; flex-direction: column; gap: 4px; font-size: var(--wm-t-xs); color: var(--wm-matt); font-weight: 700; }
-.ae-ein { width: 100%; min-height: 44px; border: 1px solid var(--wm-linie); border-radius: var(--wm-r-s); padding: 0 12px; font: inherit; font-size: var(--wm-t-m); color: var(--wm-tinte); background: var(--wm-flaeche); }
-.ae-feld input.ae-ein { margin-top: 8px; }
-.ae-text { padding: 10px 12px; resize: vertical; clear: both; }
-.ae-fuss { position: sticky; bottom: 0; margin-top: auto; background: var(--wm-flaeche); padding: 12px 18px 16px; box-shadow: 0 -1px 0 var(--wm-linie); }
-.ae-fehler { margin: 0 0 10px; padding: 8px 12px; border-radius: var(--wm-r-s); background: var(--wm-stop-hell); color: var(--wm-stop-text); font-size: var(--wm-t-s); font-weight: 700; }
-.ae-knoepfe { display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; }
-.ae-knoepfe button { min-height: 48px; border-radius: var(--wm-r-s); font-weight: 700; font-size: var(--wm-t-m); }
-.ae-abbrechen { border: 1px solid var(--wm-linie); background: var(--wm-flaeche); color: var(--wm-tinte); }
-.ae-senden { border: 1px solid var(--wm-petrol); background: var(--wm-petrol); color: var(--wm-flaeche); }
-.ae-senden:disabled { background: var(--wm-linie); border-color: var(--wm-linie); }
+.ae-chips { display: flex; flex-wrap: wrap; gap: var(--wm-2); }
+.ae-chips .wm-chip { position: relative; background: var(--wm-flaeche-2); box-shadow: none; }
+.ae-chips .wm-chip::after { content: ""; position: absolute; inset: -2px -1px; }   /* Trefferfläche ≥ 44 px */
+.ae-chips .wm-chip[aria-pressed="true"] { background: var(--wm-tinte); color: var(--wm-flaeche); }
+.ae-opt:focus-visible { outline: 3px solid var(--wm-fokus); outline-offset: 2px; }
+.ae-tipp { margin: var(--wm-2) 2px 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+.ae-paar { display: grid; grid-template-columns: 1fr 1fr; gap: var(--wm-3); clear: both; }
+.ae-wahl { display: flex; flex-direction: column; gap: var(--wm-1); font-size: var(--wm-t-s); color: var(--wm-matt); font-weight: 700; }
+.ae-feld input.ae-ein { margin-top: var(--wm-3); }
+.ae-text { min-height: 72px; padding: var(--wm-3) var(--wm-4); resize: vertical; }
+.ae-fehler { margin: 0; padding: var(--wm-2) var(--wm-3); border-radius: var(--wm-r-s); background: var(--wm-stop-hell); color: var(--wm-stop-text); font-size: var(--wm-t-s); font-weight: 700; }
+.ae-knoepfe { display: grid; grid-template-columns: 1fr 1.6fr; gap: var(--wm-3); margin-top: var(--wm-2); }
+.ae-senden:disabled { opacity: .45; }
 @media (max-width: 767px) {
-  .ae-dlg { width: 100%; max-width: none; max-height: calc(100% - 36px); margin: auto 0 0; border-radius: var(--wm-r-l) var(--wm-r-l) 0 0; }
-  .ae-fuss { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
 }
 
 /* „Heute vor Ort“ schmal: keine Probleme, nicht vor Ort (meldungen.js) */
@@ -950,3 +946,13 @@ input.hat-x { padding-right: calc(var(--x-rechts, 2px) + 44px) !important; }
   .toolbar .filter-n { background: var(--wm-petrol); color: var(--wm-flaeche); }
 
         }
+
+/* Fußzeile im Standort-Sheet (8.0.5): Koordinaten, Quelle, Herkunft und „Fehler melden“ als kleine graue Zeilen (wie die Quelle im Pegel-Sheet) */
+.st-fuss { display: flex; flex-direction: column; gap: var(--wm-1); margin: var(--wm-1) var(--wm-1) 0; font-size: var(--wm-t-xs); line-height: 1.45; color: var(--wm-matt); }
+.st-fuss p { margin: 0; }
+.st-fuss .source { border: 0; padding: 0; font-size: inherit; text-align: left; }
+.st-fuss .coords { font-variant-numeric: tabular-nums; }
+.st-fuss a { color: inherit; }
+.st-fuss .detail-links { display: inline; padding: 0; }
+.st-fuss-link, .st-fuss .detail-links .st-fuss-link { display: inline; min-height: 0; padding: 0; border: 0; background: none; color: var(--wm-petrol-tief); font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+.st-fuss-link:hover { text-decoration: underline; }

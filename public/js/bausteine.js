@@ -317,12 +317,15 @@ function wischen(el, body, s) {
   function ende(abbruch) {
     const a = z; z = null; loesen();
     if (!a || !a.aktiv) return;
-    const y = Math.max(0, a.basis + a.dy), schnell = Math.abs(a.v) > 0.5;
+    const schnell = Math.abs(a.v) > 0.5;
     const stufen = { gross: lage('gross'), klein: lage('klein'), zu: lage('zu') };
     let ziel;
+    // 8.0.6 (Nutzer): nach unten wischen schließt direkt – auch aus „groß“, ohne Zwischenhalt in „klein“.
+    // Kurzer, langsamer Zug (< 80 px bzw. 15 % der Höhe) federt zurück; nach oben geht es wie bisher auf „groß“.
+    const weit = Math.min(80, el.offsetHeight * 0.15);
     if (abbruch) ziel = s.aktuell;
-    else if (schnell) ziel = a.v < 0 ? 'gross' : (s.aktuell === 'gross' && y < stufen.klein ? 'klein' : 'zu');
-    else ziel = Object.entries(stufen).reduce((b, k) => (Math.abs(k[1] - y) < Math.abs(b[1] - y) ? k : b))[0];
+    else if (a.dy > 0) ziel = schnell || a.dy > weit ? 'zu' : s.aktuell;
+    else ziel = schnell || -a.dy > weit ? 'gross' : s.aktuell;
     // von der Fingerlage weich in die Zielstufe: Übergang aus der Klasse, Inline-Lage danach entfernen (kein Sprung)
     el.style.transition = '';
     if (ziel === 'zu') { s.schliessen({ durchNutzer: true }); return; }

@@ -4,7 +4,7 @@
 import { h } from './dom.js';
 import { sendReport } from './forms.js';
 import { displayName } from './model.js';
-import { kopf } from './bausteine.js';
+import { sheetOeffnen } from './bausteine.js';
 
 /** Felder des Formulars. Werte sind die Schlüssel, die die Verwaltung kennt (netlify/functions/fotos.mjs → ERGAENZUNG). */
 export const ERG_FELDER = [
@@ -31,18 +31,18 @@ export function bekannteAngaben(p) {
   return out;
 }
 
-/** Fenster öffnen. opts = { place, toast(text) } */
+/** Sheet öffnen (8.0.6: gemeinsamer Sheet-Rahmen, Auswahl als Chips, Felder wie im Designsystem). opts = { place, toast(text) } */
 export function slipErgaenzen({ place: p, toast }) {
-  const vorher = document.activeElement;
+  let sh = null;
   const bekannt = bekannteAngaben(p);
   const bekanntKeys = new Set(bekannt.filter(b => !b.teilweise).map(b => b.key));
   const wahl = {};            // key → Wert (nur Gewähltes)
   let aendern = !ERG_FELDER.some(f => !bekanntKeys.has(f.key));   // alles bekannt → gleich alle Felder zeigen
 
-  const senden = h('button', { type: 'submit', class: 'ae-senden' });
+  const senden = h('button', { type: 'submit', class: 'wm-btn is-primaer ae-senden' });
   const fehler = h('p', { class: 'ae-fehler', role: 'alert', hidden: true });
-  const feeNote = h('input', { type: 'text', class: 'ae-ein', name: 'fee_note', maxlength: 80, autocomplete: 'off', placeholder: 'Betrag (optional), z. B. 5 € pro Slipvorgang', hidden: true });
-  const bemerkung = h('textarea', { class: 'ae-ein ae-text', name: 'bemerkung', rows: 2, maxlength: 300, placeholder: 'z. B. Schlüssel beim Hafenmeister' });
+  const feeNote = h('input', { type: 'text', class: 'wm-eingabe ae-ein', name: 'fee_note', maxlength: 80, autocomplete: 'off', placeholder: 'Betrag (optional), z. B. 5 € pro Slipvorgang', hidden: true });
+  const bemerkung = h('textarea', { id: 'ae-bemerkung', class: 'wm-eingabe ae-text', name: 'bemerkung', rows: 2, maxlength: 300, placeholder: 'z. B. Schlüssel beim Hafenmeister' });
 
   const zaehlen = () => {
     const n = Object.keys(wahl).length;
@@ -52,7 +52,7 @@ export function slipErgaenzen({ place: p, toast }) {
 
   function seg(f) {
     const tipp = h('p', { class: 'ae-tipp', hidden: !(f.key in wahl), text: 'Nochmal antippen hebt die Auswahl auf.' });
-    const knoepfe = f.optionen.map(([wert, text]) => h('button', { type: 'button', class: 'ae-opt', 'aria-pressed': String(wahl[f.key] === wert), dataset: { wert }, text,
+    const knoepfe = f.optionen.map(([wert, text]) => h('button', { type: 'button', class: 'wm-chip ae-opt', 'aria-pressed': String(wahl[f.key] === wert), dataset: { wert }, text,
       onclick: (e) => {
         const an = wahl[f.key] !== wert;
         if (an) wahl[f.key] = wert; else delete wahl[f.key];
@@ -61,11 +61,11 @@ export function slipErgaenzen({ place: p, toast }) {
         if (f.key === 'fee') { feeNote.hidden = wahl.fee !== 'kostenpflichtig'; if (feeNote.hidden) feeNote.value = ''; }
         zaehlen();
       } }));
-    return [h('div', { class: 'ae-seg', role: 'group', 'aria-label': f.titel }, knoepfe), f.key === 'fee' ? feeNote : null, tipp];
+    return [h('div', { class: 'ae-chips', role: 'group', 'aria-label': f.titel }, knoepfe), f.key === 'fee' ? feeNote : null, tipp];
   }
   function rampe() {
     const auswahl = (name, titel, werte) => {
-      const sel = h('select', { class: 'ae-ein', name, onchange: () => { if (sel.value) wahl[name] = sel.value; else delete wahl[name]; zaehlen(); } },
+      const sel = h('select', { class: 'wm-eingabe ae-ein', name, onchange: () => { if (sel.value) wahl[name] = sel.value; else delete wahl[name]; zaehlen(); } },
         h('option', { value: '', text: '– weiß nicht –' }), werte.map(v => h('option', { value: v, text: v, selected: wahl[name] === v })));
       return h('label', { class: 'ae-wahl' }, h('span', { text: titel }), sel);
     };
@@ -90,20 +90,16 @@ export function slipErgaenzen({ place: p, toast }) {
   zeichneFelder();
 
   const form = h('form', { class: 'ae-form', novalidate: true },
-    kopf({ titel: 'Angaben ergänzen', titelId: 'ae-titel', unter: [displayName(p), p.water?.name].filter(Boolean).join(' · '), onZu: () => schliessen() }),
     h('p', { class: 'ae-hinweis', text: 'Nur ausfüllen, was du sicher weißt – Leeres bleibt „unbekannt“.' }),
     bekanntZeile, felderBox,
     h('p', { class: 'ae-teil', text: 'Optional' }),
-    h('label', { class: 'ae-feld ae-bem' }, h('span', { class: 'ae-legende', text: 'Noch etwas?' }), bemerkung),
-    h('div', { class: 'ae-fuss' }, fehler, h('div', { class: 'ae-knoepfe' },
-      h('button', { type: 'button', class: 'ae-abbrechen', text: 'Abbrechen', onclick: () => schliessen() }), senden)));
+    h('div', { class: 'ae-feld ae-bem wm-feld' }, h('label', { for: 'ae-bemerkung', text: 'Noch etwas?' }), bemerkung),
+    fehler,
+    h('div', { class: 'ae-knoepfe' }, h('button', { type: 'button', class: 'wm-btn ae-abbrechen', text: 'Abbrechen', onclick: () => schliessen() }), senden));
   bemerkung.addEventListener('input', zaehlen);
   zaehlen();
 
-  const dlg = h('dialog', { class: 'ae-dlg', 'aria-labelledby': 'ae-titel' }, form);
-  function schliessen() { if (dlg.open) dlg.close(); dlg.remove(); if (vorher?.isConnected) vorher.focus(); }
-  dlg.addEventListener('cancel', (e) => { e.preventDefault(); schliessen(); });
-  dlg.addEventListener('click', (e) => { if (e.target === dlg) schliessen(); });
+  function schliessen() { sh?.schliessen({ durchNutzer: true }); }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -117,15 +113,14 @@ export function slipErgaenzen({ place: p, toast }) {
     senden.disabled = true; senden.textContent = 'Wird gesendet …'; fehler.hidden = true;
     try {
       await sendReport(fd);
-      schliessen();
+      sh?.schliessen();
       toast?.('Danke! Deine Angaben werden geprüft und erscheinen danach für alle.');
     } catch (ex) {
       fehler.textContent = ex.message; fehler.hidden = false; zaehlen();
     }
   });
 
-  document.body.append(dlg);
-  dlg.showModal();
-  dlg.querySelector('.ae-opt, select')?.focus();
-  return dlg;
+  sh = sheetOeffnen({ inhalt: form, kopf: { titel: 'Angaben ergänzen', titelId: 'ae-titel', unter: [displayName(p), p.water?.name].filter(Boolean).join(' · ') },
+    klasse: 'ae-sheet', stufe: 'gross', verlauf: true });
+  return sh;
 }

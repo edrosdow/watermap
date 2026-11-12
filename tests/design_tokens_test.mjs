@@ -8,8 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const AUSNAHMEN = {
-  lage: { sel: ['.lage-'], grund: '„Lage vor Ort melden“: dunkle Karte bleibt wie sie ist (Nutzer, DESIGN_SYSTEM.md)' },
-  navy: { sel: ['.app-header', 'header', '.lage-'], grund: 'Navy nur Logo und Desktop-Kopfleiste (+ Lage-Karte)' },
+  navy: { sel: ['.app-header', 'header'], grund: 'Navy nur Logo und Desktop-Kopfleiste (Ausnahme „Lage melden“ am 12.11.2026 aufgehoben)' },
   klein: { sel: ['.gc-axis', '.gc-reflabel', '.gc-jetzt-text', '.pf-ax', '.pt-ax', '.pt-zeit', '.pt-jetzt', '.nav-badge', '.filter-n',
     '.leaflet-control-attribution', '.wm-extra-cluster', '.wm-cluster', '.wm-mbadge'], grund: 'Plaketten und Achsenbeschriftung unter 13 px (7.66.1)' },
   haar: { grund: 'Radius ≤ 3 px: Griffe, Balken, Striche' },
@@ -42,13 +41,13 @@ function pruefeCss(datei) {
       const p = d.slice(0, i).trim().toLowerCase(), v = d.slice(i + 1).trim().replace(/\s*!important$/, '');
       const wo = `${datei}: ${sel.slice(0, 70)} { ${p}: ${v.slice(0, 60)} }`;
       if (p.startsWith('--') && /^--(zb|pd)-/.test(p)) { if (/#[0-9a-f]{3,8}\b/i.test(v)) fehler.push(`Hex in Variable: ${wo}`); continue; }
-      if (/#[0-9a-f]{3,8}\b/i.test(v) && !hat(sel, AUSNAHMEN.lage.sel)) fehler.push(`Hex-Farbe: ${wo}`);
+      if (/#[0-9a-f]{3,8}\b/i.test(v)) fehler.push(`Hex-Farbe: ${wo}`);
       if (ALT.test(v)) fehler.push(`alte Variable: ${wo}`);
       if (v.includes('var(--wm-navy)') && !hat(sel, AUSNAHMEN.navy.sel)) fehler.push(`Navy außerhalb der Kopfleiste: ${wo}`);
       if (p === 'font-size' && /^[0-9.]+px$/.test(v) && !hat(sel, AUSNAHMEN.klein.sel)) fehler.push(`px-Schriftgröße: ${wo}`);
       if (p === 'font-weight' && /^[0-9]+$/.test(v) && !['300', '400', '700'].includes(v)) fehler.push(`Gewicht: ${wo}`);
-      if (p === 'border-radius' && !radiusOk(v) && !hat(sel, AUSNAHMEN.lage.sel)) fehler.push(`Radius: ${wo}`);
-      if (p === 'box-shadow' && !schattenOk(v) && !hat(sel, AUSNAHMEN.lage.sel)) fehler.push(`Schatten: ${wo}`);
+      if (p === 'border-radius' && !radiusOk(v)) fehler.push(`Radius: ${wo}`);
+      if (p === 'box-shadow' && !schattenOk(v)) fehler.push(`Schatten: ${wo}`);
     }
   }
 }

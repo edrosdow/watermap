@@ -1,6 +1,6 @@
 """UI-Test „Heute vor Ort“ (Lagemeldungen) mit nachgebildeter /api/meldungen und den synthetischen Daten aus ui_full.py.
 Start: python3 tests/ui_meldungen.py [screenshots-ordner]"""
-import importlib.util, json, pathlib, sys, tempfile, time
+import importlib.util, json, pathlib, re, sys, tempfile, time
 from playwright.sync_api import sync_playwright
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -91,7 +91,7 @@ def run(b, mobile):
     if mobile:
         pg.wait_for_selector('#detail .st-lage')
         z = pg.inner_text('#detail .st-lage')
-        check('Parkplatz voll' in z and 'vor 40 Min.' in z and '3× bestätigt' in z and '+1 weitere' in z, f'{tag}: Statuszeile in der Vorschau ({z!r})')
+        check('Parkplatz voll' in z and re.search(r'vor 4[0-2] Min\.', z) and '3× bestätigt' in z and '+1 weitere' in z, f'{tag}: Statuszeile in der Vorschau ({z!r})')
         check(pg.evaluate("getComputedStyle(document.querySelector('#detail .st-lage')).backgroundColor") == 'rgb(255, 241, 214)', f'{tag}: Statuszeile getönt (warn-hell)')
         pg.screenshot(path=str(SHOTS / 'meld_m_2vorschau.png'))
         pg.click('#detail .st-lage'); pg.wait_for_selector('#detail:not([hidden]) .vo-lage')
@@ -103,25 +103,26 @@ def run(b, mobile):
     karte = pg.locator('#detail #heute-vor-ort')
     # Zustand b, weiter weg (ohne Position): Status ohne Knöpfe/Chips, unten „Lage melden“
     check('vo-warn' in karte.get_attribute('class') and pg.inner_text('#detail .vo-status') == 'Parkplatz voll'
-          and 'vor 40 Min. · 3× bestätigt' in pg.inner_text('#detail .vo-lage'), f'{tag}: b – wichtigste Meldung mit Alter und Bestätigungen')
+          and re.search(r'vor 4[0-2] Min\. · 3× bestätigt', pg.inner_text('#detail .vo-lage')), f'{tag}: b – wichtigste Meldung mit Alter und Bestätigungen')
     check(pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-oben')).backgroundColor") == 'rgb(255, 241, 214)'
-          and pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-karte')).borderTopColor") == pg.evaluate("(() => { const e = document.createElement('i'); e.style.color = 'var(--wm-warn-rand)'; document.body.append(e); const c = getComputedStyle(e).color; e.remove(); return c; })()"), f'{tag}: b – getönt (warn-hell), Rand --wm-warn-rand')
+          and pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-karte')).borderTopWidth") == '0px'
+          and pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-karte')).boxShadow") != 'none', f'{tag}: b – getönt (warn-hell), Karte mit Schatten statt Rand (8.0.5)')
     check(karte.locator('.vo-pille').count() == 0 and karte.locator('.vo-chip').count() == 0 and karte.locator('button.vo-melden').count() == 1, f'{tag}: d – weit weg: keine Knöpfe/Chips, Zeile „Lage melden“')
     mz = karte.locator('.vo-melden').bounding_box()
     check(mz['height'] >= 60 and 'Warst du heute dort? Hilf anderen.' in pg.inner_text('#detail .vo-melden'), f'{tag}: d – „Lage melden“ ≥ 60 px mit Unterzeile')
     check('<b>' in karte.inner_text() and karte.locator('.vo-notiz b').count() == 0, f'{tag}: Notiz als Text, nie als HTML')
     wb = karte.locator('.vo-weiter-btn')
-    check(wb.count() == 1 and wb.get_attribute('aria-expanded') == 'false' and 'Warteschlange' in wb.inner_text() and 'vor 20 Min.' in wb.inner_text(), f'{tag}: weitere Meldung eingeklappt')
+    check(wb.count() == 1 and wb.get_attribute('aria-expanded') == 'false' and 'Warteschlange' in wb.inner_text() and re.search(r'vor 2[0-2] Min\.', wb.inner_text()), f'{tag}: weitere Meldung eingeklappt')
     wb.click(); check(karte.locator('.vo-weiter-btn').get_attribute('aria-expanded') == 'true' and 'noch nicht bestätigt' in karte.inner_text(), f'{tag}: aufklappbar')
     order = [c for c in pg.evaluate("[...document.querySelectorAll('#detail .detail-body > *')].map(e => e.id || e.className)") if not any(x.startswith('st-') for x in str(c).split())]   # Stufe-„klein“-Teile (Designumbau 3b) zählen nicht
     i_btn = next(k for k, c in enumerate(order) if 'dbtns' in str(c))
     check(order.index('heute-vor-ort') == i_btn + 1 or order.index('heute-vor-ort') == i_btn + 2, f'{tag}: Karte direkt unter Route/Merken/Teilen')
     check(order.index('heute-vor-ort') < next((k for k, c in enumerate(order) if 'wx-block' in str(c)), 999), f'{tag}: Karte über dem Wetter')
-    check('bei Testort' in pg.inner_text('#detail .st-meta') and pg.locator('#detail .detail-sub').count() == 0, f'{tag}: Ort in der Unterzeile unter dem Namen')
+    check('bei Testort' in pg.inner_text('#detail .wm-kopf') and pg.locator('#detail .st-meta').count() == 0, f'{tag}: Ort in der Unterzeile des Kopfs (8.0.5)')
     pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_3b_weit.png'))
     # „Lage melden“ (weit) → sechs Kacheln
-    pg.click('#detail .vo-melden'); pg.wait_for_selector('#dlg[open] .lf-grid')
-    check(pg.locator('#dlg .lf-tile').count() == 6, f'{tag}: d – „Lage melden“ öffnet die sechs Kacheln')
+    pg.click('#detail .vo-melden'); pg.wait_for_selector('.lf-sheet.is-offen .lf-grid')
+    check(pg.locator('.wm-sheet.lf-sheet .lf-tile').count() == 6, f'{tag}: d – „Lage melden“ öffnet die sechs Kacheln')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     # Nah (Position bekannt, ≤ 1000 m): „Stimmt das noch?“ und „Lage hat sich geändert?“
     pg.evaluate("(() => { const p = window.__watermap.state.byId.get('node/1'); window.__watermap.state.user = { lat: p.lat + 0.004, lon: p.lon }; })()")
@@ -153,8 +154,8 @@ def run(b, mobile):
     btn = karte.locator('button.vo-schmal-btn')
     check(btn.count() == 1 and btn.bounding_box()['height'] >= 43.9 and 'Lage melden' in btn.inner_text(), f'{tag}: e – Knopf „Lage melden“ ≥ 44 px ({btn.bounding_box()})')
     pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_6e_schmal.png'))
-    btn.click(); pg.wait_for_selector('#dlg[open] .lf-grid')
-    check('TEST Slip 3' in pg.inner_text('#dlg .pf-place'), f'{tag}: e – Knopf öffnet „Lage melden“ für den Standort')
+    btn.click(); pg.wait_for_selector('.lf-sheet.is-offen .lf-grid')
+    check('TEST Slip 3' in pg.inner_text('.wm-sheet.lf-sheet .wm-kopf'), f'{tag}: e – Knopf öffnet „Lage melden“ für den Standort')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
     # Zustand a: nah, keine Meldungen
     pg.evaluate("(() => { const p = window.__watermap.state.byId.get('node/3'); window.__watermap.state.user = { lat: p.lat, lon: p.lon + 0.003 }; })()")
@@ -168,7 +169,7 @@ def run(b, mobile):
     # Zustand c: Chip antippen
     karte.locator('.vo-chip', has_text='Parkplatz voll').click(); pg.wait_for_selector('#detail .vo-karte.is-edit')
     check('Deine Meldung' in karte.inner_text() and pg.inner_text('#detail .vo-wahl') == 'Parkplatz voll' and karte.locator('.vo-lage.is-klein').count() == 1, f'{tag}: c – „Deine Meldung“, gewählte Lage, Status klein')
-    check(pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-karte')).borderTopWidth") == '2px', f'{tag}: c – dunkler Rand 2 px')
+    check(pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-karte')).borderTopWidth") == '0px', f'{tag}: c – ohne dicken dunklen Rand (8.0.5)')
     check(pg.get_attribute('#vo-notiz', 'maxlength') == '140', f'{tag}: c – Notiz max. 140 Zeichen')
     pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_7c.png'))
     karte.locator('.vo-aendern').click()
@@ -188,16 +189,16 @@ def run(b, mobile):
     check('Zuletzt: „Alles frei“ · heute' in pg.inner_text('#detail .vo-lage'), f'{tag}: danach „Zuletzt: „Alles frei“ · heute …“')
     check(pg.evaluate("window.__watermap.state.meld.get('node/3')?.typ") == 'alles_frei', f'{tag}: Marker-Stand sofort aktualisiert')
     # „Mehr ›“ → sechs Kacheln
-    karte.locator('.vo-chip-mehr').click(); pg.wait_for_selector('#dlg[open] .lf-grid')
-    send = pg.locator('#dlg .lf-send')
-    check(pg.locator('#dlg .lf-tile').count() == 6 and send.get_attribute('aria-disabled') == 'true', f'{tag}: „Mehr“ öffnet sechs Kacheln, Senden erst nach Auswahl')
-    hs = [pg.locator('#dlg .lf-tile').nth(i).bounding_box()['height'] for i in range(6)]
+    karte.locator('.vo-chip-mehr').click(); pg.wait_for_selector('.lf-sheet.is-offen .lf-grid')
+    send = pg.locator('.wm-sheet.lf-sheet .lf-send')
+    check(pg.locator('.wm-sheet.lf-sheet .lf-tile').count() == 6 and send.get_attribute('aria-disabled') == 'true', f'{tag}: „Mehr“ öffnet sechs Kacheln, Senden erst nach Auswahl')
+    hs = [pg.locator('.wm-sheet.lf-sheet .lf-tile').nth(i).bounding_box()['height'] for i in range(6)]
     check(min(hs) >= 76, f'{tag}: Kacheln mindestens 76 px hoch ({min(hs):.0f})')
-    pg.click('#dlg .lf-tile[data-typ=gesperrt]'); pg.click('#dlg .lf-tile[data-typ=rampe_rutschig]')
-    check(pg.locator('#dlg .lf-tile[aria-pressed=true]').count() == 1, f'{tag}: Einfachauswahl mit aria-pressed')
+    pg.click('.wm-sheet.lf-sheet .lf-tile[data-typ=gesperrt]'); pg.click('.wm-sheet.lf-sheet .lf-tile[data-typ=rampe_rutschig]')
+    check(pg.locator('.wm-sheet.lf-sheet .lf-tile[aria-pressed=true]').count() == 1, f'{tag}: Einfachauswahl mit aria-pressed')
     pg.fill('#lf-note', 'Algen')
-    check(pg.inner_text('#dlg .lf-count') == '5 / 140', f'{tag}: Zähler „5 / 140“')
-    send.click(); pg.wait_for_selector('#dlg', state='hidden'); pg.wait_for_timeout(300)
+    check(pg.inner_text('.wm-sheet.lf-sheet .lf-count') == '5 / 140', f'{tag}: Zähler „5 / 140“')
+    send.click(); pg.wait_for_selector('.wm-sheet.lf-sheet', state='detached'); pg.wait_for_timeout(300)
     check(pg.inner_text('#detail .vo-status') == 'Rampe rutschig', f'{tag}: Detail zeigt sofort die neue Meldung')
     pg.evaluate("window.__watermap.state.user = null")
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
@@ -242,20 +243,20 @@ def run(b, mobile):
     check(len(st['posts']) == n0 + 1 and st['posts'][-1]['body'] == {'standortId': 'node/1', 'typ': 'parkplatz_voll', 'notiz': ''} and 'Danke' in pg.inner_text('#toast'),
           f'{tag}: Ein Tipp sendet die Meldung sofort, Menü schließt mit Dank')
     pg.click(opener); pg.wait_for_selector('#report-menu.is-offen .lage-frage:not([hidden])', timeout=8000)
-    pg.click('#report-menu .lage-mehr'); pg.wait_for_selector('#dlg[open] .lf-grid')
-    check('du bist 80 m entfernt' in pg.inner_text('#dlg .pf-place') and pg.locator('#dlg .lf-back').count() == 1, f'{tag}: Lage melden mit Entfernung und Zurück-Pfeil')
+    pg.click('#report-menu .lage-mehr'); pg.wait_for_selector('.lf-sheet.is-offen .lf-grid')
+    check('du bist 80 m entfernt' in pg.inner_text('.wm-sheet.lf-sheet .wm-kopf') and pg.locator('#report-menu.is-offen').count() == 1, f'{tag}: Lage melden mit Entfernung, liegt über dem Melden-Menü (8.0.6)')
     pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_5lage.png'))
-    pg.click('#dlg .lf-back'); pg.wait_for_selector('#report-menu.is-offen')
-    check(pg.locator('#dlg[open]').count() == 0, f'{tag}: Zurück führt zu „Was möchtest du melden?“')
+    pg.click('.wm-sheet.lf-sheet .wm-zu'); pg.wait_for_selector('.wm-sheet.lf-sheet', state='detached')
+    check(pg.locator('#report-menu.is-offen').count() == 1, f'{tag}: Schließen führt zurück zu „Was möchtest du melden?“ (8.0.6)')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
     # „Angaben ergänzen“ aus dem Menü: Standortauswahl nur Slipanlagen → Formular
     pg.click(opener); pg.wait_for_selector('#report-menu.is-offen')
     pg.locator('#report-menu .rm-item', has_text='Angaben ergänzen').click(); pg.wait_for_selector('#pickbar:not([hidden])')
     check('Slipanlage, die du ergänzen' in pg.inner_text('#pickbar'), f'{tag}: „Angaben ergänzen“ startet die Standortauswahl')
     r = pg.evaluate("window.__watermap.selectPlace('node/5000')"); pg.wait_for_timeout(150)
-    check(r is False and pg.locator('dialog.ae-dlg[open]').count() == 0, f'{tag}: Hafen wird für „Angaben ergänzen“ nicht angenommen')
-    pg.evaluate("window.__watermap.selectPlace('node/1')"); pg.wait_for_selector('dialog.ae-dlg[open]')
-    check(pg.locator('dialog.ae-dlg[open]').count() == 1, f'{tag}: Formular „Angaben ergänzen“ öffnet für die gewählte Slipanlage')
+    check(r is False and pg.locator('.wm-sheet.ae-sheet.is-offen').count() == 0, f'{tag}: Hafen wird für „Angaben ergänzen“ nicht angenommen')
+    pg.evaluate("window.__watermap.selectPlace('node/1')"); pg.wait_for_selector('.wm-sheet.ae-sheet.is-offen')
+    check(pg.locator('.wm-sheet.ae-sheet.is-offen').count() == 1, f'{tag}: Formular „Angaben ergänzen“ öffnet für die gewählte Slipanlage')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
     ctx.close()
 
@@ -266,9 +267,9 @@ def run(b, mobile):
     pg.click('#report-menu .lage-main'); pg.wait_for_selector('#pickbar:not([hidden])')
     check('Slipanlage, an der du gerade bist' in pg.inner_text('#pickbar'), f'{tag}: Eintrag startet die Standortauswahl')
     r = pg.evaluate("window.__watermap.selectPlace('node/5000')"); pg.wait_for_timeout(200)
-    check(r is False and pg.locator('#dlg[open]').count() == 0 and pg.locator('#pickbar').is_visible(), f'{tag}: Hafen wird für die Lagemeldung nicht angenommen')
-    pg.evaluate("window.__watermap.selectPlace('node/2')"); pg.wait_for_selector('#dlg[open] .lf-grid')
-    check('TEST Slip 2' in pg.inner_text('#dlg .pf-place'), f'{tag}: gewählter Standort im Formular')
+    check(r is False and pg.locator('.wm-sheet.lf-sheet').count() == 0 and pg.locator('#pickbar').is_visible(), f'{tag}: Hafen wird für die Lagemeldung nicht angenommen')
+    pg.evaluate("window.__watermap.selectPlace('node/2')"); pg.wait_for_selector('.lf-sheet.is-offen .lf-grid')
+    check('TEST Slip 2' in pg.inner_text('.wm-sheet.lf-sheet .wm-kopf'), f'{tag}: gewählter Standort im Formular')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
     # „Heute vor Ort“ nur bei Slipanlagen
     pg.evaluate("window.__watermap.selectPlace('node/5000', { full: true })"); pg.wait_for_selector('#detail:not([hidden])'); pg.wait_for_timeout(300)

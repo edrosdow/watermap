@@ -331,4 +331,4 @@ Neu (Nutzer, 10.11.2026, Prototyp freigegeben). Die Pegel-Ampel ist **Teil des P
 
 ## Entscheidungen des Nutzers (Ausnahmen)
 
-- **„Lage melden“ bleibt wie bisher** (Entscheidung nach dem Musterblatt zu Schritt 2): die dunkle Karte „Lage vor Ort melden“ im Melden-Fenster und das Formular „Lage melden“ mit den Schnellknöpfen (Alles frei, Parkplatz voll, Warteschlange, …) werden **nicht** auf die Bausteine umgestellt. Sie übernehmen nur Schrift und Farb-Tokens aus Schritt 1. Änderungen daran nur auf ausdrücklichen Wunsch.
+- ~~„Lage melden“ bleibt wie bisher~~ – **aufgehoben (Nutzer, 12.11.2026):** Die dunkle Karte „Lage vor Ort melden“ im Melden-Fenster, das Formular „Lage melden“ mit den Schnellknöpfen und die Karte „Heute vor Ort“ im Slip-Sheet folgen jetzt wie alles andere den Bausteinen und Tokens. Es gibt keine Ausnahme mehr von der einen Designsprache.
