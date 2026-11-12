@@ -1,12 +1,12 @@
-// „Foto hinzufügen“: eigenes, fotozentriertes Formular im Dialog (Bottom-Sheet auf dem Handy).
+// „Foto hinzufügen“: eigenes, fotozentriertes Formular – 8.0.7 im gemeinsamen Sheet-Rahmen (Handy von unten, Desktop Panel rechts).
 // Versand wie alle Meldungen über Netlify Forms (Formular „foto-einreichen“), Prüfung vor Veröffentlichung.
 // Das Bild wird schon beim Auswählen geprüft und neu kodiert – dabei gehen EXIF-/GPS-Daten verloren.
-import { h, clear, $, announce } from './dom.js';
+import { h, announce } from './dom.js';
 import { icon, glyphSvg } from './icons.js';
 import { displayName } from './model.js';
 import { prepareImage, sendReport } from './forms.js';
 import { FOTO_KATEGORIEN } from './foto-kategorien.js';
-import { kopf } from './bausteine.js';
+import { sheetOeffnen } from './bausteine.js';
 import { hakenSvg } from './bewegung.js';
 
 export const NOTIZ_MAX = 140;
@@ -17,19 +17,13 @@ const fmtSize = (b) => b >= 1024 * 1024
 
 /** ctx und preset wie bei openForm (forms.js). */
 export function openPhotoForm(ctx, preset = {}) {
-  const dlg = ctx.dialog;
-  const root = clear($('#dlg-body', dlg));
-  dlg.classList.add('dialog-photo');
-  dlg.addEventListener('close', () => { dlg.classList.remove('dialog-photo'); revoke(); }, { once: true });
+  if (ctx.dialog?.open) ctx.dialog.close();   // ein offenes Formular-Fenster (z. B. Melden) weicht dem Sheet
+  let sh = null;
 
   const p = preset.standort_id ? ctx.places.find(x => x.id === preset.standort_id) : null;
   const state = { file: null, name: '', url: null, busy: false, preparing: 0 };
   const revoke = () => { if (state.url) URL.revokeObjectURL(state.url); state.url = null; };
 
-  // ---- Kopfzeile
-  // Kopf-Baustein (Designumbau 3a): Griff (Handy), Titel links, × rechts
-  const head = h('div', { class: 'pf-oben' }, h('span', { class: 'pf-grip', 'aria-hidden': 'true' }), kopf({ titel: 'Foto hinzufügen', titelId: 'dlg-title', onZu: () => dlg.close() }));
-  const title = head.querySelector('#dlg-title');
 
   // ---- Standort
   const idIn = h('input', { type: 'hidden', name: 'standort_id', value: p ? p.id : '' });
@@ -39,7 +33,7 @@ export function openPhotoForm(ctx, preset = {}) {
     h('span', { class: 'pf-place-ico', html: p ? glyphSvg(p.type, 28) : icon('pin', 22) }),
     h('span', { class: 'pf-place-text' }, h('strong', { text: p ? displayName(p) : 'Kein Standort gewählt' }), h('small', { text: sub })),
     ctx.choosePlace ? h('button', { type: 'button', class: 'pf-link', text: p ? 'Ändern' : 'Wählen', 'aria-label': p ? 'Standort ändern' : 'Standort wählen',
-      onclick: () => ctx.choosePlace('foto-einreichen', { entwurf: entwurf() }) }) : null,
+      onclick: () => { const e = entwurf(); sh?.schliessen(); ctx.choosePlace('foto-einreichen', { entwurf: e }); } }) : null,
     idIn, nameIn);
 
   // ---- Foto
@@ -56,8 +50,8 @@ export function openPhotoForm(ctx, preset = {}) {
     h('p', { class: 'pf-drop-title', text: 'Zeig anderen, wie es hier aussieht' }),
     h('p', { class: 'pf-drop-sub', text: 'JPEG, PNG oder WebP · bis 5 MB' }),
     h('div', { class: 'pf-pick' },
-      h('button', { type: 'button', class: 'pf-btn pf-btn-fill', html: icon('camera', 20) + '<span>Kamera</span>', onclick: () => pick(camIn) }),
-      h('button', { type: 'button', class: 'pf-btn pf-btn-line', text: 'Galerie', onclick: () => pick(galIn) }))));
+      h('button', { type: 'button', class: 'wm-btn is-primaer pf-btn', html: icon('camera', 20) + '<span>Kamera</span>', onclick: () => pick(camIn) }),
+      h('button', { type: 'button', class: 'wm-btn pf-btn', text: 'Galerie', onclick: () => pick(galIn) }))));
   const drawPreview = () => photo.replaceChildren(h('div', { class: 'pf-preview' },
     h('img', { src: state.url, alt: 'Vorschau deines Fotos' }),
     h('button', { type: 'button', class: 'pf-remove', 'aria-label': 'Foto entfernen', html: icon('close', 20), onclick: removePhoto }),
@@ -119,9 +113,9 @@ export function openPhotoForm(ctx, preset = {}) {
     h('p', { class: 'pf-hint', text: 'Eine Auswahl. Hilft anderen, schnell das passende Foto zu finden.' }), katIn);
 
   // ---- Notiz
-  const note = h('input', { type: 'text', name: 'beschreibung', id: 'pf-note', maxlength: NOTIZ_MAX, autocomplete: 'off', enterkeyhint: 'done',
+  const note = h('input', { type: 'text', name: 'beschreibung', id: 'pf-note', class: 'wm-eingabe', maxlength: NOTIZ_MAX, autocomplete: 'off', enterkeyhint: 'done',
     placeholder: 'z. B. bei Niedrigwasser, Mai 2026' });
-  const noteSec = h('div', { class: 'pf-sec' }, h('label', { class: 'pf-label', for: 'pf-note' }, 'Notiz ', h('span', { class: 'pf-opt', text: '(optional)' })), note);
+  const noteSec = h('div', { class: 'pf-sec wm-feld' }, h('label', { class: 'pf-label', for: 'pf-note' }, 'Notiz ', h('span', { class: 'pf-opt', text: '(optional)' })), note);
 
   // ---- Einverständnis
   const rights = h('input', { type: 'checkbox', name: 'foto_rechte', id: 'pf-rights', onchange: () => update() });
@@ -133,7 +127,7 @@ export function openPhotoForm(ctx, preset = {}) {
 
   // ---- Fußzeile
   const status = h('p', { class: 'pf-status', role: 'status', 'aria-live': 'polite', hidden: true });
-  const sendBtn = h('button', { type: 'submit', class: 'pf-send', text: 'Foto einreichen', 'aria-disabled': 'true' });
+  const sendBtn = h('button', { type: 'submit', class: 'wm-btn pf-send', text: 'Foto einreichen', 'aria-disabled': 'true' });
   const foot = h('footer', { class: 'pf-foot' },
     h('p', { class: 'pf-facts' },
       h('span', {}, h('span', { html: icon('shield', 14) }), 'GPS-Daten werden entfernt'),
@@ -182,12 +176,13 @@ export function openPhotoForm(ctx, preset = {}) {
     try {
       await sendReport(fd, { multipart: true });
       revoke();
-      root.replaceChildren(h('div', { class: 'pf-done' },
+      const fertig = h('div', { class: 'pf-done' },
         h('div', { class: 'thanks-ico', html: hakenSvg(32) }),
-        h('h2', { id: 'dlg-title', tabindex: '-1', text: 'Danke!' }),
+        h('h2', { id: 'pf-danke', tabindex: '-1', text: 'Danke!' }),
         h('p', { text: 'Dein Foto wird geprüft und erscheint meist innerhalb von 24 Stunden.' }),
-        h('button', { type: 'button', class: 'pf-send is-ready', text: 'Fertig', onclick: () => dlg.close() })));
-      $('#dlg-title', root).focus();
+        h('button', { type: 'button', class: 'wm-btn is-primaer pf-send is-ready', text: 'Fertig', onclick: () => sh?.schliessen({ durchNutzer: true }) }));
+      sh?.setzeInhalt(fertig);
+      fertig.querySelector('#pf-danke').focus();
       announce('Foto gesendet. Es wird geprüft.');
     } catch (ex) {
       state.busy = false;
@@ -198,8 +193,7 @@ export function openPhotoForm(ctx, preset = {}) {
   });
 
   update();
-  root.append(head, form);
-  dlg.setAttribute('aria-labelledby', 'dlg-title');
-  dlg.showModal();
-  title.focus();   // nicht der Schließen-Knopf – sonst zeigt er beim Öffnen einen Fokus-Rahmen
+  // Fokus geht auf den Titel (nicht den Schließen-Knopf) – das übernimmt der Sheet-Rahmen
+  sh = sheetOeffnen({ inhalt: form, kopf: { titel: 'Foto hinzufügen', titelId: 'pf-titel' }, klasse: 'pf-sheet', stufe: 'gross', verlauf: true, onZu: () => revoke() });
+  return sh;
 }
