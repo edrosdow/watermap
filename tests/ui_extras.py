@@ -63,7 +63,7 @@ HAFENINFO = json.dumps({'generated': '2026-10-20', 'places': {HAFEN['id']: {
 extras_calls = []
 mode = {'missing': False}
 
-# „In der Nähe“ live (/.netlify/functions/umgebung): standardmäßig überlastet (503) → Rückfall auf den Import
+# Live-Abfrage der Umgebung gibt es nicht mehr (7.74.1); die Routen fangen versehentliche Aufrufe ab (Prüfung „keine Live-Abfrage“)
 def m2deg(dn, de):
     import math
     return LAT + dn / 111_000, LON + de / (111_000 * math.cos(math.radians(LAT)))
@@ -137,7 +137,7 @@ with sync_playwright() as p:
         ctx.route('**/data/hafeninfo.json', lambda r: r.fulfill(status=200, content_type='application/json', body=HAFENINFO))
         ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))   # „Heute vor Ort“ (eigener Test: ui_meldungen.py)
         ctx.route('**/api/wetter/**', EMPTY_WX)
-        ctx.route('**/.netlify/functions/umgebung*', overpass)
+        ctx.route('**/.netlify/functions/umgebung*', overpass)   # entfernt (7.74.1): darf nicht mehr aufgerufen werden
         ctx.route('https://overpass-api.de/**', overpass)
         ctx.route('**/api/pegel/**', lambda r: r.fulfill(status=200, content_type='application/json', body='[]'))   # Pegel-Hinweis im Detail
         ctx.route(re.compile(r'https://([a-c]\.)?tile\.openstreetmap\.org/.*'), lambda r: r.fulfill(status=200, content_type='image/png', body=TILE))

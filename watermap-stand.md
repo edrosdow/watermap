@@ -1,11 +1,11 @@
 # WaterMap – aktueller Stand
 
-Stand: 11.11.2026 · App-Version **7.74.0**
+Stand: 11.11.2026 · App-Version **7.74.1**
 
 | | |
 |---|---|
 | Live | Version 7.14.3 (PR #3 übernommen) |
-| Vorschau | 7.15.0 – 7.74.0 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+| Vorschau | 7.15.0 – 7.74.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
 
 Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
 
@@ -69,7 +69,6 @@ Die App ist eine installierbare PWA, auf Deutsch, und nutzt nur kostenlose Diens
   | `passt-mein-boot.js`, `mindestpegel.js`, `ampel-logik.js`, `alarm.js` | „Passt mein Boot?“, Mindestpegel, Alarm |
   | `wetter.js` | Wetter und Wind (DWD-Warnungen) |
   | `pegel-bild.js` | „Als Bild teilen“ (Canvas) |
-  | `umgebung-abfrage.js` | Overpass-Abfrage, nur noch für `netlify/functions/umgebung.mjs` |
 
 - **Gespeicherte Nutzerdaten** liegen nur im Browser (localStorage), es gibt keine Konten. Dazu gehören:
   - Favoriten
@@ -95,7 +94,7 @@ Die App ist eine installierbare PWA, auf Deutsch, und nutzt nur kostenlose Diens
 |---|---|
 | PEGELONLINE (WSV) | Netlify-Proxy `/api/pegel/*` |
 | Bright Sky (DWD) | Netlify-Proxy `/api/wetter/*` |
-| Overpass (OSM) „In der Nähe“ | direkt aus dem Browser, Rückfall über die Funktion `umgebung.mjs` |
+| Overpass (OSM) | nur beim Import der Daten (GitHub Action), nicht aus der App (seit 7.74.1) |
 | Nominatim | Ortssuche, nur auf Nutzeraktion |
 | Brevo | E-Mails für den Pegel-Alarm |
 | Netlify Forms / Blobs / Functions | Formulare, Speicher, Server-Logik |
@@ -109,7 +108,6 @@ Die App ist eine installierbare PWA, auf Deutsch, und nutzt nur kostenlose Diens
 | `pegel-alarm-pruefen.mjs` | stündliche Alarm-Prüfung |
 | `meldungen.mjs` | Lagemeldungen: `GET /api/meldungen?standort=`, `GET /api/meldungen/aktiv`, `POST /api/meldungen`, `POST /api/meldungen/<id>/bestaetigen` |
 | `meldungen-aufraeumen.mjs` | räumt stündlich die Lagemeldungen auf |
-| `umgebung.mjs` | Overpass-Rückfall – seit 7.74.0 von der App nicht mehr aufgerufen (Löschen nach Rückfrage) |
 
 Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar. Der Blob-Store heißt `meldungen` (Produktion) bzw. `meldungen-vorschau` (Vorschau).
 
@@ -270,6 +268,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | 7.73.0 | **Designumbau Phase 4 – Animationen:** Lupe → Suchfeld (Handy), Marker wachsen und ploppen ein, Sheet-Inhalt gleitet ein, Stern-Flug zu „Gemerkt“ mit Abzeichen-Sprung und „Rückgängig“ beim Entfernen, Chips mit gleitendem Punkt/Häkchen, alle Umschalter `wm-seg`, Pegelwert zählt hoch, Kurve zeichnet sich, Listen erscheinen versetzt, Haken zeichnet sich nach dem Senden; „Bewegung reduzieren“ beachtet. Neu `css/bewegung.css`, `js/bewegung.js`, Test `ui_bewegung.py`. Behoben: Enter im Suchfeld (Handy), Desktop-Panel unter umbrechender Chip-Zeile, Toast-Lage bei offenem Standort, Fehler bei „24 Std.“ ohne Messreihe |
 | 7.73.1 | **Melden angepasst:** Menü „Was möchtest du melden?“ im Sheet-Rahmen mit Ortszeilen, Abschnitte erscheinen versetzt, Zurück-Taste schließt; Formulare fahren mit Feder ein, Titel links; „Lage melden“ unverändert. Tests angepasst (`ui_full`, `ui_meldungen`, `ui_nav`, `ui_smoke`, `ui_wischen`) |
 | 7.74.0 | **Designumbau Phase 5 – Aufräumen:** CSS-Werte auf Tokens (Schrift, Gewicht, Radius, Schatten, Navy, alte Variablen), JS-Farben über Tokens (`farben.js`, neu `--wm-extrem`), Breakpoints 400/1199 aufgelöst; tote CSS-Regeln (~650 Zeilen) und verwaiste JS-Funktionen entfernt (u. a. `nearbySection`, `liveNearby`, `loadWetterStunden`, `skalaLage`); `main.js` entlastet (`suche-ui.js`, `melden-menue.js`). Neu: Wächter-Test `design_tokens_test.mjs` |
+| 7.74.1 | Netlify-Funktion `umgebung.mjs`, `js/umgebung-abfrage.js` und `umgebung_test.mjs` gelöscht (Nutzer, 12.11.; seit 7.74.0 ungenutzt); CSP ohne `overpass-api.de`; Datenschutzerklärung: Absatz zur Overpass-Abfrage entfernt (findet nicht mehr statt) |
 | 7.54.1 | Pegel-Sheet wischt so flüssig wie auf der Hauptkarte: beim Ziehen nur noch verschoben (`transform`), nicht mehr in der Höhe neu berechnet; zu Beginn einmal auf volle Höhe gestellt und nach unten versetzt, die Größe ändert sich erst beim Einrasten |
 | 7.54.0 | **Fenster von unten wischbar und flüssig:** Das Pegel-Sheet folgt beim Ziehen dem Finger (vorher sprang es erst beim Loslassen) und rastet weich ein (klein · ca. 80 % · ganz · zu; Schwung nimmt die nächste Stufe in Bewegungsrichtung). Alle Fenster von unten (Dialoge, Standort-Vorschau und -Details, Pegel-Sheet) fahren auf dem Handy weich hoch statt plötzlich zu erscheinen (`sheet-ein`, bei „Bewegung reduzieren“ aus). Die übrigen Fenster folgten schon dem Finger (`wischen.js`) |
 | 7.53.0 | **Zart blau** (Rückmeldung: das kräftige Blau passt nicht zur App): gleicher Aufbau wie 7.52.0, aber ganz helles Wasserblau oben, weiße Karten und Knöpfe mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. **Tidepegel** im selben Muster (Name mittig, große Zahl, „● Tide · ↗ auflaufend“, drei Knöpfe Alarm · Merken · Teilen, Karten Gezeiten/Tidekurve/letztes HW·NW, Liste Häfen in der Nähe · Gewässer – alle Pegel · Station und Quelle) |
@@ -320,7 +319,7 @@ Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar
 | Bereich | Tests |
 |---|---|
 | Unit (Python) | `python3 -I -m unittest discover -s tests` (Importer, Validator, Hafeninfo, Moderation) |
-| Node | `ampel_logik`, `fotos_function`, `meldungen`, `pegel_alarm`, `pegel_push`, `pegel_vorhersage`, `pegel_einordnung`, `pegel_trend`, `pegel_fluss`, `gezeiten`, `gezeiten_bsh`, `umgebung`, `gebiet`, `boot`, `foto_kategorien`, `nav` |
+| Node | `ampel_logik`, `fotos_function`, `meldungen`, `pegel_alarm`, `pegel_push`, `pegel_vorhersage`, `pegel_einordnung`, `pegel_trend`, `pegel_fluss`, `gezeiten`, `gezeiten_bsh`, `gebiet`, `design_tokens`, `boot`, `foto_kategorien`, `nav` |
 | Oberfläche (Playwright) | `ui_gebiet` (echtes Leaflet), `ui_bereiche`, `ui_einstellungen`, `ui_nav`, `ui_wischen`, `ui_full`, `ui_smoke`, `pwa_test`, `ui_naehe`, `ui_meldungen`, `ui_extras`, `ui_karussell`, `ui_pegel`, `ui_pegel_karte`, `ui_pegel_fluss`, `ui_wetter`, `ui_pegel_ampel`, `ui_fotos` |
 
 Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
@@ -329,7 +328,7 @@ Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.
 
 ## 6. Offene Aufgaben
 
-**▶ Hier weitermachen (Stand 12.11.2026, 7.74.0 in der Vorschau): Designumbau nach `docs/AUFTRAG-designumbau.md`** – Phase 0, 1, 2a, 2b, 3a und 3b freigegeben (11./12.11.; Phase 3 auf Nutzerwunsch in 3a Bereiche und 3b Standort-Sheet geteilt), Phase 4 und Melden (7.73.1) freigegeben (12.11.), Phase 5 erledigt (7.74.0, Aufräumen), **wartet auf Freigabe**; danach nach „übernehmen“ 8.0.0. Offen: Netlify-Funktion `umgebung.mjs` ist seit 7.74.0 ungenutzt – löschen nur nach Rückfrage. Offene Fragen an den Nutzer (bei der Abnahme genannt, noch ohne Antwort): „Meine Position“-Knopf auf dem Handy bei offenem Standort ausgeblendet; „In der Nähe“ zeigt auf kleinen Handys (667 px) nur 2 Einträge ohne Scrollen. Tests unter Windows einzeln laufen lassen; der Testserver lädt gelegentlich > 30 s (dann wiederholen). Nach jeder Phase committen, Vorschau, Bilder 390/1440 px, auf Freigabe warten. Neues Slip-Symbol erledigt (7.68.1).
+**▶ Hier weitermachen (Stand 12.11.2026, 7.74.1 in der Vorschau): Designumbau nach `docs/AUFTRAG-designumbau.md`** – Phase 0, 1, 2a, 2b, 3a und 3b freigegeben (11./12.11.; Phase 3 auf Nutzerwunsch in 3a Bereiche und 3b Standort-Sheet geteilt), Phase 4 und Melden (7.73.1) freigegeben (12.11.), Phase 5 (7.74.0, Aufräumen) freigegeben (12.11.); `umgebung.mjs` auf Wunsch gelöscht (7.74.1). **Alle Phasen fertig – wartet auf „übernehmen“**, dann 8.0.0 (PR #4 zusammenführen). Offene Fragen an den Nutzer (bei der Abnahme genannt, noch ohne Antwort): „Meine Position“-Knopf auf dem Handy bei offenem Standort ausgeblendet; „In der Nähe“ zeigt auf kleinen Handys (667 px) nur 2 Einträge ohne Scrollen. Tests unter Windows einzeln laufen lassen; der Testserver lädt gelegentlich > 30 s (dann wiederholen). Nach jeder Phase committen, Vorschau, Bilder 390/1440 px, auf Freigabe warten. Neues Slip-Symbol erledigt (7.68.1).
 
 **Früher: Umbau auf das Designsystem „Wasser“ – Phase 4 (abgeschlossen mit Schritt 8)**
 Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Disziplin von A, vom Nutzer gewählt) – vor jeder Oberflächenarbeit lesen.

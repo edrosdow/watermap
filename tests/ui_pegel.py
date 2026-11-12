@@ -133,8 +133,6 @@ with sync_playwright() as p:
         ctx.route(re.compile(r'https://([a-c]\.)?tile\.openstreetmap\.org/.*'), lambda r: r.fulfill(status=200, content_type='image/png', body=TILE))
         ctx.route(re.compile(r'https://(?!([a-c]\.)?tile\.openstreetmap\.org).*'), lambda r: (foreign.append(r.request.url), r.abort()))
         # Standortansicht (Slipanlage mit Pegel-Kasten) lädt „In der Nähe“ live – hier leere Antworten
-        ctx.route('**/.netlify/functions/umgebung*', lambda r: r.fulfill(status=200, content_type='application/json', body='{"elements": []}'))
-        ctx.route('https://overpass-api.de/**', lambda r: r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body='{"elements": []}'))
         ctx.add_init_script(CSP_HOOK)
         ctx.add_init_script("try { localStorage.setItem('watermap.geoAsked', '1'); } catch {}")
         ctx.add_init_script("try { if (localStorage.getItem('watermap.cats') === null) { localStorage.setItem('watermap.cats', 'slip,marina,fuel'); localStorage.setItem('watermap.listOpen', '1'); } } catch {}")   # alte Ansicht: alle Kategorien, Liste offen

@@ -29,8 +29,6 @@ def route_libs(ctx):
     ctx.route('**/data/**', data)
     ctx.route('**/api/pegel/**', lambda r: r.fulfill(status=200, content_type='application/json', body='[]'))   # Pegel werden nach dem Start im Leerlauf vorbereitet
     # Details laden auch das Wetter (eigener Test: ui_wetter.py) – hier nur leere Antworten
-    ctx.route('**/.netlify/functions/umgebung*', lambda r: r.fulfill(status=200, content_type='application/json', body='{"elements": []}'))   # „In der Nähe“ live
-    ctx.route('https://overpass-api.de/**', lambda r: r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body='{"elements": []}'))
     ctx.route('**/api/wetter/**', lambda r: r.fulfill(status=200, content_type='application/json',
               body=json.dumps({'current_weather': {'weather': None}, 'weather': {'weather': []}}.get(r.request.url.split('?')[0].rsplit('/', 1)[1], {'alerts': []}))))
     ctx.route('**/nominatim.openstreetmap.org/**', lambda r: r.fulfill(status=200, content_type='application/json',
