@@ -89,6 +89,8 @@ def sheets(pg, tag, mobile, w, hh):
       window.__s1 = B.sheetOeffnen({ kopf: { titel: 'Gemerkt', unter: '2 Pegel · 1 Ort' }, inhalt: [B.gruppe([B.zeile({ ico: 'gauge', titel: 'Vlotho', onClick: () => {} })])],
         klein: '40%%', onZu: () => window.__zu.push('s1') }); }""" % IMPORT)
     pg.wait_for_timeout(600)
+    # langsamer Rechner: warten, bis das Sheet ganz eingefahren ist (keine laufende Animation mehr)
+    pg.wait_for_function("() => { const el = document.querySelector('.wm-sheet'); return el && !el.getAnimations().length && getComputedStyle(el).transform.replace(/\s/g, '') in { 'none': 1, 'matrix(1,0,0,1,0,0)': 1 }; }", timeout=5000)
     info = pg.evaluate("""() => { const el = document.querySelector('.wm-sheet'); const r = el.getBoundingClientRect(); const t = el.querySelector('.wm-kopf-titel');
       return { role: el.getAttribute('role'), modal: el.getAttribute('aria-modal'), labelledby: el.getAttribute('aria-labelledby') === t.id, fokus: document.activeElement === t,
         offen: el.classList.contains('is-offen'), r: [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom), Math.round(r.width)],
@@ -126,9 +128,10 @@ def sheets(pg, tag, mobile, w, hh):
         k3 = pg.evaluate("() => { const el = document.querySelector('.wm-sheet'); return { klein: el.classList.contains('is-klein'), tf: el.style.transform, exp: el.querySelector('.wm-griff').getAttribute('aria-expanded') }; }")
         check(not k3['klein'] and k3['tf'] == '' and k3['exp'] == 'true', f'{tag}: Hochwischen – rastet in „groß“ ein {k3}')
         t = rect(pg, '.wm-sheet')['y']
-        wisch(pg, w / 2, t + 10, hh - t - 40, schritte=10, pause=16)
+        wisch(pg, w / 2, t + 10, 150, schritte=10, pause=60)   # 8.0.6: aus „groß“ ein mittlerer, langsamer Zug schließt direkt (kein Halt in „klein“)
+        pg.wait_for_timeout(600)
         st = pg.evaluate("() => ({ n: document.querySelectorAll('.wm-sheet').length, fokus: document.activeElement.id, zu: window.__zu })")
-        check(st == {'n': 0, 'fokus': 'test-ausloeser', 'zu': ['s2', 's1']}, f'{tag}: Runterwischen – Sheet zu, Fokus zurück an den Auslöser {st}')
+        check(st == {'n': 0, 'fokus': 'test-ausloeser', 'zu': ['s2', 's1']}, f'{tag}: Runterwischen aus „groß“ – Sheet direkt zu, Fokus zurück an den Auslöser {st}')
     else:
         pg.click('.wm-sheet .wm-zu'); pg.wait_for_timeout(650)
         st = pg.evaluate("() => ({ n: document.querySelectorAll('.wm-sheet').length, fokus: document.activeElement.id, zu: window.__zu })")

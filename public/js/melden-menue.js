@@ -114,7 +114,7 @@ export function meldenEinrichten(ctx) {
         h('p', {}, 'Wie ist es gerade an der ', h('strong', { text: displayName(p) }), p.water?.name ? `, ${p.water.name}?` : '?', h('span', { class: 'lage-dist', text: ` · ${formatDistance(d)} entfernt` })),
         knoepfe, status,
         h('div', { class: 'lage-schnell-fuss' },
-          h('span', {}, 'Mit Notiz: ', h('button', { type: 'button', class: 'lage-link lage-mehr', text: 'mehr', onclick: () => { closeMenu(); lageMelden(p, { distance: d, zurueck: true }); } })),
+          h('span', {}, 'Mit Notiz: ', h('button', { type: 'button', class: 'lage-link lage-mehr', text: 'mehr', onclick: () => lageMelden(p, { distance: d, zurueck: true }) })),   // 8.0.6: Sheet legt sich über das Menü, Schließen führt zurück
           h('button', { type: 'button', class: 'lage-link lage-anders', text: 'Anderer Standort', onclick: () => { closeMenu(); choosePlaceFor('lage-melden'); } })));
       frage.hidden = false;
     }).catch(() => { /* ohne Position: Eintrag startet die Standortauswahl */ });

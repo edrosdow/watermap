@@ -214,10 +214,13 @@ def run(b, w, hh):
     # Slipanlage: „Weißt du mehr? Ergänzen“ öffnet „Angaben ergänzen“ (kein „Fehler melden“)
     pg.goto(uf.BASE + '#karte'); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(500)
     pg.evaluate(f"window.__watermap.selectPlace({ids[2]!r}, {{full: true}})"); pg.wait_for_selector('#detail .wb-link')
-    pg.locator('#detail .wb-link').click(); pg.wait_for_selector('.ae-dlg[open]')
-    dlg = pg.locator('.ae-dlg'); sb = dlg.locator('.ae-senden')
+    pg.locator('#detail .wb-link').click(); pg.wait_for_selector('.ae-sheet.is-offen')
+    dlg = pg.locator('.wm-sheet.ae-sheet'); sb = dlg.locator('.ae-senden')
     check('Angaben ergänzen' in dlg.inner_text() and 'Informationen korrigieren' not in pg.inner_text('body') and sb.is_disabled() and sb.inner_text() == 'Nichts ausgewählt',
           f'{tag}: Formular „Angaben ergänzen“, ohne Auswahl gesperrt')
+    for _ in range(100):   # 8.0.6: warten, bis das Sheet ganz eingefahren ist (Animation fertig; langsamer Rechner)
+        if pg.evaluate("() => getComputedStyle(document.querySelector('.wm-sheet.ae-sheet')).transform.replace(/\s/g, '')") in ('none', 'matrix(1,0,0,1,0,0)'): break
+        pg.wait_for_timeout(100)
     bx = dlg.bounding_box()
     check(bx['x'] >= 0 and bx['x'] + bx['width'] <= w + 1 and bx['y'] + bx['height'] <= hh + 1, f'{tag}: Formular passt ins Fenster')
     if dlg.locator('fieldset[data-key=fee]').count() == 0: dlg.locator('.ae-aendern').click()
@@ -229,11 +232,13 @@ def run(b, w, hh):
     fee.locator('.ae-opt', has_text='Kostenpflichtig').click(); fee.locator('input[name=fee_note]').fill('5 € pro Tag')
     if dlg.locator('select[name=surface]').count() == 0: dlg.locator('.ae-aendern').click()
     dlg.locator('select[name=surface]').select_option('Beton')
-    dlg.locator('fieldset[data-key=trailer] .ae-opt', has_text='In der Nähe').click()
+    tr = dlg.locator('fieldset[data-key=trailer] .ae-opt', has_text='In der Nähe')
+    tr.evaluate("e => e.scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(200)   # nicht unter der Navigation antippen
+    tr.click()
     check(sb.inner_text() == '3 Angaben senden', f'{tag}: Zähler „3 Angaben senden“ ({sb.inner_text()})')
     pg.screenshot(path=str(SHOTS / f'bereiche_{w}_5ergaenzen.png'))
     pg.evaluate("localStorage.removeItem('watermap.lastSubmit')")   # Sendebremse nach „Unpassend melden“ oben
-    n0 = len(pg.st['forms']); sb.click(); pg.wait_for_selector('.ae-dlg', state='detached')
+    n0 = len(pg.st['forms']); sb.click(); pg.wait_for_selector('.wm-sheet.ae-sheet', state='detached')
     f = pg.st['forms'][-1] if len(pg.st['forms']) > n0 else {}
     check(f.get('form-name') == 'slip-ergaenzen' and f.get('standort_id') == ids[2] and json.loads(f.get('angaben', '{}')) == {'fee': 'kostenpflichtig', 'fee_note': '5 € pro Tag', 'surface': 'Beton', 'trailer': 'naehe'},
           f'{tag}: nur gewählte Angaben gesendet ({f.get("angaben")})')

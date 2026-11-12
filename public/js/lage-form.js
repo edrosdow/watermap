@@ -1,28 +1,20 @@
-// „Wie ist die Lage?“ – Lagemeldung mit zwei Tipps (Kachel wählen, senden). Im Formular-Dialog (#dlg), auf dem Handy als Bottom-Sheet.
-import { h, clear, $, announce } from './dom.js';
-import { icon, glyphSvg } from './icons.js';
+// „Wie ist die Lage?“ – Lagemeldung mit zwei Tipps (Kachel wählen, senden).
+// 8.0.6 (Nutzer): im gemeinsamen Sheet-Rahmen wie alle anderen Sheets (Handy von unten, Desktop Panel rechts; Wischen, Esc und
+// Zurück-Taste schließen). Aus dem Melden-Menü geöffnet, liegt das Sheet darüber – Schließen führt zurück zur Auswahl.
+import { h, announce } from './dom.js';
+import { icon } from './icons.js';
 import { displayName, formatDistance } from './model.js';
 import { TYPEN, NOTIZ_MAX, senden } from './meldungen.js';
+import { sheetOeffnen } from './bausteine.js';
 
 /**
- * opts = { dialog, place, distance (m, optional), onBack (zurück zu „Was möchtest du melden?“), onSent(meldungen), toast }
+ * opts = { place, distance (m, optional), opener, onSent(meldungen), toast }
+ * Rückgabe: das Sheet ({ el, schliessen() … }).
  */
-export function openLageForm({ dialog: dlg, place: p, distance = null, onBack, onSent, toast }) {
-  const root = clear($('#dlg-body', dlg));
-  dlg.classList.add('dialog-photo', 'dialog-lage');
-  dlg.addEventListener('close', () => dlg.classList.remove('dialog-photo', 'dialog-lage'), { once: true });
-  let typ = null, busy = false;
+export function openLageForm({ place: p, distance = null, opener = null, onSent, toast }) {
+  let typ = null, busy = false, sh = null;
 
-  const title = h('h2', { id: 'dlg-title', class: 'pf-title', tabindex: '-1', text: 'Wie ist die Lage?' });
-  const head = h('header', { class: 'pf-head lf-head' }, h('span', { class: 'pf-grip', 'aria-hidden': 'true' }),
-    onBack ? h('button', { type: 'button', class: 'lf-back', 'aria-label': 'Zurück', html: icon('back', 22), onclick: () => { dlg.close(); onBack(); } }) : null,
-    title,
-    h('button', { type: 'button', class: 'pf-x', 'aria-label': 'Schließen', html: icon('close', 22), onclick: () => dlg.close() }));
-
-  const sub = [p.water?.name, distance !== null ? `du bist ${formatDistance(distance)} entfernt` : null].filter(Boolean).join(' · ');
-  const place = h('div', { class: 'pf-place' },
-    h('span', { class: 'pf-place-ico', html: glyphSvg(p.type, 28) }),
-    h('span', { class: 'pf-place-text' }, h('strong', { text: displayName(p) }), sub ? h('small', { text: sub }) : null));
+  const unter = [displayName(p), p.water?.name, distance !== null ? `du bist ${formatDistance(distance)} entfernt` : null].filter(Boolean).join(' · ');
 
   const tiles = Object.entries(TYPEN).map(([key, t]) => h('button', { type: 'button', class: `lf-tile lf-${t.ton}`, 'aria-pressed': 'false', dataset: { typ: key },
     onclick: (e) => {
@@ -33,22 +25,22 @@ export function openLageForm({ dialog: dlg, place: p, distance = null, onBack, o
   const grid = h('div', { class: 'lf-grid', role: 'group', 'aria-label': 'Wie ist die Lage?' }, tiles);
 
   const count = h('span', { class: 'lf-count', 'aria-live': 'polite', text: `0 / ${NOTIZ_MAX}` });
-  const note = h('input', { type: 'text', id: 'lf-note', maxlength: NOTIZ_MAX, autocomplete: 'off', enterkeyhint: 'send', placeholder: 'z. B. Ausweichparkplatz am Waldweg',
+  const note = h('input', { type: 'text', id: 'lf-note', class: 'wm-eingabe', maxlength: NOTIZ_MAX, autocomplete: 'off', enterkeyhint: 'send', placeholder: 'z. B. Ausweichparkplatz am Waldweg',
     oninput: () => { count.textContent = `${[...note.value].length} / ${NOTIZ_MAX}`; } });
-  const noteSec = h('div', { class: 'pf-sec' },
-    h('div', { class: 'lf-note-head' }, h('label', { class: 'pf-label', for: 'lf-note' }, 'Notiz ', h('span', { class: 'pf-opt', text: '(optional)' })), count), note);
+  const noteSec = h('div', { class: 'wm-feld lf-notiz' },
+    h('div', { class: 'lf-note-head' }, h('label', { for: 'lf-note' }, 'Notiz ', h('span', { class: 'lf-opt', text: '(optional)' })), count), note);
 
-  const status = h('p', { class: 'pf-status', role: 'status', 'aria-live': 'polite', hidden: true });
-  const sendBtn = h('button', { type: 'submit', class: 'pf-send lf-send', text: 'Meldung senden', 'aria-disabled': 'true' });
-  const foot = h('footer', { class: 'pf-foot' }, status, sendBtn, h('p', { class: 'pf-consent', text: 'Öffentlich sichtbar · verschwindet nach 24 Stunden' }));
-  const form = h('form', { class: 'pf-form', novalidate: true, autocomplete: 'off' }, h('div', { class: 'pf-scroll' }, place, grid, noteSec), foot);
+  const status = h('p', { class: 'lf-status', role: 'status', 'aria-live': 'polite', hidden: true });
+  const sendBtn = h('button', { type: 'submit', class: 'wm-btn is-primaer lf-send', text: 'Meldung senden', 'aria-disabled': 'true' });
+  const form = h('form', { class: 'lf-form', novalidate: true, autocomplete: 'off' }, grid, noteSec, status, sendBtn,
+    h('p', { class: 'lf-hinweis', text: 'Öffentlich sichtbar · verschwindet nach 24 Stunden' }));
 
   function update() {
     const ok = !!typ && !busy && navigator.onLine !== false;
     sendBtn.classList.toggle('is-ready', ok);
     sendBtn.setAttribute('aria-disabled', ok ? 'false' : 'true');
   }
-  const zeige = (text) => { status.hidden = false; status.className = 'pf-status error'; status.textContent = text; announce(text); };
+  const zeige = (text) => { status.hidden = false; status.textContent = text; announce(text); };
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -59,7 +51,7 @@ export function openLageForm({ dialog: dlg, place: p, distance = null, onBack, o
     sendBtn.textContent = 'Wird gesendet …'; sendBtn.setAttribute('aria-busy', 'true');
     try {
       const j = await senden(p.id, typ, note.value.trim());
-      dlg.close();
+      sh?.schliessen();
       toast?.('Danke! Deine Meldung ist jetzt sichtbar.');
       onSent?.(j.meldungen || []);
     } catch (ex) {
@@ -69,8 +61,6 @@ export function openLageForm({ dialog: dlg, place: p, distance = null, onBack, o
   });
 
   update();
-  root.append(head, form);
-  dlg.setAttribute('aria-labelledby', 'dlg-title');
-  if (!dlg.open) dlg.showModal();
-  title.focus();
+  sh = sheetOeffnen({ inhalt: form, kopf: { titel: 'Wie ist die Lage?', titelId: 'lf-titel', unter }, klasse: 'lf-sheet', stufe: 'gross', verlauf: true, opener });
+  return sh;
 }

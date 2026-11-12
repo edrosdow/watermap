@@ -540,11 +540,19 @@ details.pd-zeile[open] { padding-bottom: 10px; }
 .cat-pegel { --cc: var(--wm-gut); }
 .cat-punkt { flex: none; width: 10px; height: 10px; border-radius: var(--wm-r-rund); background: var(--cc); }
 .cat[aria-pressed="true"] .cat-punkt { display: none; }
-/* Handy: vier Kategorie-Chips passen nicht nebeneinander – die Chip-Zeile scrollt seitlich, Chips behalten ihre Breite */
+/* Handy (8.0.6, Nutzer): alle Kategorie-Chips sichtbar, nichts abgeschnitten. „Filter“ wird ein runder Symbol-Knopf (40 px, wie die Suche,
+   Zähler als Abzeichen), die Chips rücken enger; reicht die Breite nicht (sehr kleine Handys), brechen sie in eine zweite Zeile um. */
 @media (max-width: 767px) {
-  .toolbar .cats { overflow-x: auto; scrollbar-width: none; padding: 4px 2px; margin: -4px 0; pointer-events: auto; }
-  .toolbar .cats::-webkit-scrollbar { display: none; }
-  .toolbar .cats .cat { flex: none; }
+  .toolbar .cats { flex-wrap: wrap; overflow: visible; gap: var(--wm-2) 6px; padding: 0; margin: 0; pointer-events: auto; }
+  .toolbar .cats .cat { flex: none; gap: 6px; padding: 0 10px; }
+  .toolbar .cats .cat[aria-pressed="true"] { padding-left: var(--wm-2); }
+  .toolbar .filter-btn { position: relative; flex: none; align-self: flex-start; width: 40px; padding: 0; justify-content: center; }
+  .toolbar .filter-btn-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .toolbar .filter-n { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: var(--wm-r-rund); }
+}
+@media (max-width: 380px) {
+  .toolbar .cats .cat { padding: 0 6px; }
+  .toolbar .cats { column-gap: var(--wm-1); }
 }
 /* ---------------------------------------------------------------- Pegel-Sheet (Designumbau 2a, 7.70.0): Kurzansicht in der Stufe „klein“ */
 .pks-kurz { display: flex; flex-direction: column; gap: var(--wm-3); }

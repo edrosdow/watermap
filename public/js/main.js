@@ -175,9 +175,9 @@ function lageMelden(p, { distance = null, zurueck = false } = {}) {
   if (navigator.onLine === false) { toast('Keine Verbindung, bitte später erneut versuchen.'); return; }
   const d = distance ?? (state.user ? haversine(state.user.lat, state.user.lon, p.lat, p.lon) : null);
   openLageForm({
-    dialog: el.dlg, place: p, distance: d, toast,
-    onBack: zurueck ? () => { renderReportMenu({ fragen: false }); reportPop.open($(isMobile() ? '#bottomnav [data-nav="melden"]' : '#btn-report')); } : null,
+    place: p, distance: d, toast, opener: document.activeElement,
     onSent: (liste) => {
+      if (zurueck) reportPop.close();   // aus dem Melden-Menü geöffnet (liegt darunter): nach dem Senden beide zu
       meldLokal(p.id, liste);
       if (state.selectedId === p.id && standort) showDetail(p, { scrollTo: 'vor-ort' });
     },
