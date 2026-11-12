@@ -334,7 +334,7 @@ Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.
 
 ## 6. Offene Aufgaben
 
-**▶ Hier weitermachen (Stand 11.11.2026, 7.68.0): Designumbau nach `docs/AUFTRAG-designumbau.md`** – Phase 0, 1, 2a und 2b freigegeben (11.11.), Phase 3 geteilt (Nutzer 11.11.): 3a und 3b freigegeben (7.72.x), Phase 4 erledigt (7.73.0, Animationen), wartet auf Freigabe; danach Phase 5 (Aufräumen, 7.74.0). Nach jeder Phase committen, Vorschau, Bilder 390/1440 px, auf Freigabe warten. Neues Slip-Symbol erledigt (7.68.1).
+**▶ Hier weitermachen (Stand 12.11.2026, 7.73.0 in der Vorschau, Commit 212e3da): Designumbau nach `docs/AUFTRAG-designumbau.md`** – Phase 0, 1, 2a, 2b, 3a und 3b freigegeben (11./12.11.; Phase 3 auf Nutzerwunsch in 3a Bereiche und 3b Standort-Sheet geteilt), Phase 4 erledigt (7.73.0, Animationen), **wartet auf Freigabe**; danach Phase 5 (Aufräumen, 7.74.0: Schriftgrößen/Gewichte/Radien/Schatten auf Tokens, Wächter-Test, verwaiste Funktionen, main.js entlasten, Doku), dann nach „übernehmen“ 8.0.0. Offene Fragen an den Nutzer (bei der Abnahme genannt, noch ohne Antwort): „Meine Position“-Knopf auf dem Handy bei offenem Standort ausgeblendet; „In der Nähe“ zeigt auf kleinen Handys (667 px) nur 2 Einträge ohne Scrollen. Tests unter Windows einzeln laufen lassen; der Testserver lädt gelegentlich > 30 s (dann wiederholen). Nach jeder Phase committen, Vorschau, Bilder 390/1440 px, auf Freigabe warten. Neues Slip-Symbol erledigt (7.68.1).
 
 **Früher: Umbau auf das Designsystem „Wasser“ – Phase 4 (abgeschlossen mit Schritt 8)**
 Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Disziplin von A, vom Nutzer gewählt) – vor jeder Oberflächenarbeit lesen.
