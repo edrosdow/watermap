@@ -543,6 +543,9 @@ details.pd-zeile[open] { padding-bottom: 10px; }
 /* Details im Sheet: Kopf ohne eigenen Namen und × (stehen im Sheet-Kopf) */
 .wm-sheet .pd { background: none; }
 .wm-sheet .pd-oben { padding-top: 0; text-align: center; }
+/* Breite wie im Slip-Sheet (8.0.1): der Rand kommt allein vom Sheet (--wm-4), keine zweiten Seitenränder; Knopfabstand wie .wm-aktionen */
+.wm-sheet .pd.pd .pd-oben, .wm-sheet .pd.pd .pd-body { padding-left: 0; padding-right: 0; }
+.wm-sheet .pd.pd .pd-knoepfe { gap: var(--wm-2); }
 /* Fluss-Sheet (7.70.0): Inhalt der Flussseite ohne eigenen Kopf und ohne Seitenränder */
 .wm-sheet .pf-seite.is-im-sheet { padding: 0; background: none; min-height: 0; }
 .wm-sheet .pf-raster { grid-template-columns: minmax(0, 1fr); grid-template-areas: "profil" "liste" "slips" "hinweis"; grid-template-rows: none; gap: var(--wm-3); padding: 0; margin-top: 0; max-width: none; }
