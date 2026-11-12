@@ -51,10 +51,10 @@ export function einordnungKarte(g) {
     h('h2', { class: 'pd-ct', text: 'Einordnung' }),
     h('p', { class: `pd-zst ${ZUSTAND[z].cls}` }, h('i', { 'aria-hidden': 'true' }), ZUSTAND[z].text.replace(/^ü/, 'Ü')),
     lage ? h('div', { class: 'pd-zonen', role: 'img', 'aria-label': `${fmt(g.value)} ${g.unit}: ${{ low: 'unter MNW', normal: 'zwischen MNW und MHW', high: 'über MHW' }[lage.zone]}. MNW ${fmt(g.refs.MNW)}, MHW ${fmt(g.refs.MHW)} ${g.unit}.` },
-      h('div', { class: 'pd-zbalken' }, ZONEN.map((w, i) => h('span', { class: `pd-z${i}`, style: `width:${w}%` })),
-        h('span', { class: 'pd-zmark', style: `left:${lage.pos.toFixed(2)}%` }, h('b', { text: `${fmt(g.value)} ${g.unit}` }), h('i'))),
-      h('div', { class: 'pd-znamen' }, ['Niedrig', 'Normal', 'Hoch'].map((t, i) => h('span', { class: ['low', 'normal', 'high'][i] === lage.zone ? 'is-an' : '', style: `width:${ZONEN[i]}%`, text: t }))),
-      h('div', { class: 'pd-zgrenzen' }, h('span', { style: `left:${ZONEN[0]}%`, text: `MNW ${fmt(g.refs.MNW)}` }), h('span', { style: `left:${ZONEN[0] + ZONEN[1]}%`, text: `MHW ${fmt(g.refs.MHW)}` })))
+      h('div', { class: 'pd-zbalken' }, ZONEN.map((w, i) => h('span', { class: `pd-z${i}${['low', 'normal', 'high'][i] === lage.zone ? ' is-an' : ''}`, style: `width:${w}%` })),
+        h('span', { class: `pd-zmark is-${lage.zone}`, style: `left:${lage.pos.toFixed(2)}%` }, h('b', { text: `${fmt(g.value)} ${g.unit}` }), h('i'))),
+      h('div', { class: 'pd-znamen' }, [['Niedrig', `unter ${fmt(g.refs.MNW)}`], ['Normal', `${fmt(g.refs.MNW)}–${fmt(g.refs.MHW)}`], ['Hoch', `über ${fmt(g.refs.MHW)}`]].map(([t, u], i) =>
+        h('span', { class: ['low', 'normal', 'high'][i] === lage.zone ? 'is-an' : '', style: `width:${ZONEN[i]}%` }, h('strong', { text: t }), h('small', { text: u })))))
       : null);
 }
 

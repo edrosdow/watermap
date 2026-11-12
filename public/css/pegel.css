@@ -391,16 +391,24 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 /* Einordnung */
 .pd-zst { margin: 0; display: flex; align-items: center; gap: 8px; font-size: var(--wm-t-xl); font-weight: 700; }
 .pd-zst i { width: 12px; height: 12px; }
-.pd-zonen { margin-top: 34px; }
-.pd-zbalken { position: relative; display: flex; height: 12px; }
-.pd-zbalken > span:not(.pd-zmark) { display: block; height: 12px; }
-.pd-zmark { position: absolute; bottom: -4px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 2; }
-.pd-zmark b { font-size: var(--wm-t-xs); font-weight: 700; white-space: nowrap; margin-bottom: 2px; }
-.pd-zmark i { display: block; width: 20px; height: 20px; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); border: 4px solid var(--wm-tinte); box-shadow: var(--wm-schatten); }
-.pd-znamen { display: flex; margin-top: 8px; font-size: var(--wm-t-xs); font-weight: 700; text-align: center; }
-.pd-znamen span { color: var(--pd-matt); } .pd-znamen span.is-an { color: var(--wm-tinte); }
-.pd-zgrenzen { position: relative; height: 16px; font-size: var(--wm-t-xs); color: var(--wm-matt); }
-.pd-zgrenzen span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.pd-zonen { margin-top: 44px; }
+/* Einordnung (8.0.2): Spur mit drei Bereichen, aktueller Bereich kräftig mit sanftem Leuchten, Knopf im Zustandston, Wert als Sprechblase; darunter Bereich + Grenzen in einem */
+.pd-zbalken { position: relative; display: flex; gap: 3px; height: 14px; padding: 3px; border-radius: var(--wm-r-rund); background: var(--wm-flaeche-2); box-shadow: inset 0 1px 2px color-mix(in srgb, var(--wm-tinte) 10%, transparent); }
+.pd-zbalken > span:not(.pd-zmark) { display: block; height: 100%; border-radius: var(--wm-r-rund); opacity: .35; transition: opacity var(--wm-lang); }
+.pd-zbalken > span.is-an { opacity: 1; }
+.pd-z0 { background: linear-gradient(90deg, var(--wm-warn), var(--wm-sonne)); }
+.pd-z1 { background: linear-gradient(90deg, var(--wm-gut-rand), var(--wm-gut)); }
+.pd-z2 { background: linear-gradient(90deg, var(--wm-hoch), var(--wm-stop)); }
+.pd-zmark { --z: var(--wm-tinte); position: absolute; top: 50%; transform: translate(-50%, -50%); z-index: 2; }
+.pd-zmark.is-low { --z: var(--wm-warn); } .pd-zmark.is-normal { --z: var(--wm-gut); } .pd-zmark.is-high { --z: var(--wm-hoch); }
+.pd-zmark i { display: block; width: 24px; height: 24px; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); border: 6px solid var(--z); box-shadow: 0 0 0 4px color-mix(in srgb, var(--z) 20%, transparent), var(--wm-schatten); }
+.pd-zmark b { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); padding: 3px var(--wm-2); border-radius: var(--wm-r-s); background: var(--wm-tinte); color: var(--wm-flaeche); font-size: var(--wm-t-s); font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; box-shadow: var(--wm-schatten); }
+.pd-zmark b::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border: 5px solid transparent; border-top-color: var(--wm-tinte); }
+.pd-znamen { display: flex; gap: 3px; margin-top: var(--wm-3); text-align: center; font-variant-numeric: tabular-nums; }
+.pd-znamen span { display: flex; flex-direction: column; gap: 2px; color: var(--pd-matt); }
+.pd-znamen strong { font-size: var(--wm-t-s); font-weight: 400; }
+.pd-znamen small { font-size: var(--wm-t-xs); }
+.pd-znamen span.is-an { color: var(--wm-tinte); } .pd-znamen span.is-an strong { font-weight: 700; }
 /* Abfluss, Wasser */
 .pd.pd .pd-zusatz { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; }
 .pd.pd .pd-zusatz[hidden] { display: none; }
