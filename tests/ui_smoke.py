@@ -113,12 +113,12 @@ with sync_playwright() as p:
         pg.fill('#q', 'Möhnesee'); pg.keyboard.press('Enter'); pg.wait_for_timeout(600)
         check(pg.evaluate('window.__watermap.state.map.getZoom()') >= 10, f'{name}: Ortssuche zoomt')
         # Melden
-        pg.click('#bottomnav [data-nav=melden]' if mobile else '#btn-report'); pg.wait_for_selector('#report-menu[open]')
+        pg.click('#bottomnav [data-nav=melden]' if mobile else '#btn-report'); pg.wait_for_selector('#report-menu.is-offen')
         txt = pg.inner_text('#report-menu')
         check(all(t in txt for t in ['Gerade vor Ort', 'Standort verbessern', 'Neue Slipanlage melden', 'Angaben ergänzen', 'Foto einreichen', 'Fehler oder Hinweis melden', 'Impressum', 'Version']) and 'Kraftstoffpreis' not in txt, f'{name}: Melden mit Abschnitten, ohne Kraftstoffpreis')
         pg.screenshot(path=str(SHOTS / f'{name}_menu.png'))
-        pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
-        check(pg.locator('#report-menu[open]').count() == 0, f'{name}: Escape schließt „Melden“')
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
+        check(pg.locator('#report-menu').count() == 0, f'{name}: Escape schließt „Melden“')
         # Navigation und Zurück-Taste
         GM = '.wm-sheet.gm-sheet'
         pg.click(f'{nav} [data-nav=mehr]'); pg.wait_for_selector('.wm-sheet.mh-sheet.is-offen .wm-zeile')

@@ -31,7 +31,7 @@ import { meldungenSeite } from './meldungen-uebersicht.js';
 import { unpassendMelden } from './meldung-unpassend.js';
 import { slipErgaenzen } from './slip-ergaenzen.js';
 import { imGebiet, aufGebietBeschneiden, gebietLaden } from './gebiet.js';
-import { sheetOeffnen, offeneSheets, kopf, marke } from './bausteine.js';
+import { sheetOeffnen, offeneSheets, kopf, marke, zeile, gruppe } from './bausteine.js';
 import { staffeln, merkFlug, sternPop, markerPlopp, hakenSvg, ruhig } from './bewegung.js';
 import { pegelSheet, slipsAmPegel, pegelSuche } from './pegel-sheet.js';
 import { weatherSection, wetterZeile } from './wetter.js';
@@ -80,7 +80,7 @@ async function init() {
   if (!state.cats.size) state.cats.add('slip');   // mindestens eine Kategorie ist immer aktiv
   nav = mountNav({ top: $('#topnav'), bottom: $('#bottomnav'), active: 'karte', onSelect: onNav });
   filterPop = popover($('#filter-panel'), { isMobile });
-  reportPop = popover($('#report-menu'), { isMobile, align: 'right' });
+  reportPop = meldenSheet();
   renderSkeleton();
   wireStatic();
   nah = naehe(naeheCtx());
@@ -1430,6 +1430,27 @@ function wireSearch() {
 // ============================================================ Melden
 function closeMenu() { reportPop?.close(); }
 
+/** „Melden“ im gemeinsamen Sheet-Rahmen (Designumbau, 7.73.1): Handy von unten, Desktop Panel rechts; × , Wischen, Esc und die
+ *  Zurück-Taste schließen. Inhalt baut renderReportMenu in meldenRoot. Schnittstelle wie das frühere Popover. */
+const meldenRoot = h('div', { class: 'rm-inhalt' });
+function meldenSheet() {
+  let sh = null;
+  const api = {
+    get isOpen() { return !!sh?.offen; },
+    open(opener = null) {
+      if (sh?.offen) return;
+      sh = sheetOeffnen({ inhalt: meldenRoot, kopf: { titel: 'Was möchtest du melden?', titelId: 'report-title' }, klasse: 'rm-sheet', stufe: 'gross', verlauf: true, opener,
+        onSchliessen: () => { sh = null; } });
+      sh.el.id = 'report-menu';
+      staffeln(meldenRoot.querySelectorAll('.lage-karte, .wm-gruppe, .wm-abschnitt'), { schritt: 55, max: 8 });   // Abschnitte erscheinen versetzt
+    },
+    // programmatisch (eine Meldung startet): ohne history.back – sonst nähme die Zurück-Taste den nächsten Schritt mit
+    close({ nutzer = false } = {}) { const s0 = sh; sh = null; s0?.schliessen({ durchNutzer: nutzer }); },
+    toggle(opener) { if (sh?.offen) api.close({ nutzer: true }); else api.open(opener); },
+  };
+  return api;
+}
+
 const LAGE_NEU_BIS = Date.parse('2026-11-22T00:00:00Z');   // Etikett „NEU“ 30 Tage nach Einführung
 const LAGE_RADIUS_M = 300;
 
@@ -1449,30 +1470,31 @@ function standortInDerNaehe(pos) {
  * fragen: Position jetzt abfragen (nur beim Öffnen durch den Nutzer, nie im Hintergrund).
  */
 function renderReportMenu({ fragen = false } = {}) {
-  const body = clear($('#report-body'));
+  const body = clear(meldenRoot);
   const offline = navigator.onLine === false;
-  const item = (ico, cls, label, run, { online = false } = {}) => h('li', {}, h('button', { type: 'button', class: 'menu-item rm-item', disabled: online && offline, onclick: () => { closeMenu(); run(); } },
-    h('span', { class: `menu-ico rm-ico ${cls}`, html: icon(ico, 22) }),
-    h('span', { class: 'rm-text' }, h('strong', { text: label }), online && offline ? h('small', { text: 'Offline – gerade nicht möglich' }) : null),
-    h('span', { class: 'rm-chev', html: icon('chevron', 18), 'aria-hidden': 'true' })));
-  const abschnitt = (text) => h('h3', { class: 'rm-abschnitt', text });
+  // Ortszeile (Baustein) mit farbiger Kachel; Klassen menu-item/rm-item bleiben für Tests und Fokus
+  const item = (ico, cls, label, unter, run, { online = false } = {}) => {
+    const z = zeile({ ico, icoKlasse: `rm-ico ${cls}`, titel: label, unter: online && offline ? 'Offline – gerade nicht möglich' : unter, onClick: () => { closeMenu(); run(); } });
+    z.classList.add('menu-item', 'rm-item'); z.disabled = online && offline;
+    return z;
+  };
+  const abschnitt = (text) => h('h3', { class: 'wm-abschnitt rm-abschnitt', text });
   const frage = h('div', { class: 'lage-frage', hidden: true });
   const lageBtn = h('button', { type: 'button', class: 'lage-main', disabled: offline, onclick: () => { closeMenu(); choosePlaceFor('lage-melden'); } },
     h('span', { class: 'lage-ico', html: icon('pin', 24) }),
     h('span', { class: 'lage-text' }, h('strong', { text: 'Lage vor Ort melden' }), h('small', { text: offline ? 'Offline – gerade nicht möglich' : 'Parkplatz, Wartezeit, Rampe, Sperrung' })),
     Date.now() < LAGE_NEU_BIS ? h('span', { class: 'lage-neu', text: 'NEU' }) : null);
   body.append(
-    kopf({ titel: 'Was möchtest du melden?', titelId: 'report-title', onZu: () => closeMenu() }),
     abschnitt('Gerade vor Ort'),
     h('div', { class: 'lage-karte' }, lageBtn, frage),
     abschnitt('Standort verbessern'),
-    h('ul', { class: 'menu-list rmenu' },
-      item('camera', 'rm-foto', 'Foto einreichen', () => choosePlaceFor('foto-einreichen')),
-      item('doc', 'rm-ergaenzen', 'Angaben ergänzen', () => choosePlaceFor('slip-ergaenzen'), { online: true }),
-      item('plus', 'rm-slip', 'Neue Slipanlage melden', () => openReport('slipanlage-melden'))),
+    gruppe([
+      item('camera', 'rm-foto', 'Foto einreichen', 'Zeig anderen, wie es dort aussieht', () => choosePlaceFor('foto-einreichen')),
+      item('doc', 'rm-ergaenzen', 'Angaben ergänzen', 'Gebühr, Rampe, Parken …', () => choosePlaceFor('slip-ergaenzen'), { online: true }),
+      item('plus', 'rm-slip', 'Neue Slipanlage melden', 'Fehlt eine auf der Karte?', () => openReport('slipanlage-melden'))], { label: 'Standort verbessern' }),
     abschnitt('Fehler und Hinweise'),
-    h('ul', { class: 'menu-list rmenu' },
-      item('flag', 'rm-fehler', 'Fehler oder Hinweis melden', () => choosePlaceFor('fehler-melden', { art: 'sonstiges' }))),
+    gruppe([
+      item('flag', 'rm-fehler', 'Fehler oder Hinweis melden', 'Falsche Angabe, geschlossen, Sonstiges', () => choosePlaceFor('fehler-melden', { art: 'sonstiges' }))], { label: 'Fehler und Hinweise' }),
     h('p', { class: 'rmenu-links' },
       h('a', { href: './ueber.html', text: 'Über WaterMap' }), ' · ', h('a', { href: './datenschutz.html', text: 'Datenschutz' }), ' · ', h('a', { href: './impressum.html', text: 'Impressum' })),
     h('p', { class: 'muted small rm-version', text: `Version ${CONFIG.VERSION}` }));

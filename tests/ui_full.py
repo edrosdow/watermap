@@ -114,7 +114,7 @@ def layer(pg, key, click=False):
 
 def report(pg, label):
     """„Melden“ öffnen (Desktop: Knopf oben, Handy: Mitte der Navigation) und eine Meldung wählen."""
-    pg.click('#bottomnav [data-nav=melden]' if pg.viewport_size['width'] < 768 else '#btn-report'); pg.wait_for_selector('#report-menu[open]')
+    pg.click('#bottomnav [data-nav=melden]' if pg.viewport_size['width'] < 768 else '#btn-report'); pg.wait_for_selector('#report-menu.is-offen')
     pg.locator('#report-menu .menu-item', has_text=label).click()
 
 def open_app(pg, mobile=False):
@@ -550,11 +550,11 @@ def mobile(b):
     pg.screenshot(path=str(SHOTS / 'full_mobile_detail.png'))
     pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
     check(pg.locator('#detail').count() == 0, 'Escape schließt')
-    pg.click('#bottomnav [data-nav=melden]'); pg.wait_for_selector('#report-menu[open]')
+    pg.click('#bottomnav [data-nav=melden]'); pg.wait_for_selector('#report-menu.is-offen')
     rb = pg.locator('#report-menu').bounding_box()
     check(rb['y'] + rb['height'] >= 843 and rb['width'] >= 389, 'Melden als Bottom-Sheet')
     pg.screenshot(path=str(SHOTS / 'full_mobile_melden.png'))
-    pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
     check(pg.evaluate("document.activeElement.closest('[data-nav]')?.dataset.nav") == 'melden', 'Fokus zurück auf „Melden“')
     pg.evaluate("window.__watermap.selectPlace('node/7000', { full: true })"); pg.wait_for_timeout(300)
     pg.screenshot(path=str(SHOTS / 'full_mobile_fuel.png'))

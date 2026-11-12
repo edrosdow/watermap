@@ -225,12 +225,12 @@ def run(b, mobile):
     plat, plon = pg.evaluate("[window.__watermap.state.byId.get('node/1').lat, window.__watermap.state.byId.get('node/1').lon]")
     ctx.set_geolocation({'latitude': plat + 0.0007, 'longitude': plon})
     opener = '#bottomnav [data-nav=melden]' if mobile else '#btn-report'
-    pg.click(opener); pg.wait_for_selector('#report-menu[open] .lage-frage:not([hidden])', timeout=8000)
+    pg.click(opener); pg.wait_for_selector('#report-menu.is-offen .lage-frage:not([hidden])', timeout=8000)
     txt = pg.inner_text('#report-menu')
     check('Lage vor Ort melden' in txt and 'NEU' in txt and 'Wie ist es gerade an der TEST Slip 1' in txt and '80 m' in txt, f'{tag}: Vorschlag „Wie ist es gerade an der …? · 80 m“')
     check(pg.locator('#report-menu .lage-typ').count() == 6, f'{tag}: sechs Lage-Knöpfe direkt im Menü')
     items = pg.locator('#report-menu .rm-item').all_inner_texts()
-    check([i.strip() for i in items] == ['Foto einreichen', 'Angaben ergänzen', 'Neue Slipanlage melden', 'Fehler oder Hinweis melden'], f'{tag}: Einträge in Abschnitten, ohne Kraftstoffpreis ({items})')
+    check([i.strip().split(chr(10))[0] for i in items] == ['Foto einreichen', 'Angaben ergänzen', 'Neue Slipanlage melden', 'Fehler oder Hinweis melden'], f'{tag}: Einträge in Abschnitten, ohne Kraftstoffpreis ({items})')
     check([t.strip().lower() for t in pg.locator('#report-menu .rm-abschnitt').all_inner_texts()] == ['gerade vor ort', 'standort verbessern', 'fehler und hinweise'], f'{tag}: drei Abschnitte')
     pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_4sheet.png'))
     # Ein Tipp sendet sofort
@@ -238,18 +238,18 @@ def run(b, mobile):
     pg.click('#report-menu .lage-typ[data-typ=parkplatz_voll]'); pg.wait_for_selector('#report-menu .lage-status:not([hidden])')
     check('warte eine Stunde' in pg.inner_text('#report-menu .lage-status') and pg.locator('#report-menu .lage-typ:disabled').count() == 0, f'{tag}: Sperre wird im Menü angezeigt, Knöpfe wieder frei')
     st['mode'] = 'ok'; n0 = len(st['posts'])
-    pg.click('#report-menu .lage-typ[data-typ=parkplatz_voll]'); pg.wait_for_selector('#report-menu[open]', state='detached', timeout=5000)
+    pg.click('#report-menu .lage-typ[data-typ=parkplatz_voll]'); pg.wait_for_selector('#report-menu', state='detached', timeout=5000)
     check(len(st['posts']) == n0 + 1 and st['posts'][-1]['body'] == {'standortId': 'node/1', 'typ': 'parkplatz_voll', 'notiz': ''} and 'Danke' in pg.inner_text('#toast'),
           f'{tag}: Ein Tipp sendet die Meldung sofort, Menü schließt mit Dank')
-    pg.click(opener); pg.wait_for_selector('#report-menu[open] .lage-frage:not([hidden])', timeout=8000)
+    pg.click(opener); pg.wait_for_selector('#report-menu.is-offen .lage-frage:not([hidden])', timeout=8000)
     pg.click('#report-menu .lage-mehr'); pg.wait_for_selector('#dlg[open] .lf-grid')
     check('du bist 80 m entfernt' in pg.inner_text('#dlg .pf-place') and pg.locator('#dlg .lf-back').count() == 1, f'{tag}: Lage melden mit Entfernung und Zurück-Pfeil')
     pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_5lage.png'))
-    pg.click('#dlg .lf-back'); pg.wait_for_selector('#report-menu[open]')
+    pg.click('#dlg .lf-back'); pg.wait_for_selector('#report-menu.is-offen')
     check(pg.locator('#dlg[open]').count() == 0, f'{tag}: Zurück führt zu „Was möchtest du melden?“')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
     # „Angaben ergänzen“ aus dem Menü: Standortauswahl nur Slipanlagen → Formular
-    pg.click(opener); pg.wait_for_selector('#report-menu[open]')
+    pg.click(opener); pg.wait_for_selector('#report-menu.is-offen')
     pg.locator('#report-menu .rm-item', has_text='Angaben ergänzen').click(); pg.wait_for_selector('#pickbar:not([hidden])')
     check('Slipanlage, die du ergänzen' in pg.inner_text('#pickbar'), f'{tag}: „Angaben ergänzen“ startet die Standortauswahl')
     r = pg.evaluate("window.__watermap.selectPlace('node/5000')"); pg.wait_for_timeout(150)
@@ -261,7 +261,7 @@ def run(b, mobile):
 
     ctx, pg, st = page(b, mobile, geo=None)   # Standortabfrage abgelehnt
     pg.goto(uf.BASE); pg.wait_for_selector('.cat-slip'); pg.wait_for_timeout(400)
-    pg.click(opener); pg.wait_for_selector('#report-menu[open]'); pg.wait_for_timeout(600)
+    pg.click(opener); pg.wait_for_selector('#report-menu.is-offen'); pg.wait_for_timeout(600)
     check(pg.locator('#report-menu .lage-frage').is_hidden(), f'{tag}: ohne Position kein Vorschlag')
     pg.click('#report-menu .lage-main'); pg.wait_for_selector('#pickbar:not([hidden])')
     check('Slipanlage, an der du gerade bist' in pg.inner_text('#pickbar'), f'{tag}: Eintrag startet die Standortauswahl')

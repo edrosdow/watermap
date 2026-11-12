@@ -118,13 +118,13 @@ def run(b, w, hh):
     pg.click(item('karte')); pg.wait_for_timeout(900)
     vorher = rect(pg, '#bottomnav .bn-ind')
     plop = pg.evaluate("(() => { const a = document.querySelector('#bottomnav [data-nav=melden]'); a.click(); return a.classList.contains('is-plop'); })()")
-    pg.wait_for_selector('#report-menu[open]'); pg.wait_for_timeout(500)
+    pg.wait_for_selector('#report-menu.is-offen'); pg.wait_for_timeout(500)
     nachher = rect(pg, '#bottomnav .bn-ind')
     check(plop and abs(nachher['x'] - vorher['x']) <= 1 and pg.get_attribute(item('melden'), 'aria-current') is None and pg.get_attribute(item('karte'), 'aria-current') == 'page',
           f'{tag}: „Melden“ – Plus ploppt, Markierung bleibt bei „Karte“, Menü offen')
-    top = pg.evaluate("(() => { const b = document.querySelector('#bottomnav').getBoundingClientRect(); const e = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2); return !!e.closest('#report-menu'); })()")
-    check(top, f'{tag}: Melden-Menü liegt über der Leiste')
-    pg.keyboard.press('Escape'); pg.wait_for_timeout(300)
+    top = pg.evaluate("(() => { const b = document.querySelector('#bottomnav').getBoundingClientRect(); const e = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2); return !!e.closest('#bottomnav'); })()") and pg.locator('#report-menu.is-offen').count() == 1
+    check(top, f'{tag}: Melden als Sheet, die Leiste bleibt darüber bedienbar (wie bei allen Sheets)')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
     check(pg.evaluate("(() => { const b = document.querySelector('#bottomnav').getBoundingClientRect(); const e = document.elementFromPoint(b.x + b.width / 2, b.y + b.height * 0.2); return !!e.closest('#bottomnav'); })()"), f'{tag}: danach ist die Leiste wieder da')
 
     # ---- Abzeichen „neu“ (die Übersicht wurde oben schon besucht: Stand zurücksetzen)

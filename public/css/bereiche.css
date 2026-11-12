@@ -136,12 +136,6 @@ a.ei-reihe-text { display: flex; flex-direction: column; color: inherit; text-de
 .mu-knopf { border: 0; border-radius: var(--wm-r-m); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); color: var(--wm-tinte); }
 
 /* Melden-Menü (ohne „Lage vor Ort melden“ – die dunkle Karte bleibt) */
-#report-menu { background: var(--wm-verlauf); }
-#report-title { font-size: var(--wm-t-xl); font-weight: 700; text-align: center; color: var(--wm-tinte); }
-.rm-abschnitt { font-size: var(--wm-t-s); font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }
-.rmenu { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); overflow: hidden; }
-.rmenu > li + li .rm-item { border-top: 1px solid var(--wm-linie); }
-.rm-item { padding-left: var(--wm-4); padding-right: var(--wm-4); }
 .rm-ico, .rm-ico.rm-slip, .rm-ico.rm-fuel, .rm-ico.rm-foto, .rm-ico.rm-fehler, .rm-ico.rm-ergaenzen { border-radius: var(--wm-r-s); background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
 .rmenu-links { border-top: 0; justify-content: center; }
 
@@ -312,10 +306,10 @@ a.ei-reihe-text { display: flex; flex-direction: column; color: inherit; text-de
 
 /* ---- Formulare und Melden-Menü mit dem Kopf-Baustein (Designumbau 3a): Titel links, × rechts; der alte ×-Knopf des Dialogs entfällt dort */
 .dialog:has(#dlg-body > .wm-kopf, #dlg-body .ae-form > .wm-kopf) > .dlg-x { display: none; }
-#dlg-body > .wm-kopf, .ae-form > .wm-kopf, #report-body > .wm-kopf { padding: 0 0 var(--wm-3); }
+#dlg-body > .wm-kopf, .ae-form > .wm-kopf { padding: 0 0 var(--wm-3); }
 .pf-oben { position: relative; padding: var(--wm-5) var(--wm-4) 0; }
 .pf-oben > .wm-kopf { padding: 0 0 var(--wm-2) var(--wm-1); }
-#dlg-body > .wm-kopf, .ae-form > .wm-kopf, #report-body > .wm-kopf, .pf-oben > .wm-kopf { text-align: left; }
+#dlg-body > .wm-kopf, .ae-form > .wm-kopf, .pf-oben > .wm-kopf { text-align: left; }
 
 /* ================================================================ Standort-Sheet (Designumbau 3b, 7.72.1, main.js standortZeigen)
    Slipanlagen, Häfen, Tankstellen, Zusatzorte im gemeinsamen Rahmen; Handy Stufe „klein“ = Kopf, Aktionen, „Details“. Nur Tokens. */

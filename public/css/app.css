@@ -169,7 +169,6 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -.01em; margin: 0; }
 .fswitch-track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform .15s; }
 .fswitch[aria-checked="true"] .fswitch-track { background: var(--slip); }
 .fswitch[aria-checked="true"] .fswitch-track::after { transform: translateX(18px); }
-.rmenu { list-style: none; margin: 0; padding: 0; }
 .rmenu-links { list-style: none; margin: 10px 0 0; padding: 10px 0 0; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; }
 .rmenu-links a { display: inline-flex; align-items: center; min-height: 44px; }
 
@@ -724,19 +723,11 @@ a.pegel-box { text-decoration: none; color: inherit; }
 .lage-schnell-fuss { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px; font-size: 14px; color: #C5D8E1; }
 .lage-link { min-height: 44px; padding: 0 2px; border: 0; background: none; color: #fff; font: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
 .lage-karte :focus-visible { outline-color: var(--sky); }
-.rm-item { min-height: 60px; }
-.rm-chev { color: var(--wm-leise); display: grid; }
 .rm-ico.rm-slip { background: var(--wm-wasser); color: var(--slip); }
 .rm-ico.rm-fuel { background: var(--wm-warn-hell); color: var(--wm-warn); }
 .rm-ico.rm-foto { background: var(--wm-linie); color: var(--wm-petrol-tief); }
 .rm-ico.rm-fehler { background: var(--wm-stop-hell); color: var(--wm-stop); }
 .rm-ico.rm-ergaenzen { background: var(--wm-gut-hell); color: var(--wm-gut-text); }
-.rm-text { flex: 1; display: flex; flex-direction: column; }
-.rm-text small { color: var(--muted); font-size: 13px; font-weight: 500; }
-.rm-item:disabled { opacity: .6; cursor: default; }
-.rm-abschnitt { margin: 18px 4px 2px; font-size: var(--wm-t-xs); font-weight: 750; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
-#report-title + .rm-abschnitt { margin-top: 4px; }
-.rmenu .menu-item { border-bottom: 1px solid var(--wm-flaeche-2); border-radius: 0; }
 p.rmenu-links { display: block; text-align: center; border-top: 0; color: var(--muted); }
 p.rmenu-links a { display: inline; min-height: 0; }
 .rm-version { text-align: center; margin: 4px 0 0; }
@@ -1029,7 +1020,6 @@ input.hat-x { padding-right: calc(var(--x-rechts, 2px) + 44px) !important; }
 .search { --x-rechts: 44px; }
 
 /* Fenster von unten (Handy): weich hochfahren statt plötzlich erscheinen (7.54.0) */
-@keyframes sheet-ein { from { transform: translateY(36%); opacity: .4; } to { transform: none; opacity: 1; } }
 
 /* ------------------------------------------------------------------ 7.57.0 Zart blau auch für Standort-Details und das Fenster „Wetter und Wind“
    Muster wie die Pegel-Ansicht: hellblauer Grund, weiße Karten, Name mittig, drei gleiche Knöpfe, Warnungen behalten ihre Farbe. */

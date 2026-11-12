@@ -240,7 +240,7 @@ def run(b, w, hh):
     check('Deine Angaben werden geprüft' in pg.inner_text('body'), f'{tag}: Danke-Hinweis')
 
     # Alte Adressen
-    for adresse, sel in [('#pegel', '#cats [data-cat=pegel][aria-pressed=true]'), ('#favoriten', '.wm-sheet.gm-sheet'), ('#naehe', '.nh-sheet .place.nk, .nh-sheet .nh-leer'), ('#melden', '#report-menu[open]')]:
+    for adresse, sel in [('#pegel', '#cats [data-cat=pegel][aria-pressed=true]'), ('#favoriten', '.wm-sheet.gm-sheet'), ('#naehe', '.nh-sheet .place.nk, .nh-sheet .nh-leer'), ('#melden', '#report-menu.is-offen')]:
         pg.goto(uf.BASE + adresse); pg.wait_for_selector(sel, timeout=10000)
         check(True, f'{tag}: alte Adresse {adresse} funktioniert')
     check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')

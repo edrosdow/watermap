@@ -47,9 +47,9 @@ def run(b, w, hh):
     check(pg.evaluate("document.querySelector('#filter-panel').open"), f'{tag}: seitwärts gewischt → bleibt offen')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     # Melden-Menü
-    pg.click('#bottomnav [data-nav=melden]'); pg.wait_for_selector('#report-menu[open]'); pg.wait_for_timeout(300)
-    r = rect(pg, '#report-menu'); wisch(pg, w / 2, r['y'] + 20, 220)
-    check(not pg.evaluate("document.querySelector('#report-menu').open"), f'{tag}: Melden-Menü: nach unten gewischt → geschlossen')
+    pg.click('#bottomnav [data-nav=melden]'); pg.wait_for_selector('#report-menu.is-offen'); pg.wait_for_timeout(300)
+    pg.wait_for_timeout(300); r = rect(pg, '#report-menu'); wisch(pg, w / 2, r['y'] + 12, 560); pg.wait_for_timeout(500)
+    check(pg.locator('#report-menu').count() == 0, f'{tag}: Melden-Sheet: nach unten gewischt → geschlossen')
     # Standort-Detail (Blatt)
     pg.evaluate("window.__watermap.selectPlace('node/7000', { full: true })"); pg.wait_for_selector('#detail:not([hidden])'); pg.wait_for_timeout(400)
     pg.wait_for_timeout(300); r = rect(pg, '#detail'); wisch(pg, w / 2, r['y'] + 12, 560); pg.wait_for_timeout(300)

@@ -94,3 +94,18 @@
 
 /* Einstellungen: Umschalter (jetzt wm-seg) mit 44 px Trefferfläche wie die übrigen Bedienelemente der Seite */
 .ei-seg.wm-seg button { height: 44px; }
+
+/* ================================================================ Melden (7.73.1): Menü als Sheet, Formulare fahren ein */
+.rm-inhalt { display: flex; flex-direction: column; gap: var(--wm-3); }
+.rm-sheet .wm-abschnitt { margin-bottom: calc(-1 * var(--wm-1)); }
+.rm-sheet .lage-karte { margin: 0; }                                   /* „Lage vor Ort melden“: Aussehen unverändert (Ausnahme) */
+.rm-sheet .wm-zeile:disabled { opacity: .55; cursor: default; }
+.rm-sheet .rmenu-links { margin: var(--wm-2) 0 0; text-align: center; font-size: var(--wm-t-s); color: var(--wm-matt); }
+.rm-sheet .rm-version { margin: 0; text-align: center; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+/* Formulare (Foto, Angaben, Fehler, neue Slipanlage): Fenster fährt mit Feder ein, Inhalt gleitet nach, Hintergrund blendet ein */
+@keyframes wm-dlg-ein { from { opacity: 0; transform: translateY(32px); } }
+#dlg[open] { animation: wm-dlg-ein var(--wm-lang) var(--wm-feder); }
+#dlg[open]::backdrop { animation: wm-einblenden var(--wm-mittel) var(--wm-sanft); }
+#dlg[open] #dlg-body > * { animation: wm-inhalt-ein var(--wm-mittel) var(--wm-sanft) 60ms backwards; }
+/* Kopf-Baustein in Formularen: Titel links (ältere Regel zentrierte #dlg-title) */
+.dialog-form #dlg-body > .wm-kopf #dlg-title, .dialog-form #dlg-body .wm-kopf .wm-kopf-titel { text-align: left; padding: 0; }
