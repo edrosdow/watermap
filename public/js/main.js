@@ -32,6 +32,7 @@ import { unpassendMelden } from './meldung-unpassend.js';
 import { slipErgaenzen } from './slip-ergaenzen.js';
 import { imGebiet, aufGebietBeschneiden, gebietLaden } from './gebiet.js';
 import { sheetOeffnen, offeneSheets, kopf, marke } from './bausteine.js';
+import { staffeln, merkFlug, sternPop, markerPlopp, hakenSvg, ruhig } from './bewegung.js';
 import { pegelSheet, slipsAmPegel, pegelSuche } from './pegel-sheet.js';
 import { weatherSection, wetterZeile } from './wetter.js';
 import { GROUPS, loadExtras, renderExtraDetail, glyph } from './extras.js';
@@ -68,7 +69,7 @@ let nav, filterPop, reportPop, nah;
 // ============================================================ Start
 async function init() {
   $('#brand-logo').innerHTML = logoSvg(38);
-  $('#btn-search-ico').innerHTML = icon('search', 20);
+  $('#btn-search-ico').innerHTML = `<span class="i-lupe">${icon('search', 20)}</span><span class="i-x">${icon('close', 20)}</span>`;
   $('#btn-report-ico').innerHTML = icon('plus', 20);
   $('#btn-filter-ico').innerHTML = icon('filter', 20);
   $('#btn-locate').innerHTML = icon('locate', 22);
@@ -259,6 +260,7 @@ function toggleCat(type, on = !state.cats.has(type)) {
   state.subs.clear();
   prefs.set('cats', [...state.cats].join(','));
   applyFilters();
+  if (on) requestAnimationFrame(() => markerPlopp(el.mapEl, '.wm-pin, .wm-cluster'));   // Designumbau 4: Marker ploppen ein
 }
 
 function applyFilters() {
@@ -286,13 +288,13 @@ function renderFilterbar() {
 
 function renderToolbar() {
   const counts = Object.fromEntries(TYPE_KEYS.map(t => [t, state.places.filter(p => p.type === t).length]));
-  clear($('#cats')).append(...TYPE_KEYS.map(t => {
+  chipsSetzen([...TYPE_KEYS.map(t => {
     const on = state.cats.has(t);
     return h('button', { type: 'button', class: `cat cat-${t}`, 'aria-pressed': String(on), dataset: { cat: t },
       title: on ? `${TYPES[t].plural} ausblenden` : `${TYPES[t].plural} auf der Karte zeigen`, onclick: () => toggleCat(t) },
       h('span', { class: 'cat-check', html: icon('check', 16), 'aria-hidden': 'true' }), h('span', { class: 'cat-punkt', 'aria-hidden': 'true' }),
       h('span', { class: 'cat-label cat-label-long', text: CAT_LABEL[t] }), h('span', { class: 'cat-label cat-label-short', text: CAT_SHORT[t] }), state.places.length ? h('span', { class: 'cat-n', text: fmtN(counts[t]) }) : null);
-  }), state.mapOk ? pegelChip() : null);
+  }), state.mapOk ? pegelChip() : null].filter(Boolean));
   pegelLegendeZeigen();
   const n = state.subs.size + (state.meldOnly ? 1 : 0);
   const badge = $('#filter-n');
@@ -308,12 +310,25 @@ function renderToolbar() {
   updateInview();
 }
 
+/** Chips der Werkzeugleiste setzen: vorhandene Knöpfe werden nur aktualisiert (Zustand, Titel, Zahl), damit Punkt und Häkchen
+ *  beim Umschalten gleiten (Designumbau 4); neu aufgebaut wird nur, wenn sich die Reihe ändert. */
+function chipsSetzen(neu) {
+  const box = $('#cats'), alt = [...box.children];
+  if (alt.length !== neu.length || alt.some((a, i) => a.dataset.cat !== neu[i].dataset.cat)) { box.replaceChildren(...neu); return; }
+  alt.forEach((a, i) => {
+    const n = neu[i];
+    a.setAttribute('aria-pressed', n.getAttribute('aria-pressed')); a.title = n.title;
+    const zn = n.querySelector('.cat-n'), za = a.querySelector('.cat-n');
+    if (zn && za) za.textContent = zn.textContent; else if (zn) a.append(zn); else za?.remove();
+  });
+}
+
 /** Chip „Pegel“ (Designumbau 2a): schaltet die Pegel-Ebene der Hauptkarte. */
 function pegelChip() {
   const on = state.gaugesOn;
   return h('button', { type: 'button', class: 'cat cat-pegel', 'aria-pressed': String(on), dataset: { cat: 'pegel' },
     title: on ? 'Pegel ausblenden' : 'Pegel auf der Karte zeigen',
-    onclick: () => { if (on && aktiveEbenen() === 1) { toast(EINE_EBENE); return; } setGauges(!on); } },
+    onclick: () => { if (state.gaugesOn && aktiveEbenen() === 1) { toast(EINE_EBENE); return; } setGauges(!state.gaugesOn); } },
     h('span', { class: 'cat-check', html: icon('check', 16), 'aria-hidden': 'true' }), h('span', { class: 'cat-punkt', 'aria-hidden': 'true' }),
     h('span', { class: 'cat-label', text: 'Pegel' }), on && state.gauges ? h('span', { class: 'cat-n', text: fmtN(state.gauges.length) }) : null);
 }
@@ -486,7 +501,14 @@ function showDetail(p, { scrollTo = null, stufe = null } = {}) {
     weather: p.type === 'slip' ? wetterZeile(p.lat, p.lon, { name: displayName(p) }) : weatherSection(p.lat, p.lon),   // Slipanlagen: Zeile + Fenster
     actions: {
       close: closeDetail,
-      onFavorite: () => { favorites.toggle(p.id); showDetail(p); renderList(); updateTabs(); state.map?.refresh(p.id); },
+      onFavorite: (e) => {
+        const von = e?.currentTarget?.getBoundingClientRect(), dazu = !favorites.has(p.id), vorher = favorites.all();
+        favorites.toggle(p.id); showDetail(p); renderList(); updateTabs(); state.map?.refresh(p.id);
+        const knopf = standort?.sheet.inhalt.querySelector('.fav');
+        if (dazu) { sternPop(knopf); merkFlug(von); }   // Designumbau 4
+        else toast(`${displayName(p)} entfernt.`, { text: 'Rückgängig', onclick: () => { favorites.setzen(vorher); if (state.selectedId === p.id) showDetail(p); state.map?.refresh(p.id); } });
+        knopf?.focus({ preventScroll: true });
+      },
       share: () => shareLink(p),
       report: () => openReport('fehler-melden', { standort_id: p.id }),
       addPhoto: () => openReport('foto-einreichen', { standort_id: p.id }),
@@ -620,7 +642,9 @@ let standort = null;   // { sheet, key }
 function standortZeigen({ kopf, body, key, stufe = null }) {
   if (standort?.sheet.offen) {
     const sh = standort.sheet, top = standort.key === key ? sh.inhalt.scrollTop : 0;
-    sh.setzeKopf(kopf); sh.setzeInhalt(body); sh.inhalt.scrollTop = top;
+    sh.setzeKopf(kopf);
+    if (standort.key === key) sh.setzeInhalt(body); else sh.wechsleInhalt(body);   // anderer Ort: weich überblenden
+    sh.inhalt.scrollTop = top;
     if (stufe && sh.stufe() !== stufe) sh.stufe(stufe);
   } else {
     const sh = sheetOeffnen({ inhalt: body, kopf, stufe: stufe || 'gross', klasse: 'st-sheet', opener: document.activeElement,
@@ -693,6 +717,7 @@ async function setGauges(on) {
   }
   renderFilterbar();
   await refreshGauges();
+  if (state.gaugesOn) requestAnimationFrame(() => markerPlopp(el.mapEl, '.pk-marker, .pk-cluster'));   // Designumbau 4
   state.gaugeTimer = setInterval(refreshGauges, CONFIG.PEGEL_REFRESH_MIN * 60e3);
 }
 
@@ -842,7 +867,7 @@ function meldungenBereich() {
     unpassend: (m, ortName, fertig) => unpassendMelden({ meldung: m, ortName, toast, onFertig: fertig }),
     setzeKopf: (k) => { if (bereich?.view === 'meldungen') bereich.sheet.setzeKopf(k); },
   });
-  meldSeite.zeigen();
+  meldSeite.zeigen().then(() => staffeln(meldRoot.querySelectorAll('.mu-karte')));   // Designumbau 4: Meldungen erscheinen versetzt
 }
 
 // ---- Gemerkt (Pegel und Orte)
@@ -886,6 +911,7 @@ function mehrBereich() {
     naehe: () => setView('naehe'),
     einstellungen: (opener) => { state.mehrSeite = 'einstellungen'; writeHash(true); einstellungenOeffnen(opener, true); },
   });
+  if (!state.mehrSeite) staffeln(bereich.root.querySelectorAll('.wm-zeile'));
   if (state.mehrSeite === 'einstellungen') einstellungenOeffnen(); else einstellungenZu();
 }
 function einstellungenOeffnen(opener = null, gepusht = false) {
@@ -1071,7 +1097,7 @@ function setView(view, { push = true, spaeter = false, sofort = false } = {}) {
     if (state.view !== view || bereich?.view !== view) return;
     if (view === 'naehe' && neu) {
       bereich.root.replaceChildren(el.naeheKopf, el.listHead, el.list, el.datainfo);
-      if (nah && state.places.length && !state.loadFailed) nah.oeffnen(); else renderList();
+      if (nah && state.places.length && !state.loadFailed) nah.oeffnen().then(() => staffeln(el.list.children)); else renderList();   // Zeilen erscheinen versetzt
     }
     if (view === 'meldungen' && neu) meldungenBereich();
     if (view === 'gemerkt' && neu) gemerktBereich();
@@ -1282,7 +1308,9 @@ function renderSuggest(local, extra) {
     add(h('button', { type: 'button', class: 'sg', tabindex: '-1' }, h('span', { class: 'sg-ico', html: icon('search', 18) }), h('span', { class: 'place-text' }, h('span', { class: 'place-name', text: `Ort „${q}“ suchen` }), h('span', { class: 'place-sub', text: 'Städte, Orte, Gewässer' }))), () => runGeocode(q));
   }
   if (extra.message) ul.append(h('li', { class: 'sg-msg', text: extra.message }));
+  const warZu = el.suggest.hidden;
   el.suggest.hidden = !ul.children.length;
+  if (warZu && !el.suggest.hidden) staffeln(ul.children, { schritt: 45, max: 10 });   // Vorschläge: Zeilen versetzt (Karte fällt per CSS ein)
   el.q.setAttribute('aria-expanded', String(!el.suggest.hidden));
   suggestIdx = -1;
 }
@@ -1336,7 +1364,37 @@ async function runGeocode(q, { auto = false } = {}) {
   }
 }
 
+/** Handy: Suche als Lupe rechts, ein Tipp dehnt sie zur Pille (Designumbau 4). Desktop: Suchfeld wie bisher offen in der Kopfleiste. */
+const kopfzeile = $('.app-header'), lupe = $('#search-form .search-btn');
+const sucheZu = () => kopfzeile.classList.contains('such-zu');
+function sucheZustand() {
+  const zu = isMobile() && sucheZu();
+  lupe.setAttribute('aria-expanded', String(!zu)); lupe.setAttribute('aria-label', isMobile() ? (zu ? 'Suche öffnen' : 'Suche schließen') : 'Suchen');
+  el.q.tabIndex = zu ? -1 : 0;
+}
+function sucheOeffnen() {
+  if (!sucheZu()) return;
+  kopfzeile.classList.remove('such-zu'); sucheZustand();
+  if (document.activeElement !== el.q) el.q.focus();   // Tastatur geht auf
+}
+function sucheSchliessen({ fokus = true } = {}) {
+  if (sucheZu() || !isMobile()) return;
+  el.q.value = ''; el.q.dispatchEvent(new Event('input'));
+  endSearch();
+  kopfzeile.classList.add('such-zu'); sucheZustand();
+  if (fokus) lupe.focus({ preventScroll: true });
+}
+
 function wireSearch() {
+  kopfzeile.classList.add('such-zu'); sucheZustand();
+  window.matchMedia('(max-width: 767px)').addEventListener?.('change', () => sucheZustand());
+  // Lupe ist ein normaler Knopf (kein submit): Enter im Feld sendet das Formular, ohne die Lupe auszulösen
+  lupe.addEventListener('click', (e) => {
+    if (!isMobile()) { $('#search-form').requestSubmit(); return; }   // Desktop: Suchen
+    e.preventDefault();
+    if (sucheZu()) sucheOeffnen(); else sucheSchliessen();
+  });
+  el.q.addEventListener('focus', () => { if (isMobile()) sucheOeffnen(); });
   el.q.addEventListener('input', debounce(() => {
     const q = el.q.value.trim();
     if (geoCtrl) geoCtrl.abort();
@@ -1350,7 +1408,7 @@ function wireSearch() {
       suggestIdx = (suggestIdx + (e.key === 'ArrowDown' ? 1 : -1) + n) % n;
       $$('#suggest [role=option]').forEach((li, i) => { li.setAttribute('aria-selected', String(i === suggestIdx)); li.classList.toggle('is-active', i === suggestIdx); });
       el.q.setAttribute('aria-activedescendant', `sg-${suggestIdx}`);
-    } else if (e.key === 'Escape') { el.suggest.hidden = true; }
+    } else if (e.key === 'Escape') { if (!el.suggest.hidden) el.suggest.hidden = true; else sucheSchliessen(); }
   });
   $('#search-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -1473,7 +1531,9 @@ function toast(text, aktion = null) {
   const t = $('#toast');
   const knopf = aktion ? h('button', { type: 'button', class: 'toast-aktion', text: aktion.text,
     onclick: () => { clearTimeout(toastTimer); t.hidden = true; aktion.onclick(); } }) : null;
-  t.replaceChildren(h('span', { class: 'toast-text', text }), ...(knopf ? [knopf] : []));
+  // „Danke! …“ nach erfolgreichem Senden (Lage, Angaben): Haken, der sich zeichnet (Designumbau 4)
+  const haken = /^Danke\b/.test(text) ? h('span', { class: 'toast-haken', html: hakenSvg(20) }) : null;
+  t.replaceChildren(...[haken, h('span', { class: 'toast-text', text }), knopf].filter(Boolean));
   t.classList.toggle('mit-aktion', !!aktion);
   t.hidden = false; announce(aktion ? `${text} ${aktion.text} ist möglich.` : text);
   const zu = () => { clearTimeout(toastTimer); toastTimer = setTimeout(() => { if (!t.contains(document.activeElement)) t.hidden = true; }, aktion ? 8000 : 5200); };
@@ -1495,7 +1555,7 @@ function wireStatic() {
   el.dlg.addEventListener('click', (e) => { if (e.target === el.dlg) el.dlg.close(); });
   $('#btn-locate').addEventListener('click', () => locate().catch(() => {}));
   suchfelderMitX();
-  document.addEventListener('wm-toast', (e) => toast(e.detail));
+  document.addEventListener('wm-toast', (e) => (typeof e.detail === 'string' ? toast(e.detail) : toast(e.detail.text, e.detail.aktion)));
   wischenZuMachen({ mobil: isMobile });   // Dialoge von unten (Filter, Melden, Formulare); Sheets wischt der Rahmen (bausteine.js)
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || el.dlg.open || filterPop.isOpen || reportPop.isOpen || $('#naehe-bezug[open]') || $('#pa-pop[open]') || $('dialog.lightbox[open]') || el.suggest.offsetParent || offeneSheets().length) return;

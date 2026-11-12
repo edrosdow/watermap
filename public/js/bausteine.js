@@ -109,6 +109,21 @@ export function seg({ optionen, wert, onWahl = null, label }) {
 // ------------------------------------------------------------------ Sheet-Rahmen
 
 const stapel = [];            // offene Sheets, das letzte liegt oben
+
+/** Desktop: Oberkante der Karte als --wm-sheet-oben-auto am Dokument, laufend nachgeführt (Kopfleiste, Chip-Zeile, Fenstergröße). */
+let obenBeobachtet = false;
+function obenMessen() {
+  const karte = document.querySelector('.map-wrap'), leiste = document.querySelector('.app-header');
+  const y = karte?.offsetParent ? karte.getBoundingClientRect().top : leiste ? leiste.getBoundingClientRect().bottom : 0;
+  document.documentElement.style.setProperty('--wm-sheet-oben-auto', `${Math.max(0, Math.round(y))}px`);
+}
+function obenBeobachten() {
+  obenMessen();
+  if (obenBeobachtet) return;
+  obenBeobachtet = true;
+  if ('ResizeObserver' in window) { const ro = new ResizeObserver(obenMessen); for (const e of document.querySelectorAll('.app-header, .toolbar')) ro.observe(e); }
+  window.addEventListener('resize', obenMessen);
+}
 const Z_BASIS = 1200;         // unter der Navigation (1500) und dem Toast (1550)
 let escVerdrahtet = false;
 
@@ -174,13 +189,8 @@ export function sheetOeffnen({ inhalt = [], kopf: k = null, label = null, stufe 
   const el = h('section', { class: `wm-sheet ${klasse}`.trim(), role: 'dialog', 'aria-modal': 'false', tabindex: '-1',
     'aria-labelledby': !label && titel ? titel.id : null, 'aria-label': label }, griff, kopfEl, body);
   if (klein) el.style.setProperty('--wm-sheet-klein', klein);
-  // Desktop: Panel beginnt wie das Standort-Panel an der Oberkante der Karte (unter Kopfleiste und Chip-Zeile);
-  // ist die Karte ausgeblendet, unter der Kopfleiste.
-  if (!oben && !mobil()) {
-    const karte = document.querySelector('.map-wrap'), leiste = document.querySelector('.app-header');
-    const y = karte?.offsetParent ? karte.getBoundingClientRect().top : leiste ? leiste.getBoundingClientRect().bottom : 0;
-    if (y > 0) oben = `${Math.round(y)}px`;
-  }
+  // Desktop: Panel beginnt an der Oberkante der Karte (unter Kopfleiste und Chip-Zeile) – folgt ihr, wenn die Chip-Zeile umbricht
+  if (!oben) obenBeobachten();
   if (oben) el.style.setProperty('--wm-sheet-oben', oben);
   el.style.zIndex = String(Z_BASIS + stapel.length * 2);
   el.classList.toggle('is-klein', stufe === 'klein');
@@ -193,15 +203,19 @@ export function sheetOeffnen({ inhalt = [], kopf: k = null, label = null, stufe 
   el.classList.add('is-offen');
   (titel || el).focus({ preventScroll: true });
 
+  const inhaltEin = () => { body.classList.remove('is-neu'); void body.offsetWidth; body.classList.add('is-neu'); };   // Designumbau 4: 14 px von unten
+  inhaltEin();
   Object.assign(s, {
     el, inhalt: body,
     setzeInhalt(...knoten) { body.replaceChildren(...knoten); body.scrollTop = 0; },
+    /** wie setzeInhalt, aber mit Überblenden (anderer Ort im offenen Sheet). */
+    wechsleInhalt(...knoten) { s.setzeInhalt(...knoten); inhaltEin(); },
     /** Inhalt der Stufe zeigen (nur mit inhaltFuer); erneut: neu aufbauen (z. B. anderer Pegel). */
     zeigeInhalt(stufe, neu = false) {
       if (!s.inhaltFuer || (!neu && s.gezeigt === stufe)) return;
       s.gezeigt = stufe;
       const n = s.inhaltFuer(stufe);
-      s.setzeInhalt(...(Array.isArray(n) ? n : [n]));
+      s.wechsleInhalt(...(Array.isArray(n) ? n : [n]));
     },
     /** Kopf ersetzen (Angaben → kopf() mit ×, oder fertiges Element). */
     setzeKopf(neu) {

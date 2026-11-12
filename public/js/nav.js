@@ -77,7 +77,8 @@ export function mountNav({ top, bottom, active, onSelect, reportLink = false }) 
     const von = ziel; ziel = m;
     if (!animiert || !von) { setzen(m); void ind.offsetWidth; return; }   // erster Aufruf / Seitenaufbau: sofort
     if (reduziert()) { setzen(m, { dauer: 120, easing: 'linear' }); return; }
-    const ms = CONFIG.NAV_ANIM_MS, feder = 'cubic-bezier(.34, 1.45, .64, 1)';
+    const css = getComputedStyle(document.documentElement);   // Bewegungs-Tokens (Designumbau 4)
+    const ms = parseFloat(css.getPropertyValue('--wm-lang')) || 420, feder = css.getPropertyValue('--wm-feder').trim() || 'cubic-bezier(.34, 1.36, .5, 1)';
     if (!CONFIG.NAV_DEHNEN) { setzen(m, { dauer: ms, easing: feder }); return; }
     // Phase 1 (erste ~45 %): vom alten bis zum neuen Platz dehnen und etwas flacher werden; Phase 2: auf den neuen Platz zusammenziehen
     const l = Math.min(von.left, m.left), r = Math.max(von.left + von.width, m.left + m.width);

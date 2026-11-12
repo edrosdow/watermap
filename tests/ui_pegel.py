@@ -167,7 +167,7 @@ with sync_playwright() as p:
         box = pill.bounding_box()
         (pg.touchscreen.tap if mobile else pg.mouse.click)(box['x'] + box['width'] / 2, box['y'] + box['height'] / 2)
         if mobile:
-            pg.wait_for_selector(S + ' .pks-kurz', timeout=8000)
+            pg.wait_for_selector(S + ' .pks-kurz', timeout=8000); pg.wait_for_timeout(900)   # Wert zählt hoch (Designumbau 4)
             ptxt = pg.inner_text(S)
             check('Köln' in ptxt and '312' in ptxt and 'Details' in ptxt, f'{name}: Kurzansicht mit Wert und „Details“')
             pg.click(S + ' .pks-details')

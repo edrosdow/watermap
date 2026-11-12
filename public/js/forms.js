@@ -5,6 +5,7 @@ import { h, clear, $, announce } from './dom.js';
 import { icon } from './icons.js';
 import { displayName, formatDistance } from './model.js';
 import { prefs } from './favorites.js';
+import { hakenSvg } from './bewegung.js';
 import { openPhotoForm } from './photo-form.js';
 import { kopf } from './bausteine.js';
 
@@ -288,7 +289,7 @@ export function openForm(formName, ctx, preset = {}) {
         ? 'Hier läuft die Seite nur lokal. Meldungen funktionieren erst auf der veröffentlichten Netlify-Website.'
         : `Der Server hat die Meldung abgelehnt (HTTP ${res.status}). Bitte später erneut versuchen.`);
       prefs.set('lastSubmit', String(Date.now()));
-      clear(root).append(h('div', { class: 'thanks' }, h('div', { class: 'thanks-ico', html: icon('check', 32) }),
+      clear(root).append(h('div', { class: 'thanks' }, h('div', { class: 'thanks-ico', html: hakenSvg(32) }),
         h('h2', { text: 'Danke für deine Meldung!' }),
         h('p', { text: 'Sie ist jetzt „Wartet auf Prüfung“. Sie erscheint erst nach einer Kontrolle auf der Karte – nicht automatisch.' }),
         h('button', { type: 'button', class: 'btn btn-primary', text: 'Schließen', onclick: () => dlg.close() })));

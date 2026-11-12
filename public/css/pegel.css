@@ -167,9 +167,6 @@
 .pd-karte-kopf { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
 .pd-karte-kopf h2 { margin: 0; }
 .pd-klartext { margin: 8px 0 0; font-size: 15.5px; color: var(--ink); }
-.pd-umschalter { display: inline-flex; padding: 4px; gap: 2px; background: var(--bg); border-radius: 12px; }
-.pd-umschalter button { min-height: 40px; padding: 0 16px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-weight: 700; font-size: 15px; }
-.pd-umschalter button[aria-pressed="true"] { background: #fff; color: var(--navy); box-shadow: 0 1px 3px rgba(11, 48, 69, .15); }
 .pd-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
 .pd-stat { background: var(--bg); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; }
 .pd-stat span { font-size: 13px; color: var(--muted); }
@@ -677,8 +674,6 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pd-tz p { margin: 0; font-size: 14px; font-weight: 700; color: var(--wm-linie); }
 .pd-tz p span { color: inherit; font-size: inherit; }
 .pd-tz strong { font-size: 14.5px; font-weight: 800; color: #fff; }
-.pd-verlauf > .pd-umschalter { display: flex; width: 100%; margin-bottom: 4px; }
-.pd-verlauf > .pd-umschalter button { flex: 1; }
 .pd-einordnung h2 { margin: 0 0 4px; }
 .pd-ein-kurz { margin: 6px 0 0; font-size: 15px; font-weight: 800; color: var(--navy); }
 .pd-aktionen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -737,9 +732,6 @@ button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; curso
 .pd.pd .pd-body, .pd.pd.is-eingebettet .pd-body { margin: 0; padding: 4px 14px 18px; gap: 10px; background: transparent; }
 .pd.pd .pd-karte { background: var(--pd-glas); color: var(--navy); border: 0; border-radius: 18px; padding: 12px 14px; box-shadow: none; }
 .pd-ct, .pd.pd .pd-karte h2.pd-ct { margin: 0 0 8px; font-size: var(--wm-t-xs); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--pd-matt); display: flex; align-items: center; gap: 6px; }
-.pd.pd .pd-umschalter { display: flex; width: 100%; background: var(--wm-linie); border-radius: 10px; padding: 3px; margin-bottom: 6px; }
-.pd.pd .pd-umschalter button { flex: 1; min-height: 32px; padding: 0 6px; color: var(--pd-matt); font-size: 13.5px; font-weight: 600; background: transparent; box-shadow: none; }
-.pd.pd .pd-umschalter button[aria-pressed="true"] { background: #FFFFFF; color: var(--navy); box-shadow: 0 1px 2px rgba(11, 48, 69, .15); }
 .pd.pd .gc-grid { stroke: var(--wm-linie); }
 .pd.pd .gc-axis, .pd.pd .gc-reflabel { fill: var(--wm-matt); }
 .pd.pd .gc-ref { stroke: var(--wm-leise); }
@@ -840,9 +832,6 @@ details.pd-zeile[open] { padding-bottom: 10px; }
 .pd-kb.pm-stern.is-on .pd-kb-ico svg, .pd.pd .pd-kb.pm-stern.is-on .pd-kb-ico svg { fill: var(--wm-sonne); color: var(--wm-tinte); }
 .pd.pd .pd-kb.pm-stern, .pd.pd .pd-kb.pm-stern.is-on { border-radius: var(--wm-r-m); }
 .pd.pd .pd-karte { border-radius: var(--wm-r-m); padding: var(--wm-3) var(--wm-4); box-shadow: var(--wm-schatten); }
-.pd.pd .pd-umschalter { background: var(--wm-linie); border-radius: var(--wm-r-s); }
-.pd.pd .pd-umschalter button { border-radius: calc(var(--wm-r-s) - 3px); font-size: var(--wm-t-s); font-weight: 700; }
-.pd.pd .pd-umschalter button[aria-pressed="true"] { color: var(--wm-tinte); box-shadow: var(--wm-schatten); }
 /* 7.60.1 Suche im Pegel-Bereich wie auf der Hauptkarte (Logo links, Pille 48 px, Lupe rechts, Chips 40 px) */
 
 /* ---------------------------------------------------------------- Pegel auf der Hauptkarte (Designumbau 2a, 7.70.0)

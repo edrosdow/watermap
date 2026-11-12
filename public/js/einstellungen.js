@@ -6,6 +6,7 @@ import { icon } from './icons.js';
 import { BOOTSTYPEN } from './ampel-logik.js';
 import { alarmeLesen, pushAlarmLoeschen, mailAlarmVergessen } from './alarm.js';
 import { bootTyp, bootTypSetzen, mindestSetzen } from './mindestpegel.js';
+import { seg } from './bausteine.js';
 
 const LS_BOOT = 'watermap.boot';     // { typ, laenge, tiefgang } – Maße in Metern, beides optional (Typ früher in watermap.ampel.boot)
 const BEHALTEN = new Set(['watermap.geraet']);   // zufällige Geräte-ID (Missbrauchsschutz der Meldungen)
@@ -64,16 +65,11 @@ export function profilZeile() {
 const abschnitt = (titel, kinder) => h('section', { class: 'bs-abschnitt' },
   h('div', { class: 'bs-abschnitt-kopf' }, h('h2', { text: titel })), h('div', { class: 'bs-gruppe' }, kinder));
 
-/** Umschalter mit Segmenten (eine Wahl). */
+/** Umschalter mit Segmenten (eine Wahl): Baustein seg mit gleitender Markierung (Designumbau 4); Klasse ei-seg für die Tests. */
 function segmente(label, optionen, wert, onWahl) {
-  return h('div', { class: 'ei-seg', role: 'group', 'aria-label': label },
-    Object.entries(optionen).map(([k, text]) => h('button', { type: 'button', 'aria-pressed': String(k === wert), dataset: { wert: k }, text,
-      onclick: (e) => {
-        if (k === wert) return;
-        wert = k;
-        for (const b of e.currentTarget.parentNode.children) b.setAttribute('aria-pressed', String(b === e.currentTarget));
-        onWahl(k);
-      } })));
+  const el = seg({ label, wert, optionen: Object.entries(optionen).map(([k, text]) => ({ wert: k, text })), onWahl });
+  el.classList.add('ei-seg');
+  return el;
 }
 
 /**

@@ -566,7 +566,6 @@ a.pegel-box { text-decoration: none; color: inherit; }
   .leaflet-control-zoom { display: none; }
   .banner { left: 10px; right: 10px; bottom: 12px; max-width: none; }
     .toast { bottom: 20px; }
-    .has-detail .toast { bottom: calc(82% + 12px); }
     .dialog { width: 100vw; max-width: 100vw; max-height: 94dvh; margin: auto 0 0; border-radius: 20px 20px 0 0; }
   .row2 { grid-template-columns: 1fr 1fr; }
   .facts { grid-template-columns: minmax(100px, 40%) 1fr; }
@@ -1004,7 +1003,6 @@ p.rmenu-links a { display: inline; min-height: 0; }
       .banner { bottom: var(--bn-space); }
   .pickbar { bottom: var(--bn-space); }
   .toast { bottom: calc(var(--bn-space) + 8px); }
-    .has-detail .toast { bottom: calc(82% + 12px); }
   /* OpenStreetMap-Quellenangabe bleibt sichtbar: direkt über der Leiste */
   .map-wrap .leaflet-bottom { bottom: calc(var(--bn-space) - 10px); }
   /* Schwebende Kartenknöpfe im selben hellen Glas-Stil, rechts/links über der Leiste */

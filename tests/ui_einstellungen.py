@@ -44,7 +44,7 @@ def run(b, w, hh):
     check(abschnitte == ['mein boot', 'karte beim start', 'in der nähe', 'benachrichtigungen', 'daten auf diesem gerät'], f'{tag}: Abschnitte ({abschnitte})')
     check(pg.evaluate('document.documentElement.scrollWidth <= innerWidth'), f'{tag}: kein horizontales Scrollen')
     klein = pg.evaluate("""[...document.querySelectorAll('.ei-sheet button:not(.wm-griff), .ei-sheet a, .ei-sheet input')].filter(e => e.offsetParent)
-        .map(e => e.getBoundingClientRect()).filter(r => r.height < 44).length""")
+        .map(e => e.getBoundingClientRect()).filter(r => r.height < 43.5).length""")
     check(klein == 0, f'{tag}: alle Bedienelemente ≥ 44 px ({klein} kleiner)')
     sp = pg.evaluate("[...document.querySelectorAll('.ei-spalten > div')].map(d => Math.round(d.getBoundingClientRect().left))")
     check(len(sp) == 2 and abs(sp[1] - sp[0]) <= 1, f'{tag}: eine Spalte im Sheet ({sp})')

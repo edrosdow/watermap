@@ -5,7 +5,7 @@ import { icon } from './icons.js';
 import { formatTime } from './pegel.js';
 import { auswerten, TENDENZ } from './gezeiten.js';
 import { vorhersageLaden, kommende, hoehe, inText, tagUhr, standText, ART } from './gezeiten-bsh.js';
-import { fmt, kmText, zusatzKacheln, glasKnopf, alarmKnopf, merkKnopf, stammdaten } from './pegel-ansicht.js';
+import { fmt, kmText, zusatzKacheln, glasKnopf, alarmKnopf, merkKnopf, stammdaten, grosserWert } from './pegel-ansicht.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const uhr = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -120,7 +120,7 @@ export function tideDetail(g, opts) {
   // Kopf wie bei allen Pegeln: Name, Ort und Zeit, große Zahl, Zustandszeile, drei Knöpfe
   const kopf = h('div', { class: 'pd-oben is-tide' },   // Name, Gewässer und × im Kopf des Sheet-Rahmens
     h('p', { class: 'pd-ort' + (alt ? ' is-alt' : '') }, [kmText(g), alt ? `veraltet – ${formatTime(g.time)}` : formatTime(g.time)].filter(Boolean).join(' · ')),
-    h('p', { class: 'pd-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: g.unit })),
+    h('p', { class: 'pd-wert' }, grosserWert(g, alt), h('span', { text: g.unit })),
     h('p', { class: 'pd-zeile-kopf' }, h('span', { class: 'pd-zdot pz-tide', 'aria-hidden': 'true' }), h('b', { class: 'pz-tag-text', text: alt ? 'veraltet' : 'Tide' }), alt ? null : tend),
     h('div', { class: 'pd-knoepfe' }, alarmKnopf(g), merkKnopf(g, opts.onStern),
       glasKnopf('pd-teilen', icon('share', 20), 'Teilen', { onclick: opts.onShare, 'aria-label': 'Pegel teilen' })));

@@ -13,6 +13,7 @@ import { istTidepegel, auswerten } from './gezeiten.js';
 import { tendenzText } from './pegel-tide-ansicht.js';
 import { normW, gleichesGewaesser, istKueste, slug, KUESTE_SLUG, flussKm } from './pegel-fluss.js';
 import { sheetOeffnen, marke } from './bausteine.js';
+import { hochzaehlen } from './bewegung.js';
 
 /** Nächste Slipanlagen am selben Gewässer (für die Details). */
 export function slipsAmPegel(g, places, max = 5, radius = 30000) {
@@ -48,8 +49,8 @@ export function kurve24(pts, g, { breite = 300, hoehe = 60, klein = false } = {}
   const last = p24[p24.length - 1];
   const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: 'none', class: 'pks-kurve-svg' + (klein ? ' is-klein' : ''), role: 'img',
     'aria-label': `Verlauf der letzten 24 Stunden: von ${fmt(p24[0].v)} auf ${fmt(last.v)} ${g.unit}, tiefster ${fmt(lo)}, höchster ${fmt(hi)} ${g.unit}` });
-  if (!klein) svg.append(svgEl('path', { d: `M${x(t0).toFixed(1)} ${H}` + p24.map(p => `L${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join('') + `L${x(last.t).toFixed(1)} ${H}Z`, class: 'pks-kurve-flaeche' }));
-  svg.append(svgEl('path', { d, class: 'pks-kurve-linie' }));
+  if (!klein) svg.append(svgEl('path', { d: `M${x(t0).toFixed(1)} ${H}` + p24.map(p => `L${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join('') + `L${x(last.t).toFixed(1)} ${H}Z`, class: 'pks-kurve-flaeche wm-nachblenden' }));
+  svg.append(svgEl('path', { d, class: 'pks-kurve-linie wm-zeichnen', pathLength: 1 }));
   svg.append(svgEl('circle', { cx: x(last.t), cy: y(last.v), r: klein ? 2.5 : 4, class: 'pks-kurve-punkt' }));
   return svg;
 }
@@ -87,9 +88,11 @@ export function pegelSheet(ctx) {
       aend.textContent = w.aend || '–';
     }, () => { if (zahlen) zahlen.querySelectorAll('b').forEach((b) => { b.textContent = '–'; }); });
     const zustandText = alt ? `Veraltet – ${formatTime(g.time)}` : tide ? 'Tide' : grossSchreiben(ZUSTAND[z].text);
+    const kurzWert = h('strong', { text: fmt(g.value) });
+    if (!alt) setTimeout(() => hochzaehlen(kurzWert, Math.round(g.value), { format: fmt }), 0);
     return h('div', { class: 'pks-kurz' },
       h('div', { class: 'pks-mitte' },
-        h('p', { class: 'pks-wert' }, h('strong', { text: fmt(g.value) }), h('small', { text: ` ${g.unit}` })),
+        h('p', { class: 'pks-wert' }, kurzWert, h('small', { text: ` ${g.unit}` })),
         kurveBox),
       h('p', { class: 'pks-trend' }, marke(alt ? 'leise' : (MARKE[z] || 'leise'), zustandText), zahlen),
       h('button', { type: 'button', class: 'wm-btn is-primaer pks-details', 'aria-expanded': 'false', onclick: () => s?.stufe('gross') }, 'Details'));

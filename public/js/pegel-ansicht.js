@@ -12,6 +12,8 @@ import { alarmFenster, alarmStatus } from './alarm.js';
 import { istTidepegel } from './gezeiten.js';
 import { tideDetail } from './pegel-tide-ansicht.js';
 import { passtMeinBoot } from './passt-mein-boot.js';
+import { hochzaehlen, merkFlug, sternPop } from './bewegung.js';
+import { seg } from './bausteine.js';
 
 export const fmt = (v) => Math.round(v).toLocaleString('de-DE');
 export const kmText = (g) => (g.km !== null && g.km !== undefined ? `km ${g.km.toLocaleString('de-DE', { maximumFractionDigits: 1 })}` : '');
@@ -137,7 +139,14 @@ export function merkKnopf(g, onChange) {
   const an = meinePegel.hat(g.id);
   const knopf = glasKnopf('pm-stern pd-merken' + (an ? ' is-on' : ''), icon('star', 20, an), an ? 'Gemerkt' : 'Merken',
     { 'aria-pressed': String(an), 'aria-label': an ? `${g.name} aus „Meine Pegel“ entfernen` : `${g.name} zu „Meine Pegel“ hinzufügen` });
-  knopf.onclick = (e) => { e.stopPropagation(); meinePegel.umschalten(g.id); onChange?.(); };
+  knopf.onclick = (e) => {
+    e.stopPropagation();
+    const von = knopf.getBoundingClientRect(), dazu = !meinePegel.hat(g.id), vorher = meinePegel.alle();
+    meinePegel.umschalten(g.id); onChange?.();
+    // Designumbau 4: Stern ploppt und fliegt zu „Gemerkt“; beim Entfernen Toast mit „Rückgängig“
+    if (dazu) { sternPop(document.activeElement?.closest?.('.pd-merken') || knopf); merkFlug(von); }
+    else document.dispatchEvent(new CustomEvent('wm-toast', { detail: { text: `${g.name} entfernt.`, aktion: { text: 'Rückgängig', onclick: () => meinePegel.setzen(vorher) } } }));
+  };
   return knopf;
 }
 
@@ -151,6 +160,13 @@ function bildZeile(g, daten) {
       await bildTeilen(cv, `Pegel-${g.name.replace(/[^\p{L}\p{N}]+/gu, '-')}.png`, `Pegel ${g.name}`);
     } catch { /* ohne Bild bleibt alles, wie es war */ } finally { btn.disabled = false; }
   } }, h('span', { html: icon('image', 18), 'aria-hidden': 'true' }), 'Als Bild teilen');
+}
+
+/** Großer Wert; beim Öffnen zählen die letzten 36 Einheiten hoch (Designumbau 4, nicht bei veralteten Werten). */
+export function grosserWert(g, alt = false) {
+  const el = h('strong', { text: fmt(g.value) });
+  if (!alt) setTimeout(() => hochzaehlen(el, Math.round(g.value), { format: fmt }), 0);
+  return el;
 }
 
 /** Zeile „Weser · KM 201,4“ in der Kopfleiste; die Art („Pegel“/„Tidepegel“) nur für Screenreader (Etikett zeigt sie sichtbar). */
@@ -172,7 +188,7 @@ export function pegelDetail(g, opts) {
   // Immer im Sheet-Rahmen (Pegel-Sheet, Pegel-Fenster): Name, Gewässer und × stehen im Kopf des Rahmens – hier km, Zeit, Wert, Zustand, Aktionen
   const kopf = h('div', { class: 'pd-oben' },
     h('p', { class: 'pd-ort' + (alt ? ' is-alt' : '') }, [kmText(g), alt ? `veraltet – ${formatTime(g.time)}` : formatTime(g.time)].filter(Boolean).join(' · ')),
-    h('p', { class: 'pd-wert' }, h('strong', { text: fmt(g.value) }), h('span', { text: g.unit })),
+    h('p', { class: 'pd-wert' }, grosserWert(g, alt), h('span', { text: g.unit })),
     h('p', { class: 'pd-zeile-kopf' }, h('span', { class: `pd-zdot ${ZUSTAND[z].cls}`, 'aria-hidden': 'true' }), h('b', { text: ZUSTAND[z].text.replace(/^ü/, 'Ü') }),
       alt ? null : h('span', { class: 'pd-tz' }, ' · 2 Std. ', tend, ' · 24 Std. ', aend24)),
     h('div', { class: 'pd-knoepfe' }, alarmKnopf(g), merkKnopf(g, opts.onStern),
@@ -194,7 +210,7 @@ export function pegelDetail(g, opts) {
       return;
     }
     const mitV = !!wv?.length;
-    const cut = bereich === '24h' ? basis[basis.length - 1].t - 24 * 3600e3 : -Infinity;
+    const cut = bereich === '24h' && basis.length ? basis[basis.length - 1].t - 24 * 3600e3 : -Infinity;   // leere Messreihe: kein Fehler
     const pts = basis.filter(p => p.t >= cut);
     chart.removeAttribute('aria-busy');
     if (pts.length < 2) { chart.replaceChildren(h('p', { class: 'unknown', text: 'Keine Messreihe verfügbar.' })); return; }
@@ -208,16 +224,18 @@ export function pegelDetail(g, opts) {
     }
   };
   const BEREICHE = { '24h': '24 Std.', '7d': '7 Tage', '30d': '30 Tage' };
-  const umschalter = h('div', { class: 'pd-umschalter', role: 'group', 'aria-label': 'Zeitraum' },
-    Object.entries(BEREICHE).map(([k, text]) => h('button', { type: 'button', 'aria-pressed': String(k === bereich), dataset: { bereich: k }, text,
-      onclick: () => {
-        bereich = k; for (const b of umschalter.children) b.setAttribute('aria-pressed', String(b.dataset.bereich === k));
+  // Umschalter mit gleitender Markierung (Baustein seg, Designumbau 4); die Knöpfe tragen weiter data-bereich
+  const umschalter = seg({ label: 'Zeitraum', wert: bereich, optionen: Object.entries(BEREICHE).map(([wert, text]) => ({ wert, text })), onWahl: (k) => waehle(k) });
+  umschalter.classList.add('pd-umschalter');
+  for (const b of umschalter.querySelectorAll('button')) b.dataset.bereich = b.dataset.wert;
+  const waehle = (k) => {
+        bereich = k;
         if (k === '30d' && !alle30) {
           fehler30 = false;
           verlauf30Laden(g.id).then((pts) => { alle30 = pts; if (bereich === '30d') zeichnen(); }, () => { fehler30 = true; if (bereich === '30d') zeichnen(); });
         }
         zeichnen();
-      } })));
+  };
   body.append(h('section', { class: 'pd-karte pd-verlauf', 'aria-label': 'Verlauf' }, h('h2', { class: 'pd-ct', text: 'Verlauf' }), umschalter, chart, vorhInfo, vorhSatz));
   const vorhersage = vorhersageWLaden(g.id);
   vorhersage.then((v) => { wv = v; wvFertig = true; zeichnen(); });

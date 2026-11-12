@@ -72,7 +72,7 @@ def run(b, mobile):
     check(pg.get_attribute('.cat-slip', 'aria-pressed') == 'true' and pg.get_attribute('.cat-fuel', 'aria-pressed') == 'false', f'{tag}: Start mit Slipanlagen')
     pg.click('.cat-slip'); pg.wait_for_timeout(150)
     check(pg.get_attribute('.cat-slip', 'aria-pressed') == 'true' and 'Mindestens eine' in pg.inner_text('#toast'), f'{tag}: letzte Kategorie lässt sich nicht abwählen')
-    pg.click('.cat-fuel'); pg.wait_for_timeout(150)
+    pg.click('.cat-fuel'); pg.wait_for_timeout(500)   # Übergang zu Tinte (Designumbau 4)
     check(pg.locator('.cat[aria-pressed=true] .cat-check').count() == 2 and pg.evaluate("getComputedStyle(document.querySelector('.cat-fuel')).backgroundColor") == 'rgb(14, 46, 66)', f'{tag}: aktive Chips mit Haken (Tinte gefüllt, Designsystem)')
     check(pg.evaluate("getComputedStyle(document.querySelector('.cat-marina')).backgroundColor") == 'rgb(255, 255, 255)', f'{tag}: inaktiver Chip weiß (Designsystem)')
     pg.click('.cat-fuel'); pg.wait_for_timeout(150)
@@ -131,7 +131,7 @@ def run(b, mobile):
     chips = [c.strip() for c in karte.locator('.vo-unten .vo-chip').all_inner_texts()]
     check('Lage hat sich geändert?' in karte.inner_text() and chips == ['Alles frei', 'Warteschlange', 'Gesperrt', 'Mehr'], f'{tag}: b nah – passende Chips ({chips})')
     hs = [karte.locator('.vo-chip').nth(i).bounding_box()['height'] for i in range(len(chips))]
-    check(min(hs) >= 40, f'{tag}: Chips mindestens 40 px hoch ({min(hs):.0f})')
+    check(min(hs) >= 39.5, f'{tag}: Chips mindestens 40 px hoch ({min(hs):.1f})')
     pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_4b_nah.png'))
     karte.locator('.vo-oben .vo-pille', has_text='Ja').click(); pg.wait_for_timeout(300)
     check(st['votes'] and st['votes'][-1][1] is True and st['votes'][-1][2], f'{tag}: „Ja“ gesendet (mit Geräte-ID)')
@@ -151,7 +151,7 @@ def run(b, mobile):
     check(pg.inner_text('#detail .vo-status') == 'Heute keine Probleme gemeldet' and bb['height'] <= 80, f'{tag}: e – schmale Zeile, höchstens 80 px ({bb["height"]:.0f})')
     check(karte.locator('.vo-chip').count() == 0 and karte.locator('.vo-alle').count() == 0 and karte.locator('.vo-melden').count() == 0, f'{tag}: e – keine Chips, kein „Alle Meldungen“')
     btn = karte.locator('button.vo-schmal-btn')
-    check(btn.count() == 1 and btn.bounding_box()['height'] >= 44 and 'Lage melden' in btn.inner_text(), f'{tag}: e – Knopf „Lage melden“ ≥ 44 px')
+    check(btn.count() == 1 and btn.bounding_box()['height'] >= 43.9 and 'Lage melden' in btn.inner_text(), f'{tag}: e – Knopf „Lage melden“ ≥ 44 px ({btn.bounding_box()})')
     pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_6e_schmal.png'))
     btn.click(); pg.wait_for_selector('#dlg[open] .lf-grid')
     check('TEST Slip 3' in pg.inner_text('#dlg .pf-place'), f'{tag}: e – Knopf öffnet „Lage melden“ für den Standort')

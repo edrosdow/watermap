@@ -219,7 +219,7 @@ export function historyChart(pts, g, { threshold = null, vorhersage = null } = {
   let d = '', prev = null;
   for (const p of pts) { d += (prev && !istLuecke(prev, p) ? 'L' : 'M') + x(p.t).toFixed(1) + ' ' + y(p.v).toFixed(1); prev = p; }
   const area = `M${x(t0).toFixed(1)} ${y(lo)}` + pts.map(p => `L${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join('') + `L${x(pts[pts.length - 1].t).toFixed(1)} ${y(lo)}Z`;
-  svg.append(s('path', { d: area, class: 'gc-area' }), s('path', { d, class: 'gc-line' }));
+  svg.append(s('path', { d: area, class: 'gc-area wm-nachblenden' }), s('path', { d, class: 'gc-line wm-zeichnen', pathLength: 1 }));   // Designumbau 4: Kurve zeichnet sich
   const last = pts[pts.length - 1];
   if (wv.length) {
     const dv = `M${x(last.t).toFixed(1)} ${y(last.v).toFixed(1)}` + wv.map(p => `L${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join('');

@@ -50,6 +50,7 @@ Seit 7.71.0 ein Abschnitt „Passt mein Boot?“ im Pegel-Sheet (`js/passt-mein-
 python3 -I -m unittest discover -s tests -v     # Importer, Validator, Moderationsskript
 python3 -I tests/ui_full.py                     # Oberfläche (braucht: pip install playwright pillow)
 python3 -I tests/ui_pegel_ampel.py              # „Passt mein Boot?“ im Pegel-Sheet, Einstiegsseite /pegel-ampel
+python3 -I tests/ui_bewegung.py                 # Animationen: Lupe, Merken-Flug, Chips, Umschalter, Pegelwert, „Bewegung reduzieren“
 node tests/mindestpegel_test.mjs                # Mindestpegel je Pegel, Übernahme, Sätze
 python3 -I tests/ui_pegel_karte.py              # Pegel auf der Hauptkarte: Chip, Marker, Pegel-Sheet, alte Adressen, Suche, Navigation (390/1440 px)
 python3 -I tests/ui_pegel_fluss.py              # Fluss-Sheet, Tidepegel mit BSH-Vorhersage im Pegel-Sheet (375/390/1024/1440 px)

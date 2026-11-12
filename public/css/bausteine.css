@@ -20,7 +20,7 @@
 .wm-griff span { width: 40px; height: 5px; border-radius: var(--wm-r-rund); background: var(--wm-rand); }
 
 @media (min-width: 768px) {
-  .wm-sheet { left: auto; width: var(--detail-w, 420px); top: var(--wm-sheet-oben, 0px); border-radius: 0; transform: translate3d(100%, 0, 0); }
+  .wm-sheet { left: auto; width: var(--detail-w, 420px); top: var(--wm-sheet-oben, var(--wm-sheet-oben-auto, 0px)); border-radius: 0; transform: translate3d(100%, 0, 0); }
   .wm-sheet.is-offen, .wm-sheet.is-offen.is-klein { transform: translate3d(0, 0, 0); }
   .wm-sheet .wm-griff { display: none; }
   .wm-sheet .wm-kopf { padding-top: var(--wm-4); }

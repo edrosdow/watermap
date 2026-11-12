@@ -7,6 +7,7 @@ import { displayName } from './model.js';
 import { prepareImage, sendReport } from './forms.js';
 import { FOTO_KATEGORIEN } from './foto-kategorien.js';
 import { kopf } from './bausteine.js';
+import { hakenSvg } from './bewegung.js';
 
 export const NOTIZ_MAX = 140;
 
@@ -182,7 +183,7 @@ export function openPhotoForm(ctx, preset = {}) {
       await sendReport(fd, { multipart: true });
       revoke();
       root.replaceChildren(h('div', { class: 'pf-done' },
-        h('div', { class: 'thanks-ico', html: icon('check', 32) }),
+        h('div', { class: 'thanks-ico', html: hakenSvg(32) }),
         h('h2', { id: 'dlg-title', tabindex: '-1', text: 'Danke!' }),
         h('p', { text: 'Dein Foto wird geprüft und erscheint meist innerhalb von 24 Stunden.' }),
         h('button', { type: 'button', class: 'pf-send is-ready', text: 'Fertig', onclick: () => dlg.close() })));

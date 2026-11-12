@@ -3,12 +3,14 @@
 import { h } from './dom.js';
 import { icon, glyphSvg } from './icons.js';
 import { zeile, gruppe, marke } from './bausteine.js';
+import { staffeln } from './bewegung.js';
 
 const fmt = (v) => Math.round(v).toLocaleString('de-DE');
 let bearbeiten = false;   // Bearbeiten-Modus bleibt beim Neuzeichnen nach dem Entfernen erhalten
+let ein = false;          // beim Öffnen erscheinen die Zeilen versetzt (Designumbau 4), beim Neuzeichnen nicht
 
 /** Bearbeiten-Modus zurücksetzen (beim Öffnen des Sheets). */
-export const gemerktFrisch = () => { bearbeiten = false; };
+export const gemerktFrisch = () => { bearbeiten = false; ein = true; };
 
 /**
  * ctx = {
@@ -54,6 +56,7 @@ export function gemerkt(root, ctx) {
         return zeile({ ico: 'gauge', titel: p.name, unter, rechts, href: bearbeiten ? null : `#karte/pegel/${encodeURIComponent(p.id)}`,
           onClick: bearbeiten ? null : klick((e) => ctx.oeffnePegel(p.id, e.currentTarget)) });
       }), { label: 'Gemerkte Pegel' })].filter(Boolean));
+      if (ein) { ein = false; staffeln(root.querySelectorAll('.wm-zeile')); }
     }, () => { if (box.isConnected) box.replaceChildren(gruppe([h('p', { class: 'gm-laedt', text: 'Pegelstände sind gerade nicht erreichbar.' })])); });
   }
 
@@ -66,6 +69,7 @@ export function gemerkt(root, ctx) {
         href: bearbeiten ? null : `#p=${encodeURIComponent(o.id)}`, onClick: bearbeiten ? null : klick(() => ctx.oeffneOrt(o.id)) })), { label: 'Gemerkte Orte' }));
   }
   root.replaceChildren(...teile);
+  if (ein && !ctx.pegelIds.length) { ein = false; staffeln(root.querySelectorAll('.wm-zeile')); }
 }
 
 /** Klick im selben Tab abfangen (neuer Tab mit Strg/Cmd/Mitteltaste bleibt möglich). */
