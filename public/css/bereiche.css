@@ -1,0 +1,334 @@
+/* Bereiche „Mehr“, Merkliste und „Aktuelle Meldungen“ – im Stil des Pegel-Bereichs (heller Kopf am Desktop, dunkelblau auf dem Handy). */
+.bs-seite { max-width: 760px; margin: 0 auto; padding: 24px 24px 40px; }
+
+.bs-abschnitt { margin-top: 18px; }
+.bs-abschnitt-kopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 4px 8px; min-height: 28px; }
+.bs-abschnitt h2 { margin: 0; font-size: var(--wm-t-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--wm-matt); }
+.bs-gruppe { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); overflow: hidden; }
+.bs-zeile { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 10px 14px; border: 0; border-top: 1px solid var(--wm-flaeche-2); background: none;
+  text-align: left; color: var(--wm-tinte); text-decoration: none; font: inherit; }
+.bs-gruppe > .bs-zeile:first-child { border-top: 0; }
+.bs-zeile:hover { background: var(--wm-wasser-2); }
+.bs-ico { width: 40px; height: 40px; border-radius: var(--wm-r-s); background: var(--wm-flaeche-2); color: var(--wm-tinte); display: grid; place-items: center; flex: none; }
+.bs-ico.is-dunkel { background: var(--wm-tinte); color: var(--wm-flaeche); }
+.bs-ico.is-typ { color: var(--wm-flaeche); }
+.bs-ico.bg-slip { background: var(--wm-slip); } .bs-ico.bg-marina { background: var(--wm-hafen); } .bs-ico.bg-fuel { background: var(--wm-tanke); }
+.bs-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.bs-text strong { color: var(--wm-tinte); font-size: var(--wm-t-m); overflow-wrap: anywhere; }
+.bs-text small { color: var(--wm-matt); font-size: var(--wm-t-s); }
+.bs-fuss { margin: 18px 4px 0; color: var(--wm-matt); font-size: var(--wm-t-xs); }
+
+@media (max-width: 767px) {
+  .bs-seite { padding: 0 0 28px; }
+            .bs-abschnitt { margin: 16px 16px 0; }
+  .bs-fuss { margin: 18px 20px 0; }
+}
+
+/* „Aktuelle Meldungen“ – Karten im Stil von „Heute vor Ort“ (Farbton nach Art der Meldung) */
+.mu-steuer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0 10px; flex-wrap: wrap; }
+.mu-sort { min-height: 40px; border: 0; background: none; color: var(--wm-petrol-tief); font-weight: 700; font-size: var(--wm-t-s); padding: 0 4px; max-width: 100%; }
+.mu-umkreis { margin: 0 0 12px; padding: 12px 16px 10px; background: var(--wm-flaeche); border: 1px solid var(--wm-linie); border-radius: var(--wm-r-s); }
+.mu-umkreis-kopf { display: flex; justify-content: space-between; align-items: baseline; color: var(--wm-matt); font-size: var(--wm-t-s); }
+.mu-umkreis-kopf b { font-size: var(--wm-t-l); color: var(--wm-petrol-tief); font-variant-numeric: tabular-nums; }
+.mu-range { display: block; width: 100%; min-height: 44px; margin: 4px 0 0; accent-color: var(--wm-slip); touch-action: pan-y; }
+.mu-skala { display: flex; justify-content: space-between; font-size: var(--wm-t-xs); color: var(--wm-leise); margin: -4px 2px 6px; }
+.mu-umkreis-zahl { margin: 4px 0 0; font-size: var(--wm-t-s); color: var(--wm-matt); }
+.mu-offline { margin: 0 0 10px; }
+.mu-liste { display: flex; flex-direction: column; gap: 12px; }
+.mu-karte { background: var(--wm-flaeche); border: 1.5px solid var(--wm-linie); border-radius: var(--wm-r-m); overflow: hidden; box-shadow: var(--wm-schatten); }
+.mu-karte.vo-warn { border-color: var(--wm-warn-rand); } .mu-karte.vo-stop { border-color: var(--wm-stop-rand); } .mu-karte.vo-gut { border-color: var(--wm-gut-rand); }
+.mu-zeit { margin: 0; color: var(--wm-matt); font-size: var(--wm-t-s); }
+.mu-notiz { margin: 6px 0 0; font-size: var(--wm-t-m); color: var(--wm-tinte); overflow-wrap: anywhere; }
+.mu-knoepfe { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--wm-flaeche-2); }
+.mu-knopf { min-height: 44px; border-radius: var(--wm-r-s); border: 1px solid var(--wm-linie); background: var(--wm-flaeche); font-weight: 700; font-size: var(--wm-t-s); color: var(--wm-tinte); padding: 0 8px; }
+.mu-knopf:disabled { opacity: .55; }
+.mu-ort-link { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 6px; color: var(--wm-petrol-tief); font-weight: 700; font-size: var(--wm-t-s); text-decoration: none; }
+.mu-unpassend { display: flex; justify-content: flex-end; padding: 0 12px 8px; margin-top: -4px; }
+.mu-unpassend .vo-unpassend { padding: 0 2px; }
+.mu-bewertet { margin: 0; padding: 0 14px 12px; color: var(--wm-matt); font-size: var(--wm-t-xs); }
+.mu-leer { padding: 6px 0 14px; display: flex; flex-direction: column; align-items: flex-start; }
+.mu-leer .mu-melden { margin: 0 16px; }
+.mu-leer-titel { margin: 0; padding: 16px 16px 0; font-weight: 700; color: var(--wm-tinte); font-size: var(--wm-t-m); }
+.mu-melden { display: inline-flex; align-items: center; gap: 8px; }
+
+@media (max-width: 767px) {
+        .mu-steuer, .mu-offline, .mu-liste, .mu-leer { margin-left: 16px; margin-right: 16px; }
+    .mu-knoepfe { grid-template-columns: 1fr 1fr; }
+    .mu-sort { font-size: var(--wm-t-s); padding: 0; }
+  .mu-ort-link { grid-column: 1 / -1; justify-content: center; border-top: 1px solid var(--wm-flaeche-2); margin-top: 2px; }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* „Mein WaterMap“: Karte in „Mehr“ und Einstellungen (#mehr/einstellungen) */
+.ei-seite { max-width: 1040px; }
+.ei-spalten { display: grid; gap: 0 24px; }
+@media (min-width: 1024px) { .ei-spalten { grid-template-columns: 1fr 1fr; align-items: start; } }
+.ei-zeile { padding: 12px 14px; border-top: 1px solid var(--wm-flaeche-2); }
+.bs-gruppe > :first-child { border-top: 0; }
+.ei-label { display: block; font-weight: 700; color: var(--wm-tinte); font-size: var(--wm-t-m); }
+.ei-hilfe { display: block; margin-top: 2px; color: var(--wm-matt); font-size: var(--wm-t-s); font-weight: 400; }
+.ei-unter { margin: 8px 0 0; }
+.ei-opt { color: var(--wm-matt); font-weight: 400; font-size: var(--wm-t-s); }
+.ei-masse { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+.ei-zahl-wrap { position: relative; display: block; margin-top: 6px; }
+.ei-zahl { width: 100%; min-height: 48px; padding: 0 34px 0 12px; border: 1.5px solid var(--wm-linie); border-radius: var(--wm-r-s); font: inherit; font-size: var(--wm-t-m); color: var(--wm-tinte); background: var(--wm-flaeche); }
+.ei-zahl[aria-invalid="true"] { border-color: var(--wm-stop); }
+.ei-einheit { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--wm-matt); font-weight: 700; pointer-events: none; }
+.ei-fehler { margin: 6px 0 0; color: var(--wm-stop); font-size: var(--wm-t-xs); font-weight: 700; }
+.ei-sw { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 6px 14px; border: 0; border-top: 1px solid var(--wm-flaeche-2); background: none; color: var(--wm-tinte); font: inherit; text-align: left; }
+.ei-sw-label { flex: 1; font-weight: 700; font-size: var(--wm-t-m); }
+.ei-dot { width: 12px; height: 12px; border-radius: var(--wm-r-rund); flex: none; }
+.ei-tr { width: 44px; height: 26px; border-radius: var(--wm-r-s); background: var(--wm-linie); position: relative; flex: none; transition: background .15s; }
+.ei-tr::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); transition: transform .15s; }
+.ei-sw[aria-checked="true"] .ei-tr { background: var(--wm-slip); }
+.ei-sw[aria-checked="true"] .ei-tr::after { transform: translateX(18px); }
+.ei-reihe { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 14px; border-top: 1px solid var(--wm-flaeche-2); }
+.ei-reihe-text { flex: 1; min-width: 0; }
+a.ei-reihe-text { display: flex; flex-direction: column; color: inherit; text-decoration: none; }   /* Mindestpegel-Zeile öffnet den Pegel (7.71.0) */
+.ei-status { font-weight: 700; font-size: var(--wm-t-s); white-space: nowrap; }
+.ei-status.is-ok { color: var(--wm-gut-text); } .ei-status.is-stop { color: var(--wm-stop); } .ei-status.is-offen { color: var(--wm-matt); }
+.ei-knopf { min-height: 44px; padding: 0 14px; border: 1.5px solid var(--wm-linie); border-radius: var(--wm-r-s); background: var(--wm-flaeche); color: var(--wm-tinte); font-weight: 700; font-size: var(--wm-t-s); white-space: nowrap; flex: none; }
+.ei-knopf:disabled { opacity: .6; }
+.ei-rot .bs-ico { background: var(--wm-stop-hell); color: var(--wm-stop); }
+.ei-rot .bs-text strong { color: var(--wm-stop); }
+.btn-gefahr { background: var(--wm-stop); color: var(--wm-flaeche); }
+.btn-gefahr:hover { background: var(--wm-stop-text); }
+
+/* ------------------------------------------------------------------ 7.61.0 Designsystem Schritt 5–7: Meldungen, Mehr, Merkliste, Einstellungen, Melden-Menü, Formulare
+   Eine Sprache wie Karte und Pegel: heller Wassergrund, Kopf mittig (Titel 24/700, runder Zurück-Knopf), weiße Karten mit Radius m und Schatten,
+   Abschnittstitel in Satzschreibung, Chips/Umschalter/Knöpfe wie überall. Ausnahme: „Lage melden“ (dunkle Karte + Formular) bleibt. */
+@media (max-width: 767px) {
+  /* oberste Leiste auf allen Seiten wie auf der Karte: Logo + weiße Such-Pille auf Wassergrund */
+  .app-header { background: var(--wm-wasser); color: var(--wm-tinte); }
+  .bs-seite { padding: 0 0 28px; }
+                .bs-abschnitt { margin: var(--wm-6) var(--wm-4) 0; }
+  .mu-steuer { padding-left: var(--wm-4); padding-right: var(--wm-4); }
+}
+/* runder Knopf: sichtbar 38 px (wie überall), Tippfläche 44 px */
+.bs-abschnitt h2, .bs-abschnitt-kopf h2 { font-size: var(--wm-t-s); font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }
+.bs-gruppe, .mu-umkreis { background: var(--wm-flaeche); border: 0; border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
+.bs-zeile, .ei-zeile, .ei-sw, .ei-reihe { border-top-color: var(--wm-linie); }
+.bs-zeile:hover { background: var(--wm-wasser-2); }
+.bs-ico, .bs-ico.is-dunkel { border-radius: var(--wm-r-s); background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
+.bs-ico.is-typ { color: var(--wm-flaeche); }
+.bs-text strong { color: var(--wm-tinte); font-weight: 700; }
+.bs-text small, .bs-fuss { color: var(--wm-matt); }
+
+/* Mehr: Profil-Karte hell wie alle Karten */
+
+/* Einstellungen */
+.ei-label { color: var(--wm-tinte); }
+.ei-hilfe, .ei-opt, .ei-einheit { color: var(--wm-matt); }
+.ei-zahl { border: 1.5px solid var(--wm-linie); border-radius: var(--wm-r-s); }
+.ei-zahl:focus { border-color: var(--wm-petrol); outline: none; box-shadow: 0 0 0 3px var(--wm-petrol-hell); }
+.ei-zahl[aria-invalid="true"] { border-color: var(--wm-stop); }
+.ei-fehler { color: var(--wm-stop-text); }
+.ei-sw[aria-checked="true"] .ei-tr { background: var(--wm-petrol); }
+.ei-knopf { border: 0; border-radius: var(--wm-r-rund); background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); font-weight: 700; }
+.ei-status.is-ok { color: var(--wm-gut-text); } .ei-status.is-stop { color: var(--wm-stop-text); } .ei-status.is-offen { color: var(--wm-matt); }
+
+/* Meldungen: Chips wie auf der Karte, Karten ohne Rahmen (Zustandsfarbe bleibt oben) */
+.mu-sort { color: var(--wm-petrol-tief); font-weight: 700; }
+.mu-umkreis-kopf b { color: var(--wm-petrol-tief); }
+.mu-range { accent-color: var(--wm-petrol); }
+.mu-karte, .mu-karte.vo-warn, .mu-karte.vo-stop, .mu-karte.vo-gut { border: 0; border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
+.mu-knopf { border: 0; border-radius: var(--wm-r-m); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); color: var(--wm-tinte); }
+
+/* Melden-Menü (ohne „Lage vor Ort melden“ – die dunkle Karte bleibt) */
+.rm-ico, .rm-ico.rm-slip, .rm-ico.rm-foto, .rm-ico.rm-fehler, .rm-ico.rm-ergaenzen { border-radius: var(--wm-r-s); background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
+.rmenu-links { border-top: 0; justify-content: center; }
+
+/* Menüs und Formulare: Grund, Knöpfe, Felder nach den Bausteinen */
+.pop { background: var(--wm-verlauf); }
+.pop.is-sheet { border-radius: var(--wm-r-l) var(--wm-r-l) 0 0; }
+.pop-foot { background: var(--wm-flaeche); border-top-color: var(--wm-linie); }
+.dialog-form:not(.dialog-photo) { border-radius: var(--wm-r-l); background: var(--wm-verlauf); }
+.btn { border-radius: var(--wm-r-m); font-weight: 700; }
+.btn-primary { background: var(--wm-petrol); }
+.btn-primary:hover { background: var(--wm-petrol-tief); }
+.btn-outline { border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); }
+.btn-outline:hover { background: var(--wm-flaeche-2); }
+.field-label { color: var(--wm-tinte); font-weight: 700; }
+.field input[type=text], .field input[type=email], .field input[type=number], .field input[type=date], .field select, .field textarea {
+  border: 1.5px solid var(--wm-linie); border-radius: var(--wm-r-s); background: var(--wm-flaeche); }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--wm-petrol); outline: none; box-shadow: 0 0 0 3px var(--wm-petrol-hell); }
+/* Foto-Formular: eigene Variablen auf Tokens (nicht „Lage melden“) */
+.dialog-photo:not(.dialog-lage) { --pf-navy: var(--wm-tinte); --pf-bg: var(--wm-wasser-2); --pf-petrol: var(--wm-petrol); --pf-line: var(--wm-linie); --pf-muted: var(--wm-matt); }
+
+/* 7.61.0 Abgleich: „In der Nähe“-Kopf am Handy hell wie alle Köpfe; Formular-Köpfe wie alle Sheets (Titel mittig, rundes × links) */
+@media (max-width: 767px) {
+                  .nh-pille { height: 36px; border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); }
+  .nh-pille .nh-bezug-ico { color: var(--wm-petrol-tief); }
+  .nh-pille-pfeil { color: var(--wm-matt); }
+        .nh-zeile1 { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); color: var(--wm-tinte); }
+}
+.dialog-form:not(.dialog-photo) #dlg-title { text-align: center; padding: 0 44px; font-size: var(--wm-t-xl); font-weight: 700; color: var(--wm-tinte); }
+.dialog-form:not(.dialog-photo) > .dlg-x, .dialog:not(.dialog-photo) > .dlg-x { right: auto; left: 10px; }
+.dialog-photo:not(.dialog-lage) .pf-head { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; column-gap: var(--wm-1); text-align: center; }
+.dialog-photo:not(.dialog-lage) .pf-title { grid-column: 2; grid-row: 1; font-size: var(--wm-t-xl); font-weight: 700; color: var(--wm-tinte); }
+.dialog-photo:not(.dialog-lage) .pf-x { grid-column: 1; grid-row: 1; background: transparent; position: relative; isolation: isolate; }
+.dialog-photo:not(.dialog-lage) .pf-x::before { content: ""; position: absolute; inset: 3px; z-index: -1; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
+.dlg-x { border-radius: var(--wm-r-rund); }
+.dialog:not(.dialog-photo) > .dlg-x { isolation: isolate; background: transparent; color: var(--wm-tinte); }
+.dialog:not(.dialog-photo) > .dlg-x::before { content: ""; position: absolute; inset: 3px; z-index: -1; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
+
+/* ------------------------------------------------------------------ 7.62.0 Designsystem Schritt 8, Teil 1: Desktop (≥ 768 px)
+   Gleiche Sprache wie am Handy: die dunkle Kopfleiste bleibt (DESIGN_SYSTEM.md, Abschnitt 5), alles darunter liegt auf dem Wassergrund.
+   Suche als Pille mit Lupe rechts, Chips weiß mit Schatten (aktiv Tinte), Knöpfe in Leisten als Chips, Köpfe mit Titel 24/700. */
+@media (min-width: 768px) {
+  .app-header .search input { border-radius: var(--wm-r-rund); padding-left: var(--wm-5); }
+  .app-header .search input::placeholder { color: var(--wm-matt); }
+  .app-header .search-btn { border-radius: var(--wm-r-rund); color: var(--wm-tinte); }
+
+  .toolbar { background: var(--wm-wasser); border-bottom: 0; }
+  .toolbar .cat { min-height: 40px; border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-size: var(--wm-t-s); font-weight: 700; }
+  .toolbar .cat:hover { background: var(--wm-flaeche-2); color: var(--wm-tinte); }
+  .toolbar .cat-n { font-size: var(--wm-t-xs); font-weight: 400; color: var(--wm-matt); }
+  .toolbar .cat[aria-pressed="true"] { background: var(--wm-tinte); color: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
+  .toolbar .cat[aria-pressed="true"] .cat-check, .toolbar .cat[aria-pressed="true"] .cat-n { color: var(--wm-flaeche); }
+  .toolbar .filter-btn, .toolbar-naehe { min-height: 40px; border: 0; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); color: var(--wm-tinte);
+    box-shadow: var(--wm-schatten); font-size: var(--wm-t-s); font-weight: 700; }
+  .toolbar .filter-btn:hover, .toolbar-naehe:hover { background: var(--wm-flaeche-2); }
+  .toolbar .filter-n { background: var(--wm-petrol); color: var(--wm-flaeche); }
+  .toolbar .inview { font-size: var(--wm-t-s); color: var(--wm-matt); }
+
+  /* Pegel: Kopf auf Wassergrund, Suche wie oben, Chip-Symbole in Tinte (gemerkter Stern Sonne) */
+                        
+  /* In der Nähe (Seitenleiste): Kopf auf Wassergrund, Knöpfe als Chips */
+        .nh-bezug-ico { color: var(--wm-petrol-tief); }
+    
+  /* Seitenleiste (Standortliste, In der Nähe): Wassergrund, Karten weiß mit Schatten */
+    .datainfo { background: transparent; border-bottom: 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+    .nh-erklaer { border: 0; border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); }
+  .nh-erklaer-ico { background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
+  .nh-erklaer-knoepfe { flex-wrap: wrap; }
+  .nh-erklaer-knoepfe .btn { flex: 1 1 auto; white-space: nowrap; border-radius: var(--wm-r-m); }
+            .nh-sort { color: var(--wm-petrol-tief); font-size: var(--wm-t-s); font-weight: 700; }
+  .nh-sort-box::after { color: var(--wm-petrol-tief); }
+}
+
+/* ------------------------------------------------------------------ 7.63.0 Designsystem Schritt 8, Teil 2: Wetter-Fenster
+   Kopf wie alle Sheets (Titel 24/700), großer Wert 72/300, Diagramm als eine weiße Karte (.wx-diagramm),
+   Abschnittstitel in Satzschreibung, Wind-Linie Petrol (Diagramm-Standard), Böen in der Zustandsfarbe „hoch“. */
+.wx-key-wind::before { border-color: var(--wm-petrol); }
+.wx-key-gust::before { border-color: var(--wm-hoch); }
+.wx-wind { stroke: var(--wm-petrol); stroke-width: 2.2; }
+.wx-gust { stroke: var(--wm-hoch); }
+.wx-area { fill: var(--wm-petrol); opacity: .08; }
+.wx-dot-wind { fill: var(--wm-petrol); stroke: var(--wm-flaeche); }
+.wx-dot-gust { fill: var(--wm-hoch); stroke: var(--wm-flaeche); }
+.wx-dir path { stroke: var(--wm-matt); }
+.wx .gc-tip { background: var(--wm-tinte); font-size: var(--wm-t-xs); font-weight: 400; border-radius: var(--wm-r-s); }
+
+.wxd.wxd-wetter .wx { gap: var(--wm-3); }
+.wxd.wxd-wetter .wx-alert, .wxd.wxd-wetter .note-warn { border-radius: var(--wm-r-m); }
+.wxd.wxd-wetter .wx-now-arrow { background: var(--wm-flaeche); color: var(--wm-petrol); box-shadow: var(--wm-schatten); }
+.wxd.wxd-wetter .wx-big strong { font-size: var(--wm-t-held); font-weight: 400; letter-spacing: 0; color: var(--wm-tinte); }
+.wxd.wxd-wetter .wx-big span { font-size: var(--wm-t-xl); font-weight: 400; color: var(--wm-tinte); }
+.wxd.wxd-wetter .wx-sub { font-size: var(--wm-t-s); color: var(--wm-matt); }
+.wxd.wxd-wetter .wx-now-temp { background: var(--wm-flaeche); border-radius: var(--wm-r-rund); box-shadow: var(--wm-schatten); }
+.wxd.wxd-wetter .wx-meta { font-size: var(--wm-t-xs); color: var(--wm-matt); }
+
+/* Diagramm: eine Karte statt vier Streifen */
+.wx-diagramm { display: flex; flex-direction: column; gap: var(--wm-2); }
+.wxd.wxd-wetter .wx-diagramm { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); padding: var(--wm-3) var(--wm-4); }
+.wxd.wxd-wetter .wx-diagramm > .wx-h4, .wxd.wxd-wetter .wx-diagramm > .wx-legend, .wxd.wxd-wetter .wx-diagramm > .gc-wrap,
+.wxd.wxd-wetter .wx-diagramm > details.gc-table { margin: 0; padding: 0; background: none; border-radius: 0; box-shadow: none; }
+.wx-h4, .wxd.wxd-wetter .wx-h4 { font-size: var(--wm-t-s); font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }
+.wx-legend { font-size: var(--wm-t-xs); color: var(--wm-matt); }
+.wxd.wxd-wetter .wx-strip { background: var(--wm-flaeche); border-radius: var(--wm-r-m); padding: var(--wm-2); box-shadow: var(--wm-schatten); }
+.wxd.wxd-wetter .wx-strip li { background: var(--wm-flaeche-2); border-radius: var(--wm-r-s); }
+.wxd.wxd-wetter .wx-diagramm > .gc-wrap { margin: 0 calc(-1 * var(--wm-4)); }
+
+/* ================================================================ Bereiche als Sheet über der Karte (Designumbau 3a, 7.72.0)
+   Nähe, Gemerkt, Meldungen, Mehr und Einstellungen im gemeinsamen Rahmen (bausteine.css: .wm-sheet). Nur Tokens. */
+.wm-bereich-inhalt, .mu-root, .ei-root, .mu-seite { display: flex; flex-direction: column; gap: var(--wm-3); }
+.wm-bereich .wm-kopf .wm-rund.is-busy svg { animation: wm-dreh 1s linear infinite; }
+@keyframes wm-dreh { to { transform: rotate(360deg); } }
+
+/* ---- In der Nähe: Bezugspunkt, Kategorien, Zählzeile, Liste als weiße Gruppe aus Ortszeilen */
+.nh-steuer { display: flex; flex-direction: column; gap: var(--wm-2); }
+.nh-steuer .nh-zeile { display: flex; align-items: center; gap: var(--wm-2); min-width: 0; }
+.nh-steuer .nh-pille { flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: var(--wm-2); height: 44px; padding: 0 var(--wm-4);
+  border: 0; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font: inherit; font-size: var(--wm-t-s); font-weight: 700; cursor: pointer; }
+.nh-steuer .nh-pille-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.nh-steuer .nh-pille-pfeil { display: grid; flex: none; transform: rotate(90deg); color: var(--wm-matt); }
+.nh-steuer .nh-bezug-ico { display: grid; flex: none; color: var(--wm-petrol-tief); }
+.nh-filter { position: relative; flex: none; }
+.nh-filter .filter-n { position: absolute; top: -2px; right: -2px; }
+.nh-sheet .list-head { padding: 0 var(--wm-1); gap: var(--wm-2); font-size: var(--wm-t-s); color: var(--wm-matt); }
+.nh-sheet .list { flex: none; overflow: visible; padding: 0; }
+.nh-sheet .list > li + li > .wm-zeile { border-top: 1px solid var(--wm-linie); }
+.nh-sheet .list .place.is-selected { background: var(--wm-wasser); box-shadow: none; }
+.nh-sheet .list > li.empty, .nh-sheet .list > li.nh-leer { padding: var(--wm-6) var(--wm-4); text-align: center; }
+.nh-sheet .nh-fuss { padding: var(--wm-3) var(--wm-4); border-top: 1px solid var(--wm-linie); font-size: var(--wm-t-xs); color: var(--wm-matt); }
+.nh-sheet .nh-fuss .version { display: block; margin-top: var(--wm-1); }
+.nh-sheet .datainfo { padding: 0 var(--wm-1); font-size: var(--wm-t-xs); color: var(--wm-matt); }
+.nh-sheet .datainfo p { margin: 0; }
+.wm-kachel-ico.is-typ { color: var(--wm-flaeche); }
+.nh-meld { margin-top: 2px; }
+
+/* ---- Gemerkt */
+.gm-leer { display: flex; flex-direction: column; align-items: center; gap: var(--wm-2); }
+.gm-leer-ico { color: var(--wm-sonne); }
+.gm-leer p { margin: 0; max-width: 32ch; }
+.gm-laedt { margin: 0; padding: var(--wm-4); color: var(--wm-matt); font-size: var(--wm-t-s); }
+.gm-hinweis { margin: 0 0 var(--wm-2); font-size: var(--wm-t-s); color: var(--wm-warn-text); }
+.gm-entfernen { width: 40px; height: 40px; }
+
+/* ---- Mehr */
+.mh-fuss { margin: var(--wm-2) var(--wm-1) 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+
+/* ---- Aktuelle Meldungen: Chips, Umschalter, Meldung als Ortszeile mit Marke, Knöpfe darunter */
+.mu-steuer { display: flex; flex-direction: column; gap: var(--wm-2); }
+.mu-sort-box { align-self: flex-end; }
+.mu-liste { display: flex; flex-direction: column; gap: var(--wm-3); }
+.mu-karte { padding-bottom: var(--wm-3); }
+.mu-karte .mu-ico { background: color-mix(in srgb, var(--c) 16%, var(--wm-flaeche)); color: var(--c); }
+.mu-karte .mu-zeit, .mu-karte .mu-wo { font-size: var(--wm-t-s); color: var(--wm-matt); }
+.mu-karte .mu-notiz { margin: 0 var(--wm-3) var(--wm-2); font-size: var(--wm-t-s); color: var(--wm-tinte); }
+.mu-karte .mu-knoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: var(--wm-2); padding: 0 var(--wm-3); }
+.mu-karte .mu-bewertet, .mu-karte .mu-unpassend { margin: var(--wm-2) var(--wm-3) 0; }
+.mu-leer { display: flex; flex-direction: column; align-items: center; gap: var(--wm-2); }
+.mu-leer-titel { margin: 0; font-weight: 700; color: var(--wm-tinte); }
+.mu-leer-text { margin: 0; max-width: 36ch; }
+
+/* ---- Einstellungen („Mein WaterMap“) im Sheet: eine Spalte, ohne Seitenrand */
+.ei-sheet .bs-seite { max-width: none; margin: 0; padding: 0; }
+.ei-sheet .ei-spalten { display: flex; flex-direction: column; gap: 0; }
+.ei-sheet .bs-abschnitt { margin: var(--wm-3) 0 0; }
+.ei-sheet .bs-abschnitt:first-child { margin-top: 0; }
+.ei-sheet .bs-fuss { margin: var(--wm-4) var(--wm-1) 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+
+/* ---- Fenster im Rahmen (Wetter, Pegel-Alarm, Pegel aus Slipanlage und Gemerkt) */
+.wxd-pegel .pegel-fenster .pd { background: none; }
+
+/* ---- Formulare und Melden-Menü mit dem Kopf-Baustein (Designumbau 3a): Titel links, × rechts; der alte ×-Knopf des Dialogs entfällt dort */
+.dialog:has(#dlg-body > .wm-kopf, #dlg-body .ae-form > .wm-kopf) > .dlg-x { display: none; }
+#dlg-body > .wm-kopf, .ae-form > .wm-kopf { padding: 0 0 var(--wm-3); }
+.pf-oben { position: relative; padding: var(--wm-5) var(--wm-4) 0; }
+.pf-oben > .wm-kopf { padding: 0 0 var(--wm-2) var(--wm-1); }
+#dlg-body > .wm-kopf, .ae-form > .wm-kopf, .pf-oben > .wm-kopf { text-align: left; }
+
+/* ================================================================ Standort-Sheet (Designumbau 3b, 7.72.1, main.js standortZeigen)
+   Slipanlagen, Häfen, Tankstellen, Zusatzorte im gemeinsamen Rahmen; Handy Stufe „klein“ = Kopf, Aktionen, „Details“. Nur Tokens. */
+.st-sheet .detail-body { display: flex; flex-direction: column; gap: var(--wm-3); padding: 0; }
+.st-sheet .st-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--wm-1); margin-top: calc(-1 * var(--wm-2)); font-size: var(--wm-t-s); color: var(--wm-matt); }
+.st-sheet .st-meta .trust { display: inline-flex; align-items: center; gap: var(--wm-1); min-height: 32px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.st-sheet .trust-tip { display: block; margin-top: var(--wm-1); font-size: var(--wm-t-s); }
+.st-sheet .st-details { display: none; width: 100%; }
+.st-sheet.is-klein .st-details { display: inline-flex; }
+@media (min-width: 768px) { .st-sheet.is-klein .st-details { display: none; } }
+.st-sheet .st-klein-ende { display: block; height: 0; }
+.st-sheet .pegel-gruppe .wm-zeile { color: var(--wm-tinte); text-decoration: none; }
+.st-sheet .pegel-box.is-gruen .wm-kachel-ico { background: var(--wm-gut-hell); color: var(--wm-gut-text); }
+.st-sheet .pegel-box.is-warn .wm-kachel-ico { background: var(--wm-warn-hell); color: var(--wm-warn-text); }
+.st-sheet .pegel-box.is-rot .wm-kachel-ico { background: var(--wm-stop-hell); color: var(--wm-stop-text); }
+.st-sheet .wxz.wm-zeile { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); color: var(--wm-tinte); text-align: left; font: inherit; cursor: pointer; }
+.st-sheet .wxz.wxz-warn .wm-kachel-ico { background: var(--wm-stop-hell); color: var(--sev, var(--wm-stop)); }
+.st-sheet .wb { margin: 0; }
+.st-sheet .wb-titel { margin: 0 var(--wm-1) var(--wm-2); }
+.st-sheet .wb-p small { font-size: var(--wm-t-xs); font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }
+.st-sheet:not(.is-klein) .st-lage { display: none; }
+@media (min-width: 768px) { .st-sheet .st-lage { display: none; } }

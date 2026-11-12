@@ -1,6 +1,7 @@
 // Fotos eines Standorts: immer ein Bild, Pfeile, Wischen und Pfeiltasten; Antippen öffnet das Vollbild.
 import { h } from './dom.js';
 import { icon } from './icons.js';
+import { FOTO_KATEGORIEN, fotoFilter } from './foto-kategorien.js';
 
 const SWIPE_PX = 40;
 const EASE = 'cubic-bezier(.22, .8, .24, 1)';
@@ -93,15 +94,38 @@ function viewer(photos, name, { start = 0, className, onImageClick } = {}) {
 export function photoCarousel(photos, { name, onReport }) {
   const caption = h('p', { class: 'ph-caption' });
   const credit = h('span', { class: 'ph-credit' });
-  const v = viewer(photos, name, { className: 'ph-frame', onImageClick: (i) => openLightbox(photos, name, i) });
-  const report = onReport ? h('button', { type: 'button', class: 'ph-report', text: 'Foto melden', onclick: () => onReport(photos[v.index()]) }) : null;
-  v.onChange((ph) => {
-    caption.textContent = ph.alt || '';
-    caption.hidden = !ph.alt;
-    credit.textContent = ph.credit ? `Foto: ${ph.credit}` : '';
-  });
-  v.show(0);
-  return h('section', { class: 'photos', 'aria-label': 'Fotos' }, v.frame, h('div', { class: 'ph-meta' }, caption, h('div', { class: 'ph-foot' }, credit, report)));
+  const badge = h('span', { class: 'ph-kat', hidden: true });
+  let liste = photos, v = null;
+  const report = onReport ? h('button', { type: 'button', class: 'ph-report', text: 'Foto melden', onclick: () => onReport(liste[v.index()]) }) : null;
+  const section = h('section', { class: 'photos', 'aria-label': 'Fotos' });
+  // Bildtext: Notiz; ist sie nur der Name der Kategorie (ältere Fotos), steht sie schon im Etikett
+  const zeigen = (neu) => {
+    liste = neu;
+    const alt = v?.frame;
+    v = viewer(liste, name, { className: 'ph-frame', onImageClick: (i) => openLightbox(liste, name, i) });
+    v.frame.append(badge);
+    v.onChange((ph) => {
+      const k = FOTO_KATEGORIEN[ph.kategorie];
+      badge.hidden = !k;
+      if (k) badge.innerHTML = icon(k.ico, 16) + `<span>${k.text}</span>`;
+      const text = ph.alt && ph.alt !== k?.text ? ph.alt : '';
+      caption.textContent = text; caption.hidden = !text;
+      credit.textContent = ph.credit ? `Foto: ${ph.credit}` : '';
+    });
+    v.show(0);
+    if (alt) alt.replaceWith(v.frame);
+  };
+  // Filter nach Kategorie (nur bei Fotos aus mindestens zwei Kategorien)
+  const filter = fotoFilter(photos);
+  const chips = filter.length ? h('div', { class: 'ph-filter', role: 'group', 'aria-label': 'Fotos nach Kategorie' },
+    filter.map(f => h('button', { type: 'button', class: 'ph-chip', 'aria-pressed': String(f.key === null), dataset: { kat: f.key || 'alle' },
+      onclick: (e) => {
+        for (const b of e.currentTarget.parentNode.children) b.setAttribute('aria-pressed', String(b === e.currentTarget));
+        zeigen(f.key ? photos.filter(ph => ph.kategorie === f.key) : photos);
+      } }, f.text, ' ', h('span', { class: 'ph-chip-n', text: String(f.n) })))) : null;
+  zeigen(photos);
+  section.append(...[chips, v.frame, h('div', { class: 'ph-meta' }, caption, h('div', { class: 'ph-foot' }, credit, report))].filter(Boolean));
+  return section;
 }
 
 /** Vollbild mit denselben Bedienwegen; Escape oder × schließt. */

@@ -1,0 +1,30 @@
+# WaterMap – Hinweise für Claude
+
+Projektstand, Architektur, Entscheidungen und offene Aufgaben: **`watermap-stand.md`** (zuerst lesen).
+
+## Arbeitsregeln (vom Nutzer festgelegt)
+- Antworten auf Deutsch, kurz.
+- Nur als **Vorschau** veröffentlichen (Branch `claude/oms-daten-aktualisieren-0bc073`, PR #4, https://deploy-preview-4--watermaps.netlify.app). PR zusammenführen **nur**, wenn der Nutzer „übernehmen“ sagt.
+- Nur kostenlose Dienste.
+- API-Schlüssel und Secrets nie im Chat erzeugen oder erfragen; der Nutzer trägt sie selbst in Netlify ein.
+- Vor größeren Änderungen an der Oberfläche erst einen Plan zeigen oder Rückfragen stellen. Ist etwas unklar: fragen.
+- Keine neuen PRs ohne Auftrag.
+
+## Bei jeder App-Änderung
+- Version erhöhen: `VERSION` in `public/js/config.js` **und** `public/sw.js`; neue Dateien in `SHELL_FILES` (`sw.js`) eintragen.
+- Tests laufen lassen (siehe README „Tests“), bei Oberflächen 375/390/1024/1440 px prüfen.
+- Commit-Nachricht auf Deutsch mit Version, z. B. „Pegel-Dashboard (7.19.0)“.
+
+## Tests in der Cloud-Umgebung
+- Playwright: Chromium unter `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (nicht `playwright install`). Die Tests rufen `chromium.launch(` ohne Pfad auf – dafür eine Kopie mit `executable_path=` im Scratchpad ausführen.
+- `ui_smoke.py` und `pwa_test.py` brauchen einen Server auf Port 8765: `(cd public && setsid python3 -m http.server 8765 &)`.
+- Achtung: `pkill -f "http.server 876…"` trifft auch die eigene Shell, wenn das Muster im selben Befehl steht – in ein Skript auslagern.
+- JS-Syntax prüfen: Datei als `.mjs` kopieren, `node --check`.
+- Leaflet-Ersatz für Tests: `tests/stub/leaflet-stub.js` (fehlende Methoden dort ergänzen, nicht die App verbiegen).
+
+## Designsystem (verbindlich)
+- Bei **jeder** Arbeit an der Oberfläche (`public/css`, `public/js` mit DOM/Markup, neue Ansichten) zuerst **`DESIGN_SYSTEM.md`** lesen und einhalten: Farb-, Schrift-, Abstands-, Radius- und Schatten-Tokens, Komponentenstandards, Breakpoints, Zustände, Barrierefreiheit.
+- Keine Werte außerhalb der Tokens; fehlt etwas, erst `DESIGN_SYSTEM.md` ergänzen (mit Begründung), dann verwenden.
+- Abweichungen nur nach Rückfrage beim Nutzer. Die Projektregeln oben gelten weiter (Vorschau zuerst, Version, Tests, 375/390/1024/1440 px).
+- **Designumbau (ab 10.11.2026):** freigegebener Plan in `docs/AUFTRAG-designumbau.md`, Vorbild `docs/prototyp-designumbau.dc.html` (Maße, Farben, Abläufe übernehmen, nicht die Technik). Phase für Phase; nach jeder Phase committen, Vorschau, Bilder 390/1440 px nebeneinander, **auf Freigabe warten**.
+- **Eine Designsprache in der ganzen App (Nutzer, 05.11.2026):** Gleiche Elemente sehen überall gleich aus – Suchleiste, Chips, Kopf (Titel links, × rechts), Karten, Ortszeilen, Knöpfe, Umschalter, Sheets. Bei jeder Änderung an einem Element **selbstständig** alle anderen Stellen mit demselben Element prüfen und angleichen (Bildschirmfotos aller Bereiche nebeneinander vergleichen), ohne dass der Nutzer es einzeln sagen muss. Ausnahme nur, was `DESIGN_SYSTEM.md` ausdrücklich nennt („Lage melden“).

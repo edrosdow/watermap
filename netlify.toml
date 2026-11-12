@@ -4,7 +4,7 @@
   publish = "public"
   # Kein Build-Schritt nötig: reine statische Seite.
   # Commits der Foto-Verwaltung, die nur den Verlauf (admin/verlauf.json) ändern, brauchen keinen neuen Deploy.
-  ignore = "git log -1 --pretty=%s | grep -qE '^(Foto abgelehnt|Foto-Meldung verworfen|Slipanlage abgelehnt|Preis abgelehnt|Hinweis erledigt|Hinweis verworfen):'"
+  ignore = "git log -1 --pretty=%s | grep -qE '^(Foto abgelehnt|Foto-Meldung verworfen|Slipanlage abgelehnt|Preis abgelehnt|Hinweis erledigt|Hinweis verworfen|Angaben abgelehnt|Lagemeldung entfernt):'"
 
 [build.environment]
   # @netlify/blobs (Pegel-Alarm) braucht Node 22

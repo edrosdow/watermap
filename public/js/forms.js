@@ -5,6 +5,10 @@ import { h, clear, $, announce } from './dom.js';
 import { icon } from './icons.js';
 import { displayName, formatDistance } from './model.js';
 import { prefs } from './favorites.js';
+import { hakenSvg } from './bewegung.js';
+import { openPhotoForm } from './photo-form.js';
+import { kopf } from './bausteine.js';
+import { tok } from './farben.js';
 
 const YNU = [['', 'Nicht bekannt'], ['ja', 'Ja'], ['nein', 'Nein']];
 
@@ -29,30 +33,16 @@ export const FORMS = {
     rights: true,
     submit: 'Zur Prüfung senden',
   },
-  'tankpreis-melden': {
-    title: 'Kraftstoffpreis melden',
-    intro: 'Melde den Preis, den du an der Bootstankstelle gesehen hast. Er wird erst nach Prüfung angezeigt – mit Datum.',
-    fields: [
-      { name: 'tankstelle', type: 'station' },
-      { name: 'kraftstoff', label: 'Kraftstoff', type: 'select', required: true, options: [['diesel', 'Diesel'], ['benzin', 'Benzin']] },
-      { name: 'preis', label: 'Preis pro Liter in €', type: 'number', required: true, placeholder: 'z. B. 2,189' },
-      { name: 'datum', label: 'Datum der Beobachtung', type: 'date', required: true },
-      { name: 'beleg', label: 'Belegfoto (optional, max. 5 MB)', type: 'file' },
-      { name: 'kommentar', label: 'Kommentar (optional)', type: 'textarea', max: 500 },
-    ],
-    rights: true,
-    submit: 'Preis zur Prüfung senden',
-  },
   'foto-einreichen': {
-    title: 'Foto einreichen',
-    intro: 'Fotos helfen anderen bei der Einschätzung vor Ort. Sie werden vor der Veröffentlichung geprüft.',
+    // eigene Oberfläche in photo-form.js; die Liste beschreibt nur die gesendeten Felder
+    title: 'Foto hinzufügen',
     fields: [
       { name: 'standort_ref', type: 'station', any: true },
-      { name: 'beschreibung', label: 'Bildbeschreibung', type: 'textarea', required: true, max: 500, placeholder: 'Was ist zu sehen? Aufnahmedatum?' },
-      { name: 'foto', label: 'Foto (max. 5 MB)', type: 'file', required: true },
+      { name: 'kategorie', type: 'hidden' },                 // Pflicht: eine Foto-Kategorie (foto-kategorien.js)
+      { name: 'beschreibung', type: 'text', max: 140 },      // „Notiz (optional)“
+      { name: 'foto', type: 'file', required: true },
     ],
     rights: true,
-    submit: 'Foto zur Prüfung senden',
   },
   'fehler-melden': {
     title: 'Informationen korrigieren',
@@ -77,10 +67,8 @@ export function submittedFieldNames(formName) {
   const names = new Set(['form-name', 'bot-field']);
   for (const f of spec.fields) {
     if (f.type === 'location') ['lat', 'lon'].forEach(n => names.add(n));
-    else if (f.type === 'station') {
-      if (formName === 'tankpreis-melden') { names.add('tankstelle_id'); names.add('tankstelle_name'); }
-      else { names.add('standort_id'); names.add('standort_name'); }
-    } else names.add(f.name);
+    else if (f.type === 'station') { names.add('standort_id'); names.add('standort_name'); }
+    else names.add(f.name);
   }
   if (spec.rights) names.add('foto_rechte');
   if (formName === 'slipanlage-melden') names.add('dublette_bestaetigt');
@@ -113,13 +101,31 @@ export async function prepareImage(file) {
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = hgt;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, hgt);
+  ctx.fillStyle = tok('--wm-flaeche'); ctx.fillRect(0, 0, w, hgt);
   ctx.drawImage(bitmap, 0, 0, w, hgt);
   bitmap.close?.();
   const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.86));
   if (!blob) throw new Error('Das Bild konnte nicht aufbereitet werden. Bitte ein anderes Foto wählen.');
   if (blob.size > CONFIG.MAX_PHOTO_BYTES) throw new Error('Das aufbereitete Foto ist noch größer als 5 MB.');
   return new File([blob], 'foto.jpg', { type: 'image/jpeg' });
+}
+
+/**
+ * Schickt eine Meldung an Netlify Forms. fd muss form-name enthalten. Mit Anhang als multipart, sonst urlencoded.
+ * Beachtet Honeypot und Sende-Bremse; wirft Error mit nutzerfreundlicher Meldung.
+ */
+export async function sendReport(fd, { multipart = false } = {}) {
+  if (fd.get('bot-field')) return;   // Bots bekommen Erfolg vorgespielt
+  const last = Number(prefs.get('lastSubmit') || 0);
+  if (Date.now() - last < CONFIG.SUBMIT_COOLDOWN_MS) throw new Error('Bitte warte einen Moment, bevor du die nächste Meldung sendest.');
+  const body = multipart ? fd : new URLSearchParams([...fd.entries()].map(([k, v]) => [k, typeof v === 'string' ? v : '']));
+  let res;
+  try { res = await fetch('/', { method: 'POST', body }); }
+  catch { throw new Error(navigator.onLine === false ? 'Du bist offline. Bitte später erneut senden.' : 'Senden fehlgeschlagen. Bitte erneut versuchen.'); }
+  if (!res.ok) throw new Error(res.status === 404 || res.status === 405 || res.status === 501
+    ? 'Hier läuft die Seite nur lokal. Meldungen funktionieren erst auf der veröffentlichten Netlify-Website.'
+    : `Der Server hat die Meldung abgelehnt (HTTP ${res.status}). Bitte später erneut versuchen.`);
+  prefs.set('lastSubmit', String(Date.now()));
 }
 
 // ------------------------------------------------------------------ Formular-Dialog
@@ -131,6 +137,7 @@ export async function prepareImage(file) {
  * preset = { standort_id, standort_name, lat, lon, art }
  */
 export function openForm(formName, ctx, preset = {}) {
+  if (formName === 'foto-einreichen') return openPhotoForm(ctx, preset);
   const spec = FORMS[formName];
   const dlg = ctx.dialog;
   const root = clear($('#dlg-body', dlg));
@@ -215,12 +222,9 @@ export function openForm(formName, ctx, preset = {}) {
   }
 
   function buildStation(f) {
-    const isPrice = formName === 'tankpreis-melden';
-    const idName = isPrice ? 'tankstelle_id' : 'standort_id';
-    const nameName = isPrice ? 'tankstelle_name' : 'standort_name';
-    const label = isPrice ? 'Bootstankstelle' : 'Standort';
+    const idName = 'standort_id', nameName = 'standort_name';
     // Keine Auswahlliste: der Standort kommt immer von der Karte (Detailansicht oder Auswahlmodus, main.js)
-    const p = preset.standort_id && ctx.places.find(x => x.id === preset.standort_id && (!isPrice || x.type === 'fuel'));
+    const p = preset.standort_id && ctx.places.find(x => x.id === preset.standort_id);
     const general = !p && preset.standort_id === '__other' && formName === 'fehler-melden';
     const idIn = h('input', { type: 'hidden', name: idName, value: p ? p.id : general ? '__other' : '' });
     const nameIn = h('input', { type: 'hidden', name: nameName, value: p ? displayName(p) : '' });
@@ -228,8 +232,8 @@ export function openForm(formName, ctx, preset = {}) {
     const shown = p ? displayName(p) + (p.locality ? ` – ${p.locality}` : '') : general ? 'Allgemeiner Hinweis (kein bestimmter Standort)' : null;
     const change = ctx.choosePlace ? h('button', { type: 'button', class: 'btn btn-outline small', text: shown ? 'Anderen Standort wählen' : 'Auf der Karte wählen',
       onclick: () => ctx.choosePlace(formName) }) : null;
-    return h('div', { class: 'field' }, h('span', { class: 'field-label', text: label }),
-      shown ? h('p', { class: 'fixed-place', text: shown }) : h('p', { class: 'hint', text: isPrice ? 'Bitte die Bootstankstelle auf der Karte antippen.' : 'Bitte den Standort auf der Karte antippen.' }),
+    return h('div', { class: 'field' }, h('span', { class: 'field-label', text: 'Standort' }),
+      shown ? h('p', { class: 'fixed-place', text: shown }) : h('p', { class: 'hint', text: 'Bitte den Standort auf der Karte antippen.' }),
       idIn, nameIn, change);
   }
 
@@ -279,7 +283,6 @@ export function openForm(formName, ctx, preset = {}) {
         } else fd.delete(fileField.name);
       }
       fd.set('form-name', formName);
-      if (formName === 'tankpreis-melden') fd.set('preis', String(fd.get('preis')).trim().replace(',', '.'));
       if (!hasFile && !(fileField && fd.has(fileField.name))) { /* kein Anhang */ }
       const body = hasFile ? fd : new URLSearchParams([...fd.entries()].map(([k, v]) => [k, typeof v === 'string' ? v : '']));
       const res = await fetch('/', { method: 'POST', body });
@@ -287,7 +290,7 @@ export function openForm(formName, ctx, preset = {}) {
         ? 'Hier läuft die Seite nur lokal. Meldungen funktionieren erst auf der veröffentlichten Netlify-Website.'
         : `Der Server hat die Meldung abgelehnt (HTTP ${res.status}). Bitte später erneut versuchen.`);
       prefs.set('lastSubmit', String(Date.now()));
-      clear(root).append(h('div', { class: 'thanks' }, h('div', { class: 'thanks-ico', html: icon('check', 32) }),
+      clear(root).append(h('div', { class: 'thanks' }, h('div', { class: 'thanks-ico', html: hakenSvg(32) }),
         h('h2', { text: 'Danke für deine Meldung!' }),
         h('p', { text: 'Sie ist jetzt „Wartet auf Prüfung“. Sie erscheint erst nach einer Kontrolle auf der Karte – nicht automatisch.' }),
         h('button', { type: 'button', class: 'btn btn-primary', text: 'Schließen', onclick: () => dlg.close() })));
@@ -299,9 +302,10 @@ export function openForm(formName, ctx, preset = {}) {
     }
   });
 
-  root.append(h('h2', { id: 'dlg-title', text: spec.title }), h('p', { class: 'muted', text: spec.intro }), form);
+  root.append(kopf({ titel: spec.title, titelId: 'dlg-title', onZu: () => dlg.close() }), h('p', { class: 'muted', text: spec.intro }), form);   // Kopf-Baustein (Designumbau 3a)
   dlg.setAttribute('aria-labelledby', 'dlg-title');
   dlg.showModal();
+  $('#dlg-title', root).focus();   // nicht der Schließen-Knopf (sonst Fokus-Rahmen beim Öffnen)
   if (preset.lat != null && controls.setLocation) { /* bereits gesetzt */ }
 }
 
@@ -317,14 +321,6 @@ function validate(formName, form, fd, state, controls) {
   }
   const email = fd.get('kontakt');
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) return bad('Bitte eine gültige E-Mail-Adresse eingeben – oder das Feld leer lassen.', controls.kontakt);
-  if (formName === 'tankpreis-melden') {
-    const rawPrice = String(fd.get('preis')).trim().replace(',', '.');
-    const price = /^\d{1,2}(\.\d{1,3})?$/.test(rawPrice) ? Number(rawPrice) : NaN;
-    if (!Number.isFinite(price) || price < CONFIG.PRICE_MIN || price > CONFIG.PRICE_MAX) return bad(`Bitte einen Preis zwischen ${CONFIG.PRICE_MIN} und ${CONFIG.PRICE_MAX} € pro Liter eingeben.`, controls.preis);
-    const d = String(fd.get('datum'));
-    if (d > new Date().toISOString().slice(0, 10)) return bad('Das Datum darf nicht in der Zukunft liegen.', controls.datum);
-    if (!fd.get('tankstelle_id')) return bad('Bitte die Bootstankstelle auf der Karte wählen.', controls.tankstelle_id);
-  }
   if ((formName === 'foto-einreichen' || formName === 'fehler-melden') && !fd.get('standort_id')) return bad('Bitte den Standort auf der Karte wählen.', controls.standort_id);
   if (formName === 'slipanlage-melden') {
     const la = Number(fd.get('lat')), lo = Number(fd.get('lon'));

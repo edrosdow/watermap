@@ -1,10 +1,13 @@
 // Kapselt Leaflet (+ MarkerCluster). Der Rest der App kennt nur diese Schnittstelle.
 import { CONFIG } from './config.js';
-import { gaugeMarkerHtml } from './pegel.js';
+import { pillenHtml, pegelTitel, ZOOM_MIT_ZAHL, ZOOM_OHNE_CLUSTER } from './pegel-marker.js';
+import { meinePegel } from './pegel-daten.js';
 import { extraMarkerHtml, extraTitle, KINDS, GROUPS } from './extras.js';
 import { pinSvg } from './icons.js';
 import { favorites } from './favorites.js';
 import { displayName, TYPES } from './model.js';
+import { gebietLaden, kachelNoetig, imGebiet } from './gebiet.js';
+import { tok } from './farben.js';
 
 // ------------------------------------------------------------------ Bibliotheken laden
 function loadCss(urls) {
@@ -49,20 +52,51 @@ export async function loadMapLibraries() {
 }
 
 // ------------------------------------------------------------------ Karte
-export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster }) {
+export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, onAusserhalb, useCluster }) {
   const L = window.L;
-  const map = L.map(el, { zoomControl: false, worldCopyJump: false, tap: true }).setView(CONFIG.FALLBACK_VIEW.center, CONFIG.FALLBACK_VIEW.zoom);
-  L.control.zoom({ position: 'bottomright', zoomInTitle: 'Vergrößern', zoomOutTitle: 'Verkleinern' }).addTo(map);
-  L.tileLayer(CONFIG.TILE_URL, { maxZoom: CONFIG.TILE_MAX_ZOOM, attribution: CONFIG.TILE_ATTRIBUTION }).addTo(map);
+  // Kartengebiet (CONFIG.GEBIET): Verschieben und Herauszoomen bis Europa, Deutschland hervorgehoben.
+  // maxBounds begrenzt auch setView/flyTo/fitBounds (Leaflet verschiebt die Mitte ins Rechteck).
+  const G = CONFIG.GEBIET;
+  const rahmen = L.latLngBounds(G.europa);
+  const map = L.map(el, { zoomControl: false, worldCopyJump: false, tap: true, maxBounds: rahmen, maxBoundsViscosity: 0.9, minZoom: 2.5, bounceAtZoomLimits: false,
+    zoomSnap: 0.25, zoomDelta: 1 });   // Viertelstufen: ganz Deutschland füllt das Fenster möglichst gut
+  // gleich mit ganz Deutschland beginnen (keine Kacheln eines Zwischenausschnitts)
+  if (map.getSize().x > 50) map.fitBounds(L.latLngBounds(G.bounds), { padding: [6, 6], animate: false });
+  else map.setView(CONFIG.FALLBACK_VIEW.center, CONFIG.FALLBACK_VIEW.zoom);
+  L.control.zoom({ position: 'topright', zoomInTitle: 'Vergrößern', zoomOutTitle: 'Verkleinern' }).addTo(map);
+  // Kacheln nur für das Gebiet laden (außerhalb liegt ohnehin die Maske)
+  const Kacheln = L.TileLayer.extend({
+    _isValidTile(c) { return L.TileLayer.prototype._isValidTile.call(this, c) && kachelNoetig(c.x, c.y, c.z); },
+  });
+  new Kacheln(CONFIG.TILE_URL, { maxZoom: CONFIG.TILE_MAX_ZOOM, attribution: CONFIG.TILE_ATTRIBUTION }).addTo(map);
   map.attributionControl.setPrefix(false);
+  // Kleinster Zoom: ganz Europa passt ins Kartenfenster – auf sehr breiten Bildschirmen höchstens ≈ 120 Längengrade (keine Weltkarte)
+  const minZoomSetzen = () => {
+    const s = map.getSize();
+    if (s.x < 50 || s.y < 50) return;
+    const breite = Math.ceil(Math.log2(s.x * 360 / (256 * 120)) * 4) / 4;
+    map.setMinZoom(Math.max(2.5, Math.min(6, Math.max(map.getBoundsZoom(rahmen, false), breite))));   // getBoundsZoom rundet auf zoomSnap ab
+  };
+  map.on('resize', minZoomSetzen); minZoomSetzen();
+  // Schleier: außerhalb des deutschen Landes leicht grau (Canvas, eigene Ebene über den Kacheln, unter Markern)
+  gebietLaden().then((g) => {
+    const pane = map.createPane('wm-maske');
+    pane.style.zIndex = 250; pane.style.pointerEvents = 'none';
+    const welt = [[-85, -180], [-85, 180], [85, 180], [85, -180]];
+    L.polygon([welt, ...g.anzeige], { pane: 'wm-maske', renderer: L.canvas({ pane: 'wm-maske', padding: 0.5 }), interactive: false,
+      color: tok('--wm-tinte'), opacity: 0.4, weight: 1.3, fillColor: G.maske, fillOpacity: G.nachbarn ?? 1, smoothFactor: 1 }).addTo(map);
+  }, () => { /* ohne Grenze bleibt das Rechteck */ });
 
+  let meld = new Map();   // Standort-ID → { n, typ } aktiver Lagemeldungen („Heute vor Ort“)
   const layer = useCluster
     ? L.markerClusterGroup({
-        showCoverageOnHover: false, chunkedLoading: true, maxClusterRadius: 52, disableClusteringAtZoom: 15,
+        showCoverageOnHover: false, chunkedLoading: true, chunkInterval: 40, chunkDelay: 16, maxClusterRadius: 52, disableClusteringAtZoom: 15,
         iconCreateFunction: (c) => {
           const n = c.getChildCount();
           const size = n < 10 ? 38 : n < 100 ? 44 : 50;
-          return L.divIcon({ html: `<span>${n}</span>`, className: 'wm-cluster', iconSize: [size, size] });
+          // Roter Punkt, wenn ein enthaltener Standort als gesperrt gemeldet ist
+          const stop = meld.size && c.getAllChildMarkers().some(m => meld.get(m.options.placeId)?.typ === 'gesperrt');
+          return L.divIcon({ html: `<span>${n}</span>${stop ? '<b class="wm-cstop" aria-hidden="true"></b>' : ''}`, className: 'wm-cluster', iconSize: [size, size] });
         },
       })
     : L.layerGroup();
@@ -75,17 +109,27 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
   let userMarker = null;
 
   const FAV_STAR = '<span class="wm-fav" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><path d="m12 3 2.8 5.8 6.2.8-4.5 4.4 1.1 6.2L12 17.2 6.4 20.2l1.1-6.2L3 9.6l6.2-.8z"/></svg></span>';
+  const badge = (info) => (!info ? '' : info.typ === 'gesperrt'
+    ? '<span class="wm-mbadge is-stop" aria-hidden="true"><i></i></span>'
+    : `<span class="wm-mbadge" aria-hidden="true">${Math.min(99, info.n | 0)}</span>`);
   const iconFor = (p, selected) => L.divIcon({
-    className: 'wm-pin' + (selected ? ' is-selected' : '') + (favorites.has(p.id) ? ' is-fav' : ''),
-    html: pinSvg(p.type, { selected }) + (favorites.has(p.id) ? FAV_STAR : ''),
+    className: 'wm-pin' + (selected ? ' is-selected' : '') + (favorites.has(p.id) ? ' is-fav' : '') + (meld.has(p.id) ? ' has-meld' : ''),
+    html: pinSvg(p.type, { selected }) + (favorites.has(p.id) ? FAV_STAR : '') + badge(meld.get(p.id)),
     iconSize: [44, 54], iconAnchor: [22, 52],
   });
+  const titleFor = (p) => {
+    const info = meld.get(p.id);
+    return `${displayName(p)} – ${TYPES[p.type].label}` + (info ? (info.typ === 'gesperrt' ? ' – gesperrt gemeldet' : ` – ${info.n} aktuelle Meldung${info.n === 1 ? '' : 'en'}`) : '');
+  };
 
-  // Pegel: eigene Ebene, ohne Cluster, unter den Standort-Pins; bei kleinem Zoom nur Punkte (CSS)
+  // Pegel (Chip „Pegel“): Wert-Pillen in eigener Ebene, Cluster bis ZOOM_OHNE_CLUSTER, unter ZOOM_MIT_ZAHL nur Punkte (CSS .pk-kompakt)
   let gaugeLayer = null, gaugeMarkers = new Map(), gaugeSel = null;
-  const gaugeIcon = (g, sel) => L.divIcon({ className: 'wm-gauge', html: gaugeMarkerHtml(g, sel), iconSize: null, iconAnchor: [9, 13] });
-  const zoomClass = () => el.classList.toggle('wm-gauges-compact', map.getZoom() < 9);
+  const gaugeIcon = (g, sel) => L.divIcon({ className: 'pk-marker', html: pillenHtml(g, { gewaehlt: sel, gemerkt: meinePegel.hat(g.id) }), iconSize: null, iconAnchor: [20, 14] });
+  const gaugeZ = (g) => (g.id === gaugeSel ? 1000 : meinePegel.hat(g.id) ? 600 : 500);
+  const zoomClass = () => el.classList.toggle('pk-kompakt', map.getZoom() < ZOOM_MIT_ZAHL);
   map.on('zoomend', zoomClass); zoomClass();
+  // Stern „Meine Pegel“ an anderer Stelle geändert: Pillen neu zeichnen (gemerkte größer, mit Stern)
+  document.addEventListener('meine-pegel', () => { for (const { marker, gauge } of gaugeMarkers.values()) { marker.setIcon(gaugeIcon(gauge, gauge.id === gaugeSel)); marker.setZIndexOffset(gaugeZ(gauge)); } });
 
   // Extras: je Gruppe eine Ebene (mit kleinen Clustern, wenn verfügbar)
   const extraLayers = {}, extraMarkers = new Map();
@@ -107,8 +151,8 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
       const list = [];
       for (const p of places) {
         const m = L.marker([p.lat, p.lon], {
-          icon: iconFor(p, p.id === selectedId),
-          title: `${displayName(p)} – ${TYPES[p.type].label}`,
+          icon: iconFor(p, p.id === selectedId), placeId: p.id,
+          title: titleFor(p),
           alt: displayName(p), keyboard: true, riseOnHover: true,
         });
         m.on('click', () => onMarkerClick && onMarkerClick(p.id));
@@ -116,6 +160,20 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
         list.push(m);
       }
       if (layer.addLayers) layer.addLayers(list); else list.forEach(m => m.addTo(layer));
+    },
+
+    /** Aktive Lagemeldungen (Map Standort-ID → { n, typ }): Abzeichen an Pins und Clustern neu zeichnen. */
+    setMeldungen(next) {
+      const alt = meld;
+      meld = next || new Map();
+      for (const [id, { marker, place }] of markers) {
+        const a = alt.get(id), b = meld.get(id);
+        if (a?.n === b?.n && a?.typ === b?.typ) continue;
+        marker.setIcon(iconFor(place, id === selectedId));
+        if (marker.options) marker.options.title = titleFor(place);
+        marker.getElement?.()?.setAttribute('title', titleFor(place));
+      }
+      layer.refreshClusters?.();
     },
 
     /** Pin neu zeichnen (z. B. nach Favorit an/aus). */
@@ -149,13 +207,18 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
     setGauges(list, onClick) {
       if (gaugeLayer) { gaugeLayer.remove(); gaugeLayer = null; gaugeMarkers.clear(); }
       if (!list) { map.attributionControl.removeAttribution(CONFIG.PEGEL_ATTRIBUTION); return; }
-      gaugeLayer = L.layerGroup().addTo(map);
-      for (const g of list) {
-        const m = L.marker([g.lat, g.lon], { icon: gaugeIcon(g, g.id === gaugeSel), title: `Pegel ${g.name}`, alt: `Pegel ${g.name}`, keyboard: true, zIndexOffset: 500 });
+      gaugeLayer = useCluster
+        ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 44, disableClusteringAtZoom: ZOOM_OHNE_CLUSTER, chunkedLoading: true, spiderfyOnMaxZoom: false,
+            iconCreateFunction: (c) => L.divIcon({ html: `<span>${c.getChildCount()}</span>`, className: 'pk-cluster', iconSize: [40, 40] }) })
+        : L.layerGroup();
+      const ms = list.map((g) => {
+        const m = L.marker([g.lat, g.lon], { icon: gaugeIcon(g, g.id === gaugeSel), title: pegelTitel(g), alt: `Pegel ${g.name}`, keyboard: true, zIndexOffset: gaugeZ(g) });
         m.on('click', () => onClick(g.id));
         gaugeMarkers.set(g.id, { marker: m, gauge: g });
-        m.addTo(gaugeLayer);
-      }
+        return m;
+      });
+      if (gaugeLayer.addLayers) gaugeLayer.addLayers(ms); else ms.forEach(m => m.addTo(gaugeLayer));
+      gaugeLayer.addTo(map);
       map.attributionControl.addAttribution(CONFIG.PEGEL_ATTRIBUTION);
     },
     /** Extras einer Gruppe zeigen (Liste) oder entfernen (null). */
@@ -165,7 +228,7 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
       if (!list) return;
       const color = GROUPS[group].color;
       const layer = useCluster
-        ? L.markerClusterGroup({ showCoverageOnHover: false, chunkedLoading: true, maxClusterRadius: 40, disableClusteringAtZoom: 15,
+        ? L.markerClusterGroup({ showCoverageOnHover: false, chunkedLoading: true, chunkInterval: 40, chunkDelay: 16, maxClusterRadius: 40, disableClusteringAtZoom: 15,
             iconCreateFunction: (c) => L.divIcon({ html: `<span style="--c:${color}">${c.getChildCount()}</span>`, className: 'wm-extra-cluster', iconSize: [30, 30] }) })
         : L.layerGroup();
       const ms = list.map((x) => {
@@ -186,16 +249,22 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
     },
     selectGauge(id) {
       const prev = gaugeMarkers.get(gaugeSel);
-      if (prev) { prev.marker.setIcon(gaugeIcon(prev.gauge, false)); prev.marker.setZIndexOffset(500); }
       gaugeSel = id;
+      if (prev) { prev.marker.setIcon(gaugeIcon(prev.gauge, false)); prev.marker.setZIndexOffset(gaugeZ(prev.gauge)); }
       const cur = gaugeMarkers.get(id);
-      if (cur) { cur.marker.setIcon(gaugeIcon(cur.gauge, true)); cur.marker.setZIndexOffset(1000); }
+      if (cur) {
+        // im Cluster versteckt: Cluster auflösen, damit der gewählte Pegel zu sehen ist
+        if (gaugeLayer?.zoomToShowLayer && !cur.marker._icon) gaugeLayer.zoomToShowLayer(cur.marker, () => {});
+        cur.marker.setIcon(gaugeIcon(cur.gauge, true)); cur.marker.setZIndexOffset(1000);
+      }
     },
     fitBounds(points, opts = {}) {
       if (!points.length) return;
       map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 12, ...opts });
     },
     setView(view) { map.setView(view.center, view.zoom); },
+    /** Ganz Deutschland mit Nord- und Ostseeküste zeigen (Startansicht). */
+    zeigeGebiet() { map.fitBounds(L.latLngBounds(CONFIG.GEBIET.bounds), { padding: [6, 6] }); },
     getBounds() { const b = map.getBounds(); return { south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast() }; },
     getCenter() { const c = map.getCenter(); return { lat: c.lat, lon: c.lng }; },
     getZoom() { return map.getZoom(); },
@@ -204,8 +273,8 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
     showUser(lat, lon, accuracy) {
       if (userMarker) userMarker.remove();
       userMarker = L.layerGroup([
-        L.circle([lat, lon], { radius: Math.min(accuracy || 0, 2000), color: '#087F9C', weight: 1, fillOpacity: 0.08, interactive: false }),
-        L.circleMarker([lat, lon], { radius: 7, color: '#fff', weight: 3, fillColor: '#087F9C', fillOpacity: 1, interactive: false }),
+        L.circle([lat, lon], { radius: Math.min(accuracy || 0, 2000), color: tok('--wm-petrol'), weight: 1, fillOpacity: 0.08, interactive: false }),
+        L.circleMarker([lat, lon], { radius: 7, color: tok('--wm-flaeche'), weight: 3, fillColor: tok('--wm-petrol'), fillOpacity: 1, interactive: false }),
       ]).addTo(map);
     },
 
@@ -218,7 +287,10 @@ export function createMap(el, { onMoveEnd, onMapClick, onMarkerClick, useCluster
         };
         if (initial) setMark([initial.lat, initial.lon]);
         let current = initial ? { lat: initial.lat, lon: initial.lon } : null;
-        pickHandler = (ll) => { current = { lat: ll.lat, lon: ll.lng }; setMark(ll); api.onPick && api.onPick(current); };
+        pickHandler = (ll) => {
+          if (!imGebiet(ll.lat, ll.lng)) { onAusserhalb && onAusserhalb(); return; }   // nur im Kartengebiet wählbar
+          current = { lat: ll.lat, lon: ll.lng }; setMark(ll); api.onPick && api.onPick(current);
+        };
         const api = this.__pickApi = {
           confirm: () => { cleanup(); resolve(current); },
           cancel: () => { cleanup(); resolve(null); },

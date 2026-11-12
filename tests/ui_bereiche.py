@@ -1,0 +1,259 @@
+"""UI-Test der Hauptnavigation (Karte · Meldungen · Melden · Gemerkt · Mehr), der Übersicht „Aktuelle Meldungen“ (#meldungen),
+des Bereichs „Mehr“ (#mehr) und der Merkliste (#mehr/merkliste) – mit nachgebildeter API und den Daten aus ui_full.py.
+Start: python3 tests/ui_bereiche.py [screenshots-ordner]"""
+import datetime as dt, importlib.util, json, pathlib, re, tempfile, time, urllib.parse
+from playwright.sync_api import sync_playwright
+
+HERE = pathlib.Path(__file__).resolve().parent
+spec = importlib.util.spec_from_file_location('ui_full', HERE / 'ui_full.py'); uf = importlib.util.module_from_spec(spec); spec.loader.exec_module(uf)
+SHOTS = uf.SHOTS
+NOW = int(time.time() * 1000)
+problems = []
+def check(cond, msg):
+    print(('OK   ' if cond else 'FAIL ') + msg, flush=True)
+    if not cond: problems.append(msg)
+
+# Pegel (für „Meine Pegel“ in der Merkliste)
+G = '00000001-0000-4000-8000-000000000000'
+STATION = {'uuid': G, 'number': '1', 'shortname': 'VLOTHO', 'longname': 'VLOTHO', 'km': 201.4, 'agency': 'X', 'longitude': 8.86, 'latitude': 52.17,
+           'water': {'shortname': 'WESER', 'longname': 'WESER'},
+           'timeseries': [{'shortname': 'W', 'unit': 'cm', 'currentMeasurement': {'timestamp': dt.datetime.now(dt.timezone.utc).isoformat(), 'value': 96, 'stateMnwMhw': 'low', 'stateNswHsw': 'normal'},
+                           'characteristicValues': [{'shortname': 'MNW', 'unit': 'cm', 'value': 100}, {'shortname': 'MHW', 'unit': 'cm', 'value': 400}]}]}
+
+def api(st):
+    def handler(route):
+        r = route.request; u = r.url
+        if st['down']: return route.abort()
+        if r.method == 'GET' and u.endswith('/api/meldungen/liste'):
+            st['liste'] += 1
+            return route.fulfill(status=200, content_type='application/json', body=json.dumps({'meldungen': sorted(st['M'], key=lambda m: -m['erstelltAm']), 'zeit': NOW}))
+        if r.method == 'GET' and u.endswith('/api/meldungen/aktiv'):
+            return route.fulfill(status=200, content_type='application/json', body=json.dumps({'aktiv': [], 'zeit': NOW}))
+        if r.method == 'GET':
+            sid = u.split('standort=')[1].replace('%2F', '/')
+            return route.fulfill(status=200, content_type='application/json', body=json.dumps({'meldungen': [m for m in st['M'] if m['standortId'] == sid], 'zeit': NOW}))
+        if '/bestaetigen' in u:
+            mid = u.split('/api/meldungen/')[1].split('/')[0]; body = json.loads(r.post_data or '{}')
+            st['votes'].append((mid, body.get('stimmt')))
+            m = next(m for m in st['M'] if m['id'] == mid); m['bestaetigt' if body['stimmt'] else 'widersprochen'] += 1
+            return route.fulfill(status=200, content_type='application/json', body=json.dumps({'standortId': m['standortId'], 'meldungen': [x for x in st['M'] if x['standortId'] == m['standortId']]}))
+        return route.fulfill(status=404, body='{}')
+    return handler
+
+def page(b, w, hh, mobile):
+    ctx = b.new_context(viewport={'width': w, 'height': hh}, is_mobile=mobile, has_touch=mobile, device_scale_factor=1, locale='de-DE', service_workers='block')
+    uf.lib_routes(ctx)
+    st = {'down': False, 'liste': 0, 'votes': [], 'M': [], 'forms': [], 'formfail': False}
+    ctx.route('**/api/meldungen**', api(st))
+    def formular(route):   # Netlify Forms (POST /)
+        r = route.request
+        if r.method != 'POST': return route.continue_()
+        if st['formfail']: return route.fulfill(status=500, body='')
+        st['forms'].append(dict(urllib.parse.parse_qsl(r.post_data or '')))
+        return route.fulfill(status=200, body='ok')
+    ctx.route(lambda u: u.rstrip('/') == uf.BASE.rstrip('/'), formular)
+    ctx.route('**/api/pegel/**', lambda r: r.fulfill(status=200, content_type='application/json', body=json.dumps([STATION]) if 'stations.json' in r.request.url else '[]'))
+    ctx.route('**/api/gezeiten**', lambda r: r.fulfill(status=404, content_type='application/json', body='{"keinOrt": true}'))
+    ctx.add_init_script("try { localStorage.setItem('watermap.geoAsked', '1'); } catch {}")
+    pg = ctx.new_page(); errs = []
+    pg.on('pageerror', lambda e: errs.append('PAGEERROR ' + str(e)))
+    pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
+    pg.errs = errs; pg.st = st
+    return ctx, pg
+
+def run(b, w, hh):
+    mobile = w < 768; tag = f'{w}px'; nav = '#bottomnav' if mobile else '#topnav'
+    print(f'--- {tag}')
+    ctx, pg = page(b, w, hh, mobile)
+    pg.goto(uf.BASE + '#karte'); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(800)
+    ids = pg.evaluate("window.__watermap.state.places.filter(p => p.type === 'slip').slice(0, 4).map(p => p.id)")
+    pg.st['M'] = [
+        {'id': 'aa01', 'standortId': ids[0], 'typ': 'gesperrt', 'notiz': 'Rampe überflutet', 'erstelltAm': NOW - 12 * 60000, 'bestaetigt': 3, 'widersprochen': 0},
+        {'id': 'aa02', 'standortId': ids[1], 'typ': 'parkplatz_voll', 'notiz': None, 'erstelltAm': NOW - 3 * 60000, 'bestaetigt': 0, 'widersprochen': 0},
+        {'id': 'aa03', 'standortId': ids[2], 'typ': 'alles_frei', 'notiz': None, 'erstelltAm': NOW - 40 * 60000, 'bestaetigt': 1, 'widersprochen': 0},
+        {'id': 'aa04', 'standortId': ids[3], 'typ': 'warteschlange', 'notiz': 'ca. 20 min', 'erstelltAm': NOW - 70 * 60000, 'bestaetigt': 0, 'widersprochen': 0},
+    ]
+    pg.reload(); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(800)   # die „neu“-Zahl lädt die Meldungen schon beim Start
+    # Navigation (Handy: nur Symbole, Beschriftung als aria-label; „Meldungen“ trägt die Zahl der neuen Meldungen)
+    texte = [re.sub(r'\s*\d+$', '', t.strip()) for t in pg.locator(f'{nav} [data-nav]').all_inner_texts()] if not mobile else [re.sub(r', \d+ neu$', '', a) for a in pg.locator(f'{nav} [data-nav]').evaluate_all("els => els.map(e => e.getAttribute('aria-label'))")]
+    check(texte == (['Karte', 'Meldungen', 'Melden', 'Gemerkt', 'Mehr'] if mobile else ['Karte', 'Meldungen', 'Gemerkt', 'Mehr']), f'{tag}: Navigation {texte}')
+    if mobile:
+        bn = pg.locator('#bottomnav').bounding_box()
+        check(abs(bn['y'] + bn['height'] - (hh - 10)) <= 1 and abs(bn['x'] - 16) <= 1 and abs(bn['x'] + bn['width'] - (w - 16)) <= 1 and abs(bn['height'] - 68) <= 1, f'{tag}: Leiste schwebt (16 px seitlich, 10 px unten, 68 px hoch) ({bn})')
+        check(all(pg.locator(f'#bottomnav .bn-item >> nth={i}').bounding_box()['width'] >= 44 and pg.locator(f'#bottomnav .bn-item >> nth={i}').bounding_box()['height'] >= 56 for i in range(5)), f'{tag}: Ziele ≥ 44 × 56 px')
+        nb = pg.locator('#btn-naehe-m').bounding_box()
+        check(nb['y'] + nb['height'] <= bn['y'] and nb['x'] >= 0, f'{tag}: „In der Nähe“ auf der Karte über der Leiste')
+    else:
+        check(pg.locator('#btn-naehe-d').is_visible() and pg.locator('#btn-naehe-m').is_hidden(), f'{tag}: „In der Nähe“ in der Werkzeugleiste')
+    check(pg.evaluate('document.documentElement.scrollWidth') <= w, f'{tag}: kein waagerechtes Scrollen')
+
+    # Meldungen
+    pg.click(f'{nav} [data-nav=meldungen]'); pg.wait_for_selector('.mu-karte')
+    check(pg.url.endswith('#meldungen') and pg.locator(f'{nav} [data-nav=meldungen]').get_attribute('aria-current') == 'page', f'{tag}: #meldungen, „Meldungen“ aktiv')
+    check(pg.locator('.wm-sheet.mu-sheet.is-offen').count() == 1, f'{tag}: Meldungen als Sheet über der Karte (Designumbau 3a)')
+    kopf = pg.inner_text('.mu-sheet .wm-kopf')
+    check('Aktuelle Meldungen' in kopf and 'aus deinem Revier' in kopf and '4 aktuelle Meldungen' in kopf and pg.locator('.mu-sheet .wm-kopf [aria-label="Meldungen aktualisieren"]').count() == 1, f'{tag}: Kopf mit Anzahl und Aktualisieren')
+    typen = [t.strip() for t in pg.locator('.mu-typ').all_inner_texts()]
+    check(typen == ['Parkplatz voll', 'Gesperrt', 'Alles frei', 'Warteschlange'] and pg.locator('.mu-karte .wm-zeile .wm-marke.mu-typ').count() == 4, f'{tag}: neueste zuerst, Art als Zustandsmarke ({typen})')
+    karte0 = pg.locator('.mu-karte', has_text='Gesperrt').text_content()
+    check(re.search(r'Gemeldet vor 1\d Min\.', karte0) and '3× bestätigt' in karte0 and '„Rampe überflutet“' in karte0, f'{tag}: Karte mit Zeit, Bestätigungen, Notiz')
+    check(pg.locator('.mu-karte.vo-stop').count() == 1 and pg.locator('.mu-karte.vo-gut').count() == 1, f'{tag}: Farbton nach Art (gesperrt rot, alles frei grün)')
+    pg.select_option('.mu-sort', 'wichtig'); pg.wait_for_timeout(100)
+    check(pg.locator('.mu-typ').first.inner_text() == 'Gesperrt', f'{tag}: „Wichtigste zuerst“')
+    check(pg.locator('.mu-sort option[value=nah]').count() == 0, f'{tag}: ohne bekannte Position keine Sortierung nach Entfernung')
+    pg.click('.mu-chip:has-text("Parkplätze")'); pg.wait_for_timeout(100)
+    check(pg.locator('.mu-karte').count() == 1 and pg.locator('.mu-chip.is-an').inner_text().strip() == 'Parkplätze', f'{tag}: Filter Parkplätze')
+    pg.click('.mu-chip:has-text("Hindernisse")'); pg.wait_for_timeout(100)
+    check(pg.locator('.mu-karte').count() == 0 and 'Für diesen Filter' in pg.inner_text('.mu-leer'), f'{tag}: leerer Filter mit Hinweis')
+    pg.click('.mu-leer .mu-alle'); pg.wait_for_timeout(100)
+    check(pg.locator('.mu-karte').count() == 4, f'{tag}: „Alle Meldungen zeigen“')
+    pg.click('.mu-seg button:has-text("Kartenausschnitt")'); pg.wait_for_timeout(100)
+    n_aus = pg.locator('.mu-karte').count()
+    check(0 <= n_aus <= 4 and pg.locator('.mu-seg button.is-an').inner_text() == 'Kartenausschnitt', f'{tag}: Kartenausschnitt ({n_aus} von 4)')
+    # Mein Standort: Freigabe erst auf Wunsch, dann Umkreis-Regler 5–100 km mit Live-Liste
+    pg.click('.mu-seg button:has-text("Mein Standort")'); pg.wait_for_timeout(150)
+    check(pg.locator('.mu-seg button.is-an').inner_text() == 'Mein Standort' and 'Standort verwenden' in pg.inner_text('.mu-pos') and pg.locator('.mu-range').count() == 0 and pg.locator('.mu-karte').count() == 0,
+          f'{tag}: „Mein Standort“ fragt erst nach (Knopf „Standort verwenden“), noch kein Regler')
+    c0 = pg.evaluate(f"(() => {{ const p = window.__watermap.state.byId.get({ids[0]!r}); return {{ latitude: p.lat + 0.01, longitude: p.lon }}; }})()")
+    pg.context.grant_permissions(['geolocation']); pg.context.set_geolocation(c0)
+    pg.click('.mu-pos .mu-melden'); pg.wait_for_selector('.mu-range')
+    r = pg.locator('.mu-range')
+    check(r.get_attribute('min') == '5' and r.get_attribute('max') == '100' and r.get_attribute('step') == '5' and r.input_value() == '25' and pg.inner_text('.mu-km-wert') == '25 km', f'{tag}: Regler 5–100 km in 5er-Schritten, Start 25 km')
+    check(pg.locator('.mu-karte').count() >= 1 and 'Umkreis von 25 km um deinen Standort' in pg.inner_text('.mu-umkreis-zahl') and pg.locator('.mu-wo').count() == pg.locator('.mu-karte').count() and all(' km' in t or ' m' in t for t in pg.locator('.mu-wo').all_inner_texts()), f'{tag}: Liste mit Entfernungen, Zählzeile')
+    pg.evaluate("document.querySelector('.mu-range').dataset.same = '1'")
+    pg.evaluate("(() => { const r = document.querySelector('.mu-range'); r.value = '5'; r.dispatchEvent(new Event('input', { bubbles: true })); })()"); pg.wait_for_timeout(100)
+    n5 = pg.locator('.mu-karte').count()
+    check(pg.locator('.mu-range').get_attribute('data-same') == '1' and pg.inner_text('.mu-km-wert') == '5 km' and 'Umkreis von 5 km' in pg.inner_text('.mu-umkreis-zahl') and n5 >= 1, f'{tag}: Ziehen auf 5 km aktualisiert die Liste, der Regler bleibt stehen ({n5} Meldungen)')
+    pg.evaluate("(() => { const r = document.querySelector('.mu-range'); r.value = '100'; r.dispatchEvent(new Event('input', { bubbles: true })); r.dispatchEvent(new Event('change', { bubbles: true })); })()"); pg.wait_for_timeout(100)
+    check(pg.locator('.mu-karte').count() >= n5 and pg.evaluate("localStorage.getItem('watermap.meldungen.umkreis')") == '100', f'{tag}: 100 km zeigt mindestens so viele, Umkreis wird gemerkt')
+    pg.evaluate("(() => { const r = document.querySelector('.mu-range'); r.value = '5'; r.dispatchEvent(new Event('input', { bubbles: true })); r.dispatchEvent(new Event('change', { bubbles: true })); })()")
+    pg.screenshot(path=str(SHOTS / f'bereiche_{w}_1meldungen_umkreis.png'))
+    pg.click('.mu-seg button:has-text("Überall")'); pg.wait_for_timeout(100)
+    check(pg.locator('.mu-range').count() == 0 and pg.locator('.mu-karte').count() == 4, f'{tag}: „Überall“ blendet den Regler aus und zeigt alle')
+    pg.evaluate("localStorage.removeItem('watermap.meldungen.umkreis')")
+    pg.screenshot(path=str(SHOTS / f'bereiche_{w}_1meldungen.png'))
+    # Bewerten
+    k = pg.locator('.mu-karte', has_text='Gesperrt')
+    k.locator('button:has-text("Stimmt noch")').click(); pg.wait_for_timeout(400)
+    k = pg.locator('.mu-karte', has_text='Gesperrt')
+    check(('aa01', True) in pg.st['votes'] and '4× bestätigt' in k.inner_text() and k.locator('button:has-text("Stimmt noch")').is_disabled(), f'{tag}: „Stimmt noch“ zählt und sperrt erneutes Bewerten')
+    # Unpassend melden: nur bei Notiz; Fehler bleibt im Fenster; danach Hinweis an Netlify Forms und Meldung ausgeblendet
+    check(pg.locator('.mu-karte', has_text='Parkplatz voll').locator('.vo-unpassend').count() == 0 and pg.locator('.mu-karte .vo-unpassend').count() == 2, f'{tag}: „Unpassend melden“ nur bei Meldungen mit Notiz')
+    pg.locator('.mu-karte', has_text='Warteschlange').locator('.vo-unpassend').click(); pg.wait_for_selector('.um-dlg[open]')
+    dlg = pg.locator('.um-dlg')
+    check('ca. 20 min' in dlg.inner_text() and 'Warteschlange' in dlg.inner_text() and dlg.locator('.um-senden').is_disabled(), f'{tag}: Fenster zeigt die Meldung, Senden erst nach Grund')
+    bx = dlg.bounding_box()
+    check(bx['x'] >= 0 and bx['x'] + bx['width'] <= w + 1 and bx['y'] + bx['height'] <= hh + 1 and (not mobile or bx['y'] + bx['height'] >= hh - 2), f'{tag}: Fenster passt ({"unten" if mobile else "Mitte"})')
+    dlg.locator('.um-grund', has_text='Beleidigend').click()
+    pg.st['formfail'] = True; dlg.locator('.um-senden').click(); pg.wait_for_selector('.um-fehler:not([hidden])')
+    check(pg.locator('.um-dlg[open]').count() == 1 and pg.locator('.mu-karte').count() == 4, f'{tag}: Senden fehlgeschlagen → Hinweis im Fenster, Meldung bleibt')
+    pg.screenshot(path=str(SHOTS / f'bereiche_{w}_4unpassend.png'))
+    pg.st['formfail'] = False
+    dlg.locator('.um-senden').click(); pg.wait_for_selector('.um-dlg', state='detached'); pg.wait_for_timeout(300)
+    f = pg.st['forms'][-1] if pg.st['forms'] else {}
+    check(f.get('form-name') == 'fehler-melden' and f.get('art') == 'meldung' and 'Meldung-ID: aa04' in f.get('details', '') and 'Grund: Beleidigend' in f.get('details', '') and f.get('standort_id') == ids[3],
+          f'{tag}: Hinweis über „fehler-melden“ mit Meldung-ID und Grund ({f})')
+    check(pg.locator('.mu-karte').count() == 3 and pg.locator('.mu-karte', has_text='Warteschlange').count() == 0 and '3 aktuelle Meldungen' in pg.inner_text('.mu-sheet .wm-kopf'),
+          f'{tag}: Meldung für mich ausgeblendet')
+    # Heute vor Ort: Unpassend melden bei Notiz, Weg zur Übersicht
+    pg.evaluate(f"window.__watermap.setView('karte'); window.__watermap.selectPlace({ids[0]!r}, {{full: true}})"); pg.wait_for_selector('#detail .vo-alle-link'); pg.wait_for_timeout(300)
+    vo = pg.locator('#detail .vo-karte')
+    check(vo.locator('.vo-unpassend').count() == 1 and '3 Meldungen im Revier' in vo.inner_text(), f'{tag}: „Heute vor Ort“ mit „Unpassend melden“ und Anzahl im Revier')
+    vo.locator('.vo-alle-link').click(); pg.wait_for_selector('.wm-sheet.mu-sheet.is-offen .mu-karte')
+    check(pg.url.endswith('#meldungen'), f'{tag}: „Alle Meldungen“ öffnet die Übersicht')
+    # Standort ansehen
+    pg.locator('.mu-karte', has_text='Parkplatz voll').locator('.mu-ort-link').click(); pg.wait_for_selector('#detail:not([hidden])')
+    check(f'p={ids[1].replace("/", "%2F")}' in pg.url and pg.locator(f'{nav} [data-nav=karte]').get_attribute('aria-current') == 'page', f'{tag}: „Standort“ öffnet die Slipanlage')
+    pg.go_back(); pg.wait_for_selector('.wm-sheet.mu-sheet.is-offen .mu-karte')
+    check(pg.url.endswith('#meldungen'), f'{tag}: Zurück führt wieder zu den Meldungen')
+    # Offline: letzter Stand mit Hinweis, Bewerten gesperrt
+    pg.st['down'] = True
+    pg.reload(); pg.wait_for_selector('.mu-karte', timeout=30000)
+    off = pg.inner_text('.wm-sheet.mu-sheet')
+    check('Offline – letzter gespeicherter Stand' in off and pg.locator('.mu-karte').count() == 3 and pg.locator('.mu-knopf:not([disabled])').count() == 0, f'{tag}: offline letzter Stand, Bewerten gesperrt')
+    pg.st['down'] = False
+
+    # Mehr
+    pg.click(f'{nav} [data-nav=mehr]'); pg.wait_for_selector('.wm-sheet.mh-sheet.is-offen .wm-zeile')
+    mehr = pg.locator('.wm-sheet.mh-sheet').text_content()
+    check(pg.url.endswith('#mehr') and all(t in mehr for t in ['Mein WaterMap', 'In der Nähe', 'Hilfe und Feedback', 'Über WaterMap', 'Datenschutz', 'Impressum']) and 'Merkliste' not in mehr,
+          f'{tag}: „Mehr“ als Sheet mit allen Einträgen (Merkliste → „Gemerkt“)')
+    check(pg.get_attribute('.wm-sheet.mh-sheet a.wm-zeile:has-text("Über WaterMap")', 'href') == './ueber.html' and (pg.get_attribute('.wm-sheet.mh-sheet a.wm-zeile:has-text("Hilfe")', 'href') or '').startswith('mailto:'),
+          f'{tag}: Links zu Über und Feedback')
+    check(all(b['height'] >= 63.5 for b in [pg.locator('.wm-sheet.mh-sheet .wm-zeile').nth(i).bounding_box() for i in range(pg.locator('.wm-sheet.mh-sheet .wm-zeile').count())]), f'{tag}: Ortszeilen ≥ 64 px')
+    check(pg.locator('.ei-profil').count() == 0, f'{tag}: keine dunkle Karte „Mein WaterMap“ mehr')
+    pg.screenshot(path=str(SHOTS / f'bereiche_{w}_2mehr.png'))
+    pg.click('.wm-sheet.mh-sheet .wm-zeile:has-text("In der Nähe")'); pg.wait_for_selector('.nh-sheet .place.nk, .nh-sheet .nh-leer'); pg.wait_for_selector('.wm-sheet.mh-sheet', state='detached')
+    check(pg.url.endswith('#naehe') and pg.locator(f'{nav} [data-nav=mehr]').get_attribute('aria-current') == 'page' and pg.locator('.wm-sheet.mh-sheet').count() == 0, f'{tag}: Mehr → In der Nähe (#naehe), „Mehr“-Sheet zu')
+
+    # Merkliste: ein Ort, ein Pegel; öffnen und entfernen
+    pg.evaluate("([id, g]) => { localStorage.setItem('watermap.favorites.v1', JSON.stringify([id])); localStorage.setItem('watermap.meinePegel', JSON.stringify([g])); localStorage.setItem('watermap.meinePegel.ampel', '1'); }", [ids[0], G])
+    pg.goto(uf.BASE + '#mehr/merkliste'); pg.reload(); pg.wait_for_selector('.wm-sheet.gm-sheet.is-offen .wm-zeile-wert', timeout=10000)
+    check(pg.url.endswith('#gemerkt') and pg.locator(f'{nav} [data-nav=gemerkt]').get_attribute('aria-current') == 'page', f'{tag}: alte Adresse #mehr/merkliste → #gemerkt')
+    mk = pg.locator('.wm-sheet.gm-sheet').text_content()
+    check('Orte (1)' in mk and 'Pegel (1)' in mk and 'Vlotho' in mk and '96 cm' in mk and 'niedrig' in mk.lower() and '2 Einträge' in mk, f'{tag}: „Gemerkt“ mit Ort und Pegel')
+    badge = pg.locator(f'{nav} [data-nav=gemerkt] .nav-badge')
+    check(badge.is_visible() and badge.inner_text() == '2', f'{tag}: Abzeichen an „Gemerkt“ = 2')
+    pg.screenshot(path=str(SHOTS / f'bereiche_{w}_3merkliste.png'))
+    pg.click('.wm-sheet.gm-sheet .wm-zeile:has-text("Vlotho")'); pg.wait_for_selector('.wm-sheet.wxd-pegel.is-offen #pd-name')
+    check(pg.url.endswith('#gemerkt') and pg.locator('.wm-sheet.gm-sheet').count() == 1, f'{tag}: Pegel aus „Gemerkt“ legt sich als Sheet darüber (Adresse bleibt)')
+    pg.locator('.wm-sheet.wxd-pegel .wm-zu').click(); pg.wait_for_timeout(700)
+    check(pg.locator('.wm-sheet.wxd-pegel').count() == 0 and pg.locator('.wm-sheet.gm-sheet.is-offen').count() == 1, f'{tag}: × schließt das Pegel-Sheet, „Gemerkt“ bleibt')
+    check(pg.url.endswith('#gemerkt'), f'{tag}: Adresse wieder #gemerkt')
+    pg.click('.wm-sheet.gm-sheet .wm-kopf [aria-label=Bearbeiten]'); pg.wait_for_timeout(150)
+    pg.click('.wm-sheet.gm-sheet .gm-entfernen >> nth=1'); pg.wait_for_timeout(300)
+    check('Orte' not in pg.inner_text('.wm-sheet.gm-sheet .wm-sheet-inhalt') and pg.evaluate("JSON.parse(localStorage.getItem('watermap.favorites.v1'))") == [], f'{tag}: Ort entfernt (Speicher der Favoriten)')
+    check(pg.evaluate("JSON.parse(localStorage.getItem('watermap.meinePegel'))") == [G] and badge.inner_text() == '1', f'{tag}: „Meine Pegel“ unverändert, Abzeichen 1')
+    pg.click('#toast .toast-aktion'); pg.wait_for_timeout(300)
+    check('Orte (1)' in pg.inner_text('.wm-sheet.gm-sheet'), f'{tag}: „Rückgängig“ holt den Ort zurück')
+    pg.click(f'{nav} [data-nav=mehr]'); pg.wait_for_timeout(700)
+    check(pg.url.endswith('#mehr') and pg.locator('.wm-sheet.mh-sheet.is-offen').count() == 1 and pg.locator('.wm-sheet.gm-sheet').count() == 0, f'{tag}: „Mehr“ ersetzt „Gemerkt“')
+    pg.locator('.wm-sheet.mh-sheet .wm-zu').click(); pg.wait_for_timeout(700)
+    check(pg.locator('.wm-sheet.wm-bereich').count() == 0 and pg.locator(f'{nav} [data-nav=karte]').get_attribute('aria-current') == 'page' and '#mehr' not in pg.url, f'{tag}: × schließt „Mehr“, Karte aktiv')
+
+    # Slipanlage: „Weißt du mehr? Ergänzen“ öffnet „Angaben ergänzen“ (kein „Fehler melden“)
+    pg.goto(uf.BASE + '#karte'); pg.wait_for_selector('.leaflet-container'); pg.wait_for_timeout(500)
+    pg.evaluate(f"window.__watermap.selectPlace({ids[2]!r}, {{full: true}})"); pg.wait_for_selector('#detail .wb-link')
+    pg.locator('#detail .wb-link').click(); pg.wait_for_selector('.ae-dlg[open]')
+    dlg = pg.locator('.ae-dlg'); sb = dlg.locator('.ae-senden')
+    check('Angaben ergänzen' in dlg.inner_text() and 'Informationen korrigieren' not in pg.inner_text('body') and sb.is_disabled() and sb.inner_text() == 'Nichts ausgewählt',
+          f'{tag}: Formular „Angaben ergänzen“, ohne Auswahl gesperrt')
+    bx = dlg.bounding_box()
+    check(bx['x'] >= 0 and bx['x'] + bx['width'] <= w + 1 and bx['y'] + bx['height'] <= hh + 1, f'{tag}: Formular passt ins Fenster')
+    if dlg.locator('fieldset[data-key=fee]').count() == 0: dlg.locator('.ae-aendern').click()
+    fee = dlg.locator('fieldset[data-key=fee]')
+    fee.locator('.ae-opt', has_text='Kostenlos').click()
+    check(sb.inner_text() == '1 Angabe senden' and not sb.is_disabled(), f'{tag}: eine Angabe gewählt')
+    fee.locator('.ae-opt', has_text='Kostenlos').click()
+    check(sb.is_disabled() and fee.locator('.ae-opt[aria-pressed=true]').count() == 0, f'{tag}: nochmal antippen hebt die Auswahl auf')
+    fee.locator('.ae-opt', has_text='Kostenpflichtig').click(); fee.locator('input[name=fee_note]').fill('5 € pro Tag')
+    if dlg.locator('select[name=surface]').count() == 0: dlg.locator('.ae-aendern').click()
+    dlg.locator('select[name=surface]').select_option('Beton')
+    dlg.locator('fieldset[data-key=trailer] .ae-opt', has_text='In der Nähe').click()
+    check(sb.inner_text() == '3 Angaben senden', f'{tag}: Zähler „3 Angaben senden“ ({sb.inner_text()})')
+    pg.screenshot(path=str(SHOTS / f'bereiche_{w}_5ergaenzen.png'))
+    pg.evaluate("localStorage.removeItem('watermap.lastSubmit')")   # Sendebremse nach „Unpassend melden“ oben
+    n0 = len(pg.st['forms']); sb.click(); pg.wait_for_selector('.ae-dlg', state='detached')
+    f = pg.st['forms'][-1] if len(pg.st['forms']) > n0 else {}
+    check(f.get('form-name') == 'slip-ergaenzen' and f.get('standort_id') == ids[2] and json.loads(f.get('angaben', '{}')) == {'fee': 'kostenpflichtig', 'fee_note': '5 € pro Tag', 'surface': 'Beton', 'trailer': 'naehe'},
+          f'{tag}: nur gewählte Angaben gesendet ({f.get("angaben")})')
+    check('Deine Angaben werden geprüft' in pg.inner_text('body'), f'{tag}: Danke-Hinweis')
+
+    # Alte Adressen
+    for adresse, sel in [('#pegel', '#cats [data-cat=pegel][aria-pressed=true]'), ('#favoriten', '.wm-sheet.gm-sheet'), ('#naehe', '.nh-sheet .place.nk, .nh-sheet .nh-leer'), ('#melden', '#report-menu.is-offen')]:
+        pg.goto(uf.BASE + adresse); pg.wait_for_selector(sel, timeout=10000)
+        check(True, f'{tag}: alte Adresse {adresse} funktioniert')
+    check(not pg.errs, f'{tag}: keine JS-Fehler {pg.errs[:3]}')
+    ctx.close()
+
+with tempfile.TemporaryDirectory() as t:
+    site = uf.build_site(pathlib.Path(t)); srv = uf.serve(site)
+    try:
+        with sync_playwright() as p:
+            b = p.chromium.launch()
+            for w, hh in [(360, 740), (375, 812), (390, 844), (768, 1024), (1024, 768), (1440, 900)]:
+                run(b, w, hh)
+            b.close()
+    finally:
+        srv.shutdown()
+print('FEHLER:', problems if problems else 'keine')

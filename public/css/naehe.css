@@ -1,0 +1,112 @@
+/* „In der Nähe“: Kopf mit Bezugspunkt, Erklär-Karte, Standort-Karten, Fenster „Entfernungen messen ab …“ */
+.nh-zeile { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.nh-bezug-ico { display: grid; flex: none; color: var(--wm-slip); }
+.nh-kat { display: none; }
+
+/* Liste */
+.list-head:empty { display: none; }
+.nh-zahlzeile { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; }
+.nh-zahl { margin: 0; font-size: var(--wm-t-m); color: var(--wm-matt); }
+.nh-zahl strong { color: var(--wm-tinte); font-size: var(--wm-t-m); }
+.nh-sort-box { position: relative; flex: none; }
+.nh-sort { appearance: none; -webkit-appearance: none; border: 0; background: transparent; color: var(--wm-petrol-tief); font-weight: 700; font-size: var(--wm-t-m); min-height: 44px; padding: 0 20px 0 6px; cursor: pointer; }
+.nh-sort-box::after { content: '▾'; position: absolute; right: 2px; top: 50%; transform: translateY(-50%); color: var(--wm-petrol-tief); font-size: var(--wm-t-xs); pointer-events: none; }
+.nh-limit { margin: 0; font-size: var(--wm-t-xs); }
+
+.nh-meld { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; padding: 3px 10px; border-radius: var(--wm-r-rund); font-size: var(--wm-t-xs); font-weight: 700; }
+.nh-meld i { width: 8px; height: 8px; border-radius: var(--wm-r-rund); background: currentColor; flex: none; }
+.nh-meld.ton-warn { background: var(--wm-warn-hell); color: var(--wm-warn-text); }
+.nh-meld.ton-stop { background: var(--wm-stop-hell); color: var(--wm-stop); }
+.nh-meld.ton-gut { background: var(--wm-gut-hell); color: var(--wm-gut-text); }
+.nh-meld.ton-gut i { display: none; }
+.nh-leer { padding: 24px 20px; }
+.nh-leer .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+
+/* Erklär-Karte und Hinweis „blockiert“ */
+.nh-erklaer { width: 100%; display: grid; grid-template-columns: 56px 1fr; gap: 6px 14px; padding: 18px; background: var(--wm-flaeche); border: 1px solid var(--wm-petrol-hell); border-radius: var(--wm-r-m); margin-bottom: 4px; }
+.nh-erklaer-ico { width: 56px; height: 56px; border-radius: var(--wm-r-rund); background: var(--wm-wasser); color: var(--wm-slip); display: grid; place-items: center; }
+.nh-erklaer-text h3 { margin: 4px 0 4px; font-size: var(--wm-t-m); color: var(--wm-tinte); }
+.nh-erklaer-text p { margin: 0; font-size: var(--wm-t-s); color: var(--wm-matt); line-height: 1.45; }
+.nh-erklaer-knoepfe { grid-column: 1 / -1; display: flex; gap: 10px; margin-top: 10px; }
+.nh-erklaer-knoepfe .btn { flex: 1; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.nh-erklaer-knoepfe .btn-primary { flex: 1.3; }
+.nh-blockiert { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--wm-warn-hell); border: 1px solid var(--wm-warn-rand); border-radius: var(--wm-r-s); color: var(--wm-warn-text); font-size: var(--wm-t-s); margin-bottom: 4px; }
+.nh-blockiert-ico { display: grid; flex: none; }
+.nh-blockiert-text { flex: 1; min-width: 0; }
+.nh-link { flex: none; border: 0; background: none; color: var(--wm-warn-text); font-weight: 700; font-size: var(--wm-t-s); min-height: 44px; padding: 0 2px; }
+.nh-link:hover { text-decoration: underline; }
+
+/* Anleitung im Dialog */
+.nh-anleitung h2 { margin: 0 0 6px; font-size: var(--wm-t-l); color: var(--wm-tinte); }
+.nh-anleitung h3 { margin: 16px 0 6px; font-size: var(--wm-t-m); color: var(--wm-tinte); }
+.nh-anleitung ol { margin: 0; padding-left: 20px; line-height: 1.5; }
+.nh-anleitung .btn { margin-top: 18px; width: 100%; }
+
+/* Fenster „Entfernungen messen ab …“ */
+.nb-pop.is-drop { width: min(420px, calc(100vw - 24px)); }
+/* Handy mit Tastatur: oben verankert (Höhe = sichtbarer Bereich über der Tastatur) */
+.nb-pop.is-sheet.is-oben { inset: calc(var(--vv-top, 0px) + 8px) 8px auto 8px; width: auto; max-width: none; border-radius: var(--wm-r-m);
+  max-height: calc(var(--vv-h, 100dvh) - 16px); transition: none; }
+.nb-pop.is-sheet.is-oben .pop-grip { display: none; }
+.nb-oben { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px 4px; }
+.nb-oben h2 { margin: 0; font-size: var(--wm-t-l); color: var(--wm-tinte); }
+.nb-x { width: 44px; height: 44px; border-radius: var(--wm-r-rund); border: 0; background: var(--wm-flaeche-2); color: var(--wm-tinte); display: grid; place-items: center; flex: none; }
+.nb-form { position: relative; margin-bottom: 8px; }
+.nb-suche-ico { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--wm-matt); display: grid; pointer-events: none; }
+.nb-suche { width: 100%; min-height: 52px; border: 1px solid var(--wm-linie); border-radius: var(--wm-r-s); padding: 0 14px 0 46px; font-size: var(--wm-t-m); color: var(--wm-tinte); background: var(--wm-flaeche); }
+.nb-suche:focus { border-color: var(--wm-slip); outline: 2px solid rgba(8, 127, 156, .25); }
+.nb-liste { list-style: none; margin: 0; padding: 0; }
+.nb-treffer:not(:empty) { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 2px solid var(--wm-linie); }
+.nb-msg { padding: 10px 4px; color: var(--wm-matt); font-size: var(--wm-t-s); }
+.nb-zeile { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 8px 4px; border: 0; border-bottom: 1px solid var(--wm-linie); background: none; text-align: left; color: var(--wm-tinte); }
+.nb-liste li:last-child .nb-zeile { border-bottom: 0; }
+.nb-zeile:hover { background: var(--wm-wasser-2); }
+.nb-zeile[aria-disabled="true"] { cursor: not-allowed; }
+.nb-zeile[aria-disabled="true"] .nb-text, .nb-zeile[aria-disabled="true"] .nb-ico { opacity: .5; }
+.nb-ico { width: 44px; height: 44px; border-radius: var(--wm-r-s); background: var(--wm-flaeche-2); color: var(--wm-tinte); display: grid; place-items: center; flex: none; }
+.nb-ico.is-dunkel { background: var(--wm-tinte); color: var(--wm-flaeche); }
+.nb-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.nb-text strong { color: var(--wm-tinte); font-size: var(--wm-t-m); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb-text small { color: var(--wm-matt); font-size: var(--wm-t-s); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb-haken { color: var(--wm-slip); display: grid; flex: none; }
+
+/* Handy: Navy-Kopf über den Kategorien (statt der Werkzeugleiste) */
+@media (min-width: 768px) { .nur-handy { display: none !important; } }
+.nh-fuss { list-style: none; }
+
+/* Handy: kompakter Navy-Kopf (statt Suchfeld und Werkzeugleiste), schmale Hinweiszeile, Links am Listenende */
+@media (max-width: 767px) {
+  .nur-desktop { display: none !important; }
+                        .nh-pille { align-self: flex-start; max-width: 100%; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border: 1.5px solid rgba(197, 216, 225, .55); border-radius: var(--wm-r-rund);
+    background: transparent; color: var(--wm-flaeche); font-size: var(--wm-t-m); font-weight: 700; }
+  .nh-pille:hover { border-color: rgba(197, 216, 225, .85); }
+  .nh-pille .nh-bezug-ico { color: var(--wm-petrol-hell); }
+  .nh-pille-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nh-pille-pfeil { display: grid; flex: none; transform: rotate(90deg); color: var(--wm-linie); }
+  .nh-kat { display: flex; align-items: center; }
+      
+  /* schmale Hinweiszeile */
+  .nh-zeile1 { width: 100%; display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; background: var(--wm-wasser); border-radius: var(--wm-r-s); color: var(--wm-tinte); font-size: var(--wm-t-s); line-height: 1.3; }
+  .nh-zeile1.is-blockiert { background: var(--wm-warn-hell); border: 1px solid var(--wm-warn-rand); color: var(--wm-warn-text); padding: 2px 8px 2px 12px; }
+  .nh-zeile1-ico { display: grid; flex: none; color: var(--wm-slip); }
+  .nh-zeile1.is-blockiert .nh-zeile1-ico { color: var(--wm-warn-text); }
+  .nh-zeile1-text { flex: 1; min-width: 0; }
+  .nh-erlauben { flex: none; min-height: 40px; padding: 0 12px; border-radius: var(--wm-r-s); font-size: var(--wm-t-s); }
+  .nh-x { flex: none; width: 40px; height: 40px; border: 0; background: none; color: var(--wm-matt); display: grid; place-items: center; border-radius: var(--wm-r-s); }
+  .nh-zeile1 .nh-link { white-space: nowrap; font-size: var(--wm-t-s); }
+  .nh-zeile1.is-blockiert .nh-zeile1-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Liste kompakt */
+  .list-head { padding: 10px 12px 4px; gap: 8px; }
+  .nh-zahlzeile { flex-wrap: nowrap; }
+  .nh-zahl-kurz { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .nh-sort { min-height: 40px; }
+            .nh-meld { margin-top: 2px; }
+    /* „In der Nähe“ liegt seit 7.72.0 als Sheet über der Karte (bausteine.css, bereiche.css). */
+        .nh-fuss { padding: 14px 16px 4px; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+  .nh-fuss .version { display: block; margin-top: 4px; }
+}
+
+/* Lange Liste: Einträge außerhalb des Bildschirms erst bei Bedarf layouten (schnelleres Öffnen) */
+
+@keyframes nh-fenster-ein { from { transform: translateY(40px); opacity: .6; } to { transform: none; opacity: 1; } }

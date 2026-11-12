@@ -1,6 +1,6 @@
 // Tests für netlify/functions/fotos.mjs mit nachgebauter Netlify- und GitHub-API (node tests/fotos_function_test.mjs).
 import assert from 'node:assert/strict';
-import { handle, imageType, addPhoto, passwordOk, fileUrl, standortAus, addHistory, photoReport, slug, slipFromSubmission, priceFromSubmission } from '../netlify/functions/fotos.mjs';
+import { handle, ergaenzungLesen, ergaenzungEintragen, imageType, addPhoto, passwordOk, fileUrl, standortAus, addHistory, photoReport, slug, slipFromSubmission, priceFromSubmission } from '../netlify/functions/fotos.mjs';
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
 const env = { FOTO_ADMIN_PASSWORT: 'geheim-123', NETLIFY_API_TOKEN: 'nf', GITHUB_TOKEN: 'gh' };
@@ -8,29 +8,31 @@ const OV = 'public/data/community/overrides.json', HIST = 'admin/verlauf.json';
 const NOW = new Date('2026-10-20T12:34:56Z');
 
 /** Nachgebaute Welt: Netlify-Formulare + ein Git-Zweig „main“ (Dateien als Buffer). */
-function fakeWorld({ photo = JPEG, rights = 'ja', standort = 'node/632876845', overrides = [], files = {}, reports = [], slips = [], prices = [], raceOnce = false } = {}) {
+function fakeWorld({ photo = JPEG, rights = 'ja', beschreibung = 'Rampe bei Niedrigwasser', motiv = undefined, kategorie = 'rampe', standort = 'node/632876845', overrides = [], files = {}, reports = [], slips = [], prices = [], ergaenzungen = [], raceOnce = false } = {}) {
   const repo = { [OV]: Buffer.from(JSON.stringify(overrides)) };
   for (const [k, v] of Object.entries(files)) repo[k] = Buffer.from(v);
   const state = {
     subs: [{ id: 's1', created_at: '2026-10-20T12:00:00Z', data: {
-      standort_id: standort, standort_name: 'Slip Vössen', beschreibung: 'Rampe bei Niedrigwasser', foto_rechte: rights,
+      standort_id: standort, standort_name: 'Slip Vössen', beschreibung, ...(motiv ? { motiv } : {}), ...(kategorie ? { kategorie } : {}), foto_rechte: rights,
       foto: { filename: 'x.jpg', url: 'https://files.netlify.example/s1/x.jpg' } } }],
-    reports, slips, prices, repo, commits: { c0: { files: repo } }, head: 'c0', n: 0, blobs: {}, trees: {}, messages: [], deleted: [], calls: [], raceOnce,
+    reports, slips, prices, ergaenzungen, repo, commits: { c0: { files: repo } }, head: 'c0', n: 0, blobs: {}, trees: {}, messages: [], deleted: [], calls: [], raceOnce,
   };
   const json = (body, status = 200) => new Response(body === null ? null : JSON.stringify(body), { status });
   const fetchFn = async (url, init = {}) => {
     const method = init.method || 'GET';
     state.calls.push(`${method} ${url}`);
     const nf = 'https://api.netlify.com/api/v1';
-    if (url === `${nf}/sites/site-1/forms`) return json([{ id: 'f9', name: 'foto-einreichen' }, { id: 'f1', name: 'fehler-melden' }, { id: 'f2', name: 'slipanlage-melden' }, { id: 'f3', name: 'tankpreis-melden' }]);
+    if (url === `${nf}/sites/site-1/forms`) return json([{ id: 'f9', name: 'foto-einreichen' }, { id: 'f1', name: 'fehler-melden' }, { id: 'f2', name: 'slipanlage-melden' }, { id: 'f3', name: 'tankpreis-melden' }, { id: 'f4', name: 'slip-ergaenzen' }]);
     if (url.startsWith(`${nf}/forms/f9/submissions`)) return json(state.subs);
     if (url.startsWith(`${nf}/forms/f1/submissions`)) return json(state.reports);
     if (url.startsWith(`${nf}/forms/f2/submissions`)) return json(state.slips);
     if (url.startsWith(`${nf}/forms/f3/submissions`)) return json(state.prices);
+    if (url.startsWith(`${nf}/forms/f4/submissions`)) return json(state.ergaenzungen);
+    if (url === `${nf}/deploys/d-vorschau`) return json({ id: 'd-vorschau', branch: 'vorschau-zweig', context: 'deploy-preview' });
     if (url.startsWith(`${nf}/submissions/`) && method === 'DELETE') {
       const id = url.split('/').pop();
       state.deleted.push(id);
-      for (const k of ['subs', 'reports', 'slips', 'prices']) state[k] = state[k].filter(s => s.id !== id);
+      for (const k of ['subs', 'reports', 'slips', 'prices', 'ergaenzungen']) state[k] = state[k].filter(s => s.id !== id);
       return new Response(null, { status: 204 });
     }
     if (url === 'https://files.netlify.example/s1/x.jpg') return new Response(photo, { status: 200 });
@@ -41,11 +43,11 @@ function fakeWorld({ photo = JPEG, rights = 'ja', standort = 'node/632876845', o
     if (p.startsWith('/contents/') && method === 'GET') {
       const [path, query] = p.slice('/contents/'.length).split('?');
       const ref = new URLSearchParams(query).get('ref');
-      const files = ref === 'main' ? state.repo : state.commits[ref].files;
+      const files = ref === 'main' || ref === 'vorschau-zweig' ? state.repo : state.commits[ref].files;
       if (!(path in files)) return new Response('{}', { status: 404 });
       return init.headers.accept === 'application/vnd.github.raw' ? new Response(files[path]) : json({ sha: 'x' });
     }
-    if (p === '/git/ref/heads/main') return json({ object: { sha: state.head } });
+    if (p === '/git/ref/heads/main' || p === '/git/ref/heads/vorschau-zweig') return json({ object: { sha: state.head } });
     if (p.startsWith('/git/commits/') && method === 'GET') return json({ tree: { sha: 'tree-' + p.split('/').pop() } });
     if (p === '/git/blobs') { const sha = 'b' + (++state.n); state.blobs[sha] = Buffer.from(JSON.parse(init.body).content, 'base64'); return json({ sha }, 201); }
     if (p === '/git/trees') { const sha = 't' + (++state.n); state.trees[sha] = JSON.parse(init.body); return json({ sha }, 201); }
@@ -58,7 +60,8 @@ function fakeWorld({ photo = JPEG, rights = 'ja', standort = 'node/632876845', o
       state.commits[sha] = { files, parent: b.parents[0], message: b.message };
       return json({ sha }, 201);
     }
-    if (p === '/git/refs/heads/main' && method === 'PATCH') {
+    if ((p === '/git/refs/heads/main' || p === '/git/refs/heads/vorschau-zweig') && method === 'PATCH') {
+      state.zweig = p.split('/').pop();
       const b = JSON.parse(init.body);
       if (state.raceOnce) {                                        // jemand anderes committet dazwischen
         state.raceOnce = false;
@@ -123,9 +126,27 @@ assert.equal(photoReport({ id: 'r3', data: { art: 'sonstiges', details: 'Foto un
   assert.match(path, /^public\/photos\/node-632876845-[a-z0-9]+\.jpg$/);
   assert.deepEqual([...w.file(path)], [...JPEG]);
   const ov = w.jsonAt(OV);
-  assert.deepEqual(ov[1], { id: 'node/632876845', status: 'approved', photos: [{ url: j.foto.url, credit: 'WaterMap-Community', alt: 'Rampe bei Niedrigwasser' }], updated: '2026-10-20' });
+  assert.deepEqual(ov[1], { id: 'node/632876845', status: 'approved', photos: [{ url: j.foto.url, credit: 'WaterMap-Community', alt: 'Rampe bei Niedrigwasser', kategorie: 'rampe' }], updated: '2026-10-20' });
   assert.deepEqual(w.jsonAt(HIST), [{ zeit: NOW.toISOString(), bereich: 'foto', aktion: 'freigegeben', standort_id: 'node/632876845', standort_name: 'Slip Vössen', foto: j.foto.url, beschreibung: 'Rampe bei Niedrigwasser' }]);
   assert.deepEqual(w.state.deleted, ['s1']); }
+
+// Kategorie: ohne Notiz wird sie zur Bildbeschreibung; die Verwaltung kann sie beim Freigeben ändern
+{ const w = fakeWorld({ beschreibung: '', kategorie: 'parkplatz' });
+  const f = (await (await run(req('GET'), w)).json()).fotos[0];
+  assert.equal(f.kategorie, 'parkplatz'); assert.equal(f.beschreibung, '');
+  await run(req('POST', '', { aktion: 'freigeben', id: 's1', kategorie: 'zufahrt' }), w);
+  assert.deepEqual(w.jsonAt(OV)[0].photos[0], { url: w.jsonAt(OV)[0].photos[0].url, credit: 'WaterMap-Community', alt: 'Zufahrt', kategorie: 'zufahrt' }); }
+// Ältere Einreichung mit Motiv-Text: ein Motiv wird zur Kategorie, mehrere brauchen eine Wahl in der Verwaltung
+{ const w = fakeWorld({ kategorie: null, motiv: 'Steg' });
+  assert.equal((await (await run(req('GET'), w)).json()).fotos[0].kategorie, 'steg');
+  assert.equal((await run(req('POST', '', { aktion: 'freigeben', id: 's1' }), w)).status, 200);
+  assert.equal(w.jsonAt(OV)[0].photos[0].kategorie, 'steg'); }
+{ const w = fakeWorld({ kategorie: null, motiv: 'Rampe, Steg' });
+  assert.equal((await (await run(req('GET'), w)).json()).fotos[0].kategorie, null);
+  const r = await run(req('POST', '', { aktion: 'freigeben', id: 's1' }), w);
+  assert.equal(r.status, 400); assert.match((await r.json()).fehler, /Kategorie/);
+  assert.equal((await run(req('POST', '', { aktion: 'freigeben', id: 's1', kategorie: 'unsinn' }), w)).status, 400);
+  assert.equal((await run(req('POST', '', { aktion: 'freigeben', id: 's1', kategorie: 'steg' }), w)).status, 200); }
 
 // Gleichzeitige Änderung am Zweig: neu aufbauen, nichts geht verloren
 { const w = fakeWorld({ raceOnce: true });
@@ -162,7 +183,15 @@ for (const [opts, msg] of [[{ rights: '' }, /Rechte/], [{ standort: '../../etc' 
     { id: 'node/7', status: 'approved', fields: { name: 'Neu' }, photos: [{ url: 'photos/d.jpg' }] }],
     files: { 'public/photos/a.jpg': JPEG, 'public/photos/b.jpg': JPEG, 'public/photos/c.jpg': JPEG } });   // d.jpg fehlt im Repo
   const list = (await (await run(req('GET', '?veroeffentlicht=1'), w)).json()).fotos;
-  assert.deepEqual(list.map(f => [f.standort_id, f.url]), [['node/5', 'photos/a.jpg'], ['node/5', 'photos/b.jpg'], ['node/6', 'photos/c.jpg'], ['node/7', 'photos/d.jpg']]);
+  assert.deepEqual(list.map(f => [f.standort_id, f.url, f.kategorie]), [['node/5', 'photos/a.jpg', null], ['node/5', 'photos/b.jpg', null], ['node/6', 'photos/c.jpg', null], ['node/7', 'photos/d.jpg', null]]);
+  // Kategorie nachträglich setzen
+  assert.equal((await run(req('POST', '', { aktion: 'kategorie', standort_id: 'node/5', url: 'photos/b.jpg', kategorie: 'rampe' }), w)).status, 200);
+  assert.deepEqual(w.jsonAt(OV)[0].photos[1], { url: 'photos/b.jpg', credit: 'X', alt: 'Rampe', kategorie: 'rampe' });
+  assert.equal(w.jsonAt(OV)[0].updated, '2026-10-20');
+  assert.deepEqual(w.jsonAt(HIST)[0], { zeit: NOW.toISOString(), bereich: 'foto', aktion: 'kategorie', standort_id: 'node/5', foto: 'photos/b.jpg', beschreibung: 'Rampe' });
+  assert.equal((await run(req('POST', '', { aktion: 'kategorie', standort_id: 'node/5', url: 'photos/b.jpg', kategorie: 'boot' }), w)).status, 400);
+  assert.equal((await run(req('POST', '', { aktion: 'kategorie', standort_id: 'node/5', url: 'photos/x.jpg', kategorie: 'steg' }), w)).status, 502);
+  w.state.repo[HIST] = Buffer.from('[]');   // Verlauf unten zählt nur die Entfernungen
   assert.equal((await run(req('GET', '?datei=photos/a.jpg'), w)).headers.get('content-type'), 'image/jpeg');
   assert.equal((await run(req('GET', '?datei=../../netlify.toml'), w)).status, 400);
   assert.equal((await run(req('GET', '?datei=photos/fehlt.jpg'), w)).status, 404);
@@ -253,5 +282,58 @@ assert.equal(slug('Slip „Großer Müggelsee“ – Nord'), 'slip-grosser-mugge
   assert.deepEqual(w.jsonAt(HIST)[0], { zeit: NOW.toISOString(), bereich: 'hinweis', aktion: 'erledigt', standort_id: 'node/5', standort_name: 'Hafen', beschreibung: 'Falsche Öffnungszeiten: Mo zu' });
   assert.equal(w.state.messages.at(-1), 'Hinweis erledigt: node/5');
   assert.equal((await run(req('POST', '', { form: 'unbekannt', aktion: 'erledigt', id: 'h1' }), w)).status, 400); }
+
+// Unpassende Lagemeldung: unter Hinweisen mit Meldung-ID; „Meldung entfernen“ entfernt sie und erledigt den Hinweis
+{ const w = fakeWorld({ reports: [
+    { id: 'u1', data: { art: 'meldung', standort_id: 'node/5', standort_name: 'Slip', details: 'Lagemeldung unpassend\nMeldung-ID: 00ab12cd34ef5678\nArt: Gesperrt\nNotiz: „blöd“\nGrund: Beleidigend' } },
+    { id: 'u2', data: { art: 'meldung', standort_id: 'node/5', details: 'ohne ID' } }] });
+  const list = (await (await run(req('GET', '?form=fehler-melden'), w)).json()).hinweise;
+  assert.deepEqual(list.map(x => [x.id, x.art_text, x.meldung_id]), [['u1', 'Unpassende Lagemeldung', '00ab12cd34ef5678'], ['u2', 'Unpassende Lagemeldung', null]]);
+  const weg = [];
+  const entf = (id) => { weg.push(id); return Promise.resolve({ entfernt: true, standortId: 'node/5' }); };
+  assert.equal((await run(req('POST', '', { form: 'fehler-melden', aktion: 'lagemeldung_entfernen', id: 'u1' }), w, { meldungEntfernen: entf })).status, 200);
+  assert.deepEqual(weg, ['00ab12cd34ef5678']);
+  assert.ok(w.state.deleted.includes('u1'), 'Hinweis erledigt');
+  assert.equal(w.jsonAt(HIST)[0].aktion, 'lagemeldung entfernt');
+  assert.equal(w.state.messages.at(-1), 'Lagemeldung entfernt: node/5');
+  assert.equal((await run(req('POST', '', { form: 'fehler-melden', aktion: 'lagemeldung_entfernen', id: 'u2' }), w, { meldungEntfernen: entf })).status, 400, 'ohne Meldung-ID');
+  assert.equal((await run(req('POST', '', { form: 'fehler-melden', aktion: 'lagemeldung_entfernen', id: 'u2' }), w)).status, 400); }
+
+// „Angaben ergänzen“: nur erlaubte Werte, Übernehmen schreibt overrides.json (bestehenden Eintrag erweitern), Ablehnen nur Verlauf
+{ const e = ergaenzungLesen(JSON.stringify({ access: 'public', fee: 'kostenpflichtig', fee_note: '<b>5 €</b> pro Tag', surface: 'Beton', incline: 'quer', trailer: 'naehe', motorboat: 'nein', boote: 'bis7', boese: 'x' }));
+  assert.deepEqual(e.fields, { access: 'public', fee: true, fee_note: 'b5 €/b pro Tag' });
+  assert.deepEqual(e.attrs, { surface: 'Beton', trailer_parking: true, trailer_note: 'in der Nähe', motorboat: false, suitable_boats: 'bis 7 m' });
+  assert.deepEqual(e.liste.map(x => x[0]), ['Zugang', 'Gebühr', 'Belag', 'Trailer parken', 'Motorboote', 'Bootsgröße', 'Betrag'], 'unbekannter Wert (Neigung „quer“) fällt weg');
+  assert.deepEqual(ergaenzungLesen('kaputt').liste, []);
+  assert.deepEqual(ergaenzungLesen(JSON.stringify({ access: '__proto__' })).liste, []);
+  const ov = ergaenzungEintragen([{ id: 'node/1', status: 'approved', photos: [{ url: 'photos/a.jpg' }], fields: { fee: true, fee_note: 'alt' } }],
+    'node/1', ergaenzungLesen(JSON.stringify({ fee: 'kostenlos', trailer: 'ja' })), '2026-10-26');
+  assert.deepEqual(ov[0], { id: 'node/1', status: 'approved', photos: [{ url: 'photos/a.jpg' }], fields: { fee: false }, attrs: { trailer_parking: true, trailer_note: 'am Slip' }, updated: '2026-10-26' }, 'Fotos bleiben, fee_note gelöscht');
+  assert.equal(ergaenzungEintragen([], 'node/2', ergaenzungLesen('{"motorboat":"ja"}'), 'x')[0].attrs.motorboat, true);
+
+  const w = fakeWorld({ ergaenzungen: [
+    { id: 'e1', created_at: '2026-10-26T10:00:00Z', data: { standort_id: 'node/5', standort_name: 'Slip Nord', angaben: JSON.stringify({ access: 'public', boote: 'bis5' }), bemerkung: 'Schlüssel beim Hafenmeister' } },
+    { id: 'e2', data: { standort_id: 'node/5', angaben: '{}', bemerkung: 'nur Text' } }] });
+  const list = (await (await run(req('GET', '?form=slip-ergaenzen'), w)).json()).ergaenzungen;
+  assert.deepEqual(list.map(x => [x.id, x.angaben, x.bemerkung, x.leer]), [['e1', [['Zugang', 'Öffentlich'], ['Bootsgröße', 'bis 5 m']], 'Schlüssel beim Hafenmeister', false], ['e2', [], 'nur Text', true]]);
+  assert.equal((await run(req('POST', '', { form: 'slip-ergaenzen', aktion: 'uebernehmen', id: 'e2' }), w)).status, 400, 'ohne Angaben nichts zu übernehmen');
+  assert.equal((await run(req('POST', '', { form: 'slip-ergaenzen', aktion: 'uebernehmen', id: 'e1' }), w)).status, 200);
+  const o = w.jsonAt('public/data/community/overrides.json').find(x => x.id === 'node/5');
+  assert.deepEqual([o.status, o.fields, o.attrs], ['approved', { access: 'public' }, { suitable_boats: 'bis 5 m' }]);
+  assert.equal(w.jsonAt(HIST)[0].aktion, 'übernommen'); assert.equal(w.jsonAt(HIST)[0].beschreibung, 'Zugang: Öffentlich, Bootsgröße: bis 5 m');
+  assert.equal(w.state.messages.at(-1), 'Angaben übernommen: node/5'); assert.ok(w.state.deleted.includes('e1'));
+  assert.equal((await run(req('POST', '', { form: 'slip-ergaenzen', aktion: 'ablehnen', id: 'e2' }), w)).status, 200);
+  assert.equal(w.state.messages.at(-1), 'Angaben abgelehnt: node/5'); }
+
+// Vorschau: Freigaben gehen in den Zweig der Vorschau (über die Netlify-API), live in FOTO_BRANCH/main
+{ const erg = () => [{ id: 'e9', data: { standort_id: 'node/5', angaben: JSON.stringify({ motorboat: 'ja' }) } }];
+  const w = fakeWorld({ ergaenzungen: erg() });
+  assert.equal((await run(req('POST', '', { form: 'slip-ergaenzen', aktion: 'uebernehmen', id: 'e9' }), w, { deploy: { context: 'deploy-preview', id: 'd-vorschau' } })).status, 200);
+  assert.equal(w.state.zweig, 'vorschau-zweig');
+  assert.ok(w.state.calls.includes('GET https://api.netlify.com/api/v1/deploys/d-vorschau'));
+  const w2 = fakeWorld({ ergaenzungen: erg() });
+  assert.equal((await run(req('POST', '', { form: 'slip-ergaenzen', aktion: 'uebernehmen', id: 'e9' }), w2, { deploy: { context: 'production', id: 'd-live' } })).status, 200);
+  assert.equal(w2.state.zweig, 'main');
+  assert.ok(!w2.state.calls.some(c => c.includes('/deploys/')), 'live keine Abfrage des Zweigs'); }
 
 console.log('fotos.mjs: alle Tests OK');

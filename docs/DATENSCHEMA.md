@@ -43,7 +43,7 @@ Welche OSM-Tags in welche Felder fließen, steht in `scripts/import_osm.py` (Fun
 ## Community-Dateien
 **`places.json`** – neuer Standort: wie oben, plus `status` (`pending` \| `approved` \| `rejected`) und `submitted`. Nur `approved` wird angezeigt.
 
-**`overrides.json`** – Korrektur: `{ "id": "node/…", "status": "approved", "fields": {…}, "attrs": {…}, "photos": [{ "url": "photos/…jpg", "credit": "…", "alt": "…" }], "updated": "JJJJ-MM-TT" }`. Änderbare `fields`: name, locality, access, fee, fee_note, opening_hours, operator, website, phone, email, description, lat+lon. Fotos müssen unter `public/photos/` liegen.
+**`overrides.json`** – Korrektur: `{ "id": "node/…", "status": "approved", "fields": {…}, "attrs": {…}, "photos": [{ "url": "photos/…jpg", "credit": "…", "alt": "…", "kategorie": "rampe" }], "updated": "JJJJ-MM-TT" }`. Änderbare `fields`: name, locality, access, fee, fee_note, opening_hours, operator, website, phone, email, description, lat+lon. Fotos müssen unter `public/photos/` liegen. `kategorie` (optional bei älteren Fotos): rampe, steg, zufahrt, parkplatz, umgebung, sonstiges (`public/js/foto-kategorien.js`).
 
 **`prices.json`** – Preismeldung: `{ "station_id": "node/…", "fuel": "diesel" \| "petrol", "price": 2.189, "observed": "JJJJ-MM-TT", "status": "approved", "submitted": "…" }`. Die App zeigt je Tankstelle und Kraftstoff die **neueste freigegebene** Meldung mit Datum. Ältere bleiben zur Nachvollziehbarkeit stehen. Preise außerhalb 0,50–5,00 €/l werden nie angezeigt. Ab 14 Tagen Alter erscheint ein Hinweis auf mögliche Veraltung (`PRICE_STALE_DAYS` in `config.js`).
 

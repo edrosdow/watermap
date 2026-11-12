@@ -6,6 +6,11 @@ const el = (tag, props = {}, ...kids) => {
   n.append(...kids.flat(Infinity).filter(k => k !== null && k !== undefined && k !== false));
   return n;
 };
+// wie public/js/foto-kategorien.js
+const KATEGORIEN = { rampe: 'Rampe', steg: 'Steg', zufahrt: 'Zufahrt', parkplatz: 'Parkplatz', umgebung: 'Umgebung', sonstiges: 'Sonstiges' };
+const katAuswahl = (wert, leer) => el('select', { className: 'kat', 'aria-label': 'Kategorie' },
+  el('option', { value: '', textContent: leer, disabled: true, selected: !wert }),
+  Object.entries(KATEGORIEN).map(([k, t]) => el('option', { value: k, textContent: t, selected: k === wert })));
 const ID = /^(node|way|relation|community|c)\/[A-Za-z0-9_-]{1,80}$/;
 const parseStandort = (t) => { const m = String(t).trim().match(/[#&]p=([^&\s]+)/); const id = m ? decodeURIComponent(m[1]) : String(t).trim(); return ID.test(id) ? id : null; };
 const when = (iso) => iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '';
@@ -63,8 +68,8 @@ async function loadAll() {
     call('GET').then(r => r.json()), call('GET', '?meldungen=1').then(r => r.json()),
     call('GET', '?veroeffentlicht=1').then(r => r.json()), call('GET', '?verlauf=1').then(r => r.json()),
     call('GET', '?form=slipanlage-melden').then(r => r.json()), call('GET', '?form=tankpreis-melden').then(r => r.json()),
-    call('GET', '?form=fehler-melden').then(r => r.json())]);
-  const [neu, gemeldet, veroeffentlicht, verlauf, slips, preise, hinweise] = all;
+    call('GET', '?form=fehler-melden').then(r => r.json()), call('GET', '?form=slip-ergaenzen').then(r => r.json())]);
+  const [neu, gemeldet, veroeffentlicht, verlauf, slips, preise, hinweise, ergaenzungen] = all;
   const failed = all.find(x => x.status === 'rejected');
   if (failed && /Passwort/.test(failed.reason?.message)) throw failed.reason;
   try { sessionStorage.setItem('wm.fotoPw', pw); } catch { /* privat */ }
@@ -76,6 +81,7 @@ async function loadAll() {
   renderSlips(slips.status === 'fulfilled' ? slips.value.slips : null, slips.reason);
   renderPrices(preise.status === 'fulfilled' ? preise.value.preise : null, preise.reason);
   renderHints(hinweise.status === 'fulfilled' ? hinweise.value.hinweise : null, hinweise.reason);
+  renderErgaenzungen(ergaenzungen.status === 'fulfilled' ? ergaenzungen.value.ergaenzungen : null, ergaenzungen.reason);
   showTab(tab);
 }
 
@@ -96,17 +102,21 @@ function submissionCard(f) {
   const where = hasId ? null : el('input', { type: 'text', placeholder: 'Link zum Standort aus der App, z. B. …#p=node/632876845', className: 'where' });
   const yes = el('button', { className: 'ok', type: 'button', textContent: 'Freigeben' });
   const no = el('button', { type: 'button', textContent: 'Ablehnen' });
-  const valid = () => f.hat_foto && f.rechte && (hasId || Boolean(parseStandort(where.value)));
+  const kat = katAuswahl(f.kategorie, 'Kategorie wählen …');
+  const valid = () => f.hat_foto && f.rechte && Boolean(kat.value) && (hasId || Boolean(parseStandort(where.value)));
   yes.disabled = !valid();
   where?.addEventListener('input', () => { yes.disabled = !valid(); });
-  yes.addEventListener('click', () => act(yes, { aktion: 'freigeben', id: f.id, ...(where ? { standort: parseStandort(where.value) } : {}) },
+  kat.addEventListener('change', () => { yes.disabled = !valid(); });
+  yes.addEventListener('click', () => act(yes, { aktion: 'freigeben', id: f.id, kategorie: kat.value, ...(where ? { standort: parseStandort(where.value) } : {}) },
     'Freigegeben – in etwa einer Minute in der App sichtbar.'));
   no.addEventListener('click', () => act(no, { aktion: 'ablehnen', id: f.id }, 'Abgelehnt und gelöscht.', 'Foto wirklich ablehnen? Die Einreichung wird gelöscht.'));
   return el('section', { className: 'card' },
-    f.hat_foto ? image(`?bild=${encodeURIComponent(f.id)}`, f.beschreibung) : el('p', { className: 'warn', textContent: 'Kein Foto in der Einreichung.' }),
+    f.hat_foto ? image(`?bild=${encodeURIComponent(f.id)}`, f.beschreibung || f.motiv) : el('p', { className: 'warn', textContent: 'Kein Foto in der Einreichung.' }),
     el('h2', {}, placeLink(hasId ? f.standort_id : '', f.standort_name || f.standort_id)),
     el('p', { className: 'meta', textContent: `Eingereicht ${when(f.created)}` }),
-    el('p', { textContent: f.beschreibung || '(keine Beschreibung)' }),
+    f.motiv && !f.kategorie ? el('p', { className: 'meta', textContent: `Motiv (alte Angabe): ${f.motiv}` }) : null,
+    el('label', { className: 'kat-zeile' }, 'Kategorie: ', kat),
+    el('p', { textContent: f.beschreibung || '(keine Notiz)' }),
     f.rechte ? null : el('p', { className: 'warn', textContent: 'Rechte am Foto nicht bestätigt – nicht freigeben.' }),
     hasId ? null : el('p', { className: 'warn', textContent: `Kein Standort aus der Liste gewählt („${f.standort_name || 'ohne Namen'}“). Standort in der App öffnen, Link kopieren und hier einfügen:` }),
     where, el('div', { className: 'actions' }, yes, no));
@@ -145,15 +155,22 @@ function renderPublished(list, err) {
     const rm = el('button', { type: 'button', textContent: 'Entfernen' });
     rm.addEventListener('click', () => act(rm, { aktion: 'entfernen', standort_id: f.standort_id, url: f.url },
       'Foto entfernt – in etwa einer Minute aus der App verschwunden.', 'Dieses Foto wirklich aus der App entfernen?'));
+    const kat = katAuswahl(f.kategorie, 'ohne Kategorie');
+    const save = el('button', { type: 'button', textContent: 'Kategorie speichern', disabled: true });
+    kat.addEventListener('change', () => { save.disabled = !kat.value || kat.value === f.kategorie; });
+    save.addEventListener('click', () => act(save, { aktion: 'kategorie', standort_id: f.standort_id, url: f.url, kategorie: kat.value },
+      `Kategorie „${KATEGORIEN[kat.value]}“ gespeichert – in etwa einer Minute in der App.`));
     box.append(el('div', { className: 'card pub' }, image(`?datei=${encodeURIComponent(f.url)}`, f.alt),
-      el('p', {}, placeLink(f.standort_id)), f.alt ? el('p', { textContent: f.alt }) : null, rm));
+      el('p', {}, placeLink(f.standort_id)), f.alt ? el('p', { textContent: f.alt }) : null,
+      el('label', { className: 'kat-zeile' }, 'Kategorie: ', kat), el('div', { className: 'actions' }, save, rm)));
   }
 }
 
 // ---------------------------------------------------------------- Verlauf
 const LABEL = { freigegeben: ['Freigegeben', 'a-freigegeben'], abgelehnt: ['Abgelehnt', 'a-abgelehnt'], entfernt: ['Entfernt', 'a-entfernt'],
-  'meldung verworfen': ['Meldung verworfen', 'a-meldung'], erledigt: ['Erledigt', 'a-freigegeben'], verworfen: ['Verworfen', 'a-abgelehnt'] };
-const BEREICH = { foto: 'Foto', slip: 'Slipanlage', preis: 'Preis', hinweis: 'Hinweis' };
+  'meldung verworfen': ['Meldung verworfen', 'a-meldung'], erledigt: ['Erledigt', 'a-freigegeben'], verworfen: ['Verworfen', 'a-abgelehnt'],
+  'übernommen': ['Übernommen', 'a-freigegeben'], kategorie: ['Kategorie geändert', 'a-meldung'], 'lagemeldung entfernt': ['Lagemeldung entfernt', 'a-entfernt'], 'lagemeldung war schon abgelaufen': ['Lagemeldung war abgelaufen', 'a-meldung'] };
+const BEREICH = { foto: 'Foto', slip: 'Slipanlage', preis: 'Preis', hinweis: 'Hinweis', ergaenzung: 'Ergänzung' };
 
 function renderLog(list, err) {
   const box = $('#log');
@@ -256,12 +273,68 @@ function renderHints(list, err) {
     const drop = el('button', { type: 'button', textContent: 'Verwerfen' });
     done.addEventListener('click', () => act(done, { form: 'fehler-melden', aktion: 'erledigt', id: x.id }, 'Hinweis als erledigt abgeschlossen.'));
     drop.addEventListener('click', () => act(drop, { form: 'fehler-melden', aktion: 'verwerfen', id: x.id }, 'Hinweis verworfen.', 'Hinweis wirklich verwerfen?'));
+    // Unpassende Lagemeldung: „Meldung entfernen“ nimmt sie aus der App und erledigt den Hinweis
+    const weg = x.meldung_id ? el('button', { className: 'danger', type: 'button', textContent: 'Meldung entfernen' }) : null;
+    if (weg) {
+      weg.addEventListener('click', () => act(weg, { form: 'fehler-melden', aktion: 'lagemeldung_entfernen', id: x.id }, 'Lagemeldung entfernt.', 'Lagemeldung wirklich für alle entfernen?'));
+      done.textContent = 'Erledigt (Meldung bleibt)';
+    }
     box.append(el('section', { className: 'card' },
       el('h2', {}, placeLink(x.standort_id, x.standort_name || (x.standort_id === '__other' ? 'Allgemeiner Hinweis' : x.standort_id))),
       el('p', { className: 'meta', textContent: `${x.art_text} · gemeldet ${when(x.created)}` }),
       el('p', { textContent: x.details }),
       x.kontakt ? el('p', { className: 'meta' }, 'Rückfragen: ', el('a', { href: `mailto:${x.kontakt}`, textContent: x.kontakt })) : null,
-      el('div', { className: 'actions' }, done, drop)));
+      el('div', { className: 'actions' }, weg, done, drop)));
+  }
+}
+
+// ---------------------------------------------------------------- Ergänzungen (Angaben zu Slipanlagen)
+// Bisherige Werte aus den veröffentlichten Daten (OSM + freigegebene Overrides), wie die App sie zeigt („Wichtig für dein Boot“)
+let bisherDaten = null;
+async function bisherLaden() {
+  bisherDaten ||= (async () => {
+    const [osm, ov, model] = await Promise.all([fetch('../data/osm/slip.geojson').then(r => r.json()), fetch('../data/community/overrides.json').then(r => r.json()).catch(() => []), import('../js/model.js')]);
+    const map = new Map((osm.features || []).map(f => [f.id, { ...f.properties, attrs: { ...(f.properties.attrs || {}) } }]));
+    for (const o of Array.isArray(ov) ? ov : []) {
+      const p = o && o.status === 'approved' && map.get(o.id);
+      if (!p) continue;
+      Object.assign(p, o.fields || {}); Object.assign(p.attrs, o.attrs || {});
+    }
+    return { map, bootPunkte: model.bootPunkte };
+  })().catch(() => null);
+  return bisherDaten;
+}
+const ALT_TITEL = { Zugang: 'Zugang', Gebühr: 'Gebühr', Betrag: 'Gebühr', Belag: 'Rampe', Neigung: 'Rampe', 'Trailer parken': 'Trailer parken', Motorboote: 'Motorboote', Bootsgröße: 'Bootsgröße' };
+
+function renderErgaenzungen(list, err) {
+  const box = $('#ergaenzungen');
+  box.replaceChildren();
+  setCount('ergaenzungen', list ? list.length : 0, true);
+  if (!list) { box.append(failNote(err)); return; }
+  if (!list.length) { box.append(el('p', { className: 'empty', textContent: 'Keine offenen Ergänzungen.' })); return; }
+  for (const x of list) {
+    const yes = el('button', { className: 'ok', type: 'button', textContent: 'Übernehmen', disabled: x.leer || !ID.test(x.standort_id) });
+    const no = el('button', { type: 'button', textContent: 'Ablehnen' });
+    yes.addEventListener('click', () => act(yes, { form: 'slip-ergaenzen', aktion: 'uebernehmen', id: x.id }, 'Angaben übernommen – in etwa einer Minute in der App.'));
+    no.addEventListener('click', () => act(no, { form: 'slip-ergaenzen', aktion: 'ablehnen', id: x.id }, 'Angaben abgelehnt.', 'Angaben wirklich ablehnen?'));
+    const tabelle = el('table', { className: 'vgl' }, el('thead', {}, el('tr', {}, el('th', { textContent: 'Angabe' }), el('th', { textContent: 'bisher' }), el('th', { textContent: 'neu' }))),
+      el('tbody', {}, x.angaben.map(([t, w]) => el('tr', {}, el('th', { textContent: t }), el('td', { className: 'alt', textContent: '…' }), el('td', { className: 'neu', textContent: w })))));
+    box.append(el('section', { className: 'card' },
+      el('h2', {}, placeLink(x.standort_id, x.standort_name || x.standort_id)),
+      el('p', { className: 'meta', textContent: `eingegangen ${when(x.created)}` }),
+      x.angaben.length ? tabelle : el('p', { className: 'warn', textContent: 'Keine gültigen Angaben – nur Bemerkung.' }),
+      x.bemerkung ? el('p', {}, el('strong', { textContent: 'Bemerkung: ' }), x.bemerkung) : null,
+      el('div', { className: 'actions' }, yes, no)));
+    // bisher nachtragen
+    bisherLaden().then((b) => {
+      const p = b?.map.get(x.standort_id);
+      const alt = p ? Object.fromEntries(b.bootPunkte(p).map(pk => [pk.titel, pk.wert])) : {};
+      for (const tr of tabelle.querySelectorAll('tbody tr')) {
+        const wert = alt[ALT_TITEL[tr.querySelector('th').textContent]] || (p ? 'Unbekannt' : '–');
+        tr.querySelector('.alt').textContent = wert;
+        if (wert === tr.querySelector('.neu').textContent) tr.querySelector('.neu').classList.add('gleich');
+      }
+    });
   }
 }
 

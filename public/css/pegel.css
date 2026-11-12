@@ -1,0 +1,565 @@
+/* Bereich „Pegel“: Dashboard, Pegel-Karten, Detailseite (js/pegel-dashboard.js, js/pegel-ansicht.js).
+   Zustandsfarben (DESIGN_SYSTEM.md): niedrig --wm-warn, normal --wm-gut, hoch --wm-hoch, über HSW --wm-stop, ohne Kennwerte --wm-leise. */
+
+/* Bereich ein-/ausblenden */
+
+.pg-seite { max-width: 1280px; margin: 0 auto; padding: 24px 24px 40px; }
+@keyframes pg-dreh { to { transform: rotate(360deg); } }
+
+.pg-link { min-height: 44px; padding: 0 2px; border: 0; background: none; color: var(--wm-petrol-tief); font-weight: 700; font-size: var(--wm-t-m); }
+.pg-link:hover { text-decoration: underline; }
+
+/* Lage heute */
+
+/* Zustands-Etiketten (Kontrast ≥ 4.5:1) */
+.pz-tag { display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: var(--wm-r-rund); font-size: var(--wm-t-xs); font-weight: 700; white-space: nowrap; }
+.pz-normal.pz-tag { background: var(--wm-gut-hell); color: var(--wm-gut-text); }
+.pz-low.pz-tag { background: var(--wm-warn-hell); color: var(--wm-warn-text); }
+.pz-high.pz-tag { background: var(--wm-stop-hell); color: var(--wm-stop-text); }
+.pz-hsw.pz-tag { background: var(--wm-stop); color: var(--wm-flaeche); }
+.pz-none.pz-tag, .pz-old.pz-tag { background: var(--wm-linie); color: var(--wm-matt); }
+.pz-tide.pz-tag { background: var(--wm-petrol-hell); color: var(--wm-tinte); }
+
+/* Meine Pegel */
+.pm-stern { width: 44px; height: 44px; border: 0; border-radius: var(--wm-r-rund); background: rgba(255, 255, 255, .12); color: var(--wm-flaeche); display: grid; place-items: center; flex: none; }
+.pm-stern.is-on { color: var(--wm-sonne); }
+.pm-stern.is-klein { background: var(--wm-flaeche-2); color: var(--wm-tinte); }
+.pm-stern.is-klein.is-on { color: var(--wm-sonne); }
+
+/* Skala MNW – MW – MHW – HSW */
+
+/* Alle Pegel */
+
+/* Flüsse im Überblick */
+
+/* Werkzeuge */
+
+/* ---------------------------------------------------------------- Detailseite */
+.pd { background: var(--wm-flaeche-2); }
+.pd-oben { background: var(--wm-tinte); color: var(--wm-flaeche); padding: 6px 20px 38px; }
+.pd-oben :focus-visible { outline: 3px solid var(--wm-petrol-hell); outline-offset: 2px; }
+/* Gewässer · km in der Kopfleiste zwischen Zurück und Teilen; zu lang → „…“ */
+.pd-kicker { flex: 1; min-width: 0; margin: 0; padding-left: 4px; font-size: var(--wm-t-xs); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--wm-petrol-hell);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd-wert { margin: 0; line-height: .9; }
+.pd-wert strong { font-size: var(--wm-t-held); font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.pd-wert span { font-size: var(--wm-t-l); font-weight: 700; margin-left: 4px; }
+.pd-body { margin-top: -22px; padding: 0 16px 8px; display: flex; flex-direction: column; gap: 16px; position: relative; }
+.pd-karte { background: var(--wm-flaeche); border-radius: var(--wm-r-m); padding: 18px 20px; box-shadow: var(--wm-schatten); }
+.pd-karte h2 { margin: 0 0 12px; font-size: var(--wm-t-l); color: var(--wm-tinte); }
+.pd-karte-kopf { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+.pd-karte-kopf h2 { margin: 0; }
+.pd-kachel { display: flex; flex-direction: column; gap: 4px; min-height: 84px; padding: 16px 18px; border-radius: var(--wm-r-m); border: 0; background: var(--wm-flaeche); color: var(--wm-tinte); text-decoration: none; text-align: left;
+  box-shadow: var(--wm-schatten); }
+.pd-kachel strong { font-size: var(--wm-t-m); }
+.pd-kachel span { font-size: var(--wm-t-s); color: var(--wm-matt); }
+.pd-kachel.is-dunkel { background: var(--wm-tinte); color: var(--wm-flaeche); }
+.pd-kachel.is-dunkel span { color: var(--wm-linie); }
+.pd-slips { list-style: none; margin: 0; padding: 0; }
+.pd-slips li + li { border-top: 1px solid var(--wm-flaeche-2); }
+.pd-slips button { display: flex; justify-content: space-between; gap: 10px; width: 100%; min-height: 52px; border: 0; background: none; text-align: left; font-size: var(--wm-t-m); }
+.pd-slip-name { font-weight: 700; color: var(--wm-tinte); }
+.pd-slip-km { color: var(--wm-matt); font-variant-numeric: tabular-nums; }
+.pd-hinweis { margin: 4px 4px 0; font-size: var(--wm-t-s); color: var(--wm-matt); line-height: 1.5; }
+.pd .gc-svg { width: 100%; height: auto; }
+
+/* Detail im Panel über der Karte */
+.pd.is-eingebettet .pd-oben { padding: 4px 16px 34px; }
+.pd.is-eingebettet .pd-wert strong { font-size: var(--wm-t-held); }
+.pd.is-eingebettet .pd-body { padding: 0 12px 16px; }
+
+/* Pegel-Vorschau (Handy) */
+
+/* ---------------------------------------------------------------- Schmal */
+@media (max-width: 767px) {
+  .pg-seite { padding: 0 0 28px; }
+                /* Handy: erst „Meine Pegel“, dann „Flüsse im Überblick“ */
+                            /* Alle Pegel als Liste, erst nach „Alle anzeigen“ (oder bei Filter/Suche) */
+                        .pd-oben { padding: 4px 16px 34px; }
+    .pd-kicker { font-size: var(--wm-t-xs); letter-spacing: .04em; }
+      .pd-wert strong { font-size: var(--wm-t-held); }
+  .pd-wert span { font-size: var(--wm-t-l); }
+      .pd-body { padding: 0 12px 8px; }
+    }
+
+/* Wetter im Pegel-Panel */
+.pd-wetter.block { margin: 0; border: 0; }
+.pd-wetter > h3 { margin: 0 0 12px; font-size: var(--wm-t-l); color: var(--wm-tinte); }
+
+/* ---------------------------------------------------------------- Fluss-Kacheln (Dashboard) */
+/* eine Zeile, nie ein einzelner Punkt in Zeile 2 */
+.pf-trend { font-weight: 700; }
+.pf-trend.t1 { color: var(--wm-stop-text); } .pf-trend.t0 { color: var(--wm-matt); }
+/* „Alle Gewässer“: kompakte Liste unter den Kacheln (statt weiterer Kacheln) */
+
+/* ---------------------------------------------------------------- Flussseite */
+.pf-seite { max-width: 1280px; }
+.pf-raster { display: grid; grid-template-columns: minmax(0, 1fr) 420px; grid-template-areas: "profil liste" "slips liste" "hinweis liste"; grid-template-rows: auto auto 1fr; gap: 18px 24px; align-items: start; }
+.pf-raster.ohne-profil { grid-template-columns: minmax(0, 1fr); grid-template-areas: "liste" "slips" "hinweis"; max-width: 760px; }
+.pf-profilkarte { grid-area: profil; } .pf-listenkarte { grid-area: liste; } .pf-slips { grid-area: slips; } .pf-hinweis { grid-area: hinweis; }
+.pf-karte { background: var(--wm-flaeche); border-radius: var(--wm-r-m); padding: 18px 20px; box-shadow: var(--wm-schatten); min-width: 0; }
+.pf-h2 { margin: 0; font-size: var(--wm-t-l); color: var(--wm-tinte); }
+.pf-h2-zeile { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.pf-klein { font-size: var(--wm-t-s); color: var(--wm-matt); }
+.pf-profil { position: relative; margin-top: 10px; min-height: 170px; }
+.pf-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.pf-ax { font-size: 12px; fill: var(--wm-matt); paint-order: stroke; stroke: var(--wm-flaeche); stroke-width: 3px; stroke-linejoin: round; }
+.pf-ax.is-mhw { fill: var(--wm-stop-text); } .pf-ax.is-mnw { fill: var(--wm-warn-text); font-weight: 700; } .pf-ax.is-normal { fill: var(--wm-gut-text); } .pf-ax.is-niedrig { fill: var(--wm-warn-text); }
+.pf-hervor-text { font-size: var(--wm-t-xs); font-weight: 700; fill: var(--wm-flaeche); }
+.pf-ziel { cursor: pointer; outline: none; }
+.pf-ziel:focus-visible { stroke: var(--wm-slip); stroke-width: 3; }
+.pf-blase { position: absolute; z-index: 5; width: 168px; padding: 8px 10px; background: var(--wm-tinte); color: var(--wm-flaeche); border-radius: var(--wm-r-s); box-shadow: var(--wm-schatten); font-size: var(--wm-t-s); display: flex; flex-direction: column; gap: 2px; }
+.pf-blase[hidden] { display: none; }
+.pf-blase:not(.mit-knopf) { pointer-events: none; }
+.pf-blase strong { font-size: var(--wm-t-s); }
+.pf-blase-btn { margin-top: 6px; min-height: 40px; border: 0; border-radius: var(--wm-r-s); background: var(--wm-flaeche); color: var(--wm-tinte); font-weight: 700; }
+.pf-enden { display: flex; justify-content: space-between; gap: 12px; margin: 6px 0 0; font-size: var(--wm-t-s); color: var(--wm-matt); }
+.pf-enden span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-enden span:last-child { text-align: right; }
+.pf-legende { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; padding-top: 12px; border-top: 1px solid var(--wm-flaeche-2); font-size: var(--wm-t-s); color: var(--wm-tinte); }
+.pf-legende span { display: inline-flex; align-items: center; gap: 6px; }
+.pf-legende i { width: 12px; height: 12px; border-radius: var(--wm-r-rund); display: inline-block; }
+.pf-liste { list-style: none; margin: 6px 0 0; padding: 0; }
+.pf-zeile { display: grid; grid-template-columns: minmax(0, 1fr) auto 22px auto; align-items: center; gap: 10px; width: 100%; min-height: 60px; padding: 10px 20px; margin: 0 -20px; width: calc(100% + 40px);
+  border: 0; border-top: 1px solid var(--wm-flaeche-2); background: none; text-align: left; color: var(--wm-tinte); }
+.pf-liste li:first-child .pf-zeile { border-top: 0; }
+.pf-zeile:hover { background: var(--wm-wasser-2); }
+.pf-zeile.is-hervor { background: var(--wm-warn-hell); }
+.pf-zeile.is-hervor.is-hoch, .pf-zeile.is-hervor.is-teils-hoch { background: var(--wm-stop-hell); }
+.pf-zeile.is-hervor.is-hsw { background: var(--wm-stop-hell); }
+.pf-z-text { display: flex; flex-direction: column; min-width: 0; }
+.pf-z-text strong { color: var(--wm-tinte); font-size: var(--wm-t-m); overflow-wrap: anywhere; }
+.pf-z-text small { color: var(--wm-matt); font-size: var(--wm-t-s); }
+.pf-z-wert { font-weight: 700; color: var(--wm-tinte); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pf-z-trend { text-align: center; }
+.pf-mehr { display: block; margin: 6px auto 0; }
+.pf-slips { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 44px; border: 0; text-align: left; color: var(--wm-tinte); }
+.pf-slips:hover { box-shadow: var(--wm-schatten); }
+.pf-slips-ico { width: 48px; height: 48px; border-radius: var(--wm-r-s); display: grid; place-items: center; flex: none; color: var(--wm-flaeche); }
+.pf-slips-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.pf-slips-text strong { color: var(--wm-tinte); font-size: var(--wm-t-m); }
+.pf-slips-text small { color: var(--wm-matt); font-size: var(--wm-t-s); }
+.pf-slips-pfeil { display: grid; color: var(--wm-slip); }
+.pf-hinweis { margin: 0; font-size: var(--wm-t-s); color: var(--wm-matt); line-height: 1.45; }
+
+@media (max-width: 1023px) {
+    .pf-raster { grid-template-columns: minmax(0, 1fr); grid-template-areas: "profil" "liste" "slips" "hinweis"; grid-template-rows: none; }
+}
+@media (max-width: 767px) {
+                .pf-seite { padding-top: 0; }
+        .pf-raster { padding: 0 12px; margin-top: -28px; gap: 14px; }
+  .pf-karte { padding: 16px; border-radius: var(--wm-r-m); }
+  .pf-zeile { padding: 10px 16px; margin: 0 -16px; width: calc(100% + 32px); grid-template-columns: minmax(0, 1fr) auto 18px auto; gap: 8px; }
+  .pf-hinweis { padding: 0 4px; }
+}
+
+/* Flussseite: hervorgehobener Pegel, Tide-Zeile */
+.pf-hervor { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; margin-top: 12px; padding: 8px 12px 8px 14px; border: 0; border-radius: var(--wm-r-s); background: var(--wm-warn-hell); text-align: left; color: var(--wm-tinte); }
+.pf-hervor.is-hoch, .pf-hervor.is-teils-hoch { background: var(--wm-stop-hell); }
+.pf-hervor.is-hsw { background: var(--wm-stop-hell); }
+.pf-hervor-punkt { width: 16px; height: 16px; border-radius: var(--wm-r-rund); border: 3px solid var(--wm-tinte); flex: none; }
+.pf-hervor-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.pf-hervor-text small { font-size: var(--wm-t-s); color: var(--wm-warn-text); }
+.pf-hervor.is-hoch .pf-hervor-text small, .pf-hervor.is-teils-hoch .pf-hervor-text small { color: var(--wm-stop-text); }
+.pf-hervor.is-hsw .pf-hervor-text small { color: var(--wm-stop-text); }
+.pf-hervor-text strong { font-size: var(--wm-t-m); }
+.pf-hervor-text em { font-style: normal; font-weight: 700; color: var(--wm-warn-text); }
+.pf-hervor-pfeil { display: grid; flex: none; color: var(--wm-warn-text); }
+.pf-tidezeile { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; margin-top: 12px; padding: 10px 0 0; border: 0; border-top: 1px solid var(--wm-flaeche-2); background: none; text-align: left; color: var(--wm-tinte); font-size: var(--wm-t-m); }
+.pf-tidezeile-ico { display: grid; flex: none; color: var(--wm-matt); }
+.pf-tidezeile-text { flex: 1; min-width: 0; }
+.pf-tidezeile-text strong { color: var(--wm-tinte); }
+.pf-tidezeile-pfeil { display: grid; flex: none; color: var(--wm-slip); }
+.pf-tipp { margin: 10px 0 0; font-size: var(--wm-t-s); color: var(--wm-matt); }
+
+/* ---------------------------------------------------------------- Tidepegel */
+.pt-klein { font-size: var(--wm-t-s); color: var(--wm-matt); font-weight: 400; }
+.pt-kurve { position: relative; margin-top: 10px; min-height: 190px; }
+.pt-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.pt-ax { font-size: 12px; fill: var(--wm-matt); paint-order: stroke; stroke: var(--wm-flaeche); stroke-width: 3px; }
+.pt-zeit { font-size: 12.5px; font-weight: 700; fill: var(--wm-tinte); paint-order: stroke; stroke: var(--wm-flaeche); stroke-width: 3px; }
+.pt-jetzt { font-size: 11.5px; font-weight: 700; fill: var(--wm-flaeche); }
+.pt-achse { display: flex; justify-content: space-between; margin: 6px 0 0; font-size: var(--wm-t-s); color: var(--wm-matt); }
+.pt-legende { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0 0; padding-top: 12px; border-top: 1px solid var(--wm-flaeche-2); font-size: var(--wm-t-s); color: var(--wm-tinte); }
+.pt-legende span { display: inline-flex; align-items: center; gap: 8px; }
+.pt-legende i { display: inline-block; width: 22px; height: 0; border-top: 3px solid var(--wm-slip); }
+.pt-legende i.is-mittel { border-top: 1.5px dashed var(--wm-leise); }
+.pt-einordnung { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.pt-einordnung > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pt-einordnung strong { font-size: var(--wm-t-l); color: var(--wm-tinte); }
+.pt-einordnung small { font-size: var(--wm-t-s); color: var(--wm-tinte); }
+.pd-oben.is-tide .pt-tendenz { color: var(--wm-flaeche); font-weight: 700; }
+.pt-legende i.is-vorhersage { border-top: 2.5px dashed var(--wm-slip); }
+.pt-klein.is-alt { color: var(--wm-warn-text); }
+/* Gezeiten (BSH-Vorhersage) */
+.pt-gezeiten .pd-karte-kopf { flex-wrap: wrap; gap: 4px 12px; }
+.pt-gz-reihe { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.pt-gz-kachel { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 12px 14px; border-radius: var(--wm-r-s); background: var(--wm-wasser); }
+.pt-gz-kachel.is-nw { background: var(--wm-flaeche-2); }
+.pt-gz-zeit { font-size: var(--wm-t-xl); line-height: 1.15; color: var(--wm-tinte); font-weight: 700; font-variant-numeric: tabular-nums; }
+.pt-gz-in { font-size: var(--wm-t-m); font-weight: 700; color: var(--wm-slip); }
+.pt-gz-kachel small { font-size: var(--wm-t-s); color: var(--wm-tinte); }
+.pt-gz-pillen { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 12px 0 0; padding: 0; }
+.pt-gz-pillen li { padding: 6px 12px; border-radius: var(--wm-r-rund); background: var(--wm-flaeche-2); font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-tinte); font-variant-numeric: tabular-nums; }
+.pt-gz-text { margin: 12px 0 0; font-size: var(--wm-t-s); color: var(--wm-tinte); }
+.pt-gz-quelle { margin: 10px 0 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+.pt-gz-quelle a { color: inherit; }
+
+/* ---------------------------------------------------------------- Pegel-Tab neu (7.45.0): Kopf mit Umschalter, Suche, Liste | Karte */
+.pg-seite { max-width: 860px; }
+.pg-seite.pf-seite { max-width: 1280px; }
+.pg-seite.is-karte { max-width: none; }
+/* Lage in Deutschland: drei Zähler in einer Zeile, farbige Unterkante */
+/* Handy: volle Breite von unten (wie alle Fenster), erst ab Tablet schmaler */
+/* Wochenende */
+/* Werkzeuge: zwei Kacheln nebeneinander */
+@media (max-width: 767px) {
+  .pg-seite, .pg-seite.pf-seite { max-width: none; }
+                                }
+
+/* Ansicht „Karte“ */
+/* kleiner Zoom: nur Punkte */
+
+/* ---------------------------------------------------------------- Pegel-Tab aufgeräumt (7.46.0) */
+/* nichts darf die Seite seitlich verschiebbar machen */
+/* Deutschland heute: kleine Chips + Flüsse in einer Karte */
+/* Wochenend-Check je Pegel */
+/* Werkzeuge klein am Ende */
+
+/* Kopf: Titel und Umschalter in einer Zeile, „Stand …“ darunter in voller Breite */
+
+/* ---------------------------------------------------------------- Stufe 2 (7.47.0): Zusatzwerte, Vorhersage, Alarm-Zeile, Bild */
+.pd-zusatz { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.pd-zusatz[hidden] { display: none; }
+.pd-z { background: var(--wm-flaeche); border-radius: var(--wm-r-m); padding: 14px 16px; box-shadow: var(--wm-schatten); min-width: 0; }
+.pd-z p { margin: 0; }
+.pd-z .pd-z-wert { margin-top: 4px; }
+.pd-z-wert { color: var(--wm-tinte); }
+.pd-z-wert strong { font-size: var(--wm-t-xxl); font-variant-numeric: tabular-nums; }
+.pd-z-wert span { font-size: var(--wm-t-m); font-weight: 700; }
+.pd-z-sub { font-size: var(--wm-t-s); color: var(--wm-matt); }
+.pd-z .pd-z-sub { margin-top: 2px; }
+.pd-vorh-satz { margin: 8px 0 4px; font-size: var(--wm-t-m); color: var(--wm-tinte); }
+.pd-vorh-satz[hidden] { display: none; }
+.pd-alarm { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; border-radius: var(--wm-r-m); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); color: var(--wm-tinte); text-decoration: none; }
+.pd-bild { text-align: left; }
+
+/* ---------------------------------------------------------------- Stufe 3 (7.48.0): Pegel-Alarm-Fenster */
+.al-form { display: flex; flex-direction: column; gap: 12px; padding-bottom: 4px; }
+.al-h { margin: 6px 0 0; font-weight: 700; font-size: var(--wm-t-m); color: var(--wm-tinte); }
+.al-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.al-r { min-height: 48px; border-radius: var(--wm-r-s); border: 1.5px solid var(--wm-linie); background: var(--wm-flaeche); color: var(--wm-tinte); font-weight: 700; font-size: var(--wm-t-m); }
+.al-r[aria-pressed="true"] { background: var(--wm-tinte); border-color: var(--wm-tinte); color: var(--wm-flaeche); }
+.al-stepper { display: grid; grid-template-columns: 56px 1fr 56px; align-items: center; gap: 10px; padding: 8px; border-radius: var(--wm-r-m); background: var(--wm-flaeche-2); }
+.al-pm { height: 52px; border: 0; border-radius: var(--wm-r-s); background: var(--wm-flaeche); color: var(--wm-tinte); font-size: var(--wm-t-xl); font-weight: 700; box-shadow: var(--wm-schatten); }
+.al-wert-box { display: flex; align-items: baseline; justify-content: center; gap: 6px; color: var(--wm-tinte); }
+.al-wert { width: 4.2ch; border: 0; background: transparent; text-align: right; font-size: var(--wm-t-xxl); font-weight: 700; color: var(--wm-tinte); font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; padding: 0; }
+.al-wert::-webkit-outer-spin-button, .al-wert::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.al-wert:focus { outline: 2px solid rgba(8, 127, 156, .35); border-radius: var(--wm-r-s); }
+.al-wert-box span { font-size: var(--wm-t-l); font-weight: 700; }
+.al-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: var(--wm-t-m); }
+.al-check input { width: 22px; height: 22px; accent-color: var(--wm-slip); }
+.al-optionen { display: flex; flex-direction: column; gap: 10px; }
+.al-opt { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 14px; border-radius: var(--wm-r-s); border: 1.5px solid var(--wm-linie); background: var(--wm-flaeche); cursor: pointer; }
+.al-opt:has(input:checked) { border-color: var(--wm-slip); background: var(--wm-wasser); }
+.al-opt.is-aus { opacity: .6; cursor: default; }
+.al-opt input { width: 22px; height: 22px; accent-color: var(--wm-slip); flex: none; }
+.al-opt-text { display: flex; flex-direction: column; min-width: 0; }
+.al-opt-text strong { font-size: var(--wm-t-m); color: var(--wm-tinte); } .al-opt-text small { font-size: var(--wm-t-s); color: var(--wm-matt); }
+.al-anleitung { padding: 12px 14px; border-radius: var(--wm-r-s); background: var(--wm-warn-hell); color: var(--wm-warn-text); font-size: var(--wm-t-s); }
+.al-anleitung ol { margin: 6px 0 4px; padding-left: 20px; }
+.al-mailbox[hidden] { display: none; }
+.al-mail { width: 100%; min-height: 50px; border: 1px solid var(--wm-linie); border-radius: var(--wm-r-s); padding: 0 14px; font-size: var(--wm-t-m); }
+.al-honig { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.al-klein { margin: 6px 2px 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+.al-meldung { margin: 0; padding: 10px 12px; border-radius: var(--wm-r-s); background: var(--wm-wasser); color: var(--wm-petrol-tief); font-size: var(--wm-t-s); }
+.al-meldung.is-fehler { background: var(--wm-stop-hell); color: var(--wm-stop-text); }
+.al-meldung[hidden] { display: none; }
+.al-los { min-height: 52px; font-size: var(--wm-t-m); }
+.al-los[hidden] { display: none; }
+.al-loeschen { align-self: center; min-height: 44px; border: 0; background: none; color: var(--wm-stop-text); font-weight: 700; }
+.al-fuss { margin: 0; text-align: center; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+button.pd-alarm { width: 100%; border: 0; text-align: left; font: inherit; cursor: pointer; }
+.ei-keine-alarme { padding: 12px 16px; margin: 0; }
+
+/* Fluss-Kacheln: alle bewerteten Pegel als dünner Farbbalken (7.48.2) */
+
+/* ---------------------------------------------------------------- Pegel als Kartenanwendung (7.49.0)
+   Kopf mit Suche und Filtern · Karte (ca. 65 %) · Panel rechts; Handy: Karte voll, Panel als Bottom Sheet. */
+@keyframes pa-dreh { to { transform: rotate(360deg); } }
+
+/* gewählter Pegel kurz */
+.pz-low > i { background: var(--wm-warn); }
+.pz-normal > i { background: var(--wm-gut); }
+.pz-high > i { background: var(--wm-hoch); }
+.pz-hsw > i { background: var(--wm-stop); }
+
+/* Liste: Meine Pegel / im Kartenausschnitt */
+
+/* Cockpit im Panel: helle Kopfzeile statt Navy-Block */
+.pd-vorh-info { margin: 8px 0 0; font-size: var(--wm-t-s); color: var(--wm-matt); }
+.pd-vorh-info[hidden] { display: none; }
+.pd-kw-liste { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 0; font-size: var(--wm-t-s); }
+.pd-kw-liste dt { color: var(--wm-tinte); } .pd-kw-liste dt b { color: var(--wm-tinte); }
+.pd-kw-liste dd { margin: 0; text-align: right; font-weight: 700; color: var(--wm-tinte); font-variant-numeric: tabular-nums; }
+.pd-stamm summary { cursor: pointer; font-weight: 700; color: var(--wm-tinte); font-size: var(--wm-t-m); min-height: 28px; }
+.pd-stamm[open] summary { margin-bottom: 10px; }
+
+/* Karte im Pegel-Tab */
+
+/* ---------------------------------------------------------------- Pegel optimiert (7.50.0): Pillen, kompakte Ansicht, Stufen, Einordnung */
+/* Pillen „● 245 cm ↗“ – kräftige Ampel nur mit Kennwerten, über HSW gefüllt */
+
+/* Stufe 1: kompakt, ohne Leerraum; Wert und 24-h-Kurve nebeneinander */
+
+/* Cockpit-Kopf: Änderung 24 h und Tendenz (2 h) als zwei Felder */
+.pd-tz { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.pd-tz > div { padding: 8px 12px; border-radius: var(--wm-r-s); background: rgba(255, 255, 255, .1); display: flex; flex-direction: column; min-width: 0; }
+.pd-tz span { font-size: var(--wm-t-xs); font-weight: 700; color: var(--wm-linie); }
+.pd-tz strong { font-size: var(--wm-t-m); font-weight: 700; color: var(--wm-flaeche); }
+.pd-body { gap: 12px; }
+.pd-karte { padding: 14px 16px; }
+.pd-karte h2 { margin-bottom: 8px; font-size: var(--wm-t-l); }
+
+/* Pegel-Einordnung: Skala maßstabsgetreu nach Zahlenwerten, HSW (⚓) oben, keine Warnfarben */
+.pd-kw-liste dt { font-size: var(--wm-t-s); }
+.pd-stamm h2 { margin: 0 0 8px; }
+.pd-stamm .pd-hinweis { margin: 8px 0 0; }
+.pd-tz strong { font-size: var(--wm-t-m); line-height: 1.3; }
+/* ---------------------------------------------------------------- Pegel aufgeräumt (7.51.0): kein Dauer-Sheet, weniger Text */
+/* Details: kurze Zeilen statt Kästen */
+.pd-tz { display: flex; flex-direction: column; gap: 0; margin: 2px 0 0; }
+.pd-tz p { margin: 0; font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-linie); }
+.pd-tz p span { color: inherit; font-size: inherit; }
+.pd-tz strong { font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-flaeche); }
+.pd-einordnung h2 { margin: 0 0 4px; }
+.pd-link { border: 0; background: none; padding: 8px 0 0; color: var(--wm-slip); font: inherit; font-weight: 700; cursor: pointer; }
+
+/* Hinweis (7.70.0): früher „.pd.pd-blau“ – der Zusatz pd-blau entfällt, „.pd.pd“ behält das Gewicht der Regeln (sie überstimmen ältere .pd-Regeln weiter oben; diese räumt Phase 5 auf). */
+/* ---------------------------------------------------------------- Pegel im Stil einer Wetter-App (7.52.0)
+   Zart blau (7.53.0): ganz helles Wasserblau, weiße Karten mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. Gilt für Kompaktansicht, Details im Panel/Sheet, Pegel-Fenster und Kartenpanel. */
+:root { --pd-blau: var(--wm-verlauf); --pd-glas: var(--wm-flaeche); --pd-glas2: var(--wm-flaeche); --pd-linie: var(--wm-linie); --pd-matt: var(--wm-matt); --pd-schatten: var(--wm-schatten); }   /* Verweise auf tokens.css */
+/* Panel/Sheet mit gewähltem Pegel: blau (Desktop und Handy) */
+/* Kompakt */
+/* Zustandspunkt (wie in der Ampel der Pillen) */
+.pd-zdot, .pd-zst i { width: 10px; height: 10px; border-radius: var(--wm-r-rund); background: var(--wm-rand); display: inline-block; flex: none; }
+.pz-low.pd-zdot, .pd-zst.pz-low i { background: var(--wm-sonne); }
+.pz-normal.pd-zdot, .pd-zst.pz-normal i { background: var(--wm-gut); }
+.pz-high.pd-zdot, .pd-zst.pz-high i { background: var(--wm-hoch); }
+.pz-hsw.pd-zdot, .pd-zst.pz-hsw i { background: var(--wm-stop); }
+/* Details */
+.pd.pd { background: var(--pd-blau); color: var(--wm-tinte); min-height: 100%; }
+.pd.pd .pd-oben { background: transparent; color: var(--wm-tinte); text-align: center; padding: 4px 16px 6px; border-radius: 0; }
+.pd.pd .pd-ort { margin: 2px 0 0; color: var(--pd-matt); font-size: var(--wm-t-s); }
+.pd.pd .pd-ort.is-alt { color: var(--wm-tanke-text); font-weight: 700; }
+.pd.pd .pd-wert { margin: 6px 0 0; line-height: 1; display: block; }
+.pd.pd .pd-wert strong, .pd.is-eingebettet.pd .pd-wert strong { font-size: var(--wm-t-held); font-weight: 300; letter-spacing: -.04em; color: var(--wm-tinte); }
+.pd.pd .pd-wert span { font-size: var(--wm-t-xl); font-weight: 400; margin-left: 2px; color: var(--wm-tinte); }
+.pd-zeile-kopf { margin: 6px 0 0; font-size: var(--wm-t-m); display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.pd-zeile-kopf b { font-weight: 700; }
+.pd-zeile-kopf .pd-tz { display: inline; margin: 0; font-weight: 400; color: var(--wm-tinte); }
+.pd-zeile-kopf .pd-tz b { font-weight: 400; color: var(--wm-tinte); }
+.pd-knoepfe { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 4px; text-align: center; }
+.pd-kb { min-height: 64px; border: 0; border-radius: var(--wm-r-m); background: var(--pd-glas2); color: var(--wm-tinte); font: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; padding: 6px; }
+.pd-kb:hover { background: var(--wm-flaeche-2); }
+.pd-kb-ico { display: grid; }
+.pd-kb-text { font-size: var(--wm-t-s); font-weight: 700; }
+.pd-kb.is-an { background: var(--wm-wasser); color: var(--wm-slip); }
+.pd-kb.pm-stern.is-on .pd-kb-ico { color: var(--wm-sonne); }
+.pd.pd .pm-stern.pd-kb { width: auto; height: auto; }
+.pd.pd .pd-body, .pd.pd.is-eingebettet .pd-body { margin: 0; padding: 4px 14px 18px; gap: 10px; background: transparent; }
+.pd.pd .pd-karte { background: var(--pd-glas); color: var(--wm-tinte); border: 0; border-radius: var(--wm-r-m); padding: 12px 14px; box-shadow: none; }
+.pd-ct, .pd.pd .pd-karte h2.pd-ct { margin: 0 0 8px; font-size: var(--wm-t-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pd-matt); display: flex; align-items: center; gap: 6px; }
+.pd.pd .gc-grid { stroke: var(--wm-linie); }
+.pd.pd .gc-axis, .pd.pd .gc-reflabel { fill: var(--wm-matt); }
+.pd.pd .gc-ref { stroke: var(--wm-leise); }
+.pd.pd .gc-ref.is-hsw { stroke: var(--wm-stop); }
+.pd.pd .gc-line { stroke: var(--wm-slip); stroke-width: 2.2; }
+.pd.pd .gc-area { fill: var(--wm-slip); opacity: .08; }
+.pd.pd .gc-dot { fill: var(--wm-slip); stroke: var(--wm-flaeche); }
+.pd.pd .gc-vorh { stroke: var(--wm-slip); }
+.pd.pd .gc-vorh-bg { fill: rgba(8, 127, 156, .05); }
+.pd.pd .gc-tief { fill: rgba(247, 183, 51, .14); }
+.pd.pd .gc-jetzt { stroke: var(--wm-leise); }
+.pd.pd .gc-jetzt-text { fill: var(--wm-matt); }
+.pd.pd .gc-cross { stroke: var(--wm-tinte); }
+.pd.pd .gc-schraffur { stroke: var(--wm-rand); }
+.pd.pd .gc-tip { background: var(--wm-tinte); color: var(--wm-flaeche); }
+.pd.pd .gc-table summary, .pd.pd .gc-luecken-text, .pd.pd .pd-vorh-info, .pd.pd .pd-vorh-satz { color: var(--pd-matt); }
+.pd.pd .gc-table table { color: var(--wm-tinte); }
+.pd.pd .muted, .pd.pd .unknown { color: var(--pd-matt); }
+/* Einordnung */
+.pd-zst { margin: 0; display: flex; align-items: center; gap: 8px; font-size: var(--wm-t-xl); font-weight: 700; }
+.pd-zst i { width: 12px; height: 12px; }
+.pd-zonen { margin-top: 34px; }
+.pd-zbalken { position: relative; display: flex; height: 12px; }
+.pd-zbalken > span:not(.pd-zmark) { display: block; height: 12px; }
+.pd-zmark { position: absolute; bottom: -4px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 2; }
+.pd-zmark b { font-size: var(--wm-t-xs); font-weight: 700; white-space: nowrap; margin-bottom: 2px; }
+.pd-zmark i { display: block; width: 20px; height: 20px; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); border: 4px solid var(--wm-tinte); box-shadow: var(--wm-schatten); }
+.pd-znamen { display: flex; margin-top: 8px; font-size: var(--wm-t-xs); font-weight: 700; text-align: center; }
+.pd-znamen span { color: var(--pd-matt); } .pd-znamen span.is-an { color: var(--wm-tinte); }
+.pd-zgrenzen { position: relative; height: 16px; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+.pd-zgrenzen span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+/* Abfluss, Wasser */
+.pd.pd .pd-zusatz { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; }
+.pd.pd .pd-zusatz[hidden] { display: none; }
+.pd.pd .pd-z { background: var(--pd-glas); border: 0; border-radius: var(--wm-r-m); padding: 12px 14px; box-shadow: none; color: var(--wm-tinte); }
+.pd.pd .pd-z .pd-ct { margin-bottom: 4px; }
+.pd.pd .pd-z-wert { margin: var(--wm-1) 0 0; color: var(--wm-tinte); }
+.pd.pd .pd-z-wert strong { font-size: var(--wm-t-xxl); font-weight: 400; color: var(--wm-tinte); }
+.pd.pd .pd-z-wert span { font-size: var(--wm-t-m); color: var(--pd-matt); }
+.pd.pd .pd-z-sub { margin: 2px 0 0; font-size: var(--wm-t-xs); color: var(--pd-matt); }
+.pd.pd .pd-z-sub:empty { display: none; }
+/* Kennwerte */
+.pd-kwl { list-style: none; margin: 0; padding: 0; }
+.pd-kwl li { display: flex; align-items: baseline; gap: 10px; padding: 8px 0; border-top: 1px solid var(--pd-linie); }
+.pd-kwl li:first-child { border-top: 0; padding-top: 2px; }
+.pd-kwl b { font-weight: 400; font-size: var(--wm-t-m); min-width: 44px; }
+.pd-kwl span { flex: 1; min-width: 0; font-size: var(--wm-t-xs); color: var(--pd-matt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pd-kwl strong { font-weight: 700; font-size: var(--wm-t-m); white-space: nowrap; }
+/* Liste unten */
+.pd.pd .pd-liste { padding: 0 14px; }
+.pd-zeile { display: flex; align-items: center; gap: 10px; min-height: 50px; width: 100%; border: 0; border-top: 1px solid var(--pd-linie); background: none; color: var(--wm-tinte); font: inherit; font-size: var(--wm-t-m); font-weight: 400; text-decoration: none; text-align: left; cursor: pointer; padding: 0; }
+.pd-liste > .pd-zeile:first-child { border-top: 0; }
+.pd-zeile > span:first-child, .pd-zeile > summary > span:first-child { display: grid; color: var(--pd-matt); }
+.pd-chev { margin-left: auto; display: grid; color: var(--pd-matt); }
+details.pd-zeile { display: block; min-height: 0; }
+details.pd-zeile > summary { list-style: none; display: flex; align-items: center; gap: 10px; min-height: 50px; cursor: pointer; }
+details.pd-zeile > summary::-webkit-details-marker { display: none; }
+details.pd-zeile > summary::after { content: '›'; margin-left: auto; font-size: var(--wm-t-l); color: var(--pd-matt); transition: transform .15s; }
+details.pd-zeile[open] > summary::after { transform: rotate(90deg); }
+details.pd-zeile > summary em { font-style: normal; color: var(--pd-matt); margin-left: auto; }
+details.pd-zeile > summary em + ::after { margin-left: 8px; }
+details.pd-zeile[open] { padding-bottom: 10px; }
+.pd.pd .pd-slips button { color: var(--wm-tinte); }
+.pd.pd .pd-slip-name { color: var(--wm-tinte); } .pd.pd .pd-slip-km { color: var(--pd-matt); }
+.pd.pd .pd-slips li + li { border-top-color: var(--pd-linie); }
+.pd.pd .pd-kw-liste dt { color: var(--pd-matt); } .pd.pd .pd-kw-liste dd { color: var(--wm-tinte); }
+.pd.pd .pd-hinweis, .pd.pd .pd-leer { color: var(--pd-matt); font-size: var(--wm-t-xs); margin: 8px 0 0; }
+.pd.pd .pd-link { color: var(--wm-slip); text-decoration: underline; text-underline-offset: 3px; font-weight: 700; display: inline-block; padding-top: 8px; }
+/* Wetter (Kartenpanel) bleibt hell lesbar */
+.pd.pd .pd-wetter { background: var(--wm-flaeche); color: var(--wm-tinte); }
+.pd.pd :focus-visible { outline: 3px solid var(--wm-slip); outline-offset: 2px; }
+@media (max-width: 767px) {
+    .pd.pd .pd-wert strong { font-size: var(--wm-t-held); }
+  }
+.pd.pd .pd-kb.pm-stern, .pd.pd .pd-kb.pm-stern.is-on { background: var(--pd-glas2); color: var(--wm-tinte); border-radius: var(--wm-r-m); }
+.pd.pd .pd-kb.pm-stern.is-on .pd-kb-ico { color: var(--wm-sonne); }
+
+/* Zart blau: weiße Karten und Knöpfe mit leichtem Schatten */
+.pd.pd .pd-karte, .pd.pd .pd-z, .pd-kb { box-shadow: var(--wm-schatten); }
+.pd.pd .pd-kb.pm-stern, .pd.pd .pd-kb.pm-stern.is-on { color: var(--wm-tinte); }
+.pd.pd .pd-wetter { box-shadow: var(--wm-schatten); }
+.pd-zdot.pz-tide { background: var(--wm-fokus); }
+.pd.pd .pd-karte-kopf { margin-bottom: 8px; }
+.pd.pd .pd-karte-kopf .pd-ct { margin: 0; }
+.pd.pd .pd-hinweis { margin: 4px 4px 0; }
+.pd.pd .pd-zeile-kopf .pd-tz, .pd.pd .pd-zeile-kopf .pt-tendenz { color: var(--wm-tinte); font-weight: 400; }
+
+/* ------------------------------------------------------------------ 7.60.0 Designsystem Schritt 4: Pegel (DESIGN_SYSTEM.md)
+   Nur Tokens: Titel 24/700, ein großer Wert (held 72/300), Knöpfe/Karten Radius m, Abschnittstitel ohne Großbuchstaben. */
+.pd-ct, .pd.pd .pd-karte h2.pd-ct, .pd-kicker { font-size: var(--wm-t-s); font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--wm-matt); }
+.pd.pd .pd-ort { font-size: var(--wm-t-s); color: var(--wm-matt); }
+.pd.pd .pd-wert strong, .pd.is-eingebettet.pd .pd-wert strong { font-size: var(--wm-t-held); font-weight: 400; color: var(--wm-tinte); }
+.pd.pd .pd-wert span { font-size: var(--wm-t-xl); font-weight: 400; }
+.pd-kb { min-height: 62px; border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); color: var(--wm-tinte); }
+.pd-kb-text { font-size: var(--wm-t-s); font-weight: 700; }
+.pd-kb.is-an { background: var(--wm-petrol-hell); color: var(--wm-petrol-tief); }
+.pd-kb.pm-stern.is-on .pd-kb-ico svg, .pd.pd .pd-kb.pm-stern.is-on .pd-kb-ico svg { fill: var(--wm-sonne); color: var(--wm-tinte); }
+.pd.pd .pd-kb.pm-stern, .pd.pd .pd-kb.pm-stern.is-on { border-radius: var(--wm-r-m); }
+.pd.pd .pd-karte { border-radius: var(--wm-r-m); padding: var(--wm-3) var(--wm-4); box-shadow: var(--wm-schatten); }
+/* 7.60.1 Suche im Pegel-Bereich wie auf der Hauptkarte (Logo links, Pille 48 px, Lupe rechts, Chips 40 px) */
+
+/* ---------------------------------------------------------------- Pegel auf der Hauptkarte (Designumbau 2a, 7.70.0)
+   Eine Wert-Pille für alle Pegel, nach dem Prototyp: weiß, Zustandspunkt, Wert, Pfeil; gewählt dunkel und größer.
+   Schrift 13 px in der Plakette (Ausnahme laut DESIGN_SYSTEM.md 8). js/pegel-marker.js, js/map.js */
+.pk-marker { background: none; border: 0; }
+.pk-pille { --pk: var(--wm-leise); display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px 0 5px; border-radius: var(--wm-r-rund);
+  background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font: 700 var(--wm-t-xs)/1 var(--wm-schrift); white-space: nowrap;
+  font-variant-numeric: tabular-nums; transition: transform var(--wm-mittel) var(--wm-feder); }
+.pk-pille b { flex: none; display: block; width: 14px; height: 14px; border-radius: var(--wm-r-rund); background: var(--pk); box-shadow: 0 0 0 2px var(--wm-flaeche); }
+.pk-welle { flex: none; display: block; color: var(--pk); }
+.pk-zahl small { font-weight: 400; }
+.pk-pfeil { font-style: normal; color: var(--wm-matt); }
+.pk-stern { font-style: normal; color: var(--wm-sonne); }
+.pk-pille.is-gemerkt { height: 32px; padding: 0 12px 0 7px; font-size: var(--wm-t-s); }
+.pk-pille.is-old { opacity: .7; }
+.pk-pille.is-old b { background: transparent; box-shadow: inset 0 0 0 2px var(--pk), 0 0 0 2px var(--wm-flaeche); }
+.pk-pille.is-gewaehlt { background: var(--wm-tinte); color: var(--wm-flaeche); transform: scale(1.15); }
+.pk-pille.is-gewaehlt .pk-pfeil { color: var(--wm-petrol-hell); }
+/* weit herausgezoomt: nur Punkte */
+.pk-kompakt .pk-pille { height: auto; padding: 0; background: transparent; box-shadow: none; }
+.pk-kompakt .pk-pille .pk-zahl, .pk-kompakt .pk-pille .pk-pfeil, .pk-kompakt .pk-pille .pk-stern { display: none; }
+.pk-kompakt .pk-pille b { box-shadow: 0 0 0 2px var(--wm-flaeche), var(--wm-schatten); }
+.pk-kompakt .pk-pille .pk-welle { background: var(--wm-flaeche); border-radius: var(--wm-r-rund); box-shadow: var(--wm-schatten); }
+.pk-kompakt .pk-pille.is-gemerkt b { width: 18px; height: 18px; }
+.pk-kompakt .pk-pille.is-gewaehlt { background: transparent; }
+.pk-kompakt .pk-pille.is-gewaehlt b { box-shadow: 0 0 0 2px var(--wm-flaeche), 0 0 0 4px var(--wm-tinte); }
+/* Cluster */
+.pk-cluster { background: none; border: 0; }
+.pk-cluster span { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--wm-r-rund); background: var(--wm-flaeche); border: 3px solid var(--wm-gut);
+  box-shadow: var(--wm-schatten); color: var(--wm-tinte); font: 700 var(--wm-t-xs)/1 var(--wm-schrift); }
+/* Legende: kleine aufklappbare Pille unten links (über „In der Nähe“), nur bei eingeschaltetem Chip „Pegel“ */
+.pk-legende { position: absolute; z-index: 1000; left: 12px; bottom: 28px; max-width: calc(100% - 96px); border-radius: var(--wm-r-m);
+  background: var(--wm-flaeche); color: var(--wm-tinte); box-shadow: var(--wm-schatten); font-size: var(--wm-t-s); }
+.pk-legende[hidden] { display: none; }
+.pk-legende summary { display: flex; align-items: center; min-height: 40px; padding: 0 var(--wm-4); font-weight: 700; cursor: pointer; list-style: none; }
+.pk-legende summary::-webkit-details-marker { display: none; }
+.pk-legende summary::before { content: ""; width: 10px; height: 10px; margin-right: var(--wm-2); border-radius: var(--wm-r-rund); background: var(--wm-gut); }
+.pk-legende ul { margin: 0; padding: 0 var(--wm-4) var(--wm-3); list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.pk-legende li { display: flex; align-items: center; gap: var(--wm-2); color: var(--wm-matt); }
+.pk-legende li i { flex: none; width: 12px; height: 12px; border-radius: var(--wm-r-rund); }
+.pk-legende summary:focus-visible { outline: 3px solid var(--wm-fokus); outline-offset: 2px; }
+.has-detail .pk-legende, .is-picking .pk-legende { display: none; }
+@media (max-width: 767px) {
+  .pk-legende { bottom: calc(var(--bn-space) + 70px); }
+  }
+/* Kategorie-Chips: Farbpunkt links, aktiv Häkchen statt Punkt (DESIGN_SYSTEM.md 5, Chip) */
+.cat-pegel { --cc: var(--wm-gut); }
+.cat-punkt { flex: none; width: 10px; height: 10px; border-radius: var(--wm-r-rund); background: var(--cc); }
+.cat[aria-pressed="true"] .cat-punkt { display: none; }
+/* Handy: vier Kategorie-Chips passen nicht nebeneinander – die Chip-Zeile scrollt seitlich, Chips behalten ihre Breite */
+@media (max-width: 767px) {
+  .toolbar .cats { overflow-x: auto; scrollbar-width: none; padding: 4px 2px; margin: -4px 0; pointer-events: auto; }
+  .toolbar .cats::-webkit-scrollbar { display: none; }
+  .toolbar .cats .cat { flex: none; }
+}
+/* ---------------------------------------------------------------- Pegel-Sheet (Designumbau 2a, 7.70.0): Kurzansicht in der Stufe „klein“ */
+.pks-kurz { display: flex; flex-direction: column; gap: var(--wm-3); }
+.pks-mitte { display: flex; align-items: center; gap: var(--wm-4); }
+.pks-wert { flex: none; margin: 0; font-variant-numeric: tabular-nums; }
+.pks-wert strong { font-size: var(--wm-t-held); line-height: 1; font-weight: 400; letter-spacing: -.02em; }
+.pks-wert small { font-size: var(--wm-t-xl); font-weight: 400; }
+.pks-kurve { flex: 1; min-width: 0; height: 64px; }
+.pks-kurve-svg { display: block; width: 100%; height: 64px; overflow: visible; }
+.pks-kurve-linie { fill: none; stroke: var(--wm-petrol); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.pks-kurve-flaeche { fill: var(--wm-petrol); opacity: .08; }
+.pks-kurve-punkt { fill: var(--wm-petrol); stroke: var(--wm-flaeche); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.pks-trend { display: flex; align-items: center; flex-wrap: wrap; gap: var(--wm-2) var(--wm-3); margin: 0; font-size: var(--wm-t-s); color: var(--wm-matt); }
+.pks-zahlen { display: inline-flex; gap: var(--wm-3); }
+.pks-zahlen b { color: var(--wm-tinte); }
+.pks-details { width: 100%; }
+/* Details im Sheet: Kopf ohne eigenen Namen und × (stehen im Sheet-Kopf) */
+.wm-sheet .pd { background: none; }
+.wm-sheet .pd-oben { padding-top: 0; text-align: center; }
+/* Fluss-Sheet (7.70.0): Inhalt der Flussseite ohne eigenen Kopf und ohne Seitenränder */
+.wm-sheet .pf-seite.is-im-sheet { padding: 0; background: none; min-height: 0; }
+.wm-sheet .pf-raster { grid-template-columns: minmax(0, 1fr); grid-template-areas: "profil" "liste" "slips" "hinweis"; grid-template-rows: none; gap: var(--wm-3); padding: 0; margin-top: 0; max-width: none; }
+
+/* ---------------------------------------------------------------- „Passt mein Boot?“ im Pegel-Sheet (Designumbau 2b, 7.71.0, passt-mein-boot.js)
+   Ohne Mindestpegel eine Ortszeile, mit Mindestpegel eine Hinweiszeile im Zustand der Ampel (gut/warn/stop, immer mit Wort). */
+.pmb { display: flex; flex-direction: column; gap: var(--wm-2); text-align: left; }
+.pmb-titel { margin: 0; font-size: var(--wm-t-m); font-weight: 700; color: var(--wm-tinte); }
+.pmb-klein { margin: 0; font-size: var(--wm-t-s); line-height: 1.4; color: var(--wm-matt); }
+.pmb .wm-gruppe { margin: 0; }
+.pmb-form { display: flex; flex-direction: column; gap: var(--wm-4); padding: var(--wm-4); border-radius: var(--wm-r-m); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
+.pmb-label { font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-tinte); }
+.pmb-stepper { display: flex; align-items: center; gap: var(--wm-3); }
+.pmb-stepper .wm-rund { flex: none; font-size: var(--wm-t-l); font-weight: 700; color: var(--wm-tinte); }
+.pmb-einheit { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; }
+.pmb-einheit .wm-eingabe { text-align: center; font-weight: 700; padding-right: var(--wm-12); -moz-appearance: textfield; }
+.pmb-einheit .wm-eingabe::-webkit-inner-spin-button, .pmb-einheit .wm-eingabe::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.pmb-einheit > span { position: absolute; right: var(--wm-4); color: var(--wm-matt); font-size: var(--wm-t-s); pointer-events: none; }
+.pmb-knoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: var(--wm-2); }
+.pmb-entfernen { margin-left: auto; }

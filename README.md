@@ -17,20 +17,27 @@ Die Standorte für **ganz Deutschland** (16 Bundesländer) kommen per Import aus
 - Mac/Linux: `sh daten-aktualisieren.sh`
 - Automatisch jeden Monat: [GitHub Action](.github/workflows/update-osm-data.yml)
 
-„In der Nähe“ (500 m um einen Standort) fragt Campingplätze, Parkplätze, Toiletten, Gastronomie, Supermärkte und Schleusen live bei OpenStreetMap ab (direkt aus dem Browser bei overpass-api.de; Rückfall: Netlify-Funktion `netlify/functions/umgebung.mjs` mit Ausweich-Servern); der Import liefert Brücken, Wehre, Kanu-Einstiege und Verleihe und dient als Rückfall.
+„Heute vor Ort“: Lagemeldungen (24 h sichtbar) über `netlify/functions/meldungen.mjs` + Netlify Blobs – Einrichtung in `docs/HEUTE-VOR-ORT.md`.
+
+„In der Nähe“ (Bereich `#naehe`) zeigt Slipanlagen, Häfen und Tankstellen im Umkreis; Schleusen, Brücken, Kanu-Einstiege und Service kommen aus dem Import (`osm/extras.geojson`).
 
 Details: [docs/DATEN-AKTUALISIEREN.md](docs/DATEN-AKTUALISIEREN.md). Fehlt ein Bundesland, weil die Overpass-Server ausfallen, bricht der Import ab und die alten Daten bleiben.
 
-## Pegel-Ampel
-Eigene Seite unter `/pegel-ampel` (`public/pegel-ampel.html`, `js/ampel.js`, Logik in `js/ampel-logik.js`): Pegel wählen, persönlichen Mindestpegel eingeben → Grün/Gelb/Rot mit Trend, 14-Tage-Verlauf und den nächsten Slipanlagen. Puffer (20 cm), Trendschwelle und Prognosezeitraum stehen als Konstanten oben in `ampel-logik.js`. Weitere Prüfungen (z. B. Brücken) werden an `PRUEFUNGEN` angehängt. Teilbare Links: `/pegel-ampel?pegel=<PEGELONLINE-UUID>&min=<cm>`.
+## Pegel
+Bereich „In der Nähe“ unter `#naehe` (`js/naehe.js`, Stil `css/naehe.css`; alter Link `#liste` geht weiter): Standorte im Umkreis von 25 km (bei weniger als 5 Treffern 50 bzw. 100 km) um „Meine Position“, die Kartenmitte oder einen gesuchten Ort. Die Standortfreigabe wird vorher geprüft (Permissions API); der Browser-Dialog kommt erst auf „Position verwenden“. Gespeichert wird nur die Wahl des Bezugspunkts, nie die Position; der Ortsname kommt lokal aus den WaterMap-Daten.
 
-**E-Mail-Alarm:** `netlify/functions/pegel-alarm.mjs` (Anmeldung mit Double-Opt-in) und `pegel-alarm-pruefen.mjs` (stündlich), Mails über Brevo (kostenlos). Einrichtung: [docs/PEGEL-ALARM.md](docs/PEGEL-ALARM.md).
+Pegel liegen seit dem Designumbau auf der Hauptkarte (Chip „Pegel“, `js/pegel-marker.js`); ein Tipp öffnet das Pegel-Sheet (`js/pegel-sheet.js`, Cockpit `js/pegel-ansicht.js`, Daten `js/pegel-daten.js`, Stil `css/pegel.css`). Adresse `#karte/pegel/<UUID>`; alte Adressen (`#pegel`, `#pegel/<UUID>`, `#g=<UUID>`) führen dorthin. Flüsse: `#pegel/fluss/<name>`.
+
+## Pegel-Ampel
+Seit 7.71.0 ein Abschnitt „Passt mein Boot?“ im Pegel-Sheet (`js/passt-mein-boot.js`, Speicher `js/mindestpegel.js`, Logik in `js/ampel-logik.js`): Mindestpegel je Pegel (`watermap.mindestpegel`) → Passt/Knapp/Zu niedrig mit Abstand und Vorschau; sichtbar auch in „Gemerkt“ und am Pegel-Kasten der Slipanlage. `/pegel-ampel` ist nur noch Einstiegsseite für Suchmaschinen (`?pegel=` leitet ins Sheet, Bestätigen/Abbestellen der Alarm-Mails läuft weiter dort). Puffer (20 cm), Trendschwelle und Prognosezeitraum stehen als Konstanten oben in `ampel-logik.js`. Weitere Prüfungen (z. B. Brücken) werden an `PRUEFUNGEN` angehängt. Alte Links `/pegel-ampel?pegel=<PEGELONLINE-UUID>` führen ins Pegel-Sheet.
+
+**E-Mail-Alarm:** `netlify/functions/pegel-alarm.mjs` (Anmeldung mit Double-Opt-in) und `pegel-alarm-pruefen.mjs` (stündlich), Mails über Brevo (kostenlos). Einrichtung: [docs/PEGEL-ALARM.md](docs/PEGEL-ALARM.md). Seit 7.71.0 legt die App nur noch Schwellen-Alarme an (Alarm-Fenster, Push oder E-Mail); bestehende Ampel-Alarme laufen weiter, Bestätigen und Abbestellen über `/pegel-ampel`.
 
 ## Ordner
 | Pfad | Inhalt |
 |---|---|
 | `public/` | Die Web-App (das wird veröffentlicht) |
-| `public/js/` | Programmcode: `main.js` (Ablauf), `map.js` (Leaflet), `data.js`, `model.js`, `forms.js`, `detail.js`, `search.js`, `icons.js`, `config.js` |
+| `public/js/` | Programmcode (ES-Module, kein Build): `main.js` (Start, Routing), `suche-ui.js`, `melden-menue.js`, `bausteine.js`, `map.js` u. a. – Übersicht in `watermap-stand.md` |
 | `public/data/osm/` | Standorte aus OpenStreetMap (GeoJSON, wird vom Import überschrieben) |
 | `public/data/community/` | Geprüfte Community-Daten (wird **nie** vom Import überschrieben) |
 | `netlify/` | Netlify-Funktionen (Foto-Verwaltung, Pegel-Alarm); `package.json` nur dafür |
@@ -42,9 +49,25 @@ Eigene Seite unter `/pegel-ampel` (`public/pegel-ampel.html`, `js/ampel.js`, Log
 ```
 python3 -I -m unittest discover -s tests -v     # Importer, Validator, Moderationsskript
 python3 -I tests/ui_full.py                     # Oberfläche (braucht: pip install playwright pillow)
-python3 -I tests/ui_ampel.py                    # Pegel-Ampel
+python3 -I tests/ui_pegel_ampel.py              # „Passt mein Boot?“ im Pegel-Sheet, Einstiegsseite /pegel-ampel
+python3 -I tests/ui_bewegung.py                 # Animationen: Lupe, Merken-Flug, Chips, Umschalter, Pegelwert, „Bewegung reduzieren“
+node tests/mindestpegel_test.mjs                # Mindestpegel je Pegel, Übernahme, Sätze
+python3 -I tests/ui_pegel_karte.py              # Pegel auf der Hauptkarte: Chip, Marker, Pegel-Sheet, alte Adressen, Suche, Navigation (390/1440 px)
+python3 -I tests/ui_pegel_fluss.py              # Fluss-Sheet, Tidepegel mit BSH-Vorhersage im Pegel-Sheet (375/390/1024/1440 px)
+python3 -I tests/ui_naehe.py                    # „In der Nähe“ (Bezugspunkt, Standortfreigabe, Liste; 375/390/1024/1440 px)
+python3 -I tests/ui_bereiche.py                 # Navigation, „Aktuelle Meldungen“, „Mehr“, „Gemerkt“ als Sheets (360–1440 px)
+python3 -I tests/ui_einstellungen.py            # „Mein WaterMap“ (Einstellungen; 375/390/1024/1440 px)
+python3 -I tests/ui_wischen.py                   # Wischen nach unten schließt Fenster von unten (Filter, Melden, Standort, Wetter; echte Touch-Ereignisse)
+python3 -I tests/ui_nav.py                      # schwebende Navigationsleiste (Handy; 375/390 px): Glas, Markierung, Abzeichen, Langdruck, nichts verdeckt
+python3 -I tests/ui_bausteine.py                # gemeinsame Bausteine und Sheet-Rahmen (Designumbau Phase 1; 390/1440 px, echte Touch-Ereignisse)
+python3 -I tests/ui_gebiet.py                   # Kartengebiet Deutschland mit echtem Leaflet (Zoom, Ziehen, Suche, Standort)
+node tests/gebiet_test.mjs                      # Kartengebiet: Punkte, Suchtreffer, Kacheln
+node tests/foto_kategorien_test.mjs             # Foto-Kategorien: Zuordnung, Filter
+node tests/nav_test.mjs                        # Navigation: Beschriftung, Abzeichen-Zahl, „neu“-Zählung
+node tests/design_tokens_test.mjs               # Wächter: nur Tokens in public/css und public/js (Ausnahmen begründet im Test)
 ```
 Die Oberflächentests laufen mit einem Leaflet-Ersatz. Siehe [docs/STATUS.md](docs/STATUS.md) für das, was damit **nicht** geprüft ist.
 
 ## Lizenzen und Quellen
 Kartendaten und Standorte © OpenStreetMap-Mitwirkende, [ODbL 1.0](https://www.openstreetmap.org/copyright). Die Namensnennung steht in der Karte und in jeder Standortansicht. Leaflet (BSD-2) und Leaflet.markercluster (MIT) werden eingebunden.
+Pegel: WSV/PEGELONLINE. Gezeitenvorhersage: BSH, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.de) – über `/api/gezeiten` (Abschalten: `GEZEITEN_BSH_AKTIV` in `config.js` oder Umgebungsvariable `GEZEITEN_BSH_AUS=1`; Kontakt im User-Agent: `WATERMAP_KONTAKT`), siehe `docs/BSH-Klaerung.md`.

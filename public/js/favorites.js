@@ -25,6 +25,8 @@ export const favorites = {
     document.dispatchEvent(new CustomEvent('favorites-changed'));
     return next.includes(id);
   },
+  /** Ganze Liste setzen (z. B. „Rückgängig“ nach dem Entfernen; Reihenfolge bleibt). */
+  setzen(arr) { write([...arr]); document.dispatchEvent(new CustomEvent('favorites-changed')); },
   get persistent() { return storageOk; },
 };
 

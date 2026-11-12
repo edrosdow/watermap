@@ -1,6 +1,6 @@
 // Zentrale Einstellungen. Hier – und nur hier – werden Dienste und Grenzwerte angepasst.
 export const CONFIG = {
-  VERSION: '7.14.3',
+  VERSION: '8.0.0',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -16,9 +16,20 @@ export const CONFIG = {
   // Ortssuche (Geocoder). Wird nur auf Nutzeraktion hin abgefragt, nie bei Kartenbewegung.
   GEOCODER_URL: 'https://nominatim.openstreetmap.org/search',
 
-  // Startansicht: 'data' = auf vorhandene Standorte zoomen, 'germany' = ganz Deutschland.
-  START_MODE: 'data',
-  GERMANY_VIEW: { center: [51.1, 10.4], zoom: 6 },
+  // Startansicht: 'germany' = ganz Deutschland mit Nord- und Ostseeküste, 'data' = auf vorhandene Standorte zoomen.
+  START_MODE: 'germany',
+  // Kartengebiet: Deutschland mit Nord- und Ostsee hervorgehoben, Europa leicht grau. Verschieben und Herauszoomen bis Europa;
+  // Kartenkacheln mit Straßen gibt es nur für Deutschland und knapp darüber hinaus. Suche, Standort und neue Slipanlagen
+  // nur im deutschen Gebiet (inkl. Küstenmeer). Grenze: data/gebiet-de.json.
+  GEBIET: {
+    url: './data/gebiet-de.json',
+    bounds: [[47.2613, 5.8586], [55.1047, 15.0471]],   // Deutschland (Startansicht, Ortssuche)
+    europa: [[34.5, -12], [71.5, 42]],                  // so weit lässt sich die Karte verschieben und herauszoomen
+    maske: '#D3D6D9',
+    nachbarn: 0.5,      // Deckkraft des grauen Schleiers außerhalb Deutschlands (1 = ganz abgedeckt)
+    strassenRand: 1.5,  // ab Zoom 9 Kacheln nur bis so viele Grad um Deutschland (keine fremden Straßenkarten)
+    hinweis: 'WaterMap ist derzeit auf Deutschland sowie die deutschen Nord- und Ostseegebiete begrenzt.',
+  },
   FALLBACK_VIEW: { center: [51.45, 7.55], zoom: 8 },
 
   // Pegelstände (PEGELONLINE der WSV). Abruf über die eigene Domain; Netlify leitet weiter (public/_redirects).
@@ -26,25 +37,32 @@ export const CONFIG = {
   PEGEL_REFRESH_MIN: 15,       // so oft misst die WSV
   PEGEL_STALE_HOURS: 6,        // ältere Messwerte gelten als veraltet
   PEGEL_HISTORY_DAYS: 7,
+  // Küstengewässer: eigene Kachel „Küste“ (Tide, ohne Niedrig/Hoch-Bewertung) statt Flussseite. Groß-/Kleinschreibung egal.
+  PEGEL_KUESTE: ['Nordsee', 'Ostsee', 'Jade', 'Jadebusen', 'Außenjade', 'Außenems', 'Außenweser', 'Außenelbe', 'Dollart', 'Wattenmeer',
+    'Strelasund', 'Peenestrom', 'Kleines Haff', 'Greifswalder Bodden', 'Kieler Förde', 'Flensburger Förde', 'Schlei', 'Trave-Mündung'],
+  // Gezeitenvorhersage des BSH (über die eigene Funktion /api/gezeiten, Lizenz CC BY 4.0). false = aus.
+  GEZEITEN_BSH_AKTIV: true,
+  GEZEITEN_BASE: '/api/gezeiten',
+  GEZEITEN_OFFLINE_STUNDEN: 24,      // so lange wird die letzte Vorhersage offline noch gezeigt
   PEGEL_ATTRIBUTION: 'Pegel: <a href="https://www.pegelonline.wsv.de" target="_blank" rel="noopener noreferrer">WSV/PEGELONLINE</a>',
 
   // Wetter und Wind (DWD-Daten über Bright Sky). Abruf über die eigene Domain (public/_redirects).
   WETTER_BASE: '/api/wetter/',
   WETTER_HOURS: 48,            // Vorhersagezeitraum im Diagramm
   WETTER_CACHE_MIN: 10,        // gleiche Stelle innerhalb dieser Zeit nicht erneut abfragen
-  WETTER_GUST_HINT_KMH: 39,    // ab 6 Bft Böen ein Hinweis (gerade für kleine Boote)
+  WETTER_GUST_HINT_KMH: 39,
+  HOCHWASSER_AKTIV: false,     // Hochwasserwarnungen (Länderportale) – erst nach Prüfung der Quelle einschalten    // ab 6 Bft Böen ein Hinweis (gerade für kleine Boote)
 
-  // „In der Nähe“ (Schleusen, Toiletten, Parkplätze … aus osm/extras.geojson)
-  NEARBY_EXTRAS_M: 500,
-  OVERPASS_API: 'https://overpass-api.de/api/interpreter',   // „In der Nähe“ direkt aus dem Browser
-  UMGEBUNG_API: '/.netlify/functions/umgebung',   // „In der Nähe“ live aus OSM (Umkreis NEARBY_EXTRAS_M, fest in der Funktion)
-  NEARBY_EXTRAS_MAX: 12,
+  VOR_ORT_RADIUS_M: 1000,   // „Heute vor Ort“: so nah gilt man als „vor Ort“ (nur Bedienhilfe, der Server prüft keine Position)
 
   // Hafeninfos von den Websites (data/hafeninfo.json): ab diesem Alter als möglicherweise veraltet markieren
   HAFENINFO_STALE_DAYS: 365,
 
   // Liste
   LIST_LIMIT: 120,
+
+  // Navigation unten (Handy): Markierung wandert beim Wechsel
+  NAV_DEHNEN: true,   // true: Markierung dehnt sich erst zum neuen Platz und zieht sich dann zusammen; false: gleitet nur
 
   // Meldungen
   NEARBY_RADIUS_M: 150,        // Prüfung auf bereits vorhandene Slipanlage

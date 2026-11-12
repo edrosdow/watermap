@@ -1,0 +1,111 @@
+/* Bewegung (Designumbau Phase 4, 7.73.0) – Abläufe nach dem Prototyp (docs/prototyp-designumbau.dc.html), DESIGN_SYSTEM.md 7a.
+   Dauern und Kurven aus den Tokens (--wm-kurz/mittel/lang, --wm-feder/sanft). Feste Längen nur, wo der Auftrag sie nennt:
+   Stern 480 ms, Flug 820 ms, Abzeichen 500 ms, Kurve 900 ms, Fläche 600 ms. Bewegt werden transform und opacity;
+   Ausnahmen: Breite der Suchpille (Auftrag 4.1), Lage des Punkts im Einordnungsbalken (left, wie im Prototyp). Geladen nach allen anderen Stilen. */
+
+@keyframes wm-zeile-ein { from { opacity: 0; transform: translateY(8px); } }
+@keyframes wm-inhalt-ein { from { opacity: 0; transform: translateY(14px); } }
+@keyframes wm-fall-ein { from { opacity: 0; transform: translateY(-8px) scale(.96); } }
+@keyframes wm-plopp-ein { from { opacity: 0; transform: scale(.3); } }
+@keyframes wm-wachsen { from { transform: scale(1); } }
+@keyframes wm-zeichnen { to { stroke-dashoffset: 0; } }
+@keyframes wm-einblenden { from { opacity: 0; } }
+@keyframes wm-von-links { from { left: 0; } }
+@keyframes wm-bump { 40% { transform: scale(1.5); } }
+@keyframes wm-toast-ein { from { opacity: 0; transform: translateX(-50%) translateY(16px) scale(.96); } }
+@keyframes wm-flug {
+  0% { transform: translate(var(--x0), var(--y0)) scale(1); opacity: 1; }
+  45% { transform: translate(calc((var(--x0) + var(--x1)) / 2), var(--ym)) scale(1.5); }
+  100% { transform: translate(var(--x1), var(--y1)) scale(.45); opacity: .7; }
+}
+
+/* ---------------------------------------------------------------- 1) Lupe → Suchfeld (nur Handy; Desktop: Suchfeld offen in der Kopfleiste) */
+.search-btn .i-x { display: none; }
+@media (max-width: 767px) {
+  .app-header .brand { transition: opacity var(--wm-mittel) var(--wm-sanft), transform var(--wm-mittel) var(--wm-feder); }
+  .app-header:not(.such-zu) .brand { opacity: 0; transform: scale(.5) rotate(-30deg); pointer-events: none; }
+  .app-header .search { position: absolute; z-index: 2; right: 12px; top: calc(8px + env(safe-area-inset-top)); width: calc(100% - 24px); min-width: 0; max-width: none; flex: none;
+    border-radius: var(--wm-r-rund); background: var(--wm-flaeche); box-shadow: var(--wm-schatten-hoch); transition: width var(--wm-lang) var(--wm-feder), box-shadow var(--wm-mittel) var(--wm-sanft); }
+  .app-header.such-zu .search { width: 48px; overflow: hidden; box-shadow: var(--wm-schatten); }   /* das Feld ragt sonst über den Rand (Seite würde breiter) */
+  .app-header .search input { background: transparent; box-shadow: none; transition: opacity var(--wm-kurz) var(--wm-sanft) 160ms; }
+  .app-header.such-zu .search input { opacity: 0; transition-delay: 0ms; }
+  .app-header.such-zu .such-x { display: none; }
+  #btn-search-ico { position: relative; display: block; width: 20px; height: 20px; }
+  .search-btn .i-lupe, .search-btn .i-x { position: absolute; inset: 0; display: grid; place-items: center;
+    transition: opacity var(--wm-mittel) var(--wm-sanft), transform var(--wm-mittel) var(--wm-feder); }
+  .search-btn .i-x { opacity: 0; transform: rotate(-90deg) scale(.4); }
+  .app-header:not(.such-zu) .search-btn .i-lupe { opacity: 0; transform: rotate(90deg) scale(.4); }
+  .app-header:not(.such-zu) .search-btn .i-x { opacity: 1; transform: none; }
+  body.view-karte .toolbar { transition: opacity var(--wm-mittel) var(--wm-sanft), transform var(--wm-mittel) var(--wm-sanft); }
+  body.view-karte .app-header:not(.such-zu) ~ .toolbar { opacity: 0; transform: translateY(-8px); pointer-events: none; }
+}
+/* Vorschläge: Karte fällt ein, Zeilen erscheinen versetzt (staffeln) */
+.suggest:not([hidden]) { transform-origin: top right; animation: wm-fall-ein var(--wm-mittel) var(--wm-feder) both; }
+
+/* ---------------------------------------------------------------- 2) Marker → Sheet */
+.wm-pin.is-selected svg { animation: wm-wachsen var(--wm-mittel) var(--wm-feder); }        /* Ort wächst auf 1,3× (app.css) */
+.pk-pille.is-gewaehlt { animation: wm-wachsen var(--wm-mittel) var(--wm-feder); }         /* Pegel 1,15× und dunkel (pegel.css) */
+.wm-sheet-inhalt.is-neu > * { animation: wm-inhalt-ein var(--wm-mittel) var(--wm-sanft) backwards; }
+
+/* ---------------------------------------------------------------- 3) Marker erscheinen (Chip an), versetzt per --plopp */
+.wm-plopp svg, .wm-plopp > span, .wm-plopp .pk-pille { animation: wm-plopp-ein var(--wm-mittel) var(--wm-feder) var(--plopp, 0ms) backwards; }
+
+/* ---------------------------------------------------------------- 4) Merken: Stern ploppt, Flug zu „Gemerkt“, Abzeichen springt */
+.wm-pop svg { animation: wm-stern-pop 480ms var(--wm-feder); }
+.pd-merken.is-on svg, .pm-stern.is-on svg { fill: var(--wm-sonne); }
+.wm-flug { position: fixed; z-index: 1600; left: 0; top: 0; width: 28px; height: 28px; pointer-events: none; color: var(--wm-tinte);
+  animation: wm-flug 820ms cubic-bezier(.45, 0, .25, 1) forwards; }
+.wm-flug svg { display: block; fill: var(--wm-sonne); }
+.wm-bump { animation: wm-bump 500ms var(--wm-feder); }
+
+/* ---------------------------------------------------------------- 5) Chips der Karte: Punkt schrumpft, Häkchen wächst, Fläche blendet zu Tinte */
+.toolbar .cat { transition: background-color var(--wm-mittel) var(--wm-sanft), color var(--wm-mittel) var(--wm-sanft), transform var(--wm-kurz) var(--wm-sanft); }
+.toolbar .cat:active { transform: scale(.94); }
+.cat .cat-check, .cat[aria-pressed="true"] .cat-check { display: grid; overflow: hidden; transition: width var(--wm-mittel) var(--wm-feder), margin var(--wm-mittel) var(--wm-feder); }
+.cat .cat-check { width: 0; margin-right: -7px; }
+.cat[aria-pressed="true"] .cat-check { width: 16px; margin-right: 0; }
+.cat .cat-punkt, .cat[aria-pressed="true"] .cat-punkt { display: block; transition: width var(--wm-mittel) var(--wm-feder), margin var(--wm-mittel) var(--wm-feder); }
+.cat[aria-pressed="true"] .cat-punkt { width: 0; margin-right: -7px; }
+
+/* ---------------------------------------------------------------- 6) Umschalter: wm-seg gleitet per translateX (bausteine.css) */
+.pd-verlauf > .pd-umschalter { margin-bottom: var(--wm-2); }
+.ei-seg { margin-top: var(--wm-2); }
+
+/* 7) Navigation: Markierung mit --wm-lang/--wm-feder (nav.js), Melden-Knopf ploppt (nav.css .is-plop) */
+
+/* ---------------------------------------------------------------- 8) Pegel: Kurve zeichnet sich, Fläche blendet nach, Punkt gleitet von links */
+.wm-zeichnen { stroke-dasharray: 1; stroke-dashoffset: 1; animation: wm-zeichnen 900ms var(--wm-sanft) forwards; }
+.wm-nachblenden { animation: wm-einblenden 600ms var(--wm-sanft) 300ms backwards; }
+.pd-zmark { animation: wm-von-links var(--wm-lang) var(--wm-feder) backwards; }
+
+/* ---------------------------------------------------------------- 10) Senden erfolgreich: Haken zeichnet sich als Linie */
+.wm-haken path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: wm-zeichnen var(--wm-lang) var(--wm-sanft) 120ms forwards; }
+.toast-haken { display: grid; flex: none; color: var(--wm-petrol-hell); }
+.toast:not([hidden]) { animation: wm-toast-ein var(--wm-mittel) var(--wm-feder) backwards; }
+
+/* ---------------------------------------------------------------- 9) Listen: Zeilen erscheinen 8 px von unten, versetzt (staffeln) */
+.wm-ein { animation: wm-zeile-ein var(--wm-mittel) var(--wm-sanft) backwards; }
+
+/* ---------------------------------------------------------------- Bewegung reduzieren: alles sofort (kein Flug und kein Zählen: bewegung.js) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; transition-delay: 0ms !important; }
+  .wm-zeichnen, .wm-haken path { stroke-dashoffset: 0; }
+}
+
+/* Einstellungen: Umschalter (jetzt wm-seg) mit 44 px Trefferfläche wie die übrigen Bedienelemente der Seite */
+.ei-seg.wm-seg button { height: 44px; }
+
+/* ================================================================ Melden (7.73.1): Menü als Sheet, Formulare fahren ein */
+.rm-inhalt { display: flex; flex-direction: column; gap: var(--wm-3); }
+.rm-sheet .wm-abschnitt { margin-bottom: calc(-1 * var(--wm-1)); }
+.rm-sheet .lage-karte { margin: 0; }                                   /* „Lage vor Ort melden“: Aussehen unverändert (Ausnahme) */
+.rm-sheet .wm-zeile:disabled { opacity: .55; cursor: default; }
+.rm-sheet .rmenu-links { margin: var(--wm-2) 0 0; text-align: center; font-size: var(--wm-t-s); color: var(--wm-matt); }
+.rm-sheet .rm-version { margin: 0; text-align: center; font-size: var(--wm-t-xs); color: var(--wm-matt); }
+/* Formulare (Foto, Angaben, Fehler, neue Slipanlage): Fenster fährt mit Feder ein, Inhalt gleitet nach, Hintergrund blendet ein */
+@keyframes wm-dlg-ein { from { opacity: 0; transform: translateY(32px); } }
+#dlg[open] { animation: wm-dlg-ein var(--wm-lang) var(--wm-feder); }
+#dlg[open]::backdrop { animation: wm-einblenden var(--wm-mittel) var(--wm-sanft); }
+#dlg[open] #dlg-body > * { animation: wm-inhalt-ein var(--wm-mittel) var(--wm-sanft) 60ms backwards; }
+/* Kopf-Baustein in Formularen: Titel links (ältere Regel zentrierte #dlg-title) */
+.dialog-form #dlg-body > .wm-kopf #dlg-title, .dialog-form #dlg-body .wm-kopf .wm-kopf-titel { text-align: left; padding: 0; }

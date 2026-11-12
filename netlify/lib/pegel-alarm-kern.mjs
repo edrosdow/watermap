@@ -7,6 +7,7 @@
 // Gespeichert wird je Alarm: E-Mail, Pegel, Mindestpegel, Zeitpunkte, letzter Status. Nichts davon ist öffentlich.
 import { createHash, randomBytes } from 'node:crypto';
 import { bewerte, trend, STATUS } from '../../public/js/ampel-logik.js';
+import { schwelleFehler, schwelleBewerten, nachricht, satzFuer } from './pegel-push-kern.mjs';
 
 export const PEGEL_API = 'https://www.pegelonline.wsv.de/webservices/rest-api/v2/';
 export const BESTAETIGEN_STUNDEN = 48;     // unbestätigte Anmeldungen werden danach gelöscht
@@ -83,8 +84,18 @@ function rahmen(inhalt, fuss) {
 }
 const knopf = (href, text) => `<p style="margin:20px 0 4px"><a href="${esc(href)}" style="display:inline-block;background:#0B5E6B;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px">${esc(text)}</a></p>`;
 
+const schwelleText = (a) => `${a.richtung === 'unter' ? 'unter' : 'über'} ${a.wert} cm`;
+
 export function bestaetigungsMail({ alarm, link }) {
   const ort = `${alarm.pegelName}${alarm.gewaesser ? ' (' + alarm.gewaesser + ')' : ''}`;
+  if (alarm.art === 'schwelle') return {
+    subject: `Bitte bestätige deinen Pegel-Alarm für ${alarm.pegelName}`,
+    html: rahmen(`<p style="margin:0 0 8px">Du möchtest benachrichtigt werden, wenn der Pegel <b>${esc(ort)}</b> <b>${esc(schwelleText(alarm))}</b> liegt.</p>
+<p style="margin:0">Bitte bestätige das mit einem Klick:</p>${knopf(link, 'Alarm bestätigen')}
+<p style="font-size:13px;color:#566878;margin:12px 0 0">Warst du das nicht? Dann ignoriere diese Mail einfach – ohne Bestätigung wird nichts gespeichert und die Anmeldung nach ${BESTAETIGEN_STUNDEN} Stunden gelöscht.</p>`,
+      'Pegeldaten: PEGELONLINE (WSV). Ohne Gewähr, vor Ort immer selbst prüfen.'),
+    text: `Bitte bestätige deinen Pegel-Alarm für ${ort} (${schwelleText(alarm)}):\n${link}\n\nWarst du das nicht? Dann ignoriere diese Mail einfach.`,
+  };
   return {
     subject: `Bitte bestätige deinen Pegel-Alarm für ${alarm.pegelName}`,
     html: rahmen(`<p style="margin:0 0 8px">Du möchtest benachrichtigt werden, wenn sich die Pegel-Ampel für <b>${esc(ort)}</b> mit deinem Mindestpegel von <b>${alarm.min} cm</b> ändert.</p>
@@ -111,16 +122,39 @@ ${hinweise.length ? '<ul style="margin:8px 0;padding-left:20px">' + hinweise.map
   };
 }
 
-const seiteUrl = (basis, alarm, extra = '') => `${basis}/pegel-ampel?pegel=${encodeURIComponent(alarm.pegel)}&min=${alarm.min}${extra}`;
+/** Mail, wenn ein Schwellen-Alarm auslöst (höchstens eine pro Tag; Inhalt wie die Push-Nachricht). */
+export function schwellenMail({ alarm, wert, punkte, satz, basis, abmelden }) {
+  const n = nachricht({ a: alarm, wert, punkte, satz });
+  const link = basis + n.url;
+  return {
+    subject: n.title,
+    html: rahmen(`<p style="font-size:20px;font-weight:700;margin:0 0 8px">${esc(n.title)}</p><p style="margin:0">${esc(n.body)}</p>${knopf(link, 'Pegel ansehen')}`,
+      `Du bekommst diese Mail, weil du einen Pegel-Alarm bestätigt hast (höchstens eine Mail pro Tag). <a href="${esc(abmelden)}" style="color:#566878">Alarm abbestellen</a>. Pegeldaten: PEGELONLINE (WSV). Ohne Gewähr, vor Ort immer selbst prüfen.`),
+    text: `${n.title}\n${n.body}\n${link}\n\nAbbestellen: ${abmelden}`,
+  };
+}
+
+// Ampel-Alarm: Pegel-Ampel mit Mindestpegel; Schwellen-Alarm: Pegel-Ampel nur zum Bestätigen/Abbestellen (Seite kennt beide)
+const seiteUrl = (basis, alarm, extra = '') => (alarm.art === 'schwelle'
+  ? `${basis}/pegel-ampel${extra.replace(/^&/, '?')}`
+  : `${basis}/pegel-ampel?pegel=${encodeURIComponent(alarm.pegel)}&min=${alarm.min}${extra}`);
 export const abmeldeUrl = (basis, token) => `${basis}/pegel-ampel?alarm-abmelden=${token}`;
 
 // ------------------------------------------------------------------ Anmeldung, Bestätigung, Abmeldung
-export async function anmelden({ store, fetchFn, send, now, basis }, { email, pegel, min }) {
+export async function anmelden({ store, fetchFn, send, now, basis }, { email, pegel, min, art, richtung, wert }) {
   email = String(email || '').trim();
   if (!EMAIL_RE.test(email) || email.length > 200) return { status: 400, fehler: 'Bitte eine gültige E-Mail-Adresse eingeben.' };
   if (!PEGEL_RE.test(String(pegel || ''))) return { status: 400, fehler: 'Bitte zuerst einen Pegel wählen.' };
-  min = Number(min);
-  if (!Number.isInteger(min) || min < -500 || min > 2000) return { status: 400, fehler: 'Bitte einen Mindestpegel in cm eingeben.' };
+  const schwelle = art === 'schwelle';   // „unter/über X cm“ (Pegel-Tab); sonst Ampel-Alarm mit Mindestpegel (Pegel-Ampel)
+  if (schwelle) {
+    wert = Number(wert);
+    const f = schwelleFehler({ richtung, wert });
+    if (f) return { status: 400, fehler: f };
+    min = null;
+  } else {
+    min = Number(min);
+    if (!Number.isInteger(min) || min < -500 || min > 2000) return { status: 400, fehler: 'Bitte einen Mindestpegel in cm eingeben.' };
+  }
 
   const mk = mailSchluessel(email);
   const liste = ((await store.get(mk, { type: 'json' })) || []).filter(e => e && e.token);
@@ -132,10 +166,11 @@ export async function anmelden({ store, fetchFn, send, now, basis }, { email, pe
   if (!(await mailKontingent(store, now))) return { status: 503, fehler: 'Heute können keine weiteren Mails verschickt werden. Bitte morgen erneut versuchen.' };
 
   const token = neuesToken();
-  const alarm = { email, pegel, pegelName: stamm.name, gewaesser: stamm.gewaesser, min, aktiv: false, erstellt: now, letzterStatus: null, letzteMail: null };
+  const alarm = { email, pegel, pegelName: stamm.name, gewaesser: stamm.gewaesser, min, aktiv: false, erstellt: now, letzterStatus: null, letzteMail: null,
+    ...(schwelle ? { art: 'schwelle', richtung, wert, zustand: null, letzteNachricht: null } : {}) };
   await store.setJSON('alarm/' + token, alarm);
   await store.setJSON(mk, [...liste, { token, erstellt: now }]);
-  await send({ to: email, ...bestaetigungsMail({ alarm, link: seiteUrl(basis, alarm, `&alarm-bestaetigen=${token}`) }) });
+  await send({ to: email, ...bestaetigungsMail({ alarm, link: seiteUrl(basis, alarm, `${schwelle ? '?' : '&'}alarm-bestaetigen=${token}`) }) });
   return { status: 200, ok: true };
 }
 
@@ -147,7 +182,7 @@ export async function bestaetigen({ store, now }, token) {
     if (now - alarm.erstellt > BESTAETIGEN_STUNDEN * H) { await loeschen(store, token, alarm); return { status: 404, fehler: 'Dieser Link ist abgelaufen. Bitte melde den Alarm neu an.' }; }
     await store.setJSON('alarm/' + token, { ...alarm, aktiv: true, bestaetigt: now });
   }
-  return { status: 200, ok: true, pegelName: alarm.pegelName, min: alarm.min };
+  return { status: 200, ok: true, pegelName: alarm.pegelName, min: alarm.min, ...(alarm.art === 'schwelle' ? { art: 'schwelle', richtung: alarm.richtung, wert: alarm.wert } : {}) };
 }
 
 export async function abmelden({ store }, token) {
@@ -183,7 +218,22 @@ export async function pruefen({ store, fetchFn, send, now, basis, log = () => {}
     try { jetzt = await pegelJetzt(fetchFn, id, now); } catch (e) { log(`Pegel ${id}: ${e.message}`); }
     if (!jetzt) continue;
     const tr = trend(jetzt.punkte);
+    let satz;
     for (const { token, a } of liste) {
+      if (a.art === 'schwelle') {
+        if (jetzt.pegel.state === 'old') continue;
+        const { senden, neu } = schwelleBewerten(a, jetzt.pegel.value, now);
+        if (senden) {
+          if (!(await mailKontingent(store, now))) { log('Tageskontingent erreicht'); return { mails }; }
+          if (satz === undefined) satz = await satzFuer(fetchFn, a, jetzt.pegel.value, now);
+          try {
+            await send({ to: a.email, abmelden: abmeldeUrl(basis, token), ...schwellenMail({ alarm: a, wert: jetzt.pegel.value, punkte: jetzt.punkte, satz, basis, abmelden: abmeldeUrl(basis, token) }) });
+            mails++;
+          } catch (e) { log(`Mail an Alarm ${token.slice(0, 6)}…: ${e.message}`); continue; }
+        }
+        if (neu !== a) await store.setJSON('alarm/' + token, neu);
+        continue;
+      }
       const ergebnis = bewerte({ pegel: jetzt.pegel, mindest: a.min, trend: tr });
       if (ergebnis.status === 'unbekannt' || jetzt.pegel.state === 'old') continue;
       if (a.letzterStatus === null) { await store.setJSON('alarm/' + token, { ...a, letzterStatus: ergebnis.status }); continue; }

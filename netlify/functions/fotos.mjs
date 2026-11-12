@@ -1,5 +1,5 @@
 // Foto-Verwaltung (Seite /admin/fotos.html): eingereichte Fotos freigeben oder ablehnen, gemeldete und veröffentlichte
-// Fotos entfernen, Verlauf aller Aktionen.
+// Fotos entfernen, als unpassend gemeldete Lagemeldungen („Heute vor Ort“) entfernen, Verlauf aller Aktionen.
 // Eingereichte und gemeldete Fotos kommen aus Netlify Forms („foto-einreichen“, „fehler-melden“ mit art=foto). Jede
 // Aktion ist genau ein Commit im GitHub-Repository: public/photos/<datei>, public/data/community/overrides.json und
 // der Verlauf admin/verlauf.json (liegt außerhalb von public/ und wird nicht veröffentlicht). Netlify baut die Seite
@@ -12,6 +12,9 @@
 //                        Berechtigung „Contents: Read and write“
 //   optional GITHUB_REPO (Standard edrosdow/watermap), FOTO_BRANCH (Standard main)
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { getStore } from '@netlify/blobs';
+import { meldungenApi } from '../lib/meldungen-kern.mjs';
+import { FOTO_KATEGORIEN, kategorieAus } from '../../public/js/foto-kategorien.js';
 
 const FORM = 'foto-einreichen';
 const REPORT_FORM = 'fehler-melden';
@@ -21,14 +24,14 @@ const OVERRIDES = 'public/data/community/overrides.json';
 const HISTORY = 'admin/verlauf.json';
 const PLACES = 'public/data/community/places.json';
 const PRICES = 'public/data/community/prices.json';
-const SLIP_FORM = 'slipanlage-melden', PRICE_FORM = 'tankpreis-melden';
+const SLIP_FORM = 'slipanlage-melden', PRICE_FORM = 'tankpreis-melden', ERG_FORM = 'slip-ergaenzen';
 const FILE_FIELD = { [FORM]: 'foto', [SLIP_FORM]: 'foto', [PRICE_FORM]: 'beleg' };   // Datei-Feld je Formular
 const ACCESS = { oeffentlich: 'public', privat: 'private', kunden: 'customers' };
 const YNU = { ja: true, nein: false };
 const FUEL = { diesel: 'diesel', benzin: 'petrol' };
 const PRICE_MIN = 0.5, PRICE_MAX = 5;
 const ART = { 'existiert-nicht': 'Existiert nicht mehr', koordinaten: 'Falsche Koordinaten', 'nicht-oeffentlich': 'Nicht öffentlich',
-  preis: 'Falscher Preis', oeffnungszeiten: 'Falsche Öffnungszeiten', foto: 'Unpassendes Foto', sonstiges: 'Sonstiges' };
+  preis: 'Falscher Preis', oeffnungszeiten: 'Falsche Öffnungszeiten', foto: 'Unpassendes Foto', meldung: 'Unpassende Lagemeldung', sonstiges: 'Sonstiges' };
 const MAX_HISTORY = 500;
 
 const json = (status, body) => new Response(JSON.stringify(body), {
@@ -66,6 +69,17 @@ export function addPhoto(overrides, id, photo, today) {
   return list;
 }
 
+/** Kategorie eines veröffentlichten Fotos setzen (nachträglich, z. B. für ältere Fotos). */
+export function setPhotoKategorie(overrides, id, url, kategorie, today) {
+  if (!FOTO_KATEGORIEN[kategorie]) throw new Error('Unbekannte Kategorie.');
+  const list = Array.isArray(overrides) ? overrides : [];
+  const rec = list.find(o => o && o.id === id && Array.isArray(o.photos) && o.photos.some(ph => ph.url === url));
+  if (!rec) throw new Error('Foto ist nicht (mehr) veröffentlicht.');
+  rec.photos = rec.photos.map(ph => (ph.url === url ? { ...ph, kategorie } : ph));
+  rec.updated = today;
+  return list;
+}
+
 /** Foto aus overrides.json nehmen; ein Eintrag ohne Fotos und ohne sonstige Änderungen fällt ganz weg. */
 export function removePhoto(overrides, id, url) {
   const out = [];
@@ -87,7 +101,7 @@ export function removePhoto(overrides, id, url) {
 /** Alle freigegebenen Fotos aus overrides.json. */
 export function publishedPhotos(overrides) {
   return (Array.isArray(overrides) ? overrides : []).filter(o => o && o.status === 'approved')
-    .flatMap(o => (o.photos || []).map(ph => ({ standort_id: o.id, url: ph.url, alt: ph.alt || '', credit: ph.credit || '' })));
+    .flatMap(o => (o.photos || []).map(ph => ({ standort_id: o.id, url: ph.url, alt: ph.alt || '', credit: ph.credit || '', kategorie: FOTO_KATEGORIEN[ph.kategorie] ? ph.kategorie : null })));
 }
 
 const text = (v, max = 500) => String(v ?? '').trim().slice(0, max);
@@ -150,7 +164,69 @@ export function priceView(s) {
 export function hintView(s) {
   const d = s.data || {};
   return { id: s.id, created: s.created_at || null, standort_id: text(d.standort_id), standort_name: text(d.standort_name, 120),
-    art: text(d.art), art_text: ART[text(d.art)] || text(d.art), details: text(d.details, 1000), kontakt: text(d.kontakt, 120) };
+    art: text(d.art), art_text: ART[text(d.art)] || text(d.art), details: text(d.details, 1000), kontakt: text(d.kontakt, 120),
+    meldung_id: text(d.art) === 'meldung' ? meldungIdAus(d.details) : null };
+}
+
+// „Angaben ergänzen“ (public/js/slip-ergaenzen.js): erlaubte Werte → Felder in community/overrides.json
+const ERGAENZUNG = {
+  access: { public: ['Öffentlich', { access: 'public' }], customers: ['Nur Kunden', { access: 'customers' }], members: ['Nur Mitglieder', { access: 'members' }], private: ['Privat', { access: 'private' }] },
+  fee: { kostenlos: ['Kostenlos', { fee: false, fee_note: null }], kostenpflichtig: ['Kostenpflichtig', { fee: true }] },
+  surface: Object.fromEntries(['Beton', 'Pflaster', 'Asphalt', 'Kies', 'Holz', 'Naturboden'].map(v => [v, [v, null, { surface: v }]])),
+  incline: Object.fromEntries(['flach', 'mittel', 'steil'].map(v => [v, [v, null, { incline: v }]])),
+  trailer: { ja: ['Ja, am Slip', null, { trailer_parking: true, trailer_note: 'am Slip' }], naehe: ['In der Nähe', null, { trailer_parking: true, trailer_note: 'in der Nähe' }],
+    nein: ['Nein', null, { trailer_parking: false, trailer_note: null }] },
+  motorboat: { ja: ['Erlaubt', null, { motorboat: true }], nein: ['Nicht erlaubt', null, { motorboat: false }] },
+  boote: { bis5: ['bis 5 m', null, { suitable_boats: 'bis 5 m' }], bis7: ['bis 7 m', null, { suitable_boats: 'bis 7 m' }], bis9: ['bis 9 m', null, { suitable_boats: 'bis 9 m' }],
+    groesser: ['größer als 9 m', null, { suitable_boats: 'größer als 9 m' }] },
+};
+const ERG_TITEL = { access: 'Zugang', fee: 'Gebühr', surface: 'Belag', incline: 'Neigung', trailer: 'Trailer parken', motorboat: 'Motorboote', boote: 'Bootsgröße' };
+
+/** Angaben aus dem Formular prüfen → { fields, attrs, liste: [[Titel, Text]] }; Unbekanntes fällt weg. */
+export function ergaenzungLesen(roh) {
+  let a = {};
+  try { a = JSON.parse(String(roh || '{}')); } catch { a = {}; }
+  if (!a || typeof a !== 'object' || Array.isArray(a)) a = {};
+  const fields = {}, attrs = {}, liste = [];
+  for (const [k, tabelle] of Object.entries(ERGAENZUNG)) {
+    const e = Object.hasOwn(tabelle, a[k]) ? tabelle[a[k]] : null;
+    if (!e) continue;
+    const [anzeige, f, at] = e;
+    Object.assign(fields, f || {}); Object.assign(attrs, at || {});
+    liste.push([ERG_TITEL[k], anzeige]);
+  }
+  if (fields.fee === true && typeof a.fee_note === 'string' && a.fee_note.trim()) {
+    fields.fee_note = text(a.fee_note.replace(/[<>]/g, ''), 80);
+    liste.push(['Betrag', fields.fee_note]);
+  }
+  return { fields, attrs, liste };
+}
+
+export function ergaenzungView(s) {
+  const d = s.data || {};
+  const e = ergaenzungLesen(d.angaben);
+  return { id: s.id, created: s.created_at || null, standort_id: text(d.standort_id), standort_name: text(d.standort_name, 120),
+    angaben: e.liste, bemerkung: text(d.bemerkung, 300), leer: !e.liste.length };
+}
+
+/** Ergänzung in overrides.json eintragen (bestehenden Eintrag des Standorts erweitern; null-Werte löschen ein Feld). */
+export function ergaenzungEintragen(overrides, id, { fields, attrs }, today) {
+  const list = Array.isArray(overrides) ? overrides.map(o => ({ ...o })) : [];
+  let ov = list.find(o => o && o.id === id && o.status === 'approved');
+  if (!ov) { ov = { id, status: 'approved' }; list.push(ov); }
+  const setzen = (ziel, quelle) => {
+    const neu = { ...(ov[ziel] || {}) };
+    for (const [k, v] of Object.entries(quelle)) { if (v === null) delete neu[k]; else neu[k] = v; }
+    if (Object.keys(neu).length) ov[ziel] = neu; else delete ov[ziel];
+  };
+  setzen('fields', fields); setzen('attrs', attrs);
+  ov.updated = today;
+  return list;
+}
+
+/** ID der Lagemeldung aus dem Hinweistext („Meldung-ID: 3f2a…“). */
+export function meldungIdAus(details) {
+  return String(details || '').match(/Meldung-ID:\s*([a-f0-9]{8,32})\b/)?.[1] || null;
 }
 
 export function submissionView(s) {
@@ -158,7 +234,8 @@ export function submissionView(s) {
   return {
     id: s.id, created: s.created_at || null,
     standort_id: String(d.standort_id || ''), standort_name: String(d.standort_name || ''),
-    beschreibung: String(d.beschreibung || '').slice(0, 500), rechte: Boolean(d.foto_rechte),
+    beschreibung: String(d.beschreibung || '').slice(0, 500), motiv: String(d.motiv || '').slice(0, 120), rechte: Boolean(d.foto_rechte),
+    kategorie: kategorieAus(d.kategorie) || kategorieAus(d.motiv),   // ältere Einreichungen: Motiv-Text
     hat_foto: Boolean(fileUrl(d.foto)),
   };
 }
@@ -269,7 +346,7 @@ async function fetchPhoto(sub, fetchFn) {
   return { bytes, type };
 }
 
-export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date() }) {
+export async function handle(req, { env, siteId, deploy = null, fetchFn = fetch, now = new Date(), meldungEntfernen = null }) {
   const missing = ['FOTO_ADMIN_PASSWORT', 'NETLIFY_API_TOKEN', 'GITHUB_TOKEN'].filter(k => !env[k]);
   if (missing.length) {
     return json(503, { fehler: `Foto-Freigabe ist noch nicht eingerichtet – in diesem Deploy fehlt: ${missing.join(', ')}. ` +
@@ -279,7 +356,12 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
   const { nf, gh } = api(env, fetchFn);
   const url = new URL(req.url);
   const q = url.searchParams;
-  const branch = env.FOTO_BRANCH || 'main';
+  // Zweig: live FOTO_BRANCH (Standard main); in einer Vorschau der Zweig dieser Vorschau – sonst landen Freigaben aus der Vorschau live
+  let branch = env.FOTO_BRANCH || 'main';
+  if (deploy?.context && deploy.context !== 'production' && deploy.id) {
+    try { branch = (await nf(`/deploys/${encodeURIComponent(deploy.id)}`))?.branch || branch; }
+    catch (e) { return json(502, { fehler: `Zweig dieser Vorschau nicht ermittelbar (${e.message}).` }); }
+  }
   const zeit = now.toISOString(), today = zeit.slice(0, 10);
   const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
   const history = (entry) => async (read) => jsonFile(HISTORY, addHistory(await read(HISTORY, []), { zeit, ...entry }));
@@ -320,6 +402,15 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
       if (report) await nf(`/submissions/${report.id}`, { method: 'DELETE' });
       return json(200, { ok: true });
     }
+    // Kategorie eines veröffentlichten Fotos ändern (auch nachträglich für ältere Fotos)
+    if (req.method === 'POST' && body.aktion === 'kategorie') {
+      const path = cleanPath(body.url);
+      if (!ID_RE.test(String(body.standort_id || '')) || !PHOTO_PATH.test(path) || !FOTO_KATEGORIEN[body.kategorie]) return json(400, { fehler: 'Ungültige Angaben.' });
+      await commitChanges(gh, branch, `Foto-Kategorie: ${body.standort_id}`, async (read) => [
+        jsonFile(OVERRIDES, setPhotoKategorie(await read(OVERRIDES, []), body.standort_id, body.url, body.kategorie, today)),
+        await history({ bereich: 'foto', aktion: 'kategorie', standort_id: body.standort_id, foto: path, beschreibung: FOTO_KATEGORIEN[body.kategorie].text })(read)]);
+      return json(200, { ok: true });
+    }
     if (req.method === 'POST' && body.aktion === 'meldung_verwerfen') {
       const report = (await formSubmissions(nf, siteId, REPORT_FORM)).find(s => s.id === body.id);
       const m = report && photoReport(report);
@@ -332,7 +423,7 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
 
     // Einreichungen eines Formulars: auflisten, Datei zeigen, freigeben/ablehnen/erledigen
     const formName = body.form || q.get('form') || FORM;
-    if (![FORM, SLIP_FORM, PRICE_FORM, REPORT_FORM].includes(formName)) return json(400, { fehler: 'Unbekanntes Formular.' });
+    if (![FORM, SLIP_FORM, PRICE_FORM, REPORT_FORM, ERG_FORM].includes(formName)) return json(400, { fehler: 'Unbekanntes Formular.' });
     const subs = await formSubmissions(nf, siteId, formName);
     if (req.method === 'GET' && q.has('bild')) {
       const sub = subs.find(s => s.id === q.get('bild'));
@@ -348,6 +439,7 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
       if (formName === SLIP_FORM) return json(200, { slips: subs.map(slipView) });
       if (formName === PRICE_FORM) return json(200, { preise: subs.map(priceView) });
       if (formName === REPORT_FORM) return json(200, { hinweise: subs.filter(s => !photoReport(s)).map(hintView) });
+      if (formName === ERG_FORM) return json(200, { ergaenzungen: subs.map(ergaenzungView) });
       return json(200, { fotos: subs.map(submissionView) });
     }
     if (req.method !== 'POST') return json(405, { fehler: 'Nicht erlaubt.' });
@@ -398,6 +490,35 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
         return json(200, { ok: true });
       }
     }
+    // Angaben zu einer Slipanlage übernehmen (→ overrides.json) oder ablehnen
+    if (formName === ERG_FORM && (body.aktion === 'uebernehmen' || body.aktion === 'ablehnen')) {
+      const v = ergaenzungView(sub);
+      if (body.aktion === 'uebernehmen') {
+        const e = ergaenzungLesen(d.angaben);
+        if (!ID_RE.test(v.standort_id)) return json(400, { fehler: 'Standort-ID fehlt oder ist ungültig.' });
+        if (!e.liste.length) return json(400, { fehler: 'Keine Angaben zum Übernehmen.' });
+        await finish(`Angaben übernommen: ${v.standort_id}`, async (read) => [
+          jsonFile(OVERRIDES, ergaenzungEintragen(await read(OVERRIDES, []), v.standort_id, e, today)),
+          await history({ bereich: 'ergaenzung', aktion: 'übernommen', standort_id: v.standort_id, standort_name: v.standort_name,
+            beschreibung: e.liste.map(([t, w]) => `${t}: ${w}`).join(', ').slice(0, 300) })(read)]);
+        return json(200, { ok: true });
+      }
+      await finish(`Angaben abgelehnt: ${v.standort_id || 'ohne Standort'}`, async (read) => [
+        await history({ bereich: 'ergaenzung', aktion: 'abgelehnt', standort_id: v.standort_id, standort_name: v.standort_name,
+          beschreibung: v.angaben.map(([t, w]) => `${t}: ${w}`).join(', ').slice(0, 300) })(read)]);
+      return json(200, { ok: true });
+    }
+    // Als unpassend gemeldete Lagemeldung entfernen (ist sie schon abgelaufen, wird nur der Hinweis erledigt)
+    if (formName === REPORT_FORM && body.aktion === 'lagemeldung_entfernen') {
+      const v = hintView(sub);
+      if (!v.meldung_id) return json(400, { fehler: 'Hinweis enthält keine Meldung-ID.' });
+      if (!meldungEntfernen) return json(503, { fehler: 'Meldungen sind hier nicht erreichbar.' });
+      const r = await meldungEntfernen(v.meldung_id, now.getTime());
+      await finish(`Lagemeldung entfernt: ${v.standort_id || r.standortId || v.meldung_id}`, async (read) => [
+        await history({ bereich: 'hinweis', aktion: r.entfernt ? 'lagemeldung entfernt' : 'lagemeldung war schon abgelaufen', standort_id: v.standort_id,
+          standort_name: v.standort_name, beschreibung: `${v.art_text}: ${v.details}`.slice(0, 300) })(read)]);
+      return json(200, { ok: true, entfernt: r.entfernt });
+    }
     if (formName === REPORT_FORM && (body.aktion === 'erledigt' || body.aktion === 'verwerfen')) {
       const v = hintView(sub);
       await finish(`Hinweis ${body.aktion === 'erledigt' ? 'erledigt' : 'verworfen'}: ${v.standort_id || 'ohne Standort'}`, async (read) => [
@@ -415,7 +536,9 @@ export async function handle(req, { env, siteId, fetchFn = fetch, now = new Date
       if (!ID_RE.test(id)) throw new Error('Standort-ID fehlt oder ist ungültig');
       const { bytes, type } = await fetchPhoto(sub, fetchFn);
       const name = `${id.replace('/', '-')}-${now.getTime().toString(36)}.${type.ext}`;
-      const photo = { url: `photos/${name}`, credit: 'WaterMap-Community', alt: String(d.beschreibung || '').trim().slice(0, 200) };
+      const kategorie = kategorieAus(body.kategorie) || kategorieAus(d.kategorie) || kategorieAus(d.motiv);
+      if (!kategorie) return json(400, { fehler: 'Bitte eine Kategorie wählen.' });
+      const photo = { url: `photos/${name}`, credit: 'WaterMap-Community', alt: String(d.beschreibung || '').trim().slice(0, 200) || FOTO_KATEGORIEN[kategorie].text, kategorie };
       await finish(`Foto freigegeben: ${id}`, async (read) => [
         { path: `public/photos/${name}`, content: bytes },
         jsonFile(OVERRIDES, addPhoto(await read(OVERRIDES, []), id, photo, today)),
@@ -441,4 +564,11 @@ function runtimeEnv() {
   return Object.fromEntries(KEYS.map(k => [k, nenv?.get?.(k) || process.env[k] || '']));
 }
 
-export default async (req, context) => handle(req, { env: runtimeEnv(), siteId: context?.site?.id || process.env.SITE_ID });
+// Lagemeldungen liegen im selben Speicher wie bei /api/meldungen (Vorschauen: „meldungen-vorschau“)
+const kontext = (deployKontext) => deployKontext || globalThis.Netlify?.env?.get?.('CONTEXT') || process.env.CONTEXT || '';
+const meldungEntfernen = (id, jetzt, deployKontext) => meldungenApi({
+  store: getStore(kontext(deployKontext) && kontext(deployKontext) !== 'production' ? 'meldungen-vorschau' : 'meldungen'), jetzt: () => jetzt,
+}).entfernen(id);
+
+export default async (req, context) => handle(req, { env: runtimeEnv(), siteId: context?.site?.id || process.env.SITE_ID, deploy: context?.deploy || null,
+  meldungEntfernen: (id, jetzt) => meldungEntfernen(id, jetzt, context?.deploy?.context) });

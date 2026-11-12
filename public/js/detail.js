@@ -1,16 +1,15 @@
-// Detailansicht eines Standorts (Seitenpanel am Desktop, Bottom Sheet am Smartphone).
+// Detailansicht eines Standorts im Sheet-Rahmen (Designumbau 3b, 7.72.1): Handy von unten (Stufe klein = Kopf, Aktionen, „Details“),
+// Desktop Panel rechts. Kopf (Titel links, ×) kommt vom Rahmen; renderDetail liefert die Angaben dafür und den Inhalt.
 import { h } from './dom.js';
-import { icon, glyphSvg } from './icons.js';
-import {
-  TYPES, UNKNOWN, displayName, subtitle, describeFacts, describePrices, formatDate, navUrl,
-  osmUrl, safeHttpUrl, safeTel, formatDistance, haversine,
-} from './model.js';
+import { aktionen } from './bausteine.js';
+import { icon } from './icons.js';
+import { TYPES, UNKNOWN, FILTERS, displayName, describeFacts, describePrices, bootPunkte, formatDate, navUrl, osmUrl, safeHttpUrl, safeTel, formatDistance, haversine } from './model.js';
 import { favorites } from './favorites.js';
 import { CONFIG } from './config.js';
 import { photoCarousel } from './photos.js';
 
 /**
- * actions = { close, share, report, addPhoto, reportPhoto, reportPrice, onFavorite }
+ * actions = { close, share, report, addPhoto, reportPhoto, onFavorite, ergaenzen }
  */
 /** Tabelle der Eigenschaften; Zeilen mit `web` zeigen die wörtlichen Website-Angaben (markiert).
  *  Unbekannte Zeilen sind eingeklappt („N weitere unbekannt“). */
@@ -49,39 +48,96 @@ function webMark() {
   return h('span', { class: 'web-mark', html: icon('globe', 13), title: 'laut Website des Hafens', 'aria-label': '(laut Website)', role: 'img' });
 }
 
-export function renderDetail(p, { user, actions, weather, nearby, enrichFacts }) {
-  const isFav = favorites.has(p.id);
-  const sub = subtitle(p);
-  const dist = user ? haversine(user.lat, user.lon, p.lat, p.lon) : null;
+/** Bis zu `max` Merkmal-Etiketten aus den Filtern (nur bestätigte Angaben), z. B. „Kostenlos“, „Öffentlich“. */
+export function placeTags(p, max = 3) {
+  return (FILTERS[p.type] || []).filter(d => d.test(p)).slice(0, max).map(d => ({ text: d.label, good: d.id === 'free' }));
+}
 
-  const head = h('header', { class: 'detail-head' },
-    h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Zurück zur Liste', title: 'Schließen', html: icon('close', 22), onclick: actions.close }),
-    h('div', { class: 'detail-title' },
-      h('span', { class: `badge badge-${p.type}`, html: glyphSvg(p.type, 18) }, h('span', { text: TYPES[p.type].label })),
-      h('h2', { id: 'detail-name', text: displayName(p) }),
-      sub || dist !== null ? h('p', { class: 'detail-sub', text: [sub, dist !== null ? formatDistance(dist) : null].filter(Boolean).join(' · '),
-        title: dist !== null ? 'Luftlinie von deinem Standort' : null }) : null,
-      trustLine(p)),
-    h('button', { type: 'button', class: 'icon-btn fav' + (isFav ? ' is-on' : ''), 'aria-pressed': String(isFav),
-      'aria-label': isFav ? 'Aus Favoriten entfernen' : 'Als Favorit speichern', title: isFav ? 'Aus Favoriten entfernen' : 'Favorit speichern',
-      html: icon('star', 22, isFav), onclick: actions.onFavorite }));
+export function tagRow(tags) {
+  return tags.length ? h('div', { class: 'dtags' }, tags.map(t => h('span', { class: 'dtag' + (t.good ? ' is-good' : '') + (t.cls ? ' ' + t.cls : ''), text: t.text }))) : null;
+}
+
+/** Kopf-Angaben für den Sheet-Rahmen: Name, „Slipanlage · Weser · 4,3 km“. */
+export function detailKopf(p, user) {
+  const dist = user ? haversine(user.lat, user.lon, p.lat, p.lon) : null;
+  return { titel: displayName(p), titelId: 'detail-name', unter: [TYPES[p.type].label, p.water?.name || null, dist !== null ? formatDistance(dist) : null].filter(Boolean).join(' · ') };
+}
+
+/** Rückgabe: [kopf-Angaben, Inhalt]. actions.details(): Stufe „groß“ (Knopf „Details“, nur in der Stufe „klein“ sichtbar). */
+export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, pegel, vorOrt }) {
+  const isFav = favorites.has(p.id);
+  const ort = p.locality ? (p.locality_kind === 'nearest' ? `bei ${p.locality}` : p.locality) : null;
 
   const body = h('div', { class: 'detail-body' });
+  // Ort und Herkunft („bei Bünde · OpenStreetMap · ungeprüft“) als kleine Zeile unter dem Kopf
+  body.append(h('div', { class: 'st-meta' }, ort ? h('span', { text: `${ort} ·` }) : null, trustLine(p)));
+  if (vorOrt?.zeile) body.append(vorOrt.zeile);   // wichtigste Lagemeldung („Heute vor Ort“)
+  const slip = p.type === 'slip';
+  const tags = tagRow(placeTags(p, 4));
+  if (tags && !slip) body.append(tags);   // Slipanlagen: Etiketten erst nach den Knöpfen
 
-  // Aktionsleiste
-  body.append(h('div', { class: 'action-bar' },
-    h('a', { class: 'act act-primary', href: navUrl(p), target: '_blank', rel: 'noopener noreferrer', title: 'Route über Straßen bis zum Standort (keine Wasserroute)' },
-      h('span', { class: 'act-ico', html: icon('navigate', 20) }), h('span', { text: 'Route' })),
-    actionButton('share', 'Teilen', 'Link teilen', actions.share),
-    actionButton('camera', 'Foto', 'Foto hinzufügen', actions.addPhoto),
-    actionButton('flag', 'Melden', 'Fehler melden', actions.report)));
+  // Aktionsleiste (Bausteine): Route (primär) · Merken · Teilen
+  const leiste = aktionen([
+    { icon: 'navigate', text: 'Route', primaer: true, href: navUrl(p) },
+    { icon: 'star', text: isFav ? 'Gemerkt' : 'Merken', gemerkt: isFav, onclick: actions.onFavorite },
+    { icon: 'share', text: 'Teilen', onclick: actions.share },
+  ]);
+  leiste.classList.add('dbtns');
+  const route = leiste.querySelector('a');
+  Object.assign(route, { target: '_blank', rel: 'noopener noreferrer', title: 'Route über Straßen bis zum Standort (keine Wasserroute)' });
+  const fav = leiste.querySelectorAll('.wm-aktion')[1];
+  fav.classList.add('fav'); fav.title = isFav ? 'Aus „Gemerkt“ entfernen' : 'Merken';
+  if (isFav) fav.querySelector('span').innerHTML = icon('star', 22, true);
+  leiste.querySelectorAll('.wm-aktion')[2].title = 'Link teilen';
+  body.append(leiste);
+  // Handy, Stufe „klein“: „Details“ öffnet die Stufe „groß“; bis hierher reicht die Stufe „klein“
+  body.append(h('button', { type: 'button', class: 'wm-btn is-primaer st-details', onclick: actions.details }, 'Details'), h('span', { class: 'st-klein-ende', 'aria-hidden': 'true' }));
+  if (tags && slip) body.append(tags);
 
-  // Fotos
-  if (p.photos.length) body.append(photoCarousel(p.photos, { name: displayName(p), onReport: actions.reportPhoto }));
+  // Pegel am selben Gewässer (wird nachgeladen; ohne Pegel bleibt der Platz leer)
+  const pegelTeil = () => {
+    if (!pegel) return;
+    const slot = h('div', { class: 'pegel-slot' });
+    body.append(slot);
+    pegel.then(box => { if (box) slot.replaceWith(box); else slot.remove(); }, () => slot.remove());
+  };
+
+  // Fotos – „Foto hinzufügen“ direkt dabei; ohne Fotos eine Einladung an derselben Stelle
+  const fotenTeil = () => {
+    if (p.photos.length) {
+      const fotos = photoCarousel(p.photos, { name: displayName(p), onReport: actions.reportPhoto });
+      fotos.append(h('button', { type: 'button', class: 'ph-add', onclick: actions.addPhoto }, h('span', { html: icon('camera', 18), 'aria-hidden': 'true' }), h('span', { text: 'Foto hinzufügen' })));
+      body.append(fotos);
+    } else {
+      body.append(h('section', { class: 'ph-leer', 'aria-label': 'Fotos' },
+        h('span', { class: 'ph-leer-ico', html: icon('camera', 24), 'aria-hidden': 'true' }),
+        h('span', { class: 'ph-leer-text' }, h('strong', { text: 'Noch keine Fotos' }), h('small', { text: 'Zeig anderen, wie es hier aussieht.' })),
+        h('button', { type: 'button', class: 'ph-leer-btn', 'aria-label': 'Foto hinzufügen', onclick: actions.addPhoto }, h('span', { html: icon('plus', 16), 'aria-hidden': 'true' }), h('span', { text: 'Foto' }))));
+    }
+  };
+
+  if (slip) {
+    // Slipanlage: Titel → Knöpfe → Etiketten → Fotos → Heute vor Ort → (Wetterwarnung) → Pegel → Wichtig für dein Boot → Wetter-Zeile → Rest
+    fotenTeil();
+    if (vorOrt?.section) body.append(vorOrt.section);
+    const wxOben = h('span', { hidden: true });   // Platz für die Wetter-Zeile, wenn eine amtliche Warnung vorliegt
+    body.append(wxOben);
+    pegelTeil();
+    body.append(bootBox(p, actions));
+    if (weather?.zeile) {
+      body.append(weather.zeile);
+      weather.warnung.then((warnung) => { if (warnung) wxOben.replaceWith(weather.zeile); });
+    }
+  } else {
+    pegelTeil();
+    // „Heute vor Ort“ direkt unter Titel und Knöpfen, vor Fotos und Wetter
+    if (vorOrt?.section) body.append(vorOrt.section);
+    fotenTeil();
+  }
 
   if (p.description) body.append(h('p', { class: 'desc', text: p.description }));
 
-  if (weather) body.append(weather);
+  if (weather && !slip) body.append(weather);
 
   // Preise (nur Bootstankstellen)
   if (p.type === 'fuel') {
@@ -92,15 +148,16 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts })
         r.price
           ? [h('strong', { text: r.price }), h('span', { class: 'price-date', text: `gemeldet am ${r.observed || 'unbekanntem Datum'}` }),
              r.stale ? h('span', { class: 'price-warn', text: r.age === null ? 'Aktualität unklar' : `Älter als ${CONFIG.PRICE_STALE_DAYS} Tage – möglicherweise nicht mehr aktuell` }) : null]
-          : h('span', { class: 'unknown', text: 'Kein Preis gemeldet' })))),
-      h('button', { type: 'button', class: 'btn btn-outline small', html: icon('plus', 16) + '<span>Preis melden</span>', onclick: actions.reportPrice })));
+          : h('span', { class: 'unknown', text: 'Kein Preis gemeldet' }))))));
   }
 
-  // Fakten (Hafeninfos von der Website füllen die Tabelle nach, sobald sie geladen sind)
-  const facts = describeFacts(p);
-  const factsBlock = h('section', { class: 'block facts-block' }, h('h3', { text: 'Eigenschaften' }), factList(facts));
-  body.append(factsBlock);
-  if (enrichFacts) enrichFacts(factsBlock, facts, factList);
+  // Fakten (Hafeninfos von der Website füllen die Tabelle nach, sobald sie geladen sind) – bei Slipanlagen steht alles in „Wichtig für dein Boot“
+  if (!slip) {
+    const facts = describeFacts(p);
+    const factsBlock = h('section', { class: 'block facts-block' }, h('h3', { text: 'Eigenschaften' }), factList(facts));
+    body.append(factsBlock);
+    if (enrichFacts) enrichFacts(factsBlock, facts, factList);
+  }
 
   if (nearby) body.append(nearby);
 
@@ -126,11 +183,28 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts })
     'Quelle: ', src ? h('a', { href: src, target: '_blank', rel: 'noopener noreferrer', text: '© OpenStreetMap', title: `OpenStreetMap ${p.osm.type}/${p.osm.id} · ODbL` }) : 'WaterMap-Community',
     p.community_fields.length ? ' + Community' : '', stand ? ` · Stand ${stand}` : ''));
 
-  return [head, body];
+  // Ganz unten, für genau diesen Standort
+  body.append(h('div', { class: 'detail-links' },
+    h('button', { type: 'button', onclick: actions.report, text: 'Fehler melden' })));
+
+  return [detailKopf(p, user), body];
 }
 
-function actionButton(name, label, title, onclick) {
-  return h('button', { type: 'button', class: 'act', title, onclick }, h('span', { class: 'act-ico', html: icon(name, 20) }), h('span', { text: label }));
+/** „Wichtig für dein Boot“: sechs Angaben mit Ampel (Text, nie nur Farbe), fehlende Angaben zum Ergänzen. */
+function bootBox(p, actions) {
+  const punkte = bootPunkte(p);
+  const fehlen = punkte.filter(x => x.ton === 'unb').length;
+  const TON = { ok: 'passt', warn: 'mit Einschränkung', stop: 'nicht möglich', unb: 'unbekannt' };
+  const extra = [p.opening_hours ? `Öffnungszeiten: ${p.opening_hours}` : null, p.operator ? `Betreiber: ${p.operator}` : null].filter(Boolean);
+  return h('section', { class: 'wb', 'aria-labelledby': 'wb-titel' },
+    h('h3', { class: 'wm-abschnitt wb-titel', id: 'wb-titel', text: 'Wichtig für dein Boot' }),
+    h('ul', { class: 'wb-liste' }, punkte.map(x => h('li', { class: `wb-p is-${x.ton}` },
+      h('i', { 'aria-hidden': 'true' }),
+      h('div', {}, h('small', { text: x.titel }), h('strong', { text: x.wert }), h('span', { class: 'sr-only', text: ` (${TON[x.ton]})` }))))),
+    extra.length ? h('p', { class: 'wb-extra', text: extra.join(' · ') }) : null,
+    h('div', { class: 'wb-fuss' },
+      h('span', { text: fehlen ? `${fehlen} ${fehlen === 1 ? 'Angabe fehlt' : 'Angaben fehlen'}` : 'Angaben laut OpenStreetMap' }),
+      h('button', { type: 'button', class: 'wb-link', onclick: actions.ergaenzen || actions.report }, fehlen ? 'Weißt du mehr? Ergänzen' : 'Angaben ändern', h('span', { html: icon('chevron', 16), 'aria-hidden': 'true' }))));
 }
 
 /** Kleine Herkunftszeile unter dem Namen; Antippen zeigt den Hinweis. */

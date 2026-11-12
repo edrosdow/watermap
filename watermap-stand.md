@@ -1,0 +1,384 @@
+# WaterMap – aktueller Stand
+
+Stand: 11.11.2026 · App-Version **7.74.1**
+
+| | |
+|---|---|
+| Live | Version 7.14.3 (PR #3 übernommen) |
+| Vorschau | 7.15.0 – 7.74.1 in PR #4, https://deploy-preview-4--watermaps.netlify.app |
+
+Branch `claude/oms-daten-aktualisieren-0bc073` – **noch nicht veröffentlicht**. Veröffentlicht wird erst auf „übernehmen“.
+
+---
+
+## 1. Was die App ist
+
+WaterMap ist eine Karte für Wassersportler mit Slipanlagen, Häfen und Bootstankstellen in ganz Deutschland. Die Standorte kommen aus OpenStreetMap, dazu gibt es Community-Daten.
+
+Weitere Funktionen:
+- Pegelstände, Wetter und Wind
+- Pegel-Ampel mit E-Mail-Alarm
+- Lagemeldungen „Heute vor Ort“
+- Fotos und Hinweise, die vor der Veröffentlichung geprüft werden
+
+Die App ist eine installierbare PWA, auf Deutsch, und nutzt nur kostenlose Dienste.
+
+## 2. Architektur
+
+### Frontend (`public/`, ohne Build-Schritt)
+- Statische Seiten mit ES-Modulen. Leaflet 1.9.4 und MarkerCluster 1.5.3 liegen selbst gehostet in `public/vendor/`.
+- **Service Worker** `sw.js`: hält die App-Hülle (`SHELL_FILES`) und die Kartenkacheln vor. Der Cache-Name hängt an der Version, also bei jeder Änderung `VERSION` in `sw.js` und `config.js` erhöhen.
+- **Routing über den Hash** in `main.js`:
+
+  | Adresse | Ziel |
+  |---|---|
+  | `#karte` (Standard) | Karte (Chips Slip/Häfen/Tanken/Pegel) |
+  | `#p=<id>` / `#x=<id>` | Standort bzw. Extra (Sheet über der Karte) |
+  | `#karte/pegel/<id>` | Pegel-Sheet auf der Karte (`/alarm` öffnet das Alarm-Fenster; alt: `#g=`, `#pegel/<id>`, `#pf=`) |
+  | `#pegel/fluss/<name>` | Flussfenster über der Karte (`kueste` = Küstenpegel) |
+  | `#pegel`, `#pegel/karte`, `#pegel/suche` | alte Adressen des Pegel-Tabs → Karte mit Chip „Pegel“ (bzw. Suche offen) |
+  | `#meldungen` | Aktuelle Meldungen (Sheet) |
+  | `#gemerkt` | Gemerkt: Orte und Pegel (alt: `#favoriten`, `#mehr/merkliste`) |
+  | `#mehr` | Mehr (Mein WaterMap, In der Nähe, Hilfe, Über, Rechtliches) |
+  | `#mehr/einstellungen` | Einstellungen „Mein WaterMap“ |
+  | `#naehe` | In der Nähe (alt: `#liste`) |
+  | `#melden` | Menü „Was möchtest du melden?“ |
+
+  Navigation unten (Handy): Karte · Meldungen · Melden · Gemerkt · Mehr; oben (Desktop) dieselben Ziele, „Melden“ als Knopf rechts. Alle Bereiche sind Sheets über der Karte (`sheetOeffnen` in `bausteine.js`).
+
+- **Wichtige Module:**
+
+  | Modul | Aufgabe |
+  |---|---|
+  | `main.js` | Start, Zustand, Routing (Hash), Auswahl, Bereiche, Filter |
+  | `suche-ui.js` | Suche: Vorschläge (Pegel, Gewässer, Orte, Ortssuche), Tastatur, Lupe → Suchfeld (Handy) |
+  | `melden-menue.js` | Menü „Was möchtest du melden?“ im Sheet, Schnellmeldung „Lage vor Ort“ |
+  | `bausteine.js` | Bausteine: `sheetOeffnen`, Kopf, Ortszeile, Gruppe, Marke, Umschalter (`wm-seg`) |
+  | `bewegung.js` | Animationen (versetzte Listen, Hochzählen, Merk-Flug, Marker-Plopp, Haken) |
+  | `farben.js` | Tokens zur Laufzeit für Canvas/Leaflet, `var()` in SVG als `style` |
+  | `map.js` | Leaflet: Marker, Cluster, Pegel, Melde-Abzeichen |
+  | `nav.js` | Navigation oben/unten, Abzeichen, Popover (Filter) |
+  | `detail.js`, `extras.js` | Standort-Sheet bzw. Extras (Schleusen, Service …) |
+  | `gemerkt.js`, `mehr.js`, `einstellungen.js`, `naehe.js` | Bereiche Gemerkt, Mehr, Einstellungen, In der Nähe |
+  | `meldungen-uebersicht.js`, `meldungen.js`, `lage-form.js`, `meldung-unpassend.js` | Aktuelle Meldungen, Lagemeldungen „Heute vor Ort“ |
+  | `forms.js`, `photo-form.js`, `slip-ergaenzen.js` | Formulare (Netlify Forms) |
+  | `data.js`, `model.js`, `search.js`, `gebiet.js` | Daten laden, Modell, Suche, Kartengebiet Deutschland |
+  | `pegel.js`, `pegel-daten.js` | PEGELONLINE, Verlaufsdiagramm, Stationsliste, „Meine Pegel“ |
+  | `pegel-sheet.js`, `pegel-ansicht.js`, `pegel-marker.js` | Pegel-Sheet (klein/groß), Cockpit, Wert-Pillen auf der Karte |
+  | `pegel-einordnung.js`, `pegel-vorhersage.js`, `pegel-fluss.js`, `pegel-fluss-ansicht.js`, `pegel-tide-ansicht.js` | Tendenz/Einordnung, Vorhersage, Flüsse, Tide |
+  | `passt-mein-boot.js`, `mindestpegel.js`, `ampel-logik.js`, `alarm.js` | „Passt mein Boot?“, Mindestpegel, Alarm |
+  | `wetter.js` | Wetter und Wind (DWD-Warnungen) |
+  | `pegel-bild.js` | „Als Bild teilen“ (Canvas) |
+
+- **Gespeicherte Nutzerdaten** liegen nur im Browser (localStorage), es gibt keine Konten. Dazu gehören:
+  - Favoriten
+  - Meine Pegel (`watermap.meinePegel`)
+  - der letzte Pegelstand für den Offline-Betrieb (`watermap.pegel.stand`)
+  - die Kategorien
+  - eine anonyme Geräte-ID für Meldungen
+
+### Daten
+- `public/data/osm/` enthält die OSM-Standorte als GeoJSON und `extras.geojson` (Schleusen, Brücken, Service). Beides schreibt der Import.
+- `public/data/community/` enthält geprüfte Community-Daten. Der Import überschreibt sie nie.
+- **GitHub Actions:**
+
+  | Workflow | Aufgabe |
+  |---|---|
+  | `update-osm-data.yml` | monatlicher OSM-Import, alle 16 Bundesländer, mit Verlustschutz |
+  | `hafeninfo.yml` | Preise und Leistungen von den Hafen-Websites, kostenlos nach festen Regeln |
+  | `entpacken.yml` | Projekt entpacken (nur manuell) |
+
+### Externe Dienste (alle kostenlos)
+
+| Dienst | Weg |
+|---|---|
+| PEGELONLINE (WSV) | Netlify-Proxy `/api/pegel/*` |
+| Bright Sky (DWD) | Netlify-Proxy `/api/wetter/*` |
+| Overpass (OSM) | nur beim Import der Daten (GitHub Action), nicht aus der App (seit 7.74.1) |
+| Nominatim | Ortssuche, nur auf Nutzeraktion |
+| Brevo | E-Mails für den Pegel-Alarm |
+| Netlify Forms / Blobs / Functions | Formulare, Speicher, Server-Logik |
+
+### Netlify-Funktionen (`netlify/functions/`, Node 22)
+
+| Funktion | Aufgabe |
+|---|---|
+| `fotos.mjs` | Foto-Freigabe für `/admin/fotos.html` |
+| `pegel-alarm.mjs` | Anmeldung zum Alarm (Double-Opt-in) |
+| `pegel-alarm-pruefen.mjs` | stündliche Alarm-Prüfung |
+| `meldungen.mjs` | Lagemeldungen: `GET /api/meldungen?standort=`, `GET /api/meldungen/aktiv`, `POST /api/meldungen`, `POST /api/meldungen/<id>/bestaetigen` |
+| `meldungen-aufraeumen.mjs` | räumt stündlich die Lagemeldungen auf |
+
+Die Logik für Meldungen und Alarm steckt in `netlify/lib/` und ist dort testbar. Der Blob-Store heißt `meldungen` (Produktion) bzw. `meldungen-vorschau` (Vorschau).
+
+### Umgebungsvariablen in Netlify (Werte nie in den Chat)
+- **Fotos:** `FOTO_ADMIN_PASSWORT`, `NETLIFY_API_TOKEN`, `GITHUB_TOKEN`, `FOTO_BRANCH`
+- **Pegel-Alarm:** `BREVO_API_KEY`, `ALARM_ABSENDER`, `ALARM_ABSENDER_NAME`; Push: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (Secret), `VAPID_SUBJECT` (erzeugt mit `node scripts/vapid-schluessel.mjs` auf dem eigenen Rechner)
+- **Heute vor Ort:** `MELDUNG_SALZ`, als Secret gesetzt. Fehlt die Variable, antwortet die Funktion mit 503.
+
+## 3. Wichtige Entscheidungen
+
+**Arbeitsweise**
+- Nur kostenlose Dienste. Keine Konten und keine Datenbank, solange es nicht nötig ist (Phase 2/V8).
+- Änderungen gehen zuerst als **Vorschau** in PR #4. Veröffentlicht wird nur auf „übernehmen“.
+- Vor größeren Änderungen an der Oberfläche gibt es erst einen Plan bzw. Rückfragen.
+
+**Karte und Daten**
+- Leaflet statt MapLibre.
+- GeoJSON. Die Aufteilung in räumliche Pakete ist vorbereitet.
+- Hafeninfos werden mit Quelle übernommen. Beschwert sich ein Hafen, wird sein Eintrag entfernt.
+
+**Navigation (Entwurf A, 7.16)**
+- Kategorien lassen sich mehrfach wählen, mindestens eine bleibt immer aktiv (Standard: Slip).
+- Die Ebenen stehen im Filter-Panel.
+- Die Vorschaukarte zeigt den nächsten Pegel.
+- Das Melde-Menü ist ein Bottom Sheet.
+
+**Heute vor Ort (7.17/7.18)**
+- Meldungen sind 24 h sichtbar.
+- Pro Gerät und Standort gibt es 1 h Sperre.
+- Nach 3 Widersprüchen wird eine Meldung ausgeblendet.
+- Notizen haben höchstens 140 Zeichen.
+- IP-Adressen werden nur mit Salz gehasht gespeichert.
+- Die Karte hat vier Zustände (a/b/c/d). „In der Nähe“ heißt hier 1 km (`VOR_ORT_RADIUS_M`).
+- Nur bei Slipanlagen (7.20): Häfen und Tankstellen zeigen keine Karte „Heute vor Ort“; Melde-Menü schlägt nur Slipanlagen vor und nimmt bei der Auswahl nur Slipanlagen an.
+- Der Datenschutztext ist abgestimmt.
+
+**Flüsse (7.22)**
+- „Flüsse im Überblick“ als Kacheln (Handy 2, Desktop 3 Spalten, am Desktop in voller Breite unter „Lage heute“); Farbbänder entfernt.
+- Gruppierung nach Gewässer. Küste = feste Liste `CONFIG.PEGEL_KUESTE` (Nordsee, Ostsee, Jade, Außenjade, … – „AUSSENJADE“ passt auch); eigene Kachel „Küste“ (Tide), Seite ohne Profil.
+- Gewässer ganz ohne Kennwerte (Kanäle): keine Kachel, aber unter „Alle Gewässer“ im Abschnitt „Kanäle und Gewässer ohne Bewertung“; Seite ohne Profil. In der Vorschau/lokal (`ENTWICKLUNG` in config.js) listet die Konsole diese Gewässer einmal auf – zum Prüfen der Küstenliste.
+- Zustand eines Flusses nur aus aktuellen, eingeordneten Pegeln: über HSW (mind. einer) → hoch (≥ 50 % über MHW) / teils hoch → niedrig (≥ 50 % unter MNW) / teils niedrig → normal. Nur veraltete Werte → grau „keine aktuellen Daten“. Hervorgehoben: relativ höchster bzw. tiefster Pegel (`rel = (W − MNW) / (MHW − MNW)`, begrenzt −0,5 … 1,6).
+- Kacheln: zuerst Flüsse mit „Meine Pegel“, dann Schwere, dann Anzahl; Küste zuletzt; 6 Kacheln, dann „Alle <n> Gewässer“. Punktreihe nur Pegel mit Kennwerten (max. 12).
+- Flussseite `#pegel/fluss/<name>`: SVG-Profil nach km (Unterweser hinten angehängt; seit 7.22.2 x halb nach km, halb nach Reihenfolge, damit Häufungen nicht aufeinanderliegen; y-Achse nur so weit wie nötig, MNW/MHW immer sichtbar; Handy 220 px hoch), Normalbereich, MNW/MHW gestrichelt, keine HSW-Linie. Abschnitt nach dem letzten Pegel mit Kennwerten abgetrennt: „Tidebereich“, wenn diese Pegel Tide-Kennwerte (MThw/MTnw) haben, sonst „ohne Kennwerte“. Handy: Tipp zeigt Blase des nächstgelegenen Punkts, „Details ›“ öffnet; Desktop Hover + Klick.
+- Seit 7.23: Pegel in Fließrichtung (`flussReihenfolge`: nach km, bei Sprüngen Kette über die Lage; km ab Mündung bei Mosel, Saar, Main, Neckar, Lahn, Saale). Profil mit gleichen Abständen nur aus bewerteten Pegeln; Höhe passt sich an (MNW immer, MHW nur wenn im Bereich, sonst Hinweis); Flächen normal/niedrig/hoch; tiefster/höchster Pegel als Zeile über dem Diagramm; Tidepegel nicht im Diagramm, sondern Zeile „Ab <Pegel> <n> Tidepegel“ darunter. Kompakter Kopf, am Handy ohne globales Suchfeld. Liste „flussabwärts“, Weser mit Abschnitt („Oberweser km 0,7“).
+- Namen: `js/pegel-namen.js` (Korrekturliste für Umlaute, „.“ mit Leerzeichen, „-strasse“ → „-straße“). Die Vorschau-Konsole listet Reihenfolge (Weser, Elbe, Rhein, Ems) und Namen mit ae/oe/ue.
+- BSH: Ergebnis der (inzwischen entfernten) Prüf-Funktion in `docs/BSH-Klaerung.md`.
+
+**Gezeiten (7.24, ohne BSH)**
+- Tidepegel = Tide-Kennwerte (MThw/MTnw/MTmw, `g.tideRefs`) statt MNW/MHW; Zustand/Etikett „Tide“ (#9CCEE3).
+- `js/gezeiten.js` (rein, getestet): Glättung, Hoch-/Niedrigwasser als lokale Extreme (±3 h, abwechselnd, nur bestätigte), Tendenz aus 30 min (auflaufend/ablaufend/kentert), Tidehub, Einordnung zu MThw/MTnw.
+- Tidepegel-Detailseite (`js/pegel-tide-ansicht.js`): Kopf „Tidepegel · Gewässer · km“, „Tide“, Tendenz; Tidekurve 24 h gemessen mit MThw/MTnw, HW/NW mit Uhrzeit, „jetzt“; Einordnung; Kacheln „Häfen in der Nähe“ und „<Gewässer> – alle Pegel“. Gilt auch im Kartenpanel.
+- „Meine Pegel“: Tidepegel-Karte mit Tendenz und „zuletzt HW … · NW …“ statt Skala. Flussseite: Tide-Zeile „· gerade auflaufend“ (eine Abfrage pro Flussseite).
+- Prüfliste `pruefung.html` (nicht verlinkt): Reihenfolge Weser/Elbe/Rhein/Ems, Namen mit ae/oe/ue, erkannte Tidepegel, Küste, Gewässer ohne Bewertung – „Alles kopieren“.
+
+**Gezeitenvorhersage BSH (7.25)**
+- Funktion `/api/gezeiten?pegel=<UUID>&nr=<Nr>` (`netlify/functions/gezeiten.mjs`, Logik `netlify/lib/gezeiten-kern.mjs`, Ausnahmen `netlify/lib/gezeiten-orte.mjs`); `?orte=1` = BSH-Orte. Zuordnung automatisch über UUID/Pegelnummer. Ortsliste 24 h (Blobs „gezeiten“), Vorhersage 1 h im CDN, Fehler 502, kein Ort 404. Aus: `GEZEITEN_BSH_AKTIV` (config.js) bzw. Env `GEZEITEN_BSH_AUS=1`. Kontakt im User-Agent: Env `WATERMAP_KONTAKT`.
+- App: `js/gezeiten-bsh.js` (Laden, Offline-Stand je Pegel ≤ 24 h, Texte). Tidepegel-Seite: Karte „Gezeiten“ (nächstes HW/NW, „in X Std. Y Min.“, Höhe – amtliche Vorhersage mit Abweichung zum Mittel, sonst Gezeitenrechnung; drei weitere als Pillen; BSH-Text), Vorhersage gestrichelt +12 h in der Tidekurve. „Meine Pegel“: „nächstes HW … · NW …“. Flussseite: Tide-Zeile „· HW <Pegel> 14:32“, Liste „HW 14:32“ (nur Pegel mit BSH-Ort). Küsten-Kachel „Cuxhaven: Hochwasser 14:32“.
+- Quelle „Gezeitenvorhersage: BSH (CC BY 4.0)“, „nicht für die Navigation“, Abschnitt in `ueber.html`. Prüfliste zeigt Zuordnung und BSH-Orte ohne Pegel.
+- „<n> Slipanlagen an der <Fluss>“: schaltet Slipanlagen zusätzlich ein und zoomt auf alle (fitBounds). Keine Abfragen pro Pegel.
+
+**In der Nähe (7.21)**
+- Tab `#naehe` ersetzt „Liste“ (Pin-Symbol). Favoriten bleiben eigener Tab mit denselben Karten; kein Umschalter mehr.
+- Bezugspunkt: „Meine Position“, „Kartenmitte“ (Standard beim ersten Öffnen) oder ein gesuchter Ort. Gespeichert (localStorage): nur die Wahl (`watermap.naehe.bezug`), bis zu 3 gesuchte Orte, ob schon entschieden, Sortierung. Die Position selbst nie.
+- Ortsname im Kopf lokal aus den WaterMap-Daten (Ort des nächsten Standorts, ≤ 30 km) – keine Rückwärtssuche, damit die Position nicht an Nominatim geht.
+- Freigabe vorher per Permissions API: granted → direkt Position; prompt/unbekannt → Erklär-Karte (Browser-Dialog erst auf „Position verwenden“); denied → gelber Hinweis mit Anleitung. Status gemeinsam mit „Meine Position“ auf der Karte. Der einmalige Karten-Hinweis „Karte auf deinen Standort ausrichten?“ ist entfernt.
+- Position wird beim Öffnen des Tabs und per Ziehen nach unten aktualisiert, nicht laufend.
+- Liste: 25 km, bei < 5 Treffern 50 bzw. 100 km; höchstens `LIST_LIMIT`. Sortierung „Nächste zuerst“, „Name A–Z“, bei nur Häfen „Gastliegeplätze zuerst“. Keine Fahrzeit. Meldungs-Etikett bei Slipanlagen (die Übersicht `/api/meldungen/aktiv` liefert dafür jetzt `at`).
+- Handy: Navy-Kopf mit Kategorien und Filter statt der Werkzeugleiste; Tipp → Karte mit Vorschau, Zurück → gleiche Scrollstelle. Desktop: Seitenleiste links, Kategorien in der Werkzeugleiste, bei Kartenmitte läuft die Liste mit der Karte mit.
+- Detail-Abschnitt „In der Nähe (bis 500 m)“ heißt jetzt „Umgebung (bis 500 m)“.
+- Handy kompakt (7.22.1, nur < 768 px): globales Suchfeld ausgeblendet; Kopf mit Titel, Lupe (→ Fenster „Entfernungen messen ab …“) und Karten-Symbol; Bezugspunkt als Pille; Chips 36 px + Filter-Symbol. Statt Erklär-Karte eine Zeile „Genauere Entfernungen mit deiner Position“ mit „Erlauben“ und „×“ (`watermap.naehe.tippZu`, gilt bis zur nächsten eigenen Wahl des Bezugspunkts); „blockiert“ einzeilig. Zählzeile „<n> Slipanlagen · bis <r> km“. Links „Über WaterMap · …“ als letzter Listeneintrag, Liste unten mit Abstand für Navigation und Melden-Knopf. Test: mindestens 4 Einträge ohne Scrollen bei 375 und 390 px.
+
+**Pegel (7.19)**
+- Der Bereich „Pegel“ ist ein eigenes Dashboard.
+- Die Pegel-Ampel bleibt unverändert und ist über „Passt mein Boot?“ mit `?pegel=` erreichbar.
+- Ein Klick auf einen Pegel-Marker bleibt auf der Karte: Handy → kompakte Vorschau, Desktop → Panel rechts.
+- „Meine Pegel“ ist eine eigene Liste, getrennt von den Favoriten. Der Ampel-Pegel wird einmalig übernommen.
+- Ist die Liste leer, erscheinen die 3 nächsten Pegel als Vorschlag.
+- Die Alarm-Kachel verweist auf den bestehenden Alarm (`pegel-ampel#am-alarm`).
+- Farben: Normal überall grün `#6CBF84`, auch auf der Karte. Niedrig `#FAB219`, Hoch `#EC835A`, über HSW `#D03B3B`, ohne Daten `#DCE5EA`.
+- Ordnet PEGELONLINE einen Pegel nicht ein, aber MNW und MHW sind bekannt, ordnet die App selbst ein: unter MNW niedrig, über MHW hoch, sonst normal (7.19.1).
+- „Flüsse im Überblick“ zeigt nur eingeordnete Pegel, keine grauen Felder. Gewässer ganz ohne Einordnung (z. B. Kanäle, Küste) fehlen dort; die Liste zeigt weiter alle Pegel (7.19.1).
+- „Pegel hinzufügen“ öffnet ein eigenes Fenster (Handy Bottom-Sheet, Desktop Dropdown, bei wenig Platz nach oben): Suche, ohne Eingabe die nächsten Pegel, „+“ fügt hinzu, Fenster bleibt offen (7.20).
+- Die Suche des Dashboards steht in der Karte „Alle Pegel“ (filtert nur diese Liste); am Handy ist sie auch bei zugeklappter Liste sichtbar und klappt beim Tippen auf (7.20.1).
+- „Alle Pegel“ ist standardmäßig nach Gewässer und Flusskilometer sortiert (7.20.2); wählbar sind nur „Gewässer“ und „Entfernung“, „Zustand“ ist auf Wunsch entfernt (7.20.3).
+- Trend: kommt aus `currentMeasurement.trend` (auch als Text). Fehlt er, berechnen Karte und Detailseite ihn aus dem Verlauf (2 h, ab 2 cm). Die Tabelle blendet die Spalte „Trend“ aus, wenn keine Zeile einen Trend hat. Ob PEGELONLINE den Trend noch liefert, ließ sich aus der Cloud-Umgebung nicht prüfen (kein Netzzugang) (7.20.2).
+- Bei einer Suche kommen zuerst Pegel, deren Gewässer passt (dann Namenstreffer wie „Jade-Weser-Port“). Die Weser hat zwei Kilometrierungen (Ober-/Mittelweser ab Hann. Münden, Unterweser ab Bremen wieder km 0); für die Reihenfolge zählt die Unterweser (nördlich 52,9°, km < 130) als km + 366,7 – angezeigt wird weiter der amtliche km (`flussKm` in `pegel-dashboard.js`, 7.20.4). Andere Flüsse mit mehreren Kilometrierungen sind nicht geprüft.
+- Suche und Filter schließen sich aus: Tippen in die Suche entfernt einen Filter (Zähler oder Flussband), ein neuer Filter leert die Suche (7.20.5).
+- Karte und Dashboard nutzen eine gemeinsame Stationsliste, die alle 15 Min. und bei Rückkehr in die App aktualisiert wird.
+- Verläufe werden nur für sichtbare Karten und die Detailseite geladen.
+- Offline gibt es den letzten Stand mit Hinweis „Stand von …“.
+
+**Gestaltung**
+- Karten mit 18 px Radius auf `#F3F6F8`.
+- Gelbe Etiketten in `#7A5200`.
+- Bedienelemente mindestens 44 px groß.
+- Maximale Breite 1280 px.
+
+## 4. Versionsverlauf seit der letzten Veröffentlichung
+
+| Version | Inhalt |
+|---|---|
+| 7.15.0 | Neues, fotozentriertes Formular „Foto hinzufügen“ |
+| 7.15.1/2 | „In der Nähe“: überlastete Overpass-Antwort erkannt, eine schnellere Abfrage |
+| 7.16.0 | Navigation nach Entwurf A (Kategorien, Filter-Panel, Melde-Menü, Vorschaukarte) |
+| 7.17.0 | „Heute vor Ort“: Lagemeldungen (Backend und Oberfläche) |
+| 7.18.0 | „Heute vor Ort“ als Karte mit vier Zuständen |
+| 7.19.0 | Pegel-Dashboard, Detailseite, „Meine Pegel“, Pegel-Vorschau auf der Karte |
+| 7.19.1 | Flüsse im Überblick ohne graue Felder, eigene Einordnung aus MNW/MHW |
+| 7.20.0 | Fenster „Pegel hinzufügen“, „Lage melden“ nur bei Slipanlagen |
+| 7.20.1 | Pegel-Suche aus dem Kopf in die Karte „Alle Pegel“ verschoben |
+| 7.20.2 | „Alle Pegel“ standardmäßig nach Gewässer und km; Trend aus dem Verlauf, wenn PEGELONLINE keinen liefert |
+| 7.20.3 | Sortierung „Zustand“ entfernt (nur noch Gewässer und Entfernung) |
+| 7.20.4 | Suche: passendes Gewässer zuerst; Unterweser hinter Ober-/Mittelweser |
+| 7.20.5 | Neue Suche hebt den Filter auf; Filter (Zähler, Flussband) leert die Suche |
+| 7.24.0 | Gezeiten aus PEGELONLINE: Tidepegel-Detailseite (Tidekurve, letztes HW/NW, Tidehub), Tide in „Meine Pegel“ und Flussseite; Prüfliste `pruefung.html` |
+| 7.24.1 | Nach Prüfliste: Ems-Reihenfolge (Unterems ab Papenburg neu ab km 0 → `flussKm` +240), Namen (Groß-/Straß-, Kürzel UW/AP/BP … groß, Bhv/Whv/LT ausgeschrieben, „auf/zur“ klein, Meißen, Roßlau, Storkower Gewässer), Tide-Kennwerte auch als Text/„cm …“, Prüfliste zeigt Datenstand, gelieferte Tide-Kennwerte und Sonderzeichen in Namen; Offline-Stand nur aus derselben Version |
+| 7.38.0 | „Details ›“ im Pegel-Kasten der Standortansicht öffnet die Pegel-Details in einem **Fenster** über dem Standort (wie „Wetter und Wind“: Handy von unten, sonst mittig) statt einer neuen Seite: dieselbe Darstellung wie im Kartenpanel (`pegelDetail`, Skala, Verlauf 24 h/7 Tage, „Passt mein Boot?“, Slipanlagen am Pegel, Stern), „×“/Escape/Klick daneben schließt, der Standort bleibt offen, Fokus zurück auf den Kasten; Strg/Cmd-Klick öffnet weiter die Pegel-Seite. Gemeinsame Fenster-Funktion `fenster()` in `js/wetter.js`. Merkliste und Dashboard öffnen weiter die Seite |
+| 7.39.0 | Auch **Merkliste („Meine Pegel“), Pegel-Dashboard (Karten, Tabelle) und Flussseite (Punkte, Zeilen)** öffnen die Pegel-Details im Fenster statt auf einer neuen Seite: Adresse und aktuelle Seite bleiben, „×“/Escape führt zurück; im Fenster zusätzlich „Auf der Karte“. `pegelCtx().open` und Merkliste rufen `pegelFensterOeffnen(id)`. Direktlinks `#pegel/<id>` und Strg/Cmd-Klick zeigen weiter die Seite |
+| 7.40.0 | Glas-Leiste unten tiefer: Abstand zum Rand 10 px + Safe-Area statt 28 px (`--bn-rand` in `css/nav.css`), `--bn-space` entsprechend 18 px kleiner |
+| 7.41.0 | **Wischen nach unten schließt alle Fenster, die auf dem Handy von unten aufgehen** (Filter, Melden-Menü, Formulare als Blatt, Nähe-Bezug, Wetter-/Pegel-Fenster, Standort-Blatt und -Vorschau): `js/wischen.js`, ein gemeinsamer Touch-Handler am Dokument (ersetzt `swipeToClose` aus `nav.js`). Das Fenster folgt dem Finger, schließt ab 110 px oder bei Schwung, sonst federt es zurück; schließt über das `cancel`-Ereignis wie Escape. Greift nur, wenn der Inhalt ganz oben steht, nicht bei Seitwärts-Wischen, Eingabefeldern, Diagrammen (`.gc`) und Vollbild-Dialogen/Lightbox. Test `ui_wischen` |
+| 7.42.0 | „Aktuelle Meldungen“: dritter Reiter **„Mein Standort“** mit **Umkreis-Regler 5–100 km** (5-km-Schritte, Start 25 km, gemerkt in `watermap.meldungen.umkreis`): Liste und Zählzeile („n Meldungen im Umkreis von X km um deinen Standort“) passen sich beim Ziehen sofort an, der Regler bleibt dabei stehen. Standortfreigabe erst auf Wunsch (Karte „Standort verwenden“, bei schon erteilter Freigabe automatisch); Fehlertext mit „Erneut versuchen“. `ctx.position()` / `ctx.freigegeben()` in `main.js` |
+| 7.43.0 | (1) **Fluss im Fenster:** Ein Fluss im „Flussüberblick“ (und „alle Pegel“ auf der Pegelseite) öffnet als Fenster von unten (`flussFenster()` in `main.js`, `wxd-pegel wxd-fluss`, Inhalt = `flussSeite`); ein Pegel darin öffnet als weiteres Fenster darüber; `#pegel/fluss/<name>` bleibt als Seite. (2) **Abschnitt „Umgebung (bis 500 m)“ aus dem Standort-Detail entfernt** (kein `nearbySection`, keine Live-Abfrage der Umgebung mehr; `nearbySection`/`liveNearby` und die Funktion `umgebung` bleiben ungenutzt im Code). (3) **Skala-Beschriftungen („MNW“ …) bleiben innerhalb der Kachel** (Mindestabstand schob die erste Beschriftung über den linken Rand) |
+| 7.44.0 | **„In der Nähe“ als Fenster von unten über der Karte (Handy):** Kopf (`#naehe-kopf-m`, absolut, Griff-Strich) und Liste (`.sidebar`) bilden zusammen das Fenster, oben bleibt die Karte als abgedunkelter Streifen (Box-Schatten); `--nh-kopf-h` (ResizeObserver in `main.js`) setzt den Listenanfang unter den Kopf. Schließen: Wischen nach unten (`wischen.js`, jetzt mit mitwandernden Teilen `mit`), Tipp auf die Karte oben, Karten-Knopf im Kopf. Favoriten bleiben Seite; Desktop unverändert |
+| 7.45.0 | **Pegel-Tab neu (Stufe 1 von 3):** Kopf „Pegel“ mit „Stand <Uhrzeit> · WSV/PEGELONLINE“ und Umschalter **Liste \| Karte** (`role=tablist`, Auswahl in `watermap.pegel.ansicht`, Adresse `#pegel` bzw. `#pegel/karte`; der Pegel-Start hat auf dem Handy einen eigenen Kopf ohne globales Suchfeld). **EIN Suchfeld** „Pegel oder Gewässer suchen und merken“ (Treffer mit Wert, Zustand, Stern; der Dialog „Pegel hinzufügen“ entfällt, „+ Pegel hinzufügen“ fokussiert die Suche). Liste: **Meine Pegel** mit **Lage-Satz** („Deine 3 Pegel: 2 normal, Minden niedrig und fallend, Trier über HSW.“; `lageSatz()`), höchstens 3 Karten + „+ n weitere Pegel (Namen) ›“ · **Lage in Deutschland** (3 Zähler über HSW/hoch/niedrig, Tipp filtert „Alle Pegel“; auf dem Handy als Liste, am Desktop als Tabelle) und Zeile **„Flüsse im Überblick ›“** (öffnet die Fluss-Kacheln als Fenster) · **Wochenend-Ausblick** (Sa/So bzw. heute+morgen; Wetter aus `loadWetterStunden()`, Etiketten „gute Bedingungen“/„<Pegel> knapp“/„windig“/„Hochwasser“, Hinweis „Pegel: Stand heute“; ohne Wetterdaten oder gemerkte Pegel nicht angezeigt) · Werkzeuge. **Karte:** eigene Leaflet-Karte (`pegel-karte.js`) mit Wert-Pillen (Zustandsfarbe, Tide mit Wellen-Symbol, ab Zoom 9 mit Zahl, gemerkte größer), Legende, dunkle Pille + Vorschau-Karte (Details öffnet das Pegel-Fenster, Merken), Start auf den gemerkten Pegeln bzw. Position bzw. Deutschland. Stufe 2 (Messwerte) und 3 (Push-Alarm, Hochwasserwarnungen) folgen |
+| 7.46.0 | Pegel-Tab aufgeräumt (nach Rückmeldung): große Pegel-Kacheln bleiben; Kopf mit Titel + Umschalter in einer Zeile, „Stand …“ darunter; „+ Hinzufügen“ und „Bearbeiten“ als Links im Kopf von „Meine Pegel“ (keine gestrichelte Kachel mehr). Reihenfolge: Meine Pegel → **Wochenend-Check je Pegel** (Tabelle Pegel × Sa/So, Wetter am Ort JEDES Pegels, Ampelpunkt + Text „Wind n Bft“/„Böen n Bft“/„Pegel knapp“/„Hochwasser“, `zelle()` in `pegel-lage.js`) → **Deutschland heute** (3 kleine Chips + „Flüsse im Überblick“ in einer Karte) → Werkzeuge (kleiner). **„X“ zum Leeren in allen Suchfeldern** (`js/suchfeld.js`, auch Pegel-Ampel). Stern in den Suchtreffern sichtbar (war weiß auf weiß). Seite kann nicht mehr seitlich verrutschen (`overflow-x: hidden`) |
+| 7.47.0 | **Stufe 2 – Zusatzwerte aus PEGELONLINE** (Stand 29.10.2026: Wassertemperatur WT an 137 Pegeln, Abfluss Q an 94, Vorhersage WV an 43 – v. a. Elbe 19, Oder 8, Rhein 7; an der Mittelweser wie Vlotho/Minden nichts davon; Q ohne Kennwerte MQ/MNQ/MHQ → nur der Wert, keine Einordnung „schwächer/stärker als üblich“). Abruf nur bei Bedarf (`zusatzLaden`, `vorhersageWLaden`, `wtAenderungLaden` in `pegel-daten.js`, zwischengespeichert; Stationsliste unverändert). Pegel-Fenster: Kacheln „Wassertemperatur“ (+ Änderung seit gestern) und „Abfluss“ (nur wenn geliefert, auch bei Tidepegeln), Diagramm „Verlauf und Vorhersage“ (Vorhersage gestrichelt auf grauem Grund, Linie „jetzt“, Fläche unter MNW; Tooltip mit „Vorhersage“/„Abschätzung“), Satz zur Vorhersage (`vorhersageSatz()`), Zeile „Pegel-Alarm“ (vorerst zur Pegel-Ampel), Kachel „Als Bild teilen“ (`pegel-bild.js`). „Meine Pegel“-Karten und Karten-Vorschau: Etiketten „Wasser x °C“/„Abfluss x m³/s“, Vorhersage als gestrichelte Verlängerung der Mini-Kurve. Wochenend-Check nutzt die Vorhersage, wo vorhanden. Quellen in `ueber.html` ergänzt |
+| 7.48.0 | **Stufe 3 – Pegel-Alarm als Push** (Hochwasserwarnungen noch nicht: Quelle erst prüfen, `HOCHWASSER_AKTIV: false`). Alarm-Fenster (`alarm.js`, Bottom-Sheet): „Benachrichtige mich, wenn …“ unter/über, Wert −/+ in 5 cm oder direkt (Vorschlag = aktueller Wert gerundet), „Wie?“ Push (empfohlen) oder E-Mail; iPhone im Browser: Push gesperrt + Anleitung „Zum Home-Bildschirm“, E-Mail vorgewählt. Push: Web Push mit VAPID (`npm web-push`), `netlify/functions/pegel-push.mjs` (GET öffentlicher Schlüssel; POST anmelden/abmelden/liste), Logik `netlify/lib/pegel-push-kern.mjs` (Entprellung `schwelleBewerten`: höchstens 1 Nachricht pro Tag und Alarm, Rückkehr über die Schwelle setzt zurück; abgelaufene Abos 404/410 löschen; Nachricht „Minden unter 100 cm“ / „Aktuell 96 cm, fallend. Vorhersage: …“). E-Mail-Schwellen-Alarm in `pegel-alarm-kern.mjs` (Art `schwelle`, Double-Opt-in). Stündliche Prüfung (`pegel-alarm-pruefen.mjs`) für E-Mail und Push getrennt je nach Einrichtung. Service Worker: `push` + `notificationclick` → `/#pf=<id>` öffnet das Pegel-Fenster. Pegel-Fenster: Zeile „Pegel-Alarm“ mit Status; Werkzeuge „Pegel-Alarm“ für den ersten gemerkten Pegel; Einstellungen: Alarme dieses Geräts mit „Löschen“. Schlüssel: `node scripts/vapid-schluessel.mjs` auf dem eigenen Rechner, Eintrag in Netlify (`docs/PEGEL-ALARM.md`). Datenschutztext: Entwurf, noch nicht eingefügt |
+| 7.48.1 | Fenster „Flüsse im Überblick“ auf dem Handy wieder in voller Breite (eigene Breite nur ab 768 px; ebenso Alarm-Fenster), Punktreihe der Fluss-Kacheln immer in einer Zeile (Punkte schrumpfen statt umzubrechen), Küste/Kanäle „ohne Einstufung niedrig/hoch“ (statt Trennung „Hoch-/Bewertung“), Hinweis „Tippe auf einen Fluss …“ als Unterzeile im Kopf statt doppelt |
+| 7.55.0 | Pegel-Sheet ohne Zwischenstufe: nur noch **klein** und **ganz offen** (vorher zusätzlich ca. 80 %). Hochwischen oder „Details“ öffnet ganz, Runterwischen verkleinert, noch einmal schließt |
+| 7.56.0 | Pegel-Sheet „groß“ wie auf der Hauptkarte: endet unter Suche und Chips, darüber bleibt ein Streifen Karte (60 px), der gewählte Pegel wird in diesen Streifen geschoben. |
+| 7.57.0 | Pegel-Sheet flüssig: beim Hochziehen erscheinen die Details sofort (kein leeres Blatt), Einrasten ohne Sprung (Sheet fährt in großer Form genau bis zur Höhe des kleinen Sheets, erst dann Inhaltstausch); „Details“, Griff und „×“ fahren weich (0,28 s); Touch-Ereignisse hängen am berührten Element. Zart blau auch für Standort-Details (alle Arten) und das Fenster „Wetter und Wind“ |
+| 7.57.1 | Pegel-Sheet groß → klein: Details blenden beim Runtergleiten weich aus, der kleine Inhalt blendet danach weich ein (kein harter Tausch); beim Hochziehen blenden die Details ebenso ein |
+| (Doku) | Designsystem „Wasser“ festgelegt: Richtung C mit Disziplin von A → `DESIGN_SYSTEM.md` (Tokens, Schrift Atkinson Hyperlegible Next selbst gehostet, Komponenten, Regeln); in `CLAUDE.md` verbindlich verankert. Umsetzung (Phase 4) erst nach Freigabe |
+| 7.58.0 | Designsystem Schritt 1: `tokens.css` (Farben, Schrift, Abstände, Radien, Schatten), Schrift Atkinson Hyperlegible Next selbst gehostet (`public/fonts/`, ~53 KB), alte Variablen verweisen auf Tokens, Ziffern überall gleich breit |
+| 7.58.1 | Designsystem Schritt 2 vorbereitet: `bausteine.css` (gemeinsame `.wm-*`-Bausteine) eingebunden, noch ohne Verwendung – keine sichtbare Änderung |
+| (Doku) | Nutzer: „Lage melden“ (dunkle Karte im Melden-Fenster + Formular mit Schnellknöpfen) bleibt wie bisher – Ausnahme vom Umbau, in `DESIGN_SYSTEM.md` festgehalten |
+| 7.58.2 | Null ohne Schrägstrich (Schriftdatei angepasst, `public/fonts/LIESMICH.txt`) |
+| 7.59.0 | Designsystem Schritt 3 – Karte und Standort: Handy-Karte ohne dunkle Leiste (Suche und Chips schweben), Standort-Sheet/Vorschau nach den Bausteinen (Titel 24/700, keine Großbuchstaben-Etiketten, Route gefüllt) |
+| 7.60.0 | Designsystem Schritt 4 – Pegel: Titel/Wert/Knöpfe/Karten auf Tokens, Abschnittstitel in Satzschreibung, Chips und Suche wie auf der Karte |
+| 7.60.1 | Pegel-Suche wie auf der Hauptkarte: Logo links, Pille 48 px, Lupe rechts, Chips 40 px; Oberkante des großen Sheets aus der Kopfhöhe berechnet (`--pa-gross-top`) |
+| 7.61.0 | Designsystem Schritt 5–7: Meldungen, Mehr, Merkliste, Einstellungen, „In der Nähe“, Melden-Menü und Formulare in derselben Sprache wie Karte/Pegel (heller Kopf, Logo + Such-Pille, Titel mittig, runde Knöpfe, Chips 40 px, Karten ohne Rahmen); „Lage melden“ unverändert |
+| 7.61.1 | Kein blauer Fokusrahmen mehr um Überschriften/Bereiche, die nur per Skript den Fokus bekommen (`tabindex="-1"`, z. B. Pegelname „Vlotho“); Fokusring an Knöpfen/Links/Feldern bleibt |
+| 7.61.2 | Fokusrahmen wirklich weg: die Ausnahme für `tabindex="-1"` war schwächer als „.pa-panel .pd-kopf :focus-visible“ (Petrol-Rahmen um den Pegelnamen) – jetzt mit höherer Spezifität; Test prüft im Tastatur-Modus alle sichtbaren Skript-Fokus-Elemente |
+| 7.62.0 | Designsystem Schritt 8, Teil 1 – Desktop (≥ 768 px): Leiste unter der Kopfzeile auf Wassergrund, Chips weiß mit Schatten (aktiv Tinte), Filter/„In der Nähe“ als Chips, Suche als Pille mit Lupe rechts (Karte und Pegel), Pegel-Kopf und „In der Nähe“-Seitenleiste nach Tokens; Test `ui_meldungen` auf Designsystem angepasst |
+| 7.63.0 | Designsystem Schritt 8, Teil 2: Seiten Über/Datenschutz/Impressum/404 nach Tokens (Wassergrund, Text in weißer Karte, Kopf am Handy hell, ab 768 px dunkel; nur `page.css`); Wetter-Fenster: Diagramm als eine Karte (`.wx-diagramm`), Titel in Satzschreibung, Wind-Linie Petrol, Böen `--wm-hoch`, Titel/Wert/Abstände nach Tokens |
+| 7.64.0 | Designsystem Schritt 8, Teil 3 – Reste aufgeräumt: 366 Farbwerte mit ΔE ≤ 6 auf Tokens, `!important` bis auf begründete Ausnahmen entfernt (DESIGN_SYSTEM.md Abschnitt 9), 67 Schriftgrößen unter 13 px auf `--wm-t-xs`; Fotoverwaltung lädt wieder `tokens.css` (seit 7.63.0 ohne Gestaltung); Tests mit festen alten Farbwerten auf Tokens angepasst |
+| 7.65.0 | Designsystem, Farbgruppe Blau: 55 Blauwerte in CSS und das Teilen-Bild auf Tokens (Pegel-Blau → Petrol, Hover → Petrol-tief, dunkle Pillen auf Navy per `color-mix`, Ampelgehäuse → Tinte); Diagrammfläche 8 % |
+| 7.66.0 | Designsystem, alle übrigen Farben (Rot, Gold, Grün, Grau/Rahmen) auf Tokens, in CSS und JS (Pegel-Zonen, Kartenpillen, Fluss-Diagramm, Meldungstypen, Teilen-Bild); neue Tokens `--wm-rand` und `--wm-gut/warn/hoch/stop-rand` (Einordnungsbalken hell); Meldungstypen mit getrennter Punkt- und Textfarbe; „Lage melden“, Logo und Kartendaten-Farben bleiben |
+| 7.66.1 | `main` zusammengeführt (OSM-Daten 01.11., Foto Slip Vössen); Konflikte in `admin/verlauf.json` (beide Verläufe vereinigt) und `overrides.json` (Foto aus `main` ergänzt, auf dem Branch entferntes Test-Foto bleibt weg) gelöst; Schrift < 13 px in Plaketten/SVG/Leaflet bleibt (Nutzer 08.11.) |
+| 7.67.0 | **Toast nach Designsystem, „Rückgängig“ in der Merkliste** (Vorbild Material-3-Snackbar, Figma): Kurzmeldung auf Tokens (Grund `--wm-tinte` statt Navy, Radius s, `schatten-hoch`, Schrift s), Baustein „Kurzmeldung (Toast)“ in `DESIGN_SYSTEM.md`. `toast(text, aktion)` kann einen Knopf rechts zeigen (8 s statt 5 s, bleibt bei Fokus stehen); Entfernen eines Orts oder Pegels in der Merkliste lässt sich rückgängig machen, Reihenfolge bleibt (`favorites.setzen`, `meinePegel.setzen`). **Fehler behoben:** `#toast` lag in `.map-wrap` innerhalb von `main` und war auf Mehr/Pegel/Meldungen nie sichtbar – jetzt direkt im `body`, `position: fixed` |
+| 7.68.0 | **Designumbau Phase 0 – Regeln** (Auftrag `docs/AUFTRAG-designumbau.md`, Prototyp `docs/prototyp-designumbau.dc.html`, beide vom Nutzer freigegeben 10.11.): `DESIGN_SYSTEM.md` – Kopf links mit × rechts und Griff, Ortszeile (≥ 64), Aktionsleiste je Art, Chip mit Farbpunkt/Häkchen, Navigation Karte · Meldungen · Melden · Gemerkt · Mehr, ein Sheet-Rahmen, neuer Abschnitt 7a Bewegung, Abschnitt 11 Pegel-Ampel; `tokens.css`: `--wm-kurz/mittel/lang/feder/sanft` statt der ungenutzten `--wm-kurve`/`--wm-dauer`. Keine sichtbare Änderung |
+| 7.68.1 | **Neues Slip-Symbol** (Kartenmarker, Slip-Sheet, Listen; `GLYPH.slip` in `icons.js`): flaches, langes Motorboot auf dem Trailer an der schrägen Rampe, darunter Wellen – eigener Entwurf nach einer Vorlage des Nutzers (Variante F; Bug gerade, nicht hochgezogen). Ersetzt das Segelboot |
+| 7.69.0 | **Designumbau Phase 1 – gemeinsame Bausteine** (keine sichtbare Änderung): `css/bausteine.css` neu nach dem Prototyp, `js/bausteine.js` (`kopf`, `zeile`, `gruppe`, `aktionen`, `marke`, `hinweis`, `chip`, `seg`, Sheet-Rahmen `sheetOeffnen` mit Stapeln, Einrasten groß/klein, Esc/×/Wischen, Fokus zurück). Rahmen noch nicht genutzt; Pegel-Sheet folgt in 2a, `fenster()` und Standort-Sheet in Phase 3 (Begründung in `DESIGN_SYSTEM.md`). Test `ui_bausteine.py` |
+| 7.70.0 | **Designumbau Phase 2a – Pegel auf die Hauptkarte:** Chip „Pegel“ (Farbpunkt, mindestens eine Ebene), ein Marker mit Cluster und Legende (`pegel-marker.js`), Pegel-Sheet im gemeinsamen Rahmen (`pegel-sheet.js`; Handy klein = Kurzansicht, groß = Details; Desktop Panel), Hauptsuche findet Pegel und Gewässer, Fluss als Sheet. Pegel-Tab entfernt (`pegel-dashboard.js`, `pegel-karte.js`, `#pegelseite`, 309 CSS-Regeln), alte Adressen `#pegel…`/`#pf=` leiten auf die Karte. Navigation Karte · Meldungen · Melden · Gemerkt · Mehr („Gemerkt“ = Merkliste bis Phase 3). `pd-blau` aufgelöst. Ungenutztes `renderGaugeDetail`, `gaugeMarkerHtml`, `GAUGE_STATES` entfernt. Tests: neu `ui_pegel_karte.py` (ersetzt `ui_pegel_dashboard.py`), angepasst `ui_pegel`, `ui_pegel_fluss`, `ui_full`, `ui_bereiche`, `ui_nav`, `ui_ampel`, `ui_wetter`, `ui_smoke`, `nav_test` |
+| 7.71.0 | **Designumbau Phase 2b – Pegel-Ampel im Pegel-Sheet:** Abschnitt „Passt mein Boot?“ (`passt-mein-boot.js`) unter der Aktionsleiste: ohne Mindestpegel Zeile → Formular (−/+ 5 cm, Bootstyp), mit Mindestpegel Hinweiszeile Passt/Knapp/Zu niedrig mit Abstand und Vorschau. Mindestpegel je Pegel (`mindestpegel.js`, `watermap.mindestpegel`, einmalige Übernahme aus `watermap.ampel`), Bootstyp in `watermap.boot.typ`. Ampel in Merkliste, Pegel-Kasten der Slipanlage und Einstellungen; Alarm-Fenster schlägt den Mindestpegel vor, kein neuer Ampel-Alarm mehr (bestehende laufen weiter). `pegel-ampel.html` = Einstiegsseite (`page.css`), leitet `?pegel=`/`#am-alarm` ins Sheet, Mail-Links Bestätigen/Abbestellen weiter dort. `ampel.css` entfernt. Tests: neu `ui_pegel_ampel.py` (ersetzt `ui_ampel.py`) und `mindestpegel_test.mjs`, angepasst `ui_pegel`, `ui_einstellungen`, `ui_nav` |
+| 7.72.0 | **Designumbau Phase 3a – Bereiche als Sheet:** Nähe, Gemerkt (`gemerkt.js`, `#gemerkt`), Meldungen und Mehr als Sheet über der Karte (Handy von unten, Desktop Panel rechts), Einstellungen als Sheet über „Mehr“; keine Seitenleiste und keine Seiten mehr. Wetter-, Alarm- und Pegel-Fenster im Sheet-Rahmen (stapeln sich), Zurück-Taste schließt das oberste Sheet. Abzeichen an „Gemerkt“. Inhalte auf den Bausteinen (Ortszeilen, Marken, Chips, Umschalter); Formulare und Melden-Menü mit `kopf()`. Alte Kopf-Varianten und ihr CSS entfernt (Standort-Sheet folgt in 3b). Behoben: Karte auf dem Desktop volle Breite, Standort-Knopf neben dem Panel. Tests angepasst: `ui_nav`, `ui_bereiche`, `ui_einstellungen`, `ui_naehe`, `ui_wischen`, `ui_wetter`, `ui_pegel`, `ui_pegel_ampel`, `ui_pegel_karte`, `ui_pegel_fluss`, `ui_full`, `ui_smoke`, `ui_karussell`, `nav_test` |
+| 7.72.1 | **Designumbau Phase 3b – Standort-Sheet:** Vorschau und Details von Slipanlage, Hafen, Tankstelle und Zusatzorten im gemeinsamen Sheet-Rahmen (Handy: Stufe „klein“ mit Route/Merken/Teilen, Lagemeldung und „Details“ statt der Vorschau-Karte; Desktop Panel rechts). Pegel- und Wetterzeile als Ortszeilen, Kopf mit Titel links und ×. `#peek` und das alte `#detail`-Panel samt CSS entfernt; letzte alte Kopf-Varianten weg. Tests angepasst: `ui_full`, `ui_meldungen`, `ui_nav`, `ui_karussell`, `ui_smoke`, `ui_wischen`, `ui_extras`, `ui_pegel`, `ui_naehe` |
+| 7.73.0 | **Designumbau Phase 4 – Animationen:** Lupe → Suchfeld (Handy), Marker wachsen und ploppen ein, Sheet-Inhalt gleitet ein, Stern-Flug zu „Gemerkt“ mit Abzeichen-Sprung und „Rückgängig“ beim Entfernen, Chips mit gleitendem Punkt/Häkchen, alle Umschalter `wm-seg`, Pegelwert zählt hoch, Kurve zeichnet sich, Listen erscheinen versetzt, Haken zeichnet sich nach dem Senden; „Bewegung reduzieren“ beachtet. Neu `css/bewegung.css`, `js/bewegung.js`, Test `ui_bewegung.py`. Behoben: Enter im Suchfeld (Handy), Desktop-Panel unter umbrechender Chip-Zeile, Toast-Lage bei offenem Standort, Fehler bei „24 Std.“ ohne Messreihe |
+| 7.73.1 | **Melden angepasst:** Menü „Was möchtest du melden?“ im Sheet-Rahmen mit Ortszeilen, Abschnitte erscheinen versetzt, Zurück-Taste schließt; Formulare fahren mit Feder ein, Titel links; „Lage melden“ unverändert. Tests angepasst (`ui_full`, `ui_meldungen`, `ui_nav`, `ui_smoke`, `ui_wischen`) |
+| 7.74.0 | **Designumbau Phase 5 – Aufräumen:** CSS-Werte auf Tokens (Schrift, Gewicht, Radius, Schatten, Navy, alte Variablen), JS-Farben über Tokens (`farben.js`, neu `--wm-extrem`), Breakpoints 400/1199 aufgelöst; tote CSS-Regeln (~650 Zeilen) und verwaiste JS-Funktionen entfernt (u. a. `nearbySection`, `liveNearby`, `loadWetterStunden`, `skalaLage`); `main.js` entlastet (`suche-ui.js`, `melden-menue.js`). Neu: Wächter-Test `design_tokens_test.mjs` |
+| 7.74.1 | Netlify-Funktion `umgebung.mjs`, `js/umgebung-abfrage.js` und `umgebung_test.mjs` gelöscht (Nutzer, 12.11.; seit 7.74.0 ungenutzt); CSP ohne `overpass-api.de`; Datenschutzerklärung: Absatz zur Overpass-Abfrage entfernt (findet nicht mehr statt) |
+| 7.54.1 | Pegel-Sheet wischt so flüssig wie auf der Hauptkarte: beim Ziehen nur noch verschoben (`transform`), nicht mehr in der Höhe neu berechnet; zu Beginn einmal auf volle Höhe gestellt und nach unten versetzt, die Größe ändert sich erst beim Einrasten |
+| 7.54.0 | **Fenster von unten wischbar und flüssig:** Das Pegel-Sheet folgt beim Ziehen dem Finger (vorher sprang es erst beim Loslassen) und rastet weich ein (klein · ca. 80 % · ganz · zu; Schwung nimmt die nächste Stufe in Bewegungsrichtung). Alle Fenster von unten (Dialoge, Standort-Vorschau und -Details, Pegel-Sheet) fahren auf dem Handy weich hoch statt plötzlich zu erscheinen (`sheet-ein`, bei „Bewegung reduzieren“ aus). Die übrigen Fenster folgten schon dem Finger (`wischen.js`) |
+| 7.53.0 | **Zart blau** (Rückmeldung: das kräftige Blau passt nicht zur App): gleicher Aufbau wie 7.52.0, aber ganz helles Wasserblau oben, weiße Karten und Knöpfe mit leichtem Schatten, Schrift Navy, Petrol für Kurve und „Details“. **Tidepegel** im selben Muster (Name mittig, große Zahl, „● Tide · ↗ auflaufend“, drei Knöpfe Alarm · Merken · Teilen, Karten Gezeiten/Tidekurve/letztes HW·NW, Liste Häfen in der Nähe · Gewässer – alle Pegel · Station und Quelle) |
+| 7.52.0 | **Pegel im Stil einer Wetter-App** (Vorschaubild freigegeben): Wasserblauer Verlauf mit hellen Glaskarten – Kompaktansicht, Details im Panel/Sheet (auch Desktop), Pegel-Fenster der Hauptkarte/Merkliste/Push. Kompakt: Name · Gewässer, Glasknöpfe Glocke/Stern/✕, große helle Zahl, weiße Kurve, „● Niedrig · 2 Std. −1 cm · 24 Std. −6 cm“, Knopf „Details“. Details: Name mittig, große Zahl, Zustandszeile, **drei gleiche Knöpfe Alarm · Merken · Teilen**, Karten **Verlauf** (24 Std./7 Tage/30 Tage), **Einordnung** (Zustand groß, Balken Niedrig · Normal · Hoch mit Punkt und Wert, darunter MNW/MHW – keine cm-Abstände, kein Zusatztext; `zonenLage()`), **Abfluss/Wasser**, **Kennwerte** (Kürzel, kurze Bezeichnung, Wert), Liste Passt mein Boot? · Als Bild teilen · Slipanlagen · Station und Quelle. Tidepegel-Details zunächst im alten Stil (7.53.0 nachgezogen) |
+| 7.51.0 | **Pegel aufgeräumt** (nach Rückmeldung „zu überladen, zu viel Text“, Vorschaubild freigegeben): **kein Dauer-Sheet** – ohne Auswahl nur die Karte (Desktop volle Breite, Panel erst mit Auswahl). Chips **„★ Favoriten“** und **„In der Nähe“** öffnen eine kurze Liste nur auf Wunsch (✕, Wischen, Esc schließt); „Alle Pegel“ entfällt. Kompakt: „Minden · Weser“ mit Glocke/Stern/✕, Wert + Kurve, eine Zeile „● Niedrig · 2 h → −1 cm · 24 h −6 cm“, Knopf „Details“. Details: kurze Zeilen statt Kästen, keine Statistik-Kacheln, kein „keine Vorhersage“-Satz, Einordnung = Skala + eine Zeile, Aktionen in einer Zeile (Alarm · Als Bild · Passt mein Boot?), eingeklappt: Alle Kennwerte (mit Erklärsatz, HSW-Hinweis), Slipanlagen, Station und Quelle. Fußtext und Tipp entfernt |
+| 7.50.0 | **Pegel optimiert** (nach Vorschaubild): Bottom Sheet in **drei Stufen** (kompakt → ca. 80 % → ganz; Griff, Wischen, Scrollen in Stufe 2 öffnet Stufe 3; Stufenwechsel ohne neue Anfragen). Kompakt: Name, Gewässer · km · Messzeit, Wert mit 24-h-Kurve daneben, **„24 h: +1 cm · Tendenz (2 h): ↘ fallend, −3 cm“ getrennt** (vorher widersprüchlich „fallend · +1 cm in 24 h“), Einordnung, „Verlauf und Details anzeigen“, Alarm. Details: Verlauf direkt unter dem Wert, dann **Pegel-Einordnung** (Abstand zu MNW, Skala **maßstabsgetreu nach Zahlenwerten** – bei Celle liegt HSW 310 unter MHW 412 –, HSW ⚓ eigene Reihe „keine Warnstufe“, Erklärsatz aus den Kennwerten, **„Alle Kennwerte anzeigen“** eingeklappt mit allen PEGELONLINE-Kennwerten und amtlichen Namen inkl. Marke I–III, NNW, HHW), weitere Messwerte, Alarm, „Messstation und Quelle“. **Wassertemperatur/Abfluss nur, wenn die Messung höchstens 24 h alt ist** (Celle meldete 0,0 °C vom 29.10.); echte 0 °C bleiben. Pillen „● 245 cm ↗“ (Pfeil = Tendenz laut PEGELONLINE), kräftigere Ampel nur mit Kennwerten (grün/gelb-orange/rot, über HSW gefüllt, sonst grau). Chip „Pegel“ auf der Hauptkarte: auf später verschoben |
+| 7.49.0 | **Pegel-Tab als Kartenanwendung** (nach Vorschaubild und Freigabe): Kopf „Pegelstände“ mit Suche (Pegel, Gewässer, Ort; Tastatur, Combobox) und Filtern **Alle Pegel · In Kartennähe · Favoriten**. Karte ca. 65 % der Breite, rechts das Panel; Handy: Karte voll, Panel als **Bottom Sheet** (Griff antippen oder wischen: groß/klein, nach unten schließt die Auswahl). Marker antippen → Name, Gewässer · km, Stern, Messzeit, **großer Wert**, **Trend aus 24 h** („↗ steigend · +6 cm in 24 h“, unter 3 cm „nahezu unverändert“), **Kurve 24 h**, Einordnung nur mit Kennwerten („unter MNW“ …), Hinweis „nicht die Wassertiefe“. „Verlauf anzeigen“ öffnet das **Cockpit** (24 h / 7 Tage / **30 Tage**, 30 Tage erst auf Wunsch, Tooltip, Achse je Zeitraum, **Messlücken schraffiert**, Vorhersage gestrichelt mit Zeitraum bzw. Hinweis „keine Vorhersage“, Kennwerte mit offiziellen Namen, Stammdaten aufklappbar). Marker: Farbe nur bei MNW/MHW, sonst grau; Cluster (Leaflet.markercluster) bis Zoom 10. Adresse `#pegel/<id>` = gewählter Pegel. **Entfernt** (auf Wunsch): Liste/Karte-Umschalter, Wochenend-Check, „Deutschland heute“, „Flüsse im Überblick“, Liste „Alle Pegel“, Werkzeuge (`pegel-lage.js` gelöscht; Vorhersage-Satz-Test jetzt `pegel_vorhersage_test.mjs`). Flussseite bleibt per Link und über das Cockpit (Tidepegel) erreichbar |
+| 7.48.2 | Fluss-Kacheln: statt einer Auswahl von höchstens 12 Punkten zeigt ein dünner Farbbalken ALLE bewerteten Pegel in Fließrichtung (ein Abschnitt je Pegel, Farbe = Zustand) – passt jetzt zur Zahl „22 von 26 niedrig“ |
+| 7.37.0 | Navigation unten (Handy, < 768 px) als **schwebende, helle Glas-Leiste** (`js/nav.js`, `css/nav.css`): fixed, 16 px seitlich, 28 px + Safe-Area unten, 68 px hoch, Ecken 34 px, `backdrop-filter` (Fallback ohne Blur), nur Symbole 26 px (Text als `aria-label`), „Melden“ als 54-px-Kreis in der Leiste. Eine gemeinsame Markierung (`.bn-ind`, 56 px) wandert zum aktiven Platz: Phase 1 dehnt sich vom alten zum neuen Platz (flacher, scaleY .88), nach 45 % von `CONFIG.NAV_ANIM_MS` (340) zieht sie sich mit Federn zusammen (`NAV_DEHNEN` schaltet das Dehnen ab); Symbol ploppt; Seitenaufbau/Start-Adresse ohne Animation (`setActive(…, { sofort })`); „Melden“ ändert die Markierung nicht (nur Plopp); reduzierte Bewegung: 120 ms linear, kein Plopp. Langes Drücken (400 ms) zeigt die Beschriftung als Blase (kein Link-Auslösen), erster Start zeigt einmalig alle fünf 3 s (`wm-nav-labels-gesehen`); Leiste verschwindet, solange ein Eingabefeld Fokus hat oder die sichtbare Höhe stark schrumpft. **Abzeichen** am Punkt „Meldungen“ = Meldungen (aus `/api/meldungen/liste`), die neuer sind als der letzte Besuch der Übersicht (`watermap.meldungen.gesehen`) und nicht von diesem Gerät stammen (`watermap.meldungen.eigene`); „99+“, `aria-label` „Meldungen, 3 neu“. Überall `--bn-space` (108 px + Safe-Area) als unterer Abstand: Seiten, Listen, Detail-Blatt (reicht bis zum Rand, die Leiste schwebt darüber; Inhalt scrollt jetzt vollständig im Blatt), Vorschau-Karte, Toast, Banner, Auswahlleiste, `detailInset()`; OSM-Quellenangabe der Karte sitzt über der Leiste; Standort-Knopf (48 px, Glas) und „In der Nähe“ im Glas-Stil darüber. Desktop (Navigation oben) unverändert |
+| 7.36.0 | Standortansicht bei **Slipanlagen** neu geordnet (Häfen/Tankstellen unverändert): Titel → Knöpfe (Route, Merken, Teilen) → Etiketten → Fotos mit „Foto hinzufügen“ → „Heute vor Ort“ → (amtliche Wetterwarnung) → Pegel → „Wichtig für dein Boot“ → Wetter-Zeile → Rest (Beschreibung, Umgebung, Koordinaten, Quelle, Fehler melden). „Heute vor Ort“ ohne Meldung, nicht vor Ort (> 1 km) und nicht offline-unbekannt: schmale Zeile „✓ Heute keine Probleme gemeldet · Lage melden“ (`.vo-schmal`, Chips „Bist du gerade hier?“ bleiben, wenn man vor Ort ist; „Alle Meldungen“ nur noch über den Tab). „Wetter und Wind“ bei Slipanlagen als Zeile mit Kurzwerten („3 Bft aus SW · Böen 34 km/h · 12 °C · keine Warnung“, `wetterZeile` in `js/wetter.js`); Tipp öffnet ein Fenster (`wetterFenster`, Handy von unten, sonst mittig) mit Warnungen, Wind, Diagramm und Tabelle. Liegt eine amtliche Warnung vor, wird die Zeile gelb/orange/rot (Stufe), zeigt „Amtliche Warnung: …“ und rückt hinter „Heute vor Ort“ nach oben. Pegel-Seiten und Nicht-Slips zeigen Wetter weiter als Abschnitt |
+| 7.35.1 | „Foto hinzufügen“ als breiter Knopf direkt unter den Fotos; ohne Fotos an derselben Stelle die Karte „Noch keine Fotos – Zeig anderen, wie es hier aussieht“ mit „+ Foto“; unten nur noch „Fehler melden“. Kategorie-Etikett (und Pfeile) bleiben beim Scrollen unter dem festen Kopf (`.ph-frame { isolation: isolate }`, vorher auf dem iPhone darüber) |
+| 7.35.0 | Foto-Kategorien (`js/foto-kategorien.js`, auch vom Server genutzt): beim Einreichen Pflicht, genau eine von Rampe, Steg, Zufahrt, Parkplatz, Umgebung, Sonstiges (Kacheln, Feld `kategorie` statt `motiv`); Verwaltung: Kategorie vorausgewählt und änderbar, Freigeben nur mit Kategorie, unter „Veröffentlicht“ nachträglich setzen (`aktion: kategorie`, Verlauf „Kategorie geändert“); ältere Einreichungen: ein Motiv-Text wird übernommen. Standortansicht: Filter „Alle n · Rampe n …“ nur bei mindestens zwei Kategorien, Etikett auf dem Foto, Blättern und Vollbild nur innerhalb der Kategorie (Variante A, ohne Vorschaubilder). Foto bei Slip Vössen = Rampe |
+| 7.34.0 | „Mein WaterMap“ (`#mehr/einstellungen`, `js/einstellungen.js`): dunkle Karte oben in „Mehr“; Einstellungen nur auf dem Gerät – Bootstyp (= Pegel-Ampel `watermap.ampel.boot`), Länge und Tiefgang optional (`watermap.boot`, noch nirgends ausgewertet), Kategorien, Startausschnitt ganz Deutschland/letzte Ansicht/meine Position (`watermap.start`, `watermap.ansicht`; Position nur bei bestehender Freigabe, Ansicht außerhalb des Gebiets wird ignoriert), Bezugspunkt „In der Nähe“, Standortfreigabe mit „Erlauben“, Pegel-Alarm-Link, ausgeblendete Meldungen wieder zeigen, Offline-Daten aktualisieren, „Alles zurücksetzen“ mit Rückfrage (löscht alle `watermap.*` außer der Geräte-ID; Pegel-Alarme bleiben). Desktop zweispaltig |
+| 7.33.1 | „Preis melden“ ganz entfernt (Knopf in der Tankstellen-Ansicht, Formular, Prüfungen); gemeldete Preise werden weiter angezeigt, Verwaltung und verstecktes Netlify-Formular bleiben für offene Meldungen; Datenschutz ohne „einen Preis“ |
+| 7.33.0 | Melden-Menü mit Abschnitten „Gerade vor Ort“ · „Standort verbessern“ (Foto, Angaben ergänzen – neu im Menü, Standortauswahl nur Slipanlagen –, Neue Slipanlage) · „Fehler und Hinweise“. In der Nähe einer Slipanlage sechs Lage-Knöpfe direkt im Menü: ein Tipp sendet ohne Notiz (Fehler wie die 1-h-Sperre im Menü), „mehr“ öffnet das Formular mit Notiz. „Kraftstoffpreis melden“ aus dem Menü entfernt (bleibt in der Tankstellen-Ansicht „Preis melden“) |
+| 7.32.1 | Verwaltung schreibt in einer Vorschau in den Zweig dieser Vorschau (Netlify-API: Deploy → Branch), live weiter in `FOTO_BRANCH`/main – vorher landeten Freigaben aus der Vorschau live. Meldungen-Speicher wählt Vorschau/live über `context.deploy.context`. Freigaben aus `main` in den Vorschau-Zweig übernommen |
+| 7.32.0 | „Weißt du mehr? Ergänzen“ öffnet das Formular „Angaben ergänzen“ (nur fehlende Angaben, bekannte eingeklappt mit „ändern“; Knopfleisten, Belag/Neigung als Auswahl; leer = weiß nicht, nochmal antippen hebt auf; „N Angaben senden“, ohne Auswahl gesperrt) → Netlify-Formular `slip-ergaenzen` → Verwaltung Reiter „Ergänzungen“ (bisher → neu, Übernehmen schreibt `overrides.json`). Neues Merkmal `trailer_note` („am Slip“/„in der Nähe“) |
+| 7.31.0 | Slipanlagen: Kasten „Wichtig für dein Boot“ (Zugang, Gebühr, Rampe, Trailer parken, Motorboote, Bootsgröße mit Ampel und Text; fehlende Angaben „Unbekannt“ + „Weißt du mehr? Ergänzen“ → „Fehler melden“), Reihenfolge Knöpfe → Heute vor Ort → Wichtig für dein Boot → Pegel → Fotos → Wetter → Umgebung → Kontakt; „Eigenschaften“ bei Slipanlagen entfernt (Öffnungszeiten/Betreiber als Zeile im Kasten). Häfen und Tankstellen unverändert (`bootPunkte` in `model.js`) |
+| 7.30.0 | Europa-Übersicht: Herauszoomen und Verschieben bis Europa, Länder leicht grau; hervorgehoben nur deutsches Land (Nord-/Ostsee nicht mehr als helle Fläche); Straßenkacheln ab Zoom 9 nur um Deutschland; Suche/Standort weiter nur in Deutschland |
+| 7.29.1 | Nachbarländer zur Orientierung leicht sichtbar (abgeblendet statt abgedeckt, `CONFIG.GEBIET.nachbarn`), deutsche Grenze deutlicher; Begrenzung von Verschieben und Zoom bleibt |
+| 7.29.0 | Karte auf Deutschland mit Nord- und Ostsee begrenzt: `maxBounds` + `minZoom` (ganz Deutschland), Maske über fremdem Land (OSM-Grenze, `data/gebiet-de.json`), Kacheln nur im Gebiet, Startansicht ganz Deutschland, Ortssuche nur im Gebiet (Hinweis bei Moskau/London), kein Sprung zum Standort im Ausland, neue Slipanlage nur im Gebiet. Details: `docs/KARTENGEBIET.md` |
+| 7.28.0 | „Heute vor Ort“: Fußzeile „n Meldungen im Revier · Alle Meldungen ›“ zur Übersicht; „Unpassend melden“ bei Meldungen mit Notiz (in „Heute vor Ort“ und in „Aktuelle Meldungen“): Fenster mit Grund, Hinweis über das Formular „fehler-melden“ (Art `meldung`, mit Meldung-ID), Meldung auf dem Gerät sofort ausgeblendet (`watermap.meldungen.ausgeblendet`); Verwaltung `/admin/fotos.html` → Hinweise → „Meldung entfernen“ löscht sie für alle (`api.entfernen`) |
+| 7.27.1 | „Flüsse im Überblick“: feste Kacheln Rhein, Elbe, Weser, Donau, Main und Küste; „Alle Gewässer anzeigen“ klappt darunter eine kompakte Liste auf (Zustand, Pegelzahl, Suche, Kanäle ohne Bewertung extra) – ohne Sprung, Kacheln bleiben stehen |
+| 7.27.0 | Sportboot-Community, Schritt 1: Navigation Karte · Pegel · Melden · Meldungen · Mehr; neue Übersicht „Aktuelle Meldungen“ (`#meldungen`, ein Abruf `GET /api/meldungen/liste`, Filter nach Art, Überall/Kartenausschnitt, Neueste/Wichtigste/Nächste, „Stimmt noch“/„Nicht mehr aktuell“, offline letzter Stand); „Mehr“ (`#mehr`) mit In der Nähe, Merkliste, Hilfe und Feedback, Über, Datenschutz, Impressum; Merkliste (`#mehr/merkliste`) aus Favoriten und „Meine Pegel“ mit Pegelwerten; Knopf „In der Nähe“ auf der Karte (Handy) bzw. in der Werkzeugleiste (Desktop); Meldungen-Backend schreibt mit ETag-Prüfung (`sicherAendern`, keine verlorenen Bestätigungen bei gleichzeitigen Zugriffen) |
+| 7.26.3 | Pegel-Kasten in der Standortansicht: ganzer Kasten führt zur Pegel-Detailseite („Details ›“ statt „Pegel-Ampel ›“), Zurück führt wieder zum Standort |
+| 7.26.2 | Pegel bei Slipanlagen: immer der nächste Pegel am selben Gewässer bis 80 km (vorher 15 km), Entfernung wird ab 2 km dazugeschrieben; Namensvergleich mit ü=ue/ß=ss und ganzen Wörtern, Fluss ≠ Kanal („Rhein“ ≠ „Rhein-Herne-Kanal“); ohne Gewässernamen nur ein Pegel bis 1,5 km (`naechsterPegel`, `gleichesGewaesser` in `js/pegel-fluss.js`, auch für „Slipanlagen am Pegel/Fluss“) |
+| 7.26.1 | „Entfernungen messen ab …“ auf dem Handy: beim Tippen ins Suchfeld oben verankert (Höhe nach `visualViewport`), Suchfeld und Treffer stehen über der Tastatur |
+| 7.26.0 | Kompakter Kopf der Pegel- und Tidepegel-Seite: „Gewässer · KM“ in der Leiste zwischen Zurück und Teilen (Art „Pegel“/„Tidepegel“ nur für Screenreader), Name 26/30 px, Wert 54/64 px, daneben Etikett, Trend und „Gemessen …“ (Kopf ≈ 40 % niedriger) |
+| 7.25.9 | Verlauf (Pegel) und Wind-Diagramm mit dem Finger: kurz gedrückt halten oder seitlich ziehen fährt die Kurve ab (Seite scrollt dabei nicht), Antippen zeigt den Wert und lässt ihn stehen, senkrecht wischen scrollt; kein Auswahlmenü beim langen Drücken (`abfahren` in `js/chart.js`) |
+| 7.25.8 | Messzeile und Tipp-Anzeige wieder entfernt. Ergebnis: Tipps, die „nicht ankamen“, fing der In-App-Browser (Link aus einer App) ab – in Safari bzw. als Home-Bildschirm-App tritt das nicht auf |
+| 7.25.7 | Vorschau: Fehlersuche „Tipp kommt nicht an“ – rote Zeile zeigt bei jedem Tipp das getroffene Element und offene Fenster |
+| 7.25.6 | „In der Nähe“ mit eigener Position: beim Öffnen nur neu orten, wenn die Position älter als 2 Min. ist; „Position wird bestimmt …“ ändert nur den Kopf, die Liste nur bei > ~100 m Bewegung; Messzeile in der Vorschau zeigt zusätzlich „ganz fertig“ (inkl. Pegeldaten bzw. Ortung) |
+| 7.25.5 | Ohne Wartezeit: „In der Nähe“ und Pegel-Dashboard werden nach dem Start im Leerlauf unsichtbar vorbereitet (Pegelliste wird dafür einmal geladen); beim erneuten Öffnen bleibt der fertige Inhalt stehen, wenn sich nichts geändert hat (Bezugspunkt ≈ 1 km, Filter, Meldungen, Sortierung, Freigabe, Datenstand); Listeneinträge außerhalb des Bildschirms mit `content-visibility: auto` |
+| 7.25.4 | Weiter schneller: Marker-Cluster in 40-ms-Portionen (Tipps warten beim Start nicht mehr Sekunden), „In der Nähe“ zeigt erst 20 Einträge und lädt den Rest nach, Symbole geklont, kein doppeltes Zeichnen beim Öffnen; Tipp-Rückmeldung in der unteren Leiste; Vorschau zeigt oben die Messung „Tipp wartet … · Aufbau …“ |
+| 7.25.3 | Schnellerer Wechsel zu „In der Nähe“/„Pegel“: Ansicht wechselt sofort, Inhalt wird im nächsten Bild gezeichnet; Flussgruppen je Datenstand nur einmal berechnet (Entfernungen vorab statt n³); „In der Nähe“ zeichnet beim Öffnen einmal statt dreimal |
+| 7.25.2 | Pegel-Dashboard am Handy: „Meine Pegel“ vor „Flüsse im Überblick“ (CSS-Reihenfolge, Desktop unverändert) |
+| 7.25.1 | (in der Vorschau mit echten Daten geprüft: Cuxhaven stimmt mit wasserstand.bsh.de überein) BSH-Zuordnung nach Prüfliste (55 Tidepegel automatisch): Ausnahmen Grauerort Reede und Blankenese UF; `?orte=1` liefert `alias`, Prüfliste berücksichtigt sie |
+| 7.25.0 | Gezeitenvorhersage des BSH: Funktion `/api/gezeiten`, Karte „Gezeiten“, Vorhersage in der Tidekurve, nächstes HW in „Meine Pegel“, Flussseite und Küsten-Kachel, Offline-Stand, Über-Seite |
+| 7.24.2 | Prüfliste bestätigt (Tide-Kennwerte kommen an): „_“ im Namen als Leerzeichen, bestätigte Namen mit ae/oe/ue (Flaesheim, Fuestrup, Itzehoe, Poel, Ueckermünde, Uelzen, Uetersen, Oestrich) nicht mehr als Verdacht |
+| 7.23.0 | Flussseite überarbeitet (Reihenfolge in Fließrichtung, Profil ohne Tidepegel, Zeile tiefster/höchster Pegel), Namen mit Umlauten, BSH-Prüf-Funktion |
+| 7.22.2 | Flussprofil: y-Achse passt sich an, x halb nach km/halb nach Reihenfolge, Handy 220 px |
+| 7.22.1 | „In der Nähe“ am Handy kompakt (Kopf, Hinweiszeile, Links am Listenende) |
+| 7.22.0 | Fluss-Kacheln statt Farbbänder, neue Flussseite mit Profil |
+| 7.21.0 | Tab „Liste“ → „In der Nähe“ (Bezugspunkt, Standortfreigabe, neue Karten); Detail-Abschnitt „Umgebung“; Datenschutz „Standort“ neu |
+
+## 5. Tests
+
+| Bereich | Tests |
+|---|---|
+| Unit (Python) | `python3 -I -m unittest discover -s tests` (Importer, Validator, Hafeninfo, Moderation) |
+| Node | `ampel_logik`, `fotos_function`, `meldungen`, `pegel_alarm`, `pegel_push`, `pegel_vorhersage`, `pegel_einordnung`, `pegel_trend`, `pegel_fluss`, `gezeiten`, `gezeiten_bsh`, `gebiet`, `design_tokens`, `boot`, `foto_kategorien`, `nav` |
+| Oberfläche (Playwright) | `ui_gebiet` (echtes Leaflet), `ui_bereiche`, `ui_einstellungen`, `ui_nav`, `ui_wischen`, `ui_full`, `ui_smoke`, `pwa_test`, `ui_naehe`, `ui_meldungen`, `ui_extras`, `ui_karussell`, `ui_pegel`, `ui_pegel_karte`, `ui_pegel_fluss`, `ui_wetter`, `ui_pegel_ampel`, `ui_fotos` |
+
+Die Oberflächentests laufen mit einem Leaflet-Ersatz (`tests/stub/leaflet-stub.js`) und erfundenen API-Daten.
+
+**Letzter Lauf (7.66.1, lokal Windows): alle Oberflächen- und Node-Tests grün.** Unter Windows scheitern 10 Import-Unit-Tests (`test_import.CliTests`) an der Zeichenkodierung der Unterprozesse – Umgebung, nicht Code. `ui_naehe`, `ui_pegel`, `ui_bereiche` (Neuladen offline) und `ui_extras` brechen unter Windows gelegentlich mit Zeitüberschreitung ab – auch mit unverändertem Code (geprüft mit 7.63.0), einzeln wiederholen.
+
+## 6. Offene Aufgaben
+
+**▶ Hier weitermachen (Stand 12.11.2026, 7.74.1 in der Vorschau): Designumbau nach `docs/AUFTRAG-designumbau.md`** – Phase 0, 1, 2a, 2b, 3a und 3b freigegeben (11./12.11.; Phase 3 auf Nutzerwunsch in 3a Bereiche und 3b Standort-Sheet geteilt), Phase 4 und Melden (7.73.1) freigegeben (12.11.), Phase 5 (7.74.0, Aufräumen) freigegeben (12.11.); `umgebung.mjs` auf Wunsch gelöscht (7.74.1). **Alle Phasen fertig – wartet auf „übernehmen“**, dann 8.0.0 (PR #4 zusammenführen). Vom Nutzer bestätigt (12.11.): „Meine Position“-Knopf bleibt auf dem Handy bei offenem Standort ausgeblendet; „In der Nähe“ mit nur 2 Einträgen ohne Scrollen auf kleinen Handys (667 px) ist in Ordnung. Tests unter Windows einzeln laufen lassen; der Testserver lädt gelegentlich > 30 s (dann wiederholen). Nach jeder Phase committen, Vorschau, Bilder 390/1440 px, auf Freigabe warten. Neues Slip-Symbol erledigt (7.68.1).
+
+**Früher: Umbau auf das Designsystem „Wasser“ – Phase 4 (abgeschlossen mit Schritt 8)**
+Grundlage: `DESIGN_SYSTEM.md` (Richtung C „Contemporary Product“ mit der Disziplin von A, vom Nutzer gewählt) – vor jeder Oberflächenarbeit lesen.
+- [x] Schritt 1 – Tokens und Schrift (7.58.0): `public/css/tokens.css`, Atkinson Hyperlegible Next selbst gehostet (`public/fonts/`).
+- [x] Null ohne Schrägstrich (7.58.2, Wunsch des Nutzers; Schriftdatei angepasst, `public/fonts/LIESMICH.txt`).
+- [x] Schritt 2 – gemeinsame Bausteine `public/css/bausteine.css` (`.wm-*`), Musterblatt vom Nutzer freigegeben („Rest passt“).
+- [x] Schritt 3 – Karte und Standort (7.59.0): Handy-Karte ohne dunkle Leiste (Suche/Chips schweben, `body.view-karte`), Standort-Sheet/Vorschau nach Bausteinen.
+- [x] Schritt 4 – Pegel (7.60.0): Feinschliff auf Tokens, Abschnittstitel ohne Großbuchstaben, Wert 72/300, Chips/Suche wie Karte.
+- [x] Schritt 5–7 (7.61.0): Meldungen, Mehr, Merkliste, Einstellungen, „In der Nähe“, Melden-Menü, Formulare – eine Sprache wie Karte/Pegel. **Ausnahme: „Lage melden“ bleibt wie bisher.**
+- **Pausiert auf Wunsch des Nutzers (05.11.2026)** – offen bleibt nur Schritt 8:
+- [ ] Schritt 8 (wieder aufgenommen 07.11.2026, lokal unter Windows) – Teil 1 Desktop (7.62.0), Teil 2 Wetter-Fenster + Textseiten (7.63.0), Teil 3 Reste aufräumen (7.64.0) erledigt. Farben mit ΔE > 6 werden gruppenweise angeglichen (Nutzer 07.11.): Blau (7.65.0) und alle übrigen Farben (7.66.0) erledigt. Bericht: `python3 -I scripts/farben_tokens.py public/css` (nächster Token in Lab). Schrift unter 13 px in Plaketten/SVG-Diagrammen/Leaflet-Quellenangabe bleibt (Nutzer 08.11.). Schritt 8 damit abgeschlossen.
+- Arbeitsweise: je Schritt Vorschaubild (vorher/nachher, 390 px) zeigen, Version erhöhen, alle Tests, pushen. Tests, die altes Aussehen festschreiben, auf das Designsystem anpassen (nicht die App verbiegen).
+- **Figma (seit 10.11.2026):** Figma-MCP-Server eingerichtet (`claude mcp add --scope user --transport http figma https://mcp.figma.com/mcp`, Anmeldung über `/mcp`). Konto im Starter-Tarif, Platz „View“ – nur sehr wenige MCP-Aufrufe im Monat, sparsam einsetzen. Datei „Watermap“ (`VnWuIUI66rzeJpAtzbdJJy`) mit Seite „Material 3 Vorschau“ (Snackbar, Bottom sheet, Filter chip, Search bar, Navigation bar, Segmented button, Side sheet). Eingebunden: Material 3 Design Kit, Simple Design System, Apple-Kits (erst nach Lizenzannahme nutzbar).
+- **Vorschläge aus Material 3 – noch offen:** Griff des Sheets prüfen (antippbar, Screenreader-Beschriftung) · Seitenleiste Tablet nach „Side sheet“ schärfen · Chip „Pegel“ (siehe unten) · Vollbild-Suche mit letzten Orten. Erledigt: Toast + „Rückgängig“ (7.67.0).
+- Test `ui_nav` scheitert unter Windows an „Phase 1 – Markierung dehnt sich“ auch ohne Änderung (Timing, geprüft 10.11. mit altem Stand).
+- Unter Windows lädt die Test-Seite gelegentlich > 8 s (auch mit altem Stand und mit `127.0.0.1` statt `localhost`, geprüft 11.11.): `ui_bereiche` bricht dann bei 768 px mit Zeitüberschreitung ab, ohne fehlgeschlagene Prüfung – einzeln wiederholen.
+- Plugin „frontend-design“ war nur in der Cloud-Sitzung installiert (`claude plugin install frontend-design@anthropic-plugin-directory`).
+
+**Pegel – vorgemerkt:** Chip „Pegel“ in der Kategorie-Leiste der Hauptkarte (Vorschaubild 02.11., vom Nutzer zurückgestellt).
+
+**Pegel-Tab Stufe 3 – noch offen (Stand 7.48.0, vom Nutzer auf später verschoben)**
+- [ ] VAPID-Schlüssel erzeugen und in Netlify eintragen (Nutzer), danach Push auf Android (Chrome) und iPhone (Home-Bildschirm-App) live testen.
+- [ ] Datenschutzerklärung um „Pegel-Alarm per Push“ ergänzen – Entwurf liegt vor (Chat 29.10.), wartet auf OK des Nutzers.
+- [ ] Hochwasserwarnungen (3.3): Quelle prüfen (Länderübergreifendes Hochwasserportal / Hochwasserzentralen – Format, Nutzungsbedingungen, Zuordnung zu PEGELONLINE-Pegeln). Dafür muss der Nutzer `www.hochwasserzentralen.de` (evtl. `hochwasserportal.de`) in den Netzwerk-Einstellungen der Cloud-Umgebung freigeben. Erst nach OK einbauen (`HOCHWASSER_AKTIV` in `config.js`, nur serverseitig abrufen; Anzeige oben im Pegel-Tab, im Pegel-Fenster, Push mit Häkchen).
+- [ ] Pegel-Alarm-Mails (Schwellen-Alarm) live prüfen.
+
+**Als Nächstes**
+1. Community-Vorgabe: ~~Melden-Menü mit Abschnitten~~ (7.33.0), ~~Einstellungen/Profil-Einstieg~~ (7.34.0), ~~Foto-Kategorien~~ (7.35.0).
+2. Vorschau prüfen, dann PR #4 auf „übernehmen“ zusammenführen.
+3. Testfoto, das schon live ist, in der Live-Verwaltung entfernen (Nutzer).
+
+**Nach der Veröffentlichung live prüfen.** Diese Punkte sind nur gegen Testdaten geprüft, weil die echten Dienste in der Entwicklungsumgebung nicht erreichbar waren:
+- Pegel (PEGELONLINE-Proxy) und Wetter (Bright Sky)
+- „Heute vor Ort“ mit echten Blobs
+- Zustellung der Netlify Forms
+- Pegel-Alarm-Mails
+
+**Prüfen auf echten Geräten:** Safari (iOS) und Firefox. Bisher ist nur in Chromium getestet.
+
+**Rechtliches und Betrieb**
+- Vertrag zur Auftragsverarbeitung mit Netlify abschließen.
+- Impressum und Datenschutz sind ausgefüllt, aber nicht juristisch geprüft.
+
+**Bekannte Lücken**
+- Nur Bundeswasserstraßen. Landespegel, etwa an Seen, fehlen.
+- Hafeninfos haben etwa 300 nicht erreichbare Websites. Bei den Kieler Sporthäfen fehlen die Preise.
+
+**Später (Roadmap)**
+- V8: Supabase, Admin-Bereich, serverseitige Upload-Prüfung, Bewertungen (braucht Konten)
+- V9: räumliche Datenpakete
+- V10: Werbung (dann mit Einwilligungsbanner)
+
+Details stehen in `README.md`, `docs/STATUS.md`, `docs/HEUTE-VOR-ORT.md`, `docs/PEGEL-ALARM.md` und `docs/MODERATION.md`.

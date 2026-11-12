@@ -17,11 +17,11 @@ class Handler(SimpleHTTPRequestHandler):
 PNG = bytes.fromhex('89504e470d0a1a0a0000000d4948445200000001000000010806000000'
                     '1f15c4890000000d49444154789c6360f8cfc0f01f0005000201e2a2c1b10000000049454e44ae426082')
 FOTOS = [{'id': 's1', 'created': '2026-10-20T12:00:00Z', 'standort_id': 'node/632876845', 'standort_name': 'Slip Vössen',
-          'beschreibung': '<b>Rampe</b> bei Niedrigwasser', 'rechte': True, 'hat_foto': True},
+          'beschreibung': '<b>Rampe</b> bei Niedrigwasser', 'rechte': True, 'hat_foto': True, 'kategorie': 'rampe'},
          {'id': 's2', 'created': '2026-10-20T13:00:00Z', 'standort_id': 'node/1', 'standort_name': 'Ohne Rechte',
           'beschreibung': 'x', 'rechte': False, 'hat_foto': True},
          {'id': 's3', 'created': '2026-10-20T14:00:00Z', 'standort_id': '__other', 'standort_name': 'Porta In Vössen',
-          'beschreibung': 'Slipanlage', 'rechte': True, 'hat_foto': True}]
+          'beschreibung': 'Slipanlage', 'rechte': True, 'hat_foto': True, 'kategorie': None, 'motiv': 'Rampe, Steg'}]
 REPORTS = [{'id': 'r1', 'created': '2026-10-20T15:00:00Z', 'standort_id': 'node/1937154973', 'standort_name': 'Tegel',
             'foto': 'photos/a.jpg', 'grund': 'Babybett, <i>kein</i> Slip', 'veroeffentlicht': True}]
 PUBLISHED = [{'standort_id': 'node/1937154973', 'url': 'photos/a.jpg', 'alt': 'Babybett', 'credit': 'WaterMap-Community'},
@@ -38,8 +38,14 @@ SLIPS = [{'id': 'n1', 'created': '2026-10-20T09:00:00Z', 'name': 'Doppelt', 'gew
 PREISE = [{'id': 'p1', 'created': '2026-10-20T10:00:00Z', 'tankstelle_id': 'node/7000', 'tankstelle_name': 'Tanke', 'kraftstoff': 'diesel', 'preis': 2.189, 'datum': '2026-10-19', 'kommentar': 'Schild', 'hat_beleg': True},
           {'id': 'p2', 'created': '2026-10-20T10:30:00Z', 'tankstelle_id': '__other', 'tankstelle_name': 'Irgendwo', 'kraftstoff': 'benzin', 'preis': 2.0, 'datum': '2026-10-19', 'kommentar': '', 'hat_beleg': False}]
 HINWEISE = [{'id': 'h1', 'created': '2026-10-20T11:00:00Z', 'standort_id': 'node/5', 'standort_name': 'Hafen', 'art': 'oeffnungszeiten', 'art_text': 'Falsche Öffnungszeiten',
-             'details': 'Montags <u>zu</u>', 'kontakt': 'x@y.de'}]
+             'details': 'Montags <u>zu</u>', 'kontakt': 'x@y.de'},
+            {'id': 'u1', 'created': '2026-10-20T12:00:00Z', 'standort_id': 'node/9', 'standort_name': 'Slip Nord', 'art': 'meldung', 'art_text': 'Unpassende Lagemeldung',
+             'details': 'Lagemeldung unpassend\nMeldung-ID: 00ab12cd34ef5678\nGrund: Beleidigend', 'kontakt': '', 'meldung_id': '00ab12cd34ef5678'}]
 LOG.append({'zeit': '2026-10-20T14:00:00Z', 'bereich': 'slip', 'aktion': 'freigegeben', 'standort_id': 'c/neu-20261020-abc', 'standort_name': 'Neue Rampe', 'beschreibung': 'Weser'})
+# Ergänzung zu einer echten Slipanlage (bisher-Werte kommen aus public/data)
+_SLIP = next(f for f in json.loads((ROOT / 'data/osm/slip.geojson').read_text(encoding='utf-8'))['features'] if f['properties'].get('access') == 'public')
+ERG = [{'id': 'e1', 'created': '2026-10-26T10:00:00Z', 'standort_id': _SLIP['id'], 'standort_name': 'Slip Süd', 'angaben': [['Zugang', 'Öffentlich'], ['Bootsgröße', 'bis 7 m']],
+        'bemerkung': 'Schlüssel beim <b>Hafenmeister</b>', 'leer': False}]
 posted = []
 
 def api(route):
@@ -55,6 +61,7 @@ def api(route):
         if 'form=slipanlage-melden' in r.url: return j({'slips': SLIPS})
         if 'form=tankpreis-melden' in r.url: return j({'preise': PREISE})
         if 'form=fehler-melden' in r.url: return j({'hinweise': HINWEISE})
+        if 'form=slip-ergaenzen' in r.url: return j({'ergaenzungen': ERG})
         return j({'fotos': FOTOS})
     posted.append(json.loads(r.post_data))
     j({'ok': True})
@@ -82,7 +89,7 @@ with sync_playwright() as p:
     check(pg.locator('#login').is_hidden() and pg.inner_text('#n-neu') == '3' and pg.inner_text('#n-gemeldet') == '1' and pg.inner_text('#n-veroeffentlicht') == '2',
           'Reiter mit Anzahlen (3 eingereicht, 1 gemeldet, 2 veröffentlicht)')
     check('hot' in pg.get_attribute('#n-gemeldet', 'class'), 'Meldungen sind hervorgehoben')
-    check(pg.inner_text('#n-slips') == '2' and pg.inner_text('#n-preise') == '2' and pg.inner_text('#n-hinweise') == '1', 'Reiter Slipanlagen, Preise, Hinweise mit Anzahlen')
+    check(pg.inner_text('#n-slips') == '2' and pg.inner_text('#n-preise') == '2' and pg.inner_text('#n-hinweise') == '2', 'Reiter Slipanlagen, Preise, Hinweise mit Anzahlen')
 
     # Eingereicht
     cards = pg.locator('#tab-neu .card')
@@ -91,12 +98,15 @@ with sync_playwright() as p:
     other = cards.nth(2)
     check(other.locator('button.ok').is_disabled() and 'Porta In Vössen' in other.inner_text(), 'ohne Standort: Freigeben gesperrt, Hinweis da')
     other.locator('input.where').fill('https://watermaps.netlify.app/#p=node%2F632876845')
-    check(not other.locator('button.ok').is_disabled(), 'nach Einfügen des Links freigebbar')
+    check(other.locator('button.ok').is_disabled() and 'Motiv (alte Angabe): Rampe, Steg' in other.inner_text(), 'ohne Kategorie noch gesperrt, alte Motiv-Angabe sichtbar')
+    other.locator('select.kat').select_option('steg')
+    check(not other.locator('button.ok').is_disabled(), 'mit Link und Kategorie freigebbar')
     other.locator('button.ok').click(); pg.locator('#msg', has_text='Freigegeben').wait_for()
-    check(posted == [{'aktion': 'freigeben', 'id': 's3', 'standort': 'node/632876845'}], f'Standort wird mitgeschickt ({posted})')
+    check(posted == [{'aktion': 'freigeben', 'id': 's3', 'kategorie': 'steg', 'standort': 'node/632876845'}], f'Standort und Kategorie werden mitgeschickt ({posted})')
     posted.clear()
     pg.locator('#tab-neu .card >> nth=0').locator('button.ok').click(); pg.wait_for_timeout(300)
-    check(posted == [{'aktion': 'freigeben', 'id': 's1'}], f'Freigabe gesendet ({posted})')
+    check(pg.locator('#tab-neu .card >> nth=0').locator('select.kat').input_value() == 'rampe', 'Kategorie der Einreichung vorausgewählt')
+    check(posted == [{'aktion': 'freigeben', 'id': 's1', 'kategorie': 'rampe'}], f'Freigabe mit Kategorie gesendet ({posted})')
     posted.clear()
     pg.once('dialog', lambda d: d.dismiss())
     pg.locator('#tab-neu .card >> nth=1').locator('button', has_text='Ablehnen').click(); pg.wait_for_timeout(300)
@@ -124,6 +134,11 @@ with sync_playwright() as p:
     pg.click('#tabs [data-tab=veroeffentlicht]')
     pg.locator('#tab-veroeffentlicht .card img[src^="blob:"] >> nth=1').wait_for()
     check(pg.locator('#tab-veroeffentlicht .card').count() == 2 and 'Babybett' in pg.inner_text('#published'), 'veröffentlichte Fotos mit Bild und Beschreibung')
+    pub2 = pg.locator('#tab-veroeffentlicht .card >> nth=1')
+    check(pub2.locator('select.kat').input_value() == '' and pub2.locator('button', has_text='Kategorie speichern').is_disabled(), 'älteres Foto ohne Kategorie, Speichern gesperrt')
+    pub2.locator('select.kat').select_option('rampe'); pub2.locator('button', has_text='Kategorie speichern').click(); pg.locator('#msg', has_text='Kategorie „Rampe“ gespeichert').wait_for()
+    check(posted == [{'aktion': 'kategorie', 'standort_id': 'node/632876845', 'url': 'photos/b.jpg', 'kategorie': 'rampe'}], f'Kategorie nachträglich gesetzt ({posted})')
+    posted.clear()
     pg.once('dialog', lambda d: d.accept())
     pg.locator('#tab-veroeffentlicht .card >> nth=0').locator('button', has_text='Entfernen').click(); pg.locator('#msg', has_text='Foto entfernt').wait_for()
     check(posted == [{'aktion': 'entfernen', 'standort_id': 'node/1937154973', 'url': 'photos/a.jpg'}], f'Entfernen gesendet ({posted})')
@@ -156,11 +171,33 @@ with sync_playwright() as p:
     posted.clear()
     # Hinweise
     pg.click('#tabs [data-tab=hinweise]')
-    hi = pg.locator('#tab-hinweise .card')
+    hi = pg.locator('#tab-hinweise .card', has_text='Hafen')
+    check(hi.locator('button.danger').count() == 0, 'normaler Hinweis ohne „Meldung entfernen“')
+    lm = pg.locator('#tab-hinweise .card', has_text='Slip Nord')
+    check('Unpassende Lagemeldung' in lm.inner_text() and lm.locator('button.danger', has_text='Meldung entfernen').count() == 1, 'Lagemeldung-Hinweis mit „Meldung entfernen“')
+    pg.once('dialog', lambda d: d.accept())
+    lm.locator('button.danger').click(); pg.locator('#msg', has_text='Lagemeldung entfernt').wait_for()
+    check(posted == [{'form': 'fehler-melden', 'aktion': 'lagemeldung_entfernen', 'id': 'u1'}], f'Lagemeldung entfernen ({posted})')
+    posted.clear()
     check('Montags <u>zu</u>' in hi.inner_text() and hi.locator('u').count() == 0 and 'Falsche Öffnungszeiten' in hi.inner_text()
           and hi.locator('a[href="mailto:x@y.de"]').count() == 1, 'Hinweis mit Art, Text und Rückfrage-Adresse')
     hi.locator('button', has_text='Erledigt').click(); pg.locator('#msg', has_text='erledigt').wait_for()
     check(posted == [{'form': 'fehler-melden', 'aktion': 'erledigt', 'id': 'h1'}], f'Hinweis erledigt ({posted})')
+    # Ergänzungen: bisher → neu, Übernehmen
+    pg.click('#tabs [data-tab=ergaenzungen]')
+    er = pg.locator('#tab-ergaenzungen .card')
+    for _ in range(40):
+        if '…' not in er.inner_text(): break
+        pg.wait_for_timeout(150)
+    et = er.inner_text()
+    check(pg.inner_text('#n-ergaenzungen') == '1' and 'Slip Süd' in et and 'bis 7 m' in et and 'Schlüssel beim <b>Hafenmeister</b>' in et and er.locator('b').count() == 0,
+          'Ergänzung mit Angaben und Bemerkung (als Text)')
+    zug = er.locator('tbody tr', has_text='Zugang')
+    check(zug.locator('.alt').inner_text() == 'Öffentlich' and 'gleich' in (zug.locator('.neu').get_attribute('class') or '')
+          and er.locator('tbody tr', has_text='Bootsgröße').locator('.alt').inner_text() == 'Unbekannt', f'bisher → neu aus den veröffentlichten Daten ({et!r})')
+    er.locator('button.ok', has_text='Übernehmen').click(); pg.locator('#msg', has_text='übernommen').wait_for()
+    check(posted[-1:] == [{'form': 'slip-ergaenzen', 'aktion': 'uebernehmen', 'id': 'e1'}], f'Übernehmen ({posted})')
+    posted.clear()
     # Verlauf
     pg.click('#tabs [data-tab=verlauf]')
     log = pg.inner_text('#log')

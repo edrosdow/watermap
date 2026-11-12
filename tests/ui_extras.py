@@ -26,6 +26,8 @@ class Handler(SimpleHTTPRequestHandler):
 slips = json.loads((ROOT / 'data/osm/slip.geojson').read_text(encoding='utf-8'))['features']
 ANCHOR = next(f for f in slips if f['properties'].get('name') and 50.5 < f['geometry']['coordinates'][1] < 52)
 LON, LAT = ANCHOR['geometry']['coordinates']
+# Hafeninfos gibt es nur für Häfen (Slipanlagen zeigen „Wichtig für dein Boot“ statt der Eigenschaften-Tabelle)
+HAFEN = next(f for f in json.loads((ROOT / 'data/osm/marina.geojson').read_text(encoding='utf-8'))['features'] if f['properties'].get('name'))
 D = 0.0009   # ≈ 100 m
 
 def feat(i, kind, dlat, dlon, **p):
@@ -50,7 +52,7 @@ FC = json.dumps({'type': 'FeatureCollection', 'features': EXTRAS})
 META = json.loads((ROOT / 'data/meta.json').read_text(encoding='utf-8'))
 META.setdefault('files', {})['extras'] = 'osm/extras.geojson'
 META['files']['hafeninfo'] = 'hafeninfo.json'
-HAFENINFO = json.dumps({'generated': '2026-10-20', 'places': {ANCHOR['id']: {
+HAFENINFO = json.dumps({'generated': '2026-10-20', 'places': {HAFEN['id']: {
     'checked': '2026-10-20', 'status': 'ok', 'source': 'https://www.marina-test.de/', 'facts': [
         {'key': 'gast_liegeplatz', 'value': '3,00 € pro lfd. Meter und Tag (mind. 7 m), inkl. Strom', 'price_eur': 3.0,
          'quote': '3,00 € / lfd. Meter / Tag (Berechnung mind. 7m) inkl. Strom', 'url': 'https://www.marina-test.de/hafen/'},
@@ -61,7 +63,7 @@ HAFENINFO = json.dumps({'generated': '2026-10-20', 'places': {ANCHOR['id']: {
 extras_calls = []
 mode = {'missing': False}
 
-# „In der Nähe“ live (/.netlify/functions/umgebung): standardmäßig überlastet (503) → Rückfall auf den Import
+# Live-Abfrage der Umgebung gibt es nicht mehr (7.74.1); die Routen fangen versehentliche Aufrufe ab (Prüfung „keine Live-Abfrage“)
 def m2deg(dn, de):
     import math
     return LAT + dn / 111_000, LON + de / (111_000 * math.cos(math.radians(LAT)))
@@ -88,6 +90,8 @@ def overpass(route):
     live['queries'].append(q)
     cors = {'access-control-allow-origin': '*'}   # wie der echte Overpass-Server
     if live['mode'] == 'down': return route.fulfill(status=503, headers=cors, body='busy')
+    if live['mode'] == 'remark':   # Overpass überlastet: HTTP 200, leere Liste, „runtime error“
+        return route.fulfill(status=200, content_type='application/json', headers=cors, body=json.dumps({'elements': [], 'remark': 'runtime error: Query timed out in "query" at line 1 after 15 seconds.'}))
     els = LIVE if live['mode'] == 'data' else []
     route.fulfill(status=200, content_type='application/json', headers=cors, body=json.dumps({'elements': els}))
 
@@ -112,6 +116,17 @@ def check(cond, msg):
 srv = ThreadingHTTPServer(('127.0.0.1', PORT), functools.partial(Handler, directory=str(ROOT)))
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 
+
+def layer(pg, key, click=False):
+    """Schalter im Filter-Fenster (Kartenebenen, Unterfilter): (vorhanden, an?, Zähler); optional umschalten. Fenster wird wieder geschlossen."""
+    if not pg.locator('#filter-panel[open]').count():
+        pg.click('#btn-filter'); pg.wait_for_selector('#filter-panel[open]')
+    sw = pg.locator(f'#filter-panel [data-key="{key}"]')
+    res = (sw.count(), sw.get_attribute('aria-checked') if sw.count() else None, sw.locator('.fswitch-n').inner_text() if sw.locator('.fswitch-n').count() else None)
+    if click: sw.click(); pg.wait_for_timeout(50)
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(80)
+    return res
+
 with sync_playwright() as p:
     b = p.chromium.launch()
     for name, vp, mobile in [('desktop', {'width': 1280, 'height': 900}, False), ('mobile', {'width': 390, 'height': 844}, True)]:
@@ -120,9 +135,11 @@ with sync_playwright() as p:
         ctx.route('**/data/meta.json', lambda r: r.fulfill(status=200, content_type='application/json', body=json.dumps(META)))
         ctx.route('**/data/osm/extras.geojson', extras)
         ctx.route('**/data/hafeninfo.json', lambda r: r.fulfill(status=200, content_type='application/json', body=HAFENINFO))
+        ctx.route('**/api/meldungen**', lambda r: r.fulfill(status=200, content_type='application/json', body='{"aktiv": [], "meldungen": []}'))   # „Heute vor Ort“ (eigener Test: ui_meldungen.py)
         ctx.route('**/api/wetter/**', EMPTY_WX)
-        ctx.route('**/.netlify/functions/umgebung*', overpass)
+        ctx.route('**/.netlify/functions/umgebung*', overpass)   # entfernt (7.74.1): darf nicht mehr aufgerufen werden
         ctx.route('https://overpass-api.de/**', overpass)
+        ctx.route('**/api/pegel/**', lambda r: r.fulfill(status=200, content_type='application/json', body='[]'))   # Pegel-Hinweis im Detail
         ctx.route(re.compile(r'https://([a-c]\.)?tile\.openstreetmap\.org/.*'), lambda r: r.fulfill(status=200, content_type='image/png', body=TILE))
         ctx.route(re.compile(r'https://(?!(([a-c]\.)?tile\.openstreetmap\.org|overpass-api\.de/)).*'), lambda r: r.abort())
         ctx.add_init_script("document.addEventListener('securitypolicyviolation', e => (window.__csp = window.__csp || []).push(e.violatedDirective + ' ' + e.blockedURI));")
@@ -134,30 +151,21 @@ with sync_playwright() as p:
         pg.on('console', lambda m: errors.append(m.text) if m.type == 'error' and 'status of 503' not in m.text else None)   # 503 = Overpass absichtlich überlastet
         pg.goto(BASE); pg.wait_for_selector('.wm-cluster, .wm-pin', timeout=20000)
 
-        check(pg.locator('.chip-extra').count() == 2, f'{name}: Chips „Schleusen & Brücken“ und „Service“')
+        check(layer(pg, 'extra-wasser')[0] == 1 and layer(pg, 'extra-service')[0] == 1, f'{name}: Schalter „Schleusen & Brücken“ und „Service“ im Filter-Fenster')
         check(not extras_calls, f'{name}: Extras werden erst bei Bedarf geladen')
 
-        # Standort öffnen → „In der Nähe“
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])})")
-        pg.wait_for_selector('#detail .nearby-item', timeout=8000)
-        items = pg.locator('#detail .nearby-item')
-        check(items.count() == 10, f'{name}: 10 Einträge in der Nähe, der entfernte nicht ({items.count()})')
-        dists = [t for t in pg.locator('#detail .nearby-dist').all_inner_texts()]
-        check(dists[0].endswith(' m') and 'Toilette' in items.first.inner_text(), f'{name}: nach Entfernung sortiert ({dists[:3]})')
-        txt = pg.inner_text('#detail .nearby-list')
-        check('Durchfahrtshöhe 4,5 m' in txt and 'kein Trinkwasser' in txt and 'Kanu-Ein- und Ausstieg' in txt, f'{name}: Kurzinfos in der Liste')
-        check('null' not in txt and 'undefined' not in txt, f'{name}: kein „null“/„undefined“ im Text')
-        pg.wait_for_selector('#detail .nearby-hinweis', timeout=8000)
-        hint = pg.inner_text('#detail .nearby-hinweis')
-        check('overpass-api.de: HTTP 503' in hint and 'HTTP 503' in hint.split(';')[-1], f'{name}: Hinweis nennt den Grund der fehlgeschlagenen Live-Abfrage ({hint})')
-        pg.locator('#detail .nearby-list').scroll_into_view_if_needed()
-        pg.screenshot(path=str(SHOTS / f'{name}_1_in_der_naehe.png'))
+        # Standort öffnen → keine Umgebungsliste mehr (7.43.0), keine Live-Abfrage
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])}, {{ full: true }})")
+        pg.wait_for_selector('#detail-name', timeout=8000); pg.wait_for_timeout(600)
+        check(pg.locator('#detail .nearby-list').count() == 0 and 'Umgebung (bis' not in pg.inner_text('#detail'), f'{name}: keine Liste „Umgebung“ im Standort-Detail')
+        check(not live['queries'], f'{name}: keine Live-Abfrage der Umgebung')
 
-        # Hafeninfos laut Website füllen die Eigenschaften-Tabelle
+        # Hafeninfos laut Website füllen die Eigenschaften-Tabelle (Hafen)
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(HAFEN['id'])}, {{ full: true }})")
         pg.wait_for_selector('#detail .facts-block .hi-note', timeout=8000)
         fb = pg.locator('#detail .facts-block')
-        hi = fb.inner_text()
-        check('Eigenschaften' in hi and 'Gastliegeplatz' in hi and '3,00 € pro lfd. Meter und Tag' in hi and 'Fäkalienabsaugung' in hi and 'WLAN' in hi,
+        hi = fb.text_content()   # Überschrift in Großbuchstaben (CSS) – Text ohne Umwandlung
+        check('Eigenschaften' in hi and 'Liegeplatzgebühr' in hi and '3,00 € pro lfd. Meter und Tag' in hi and 'Fäkalienabsaugung' in hi and 'WLAN' in hi,
               f'{name}: Website-Angaben als Zeilen der Eigenschaften')
         check(pg.locator('#detail .facts-block .facts').count() == 1 and pg.locator('#detail .hi-block').count() == 0, f'{name}: eine Tabelle, kein eigener Block')
         check(pg.locator('#detail .facts-block dd.from-web .web-mark').count() == 3, f'{name}: Website-Werte markiert')
@@ -172,9 +180,11 @@ with sync_playwright() as p:
         check(rows == [['Zugang', None, ''], ['Gastliegeplätze', 'Ja', ''], ['Liegeplatzgebühr', None, '3 €'], ['Stromanschluss', None, '0,70 €/kWh'],
                        ['Kran', None, 'Kran bis 10 t'], ['Öffnungszeiten', None, '']], f'{name}: Marina-Felder werden gefüllt, Rest als eigene Zeilen ({rows})')
         fb.scroll_into_view_if_needed(); pg.screenshot(path=str(SHOTS / f'{name}_0_hafeninfo.png'))
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])}, {{ full: true }})")
+        pg.wait_for_selector('#detail-name', timeout=8000)
 
-        # Eintrag anklicken → Detail
-        pg.locator('#detail .nearby-item', has_text='Hubbrücke').click()
+        # Eintrag öffnen → Detail
+        pg.evaluate("window.__watermap.setExtras('wasser', true).then(() => window.__watermap.selectExtra('node/9000001', { fly: false }))"); pg.wait_for_selector('#detail .facts', timeout=8000)
         pg.wait_for_selector('#detail .facts')
         d = pg.inner_text('#detail')
         check('Hubbrücke Test' in d and '4,5 m' in d and '3,2 m' in d and 'Hubbrücke' in d, f'{name}: Brücken-Detail mit Höhen und Bauart')
@@ -189,16 +199,18 @@ with sync_playwright() as p:
         pg.evaluate("window.__watermap.selectExtra('node/9000004', { fly: false })"); pg.wait_for_timeout(150)
         d = pg.inner_text('#detail')
         check('Rollstuhlgerecht' in d and 'Wickeltisch' in d and 'Nicht bekannt' in d, f'{name}: Unbekanntes bleibt „Nicht bekannt“')
-        pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
         check(pg.locator('#detail').is_hidden(), f'{name}: Escape schließt')
 
+        pg.evaluate("window.__watermap.setExtras('wasser', false)"); pg.wait_for_timeout(200)
+
         # Ebenen
-        pg.locator('.chip-extra-wasser').click(); pg.wait_for_timeout(400)
+        layer(pg, 'extra-wasser', click=True); pg.wait_for_timeout(400)
         pg.evaluate(f"window.__watermap.state.map.raw.setView([{LAT}, {LON}], 16, {{ animate: false }})"); pg.wait_for_timeout(500)
         check(pg.locator('.wm-extra').count() == 3, f'{name}: Ebene „Schleusen & Brücken“ zeigt 3 Einträge ({pg.locator(".wm-extra").count()})')
         check(pg.locator('.wm-extra.has-label', has_text='4,5').count() == 1, f'{name}: Brücke zeigt Durchfahrtshöhe am Marker')
-        check(pg.locator('.chip-extra-wasser .chip-n').inner_text() == '3', f'{name}: Zähler am Chip')
-        pg.locator('.chip-extra-service').click(); pg.wait_for_timeout(500)
+        check(layer(pg, 'extra-wasser')[2] == '3', f'{name}: Zähler am Schalter')
+        layer(pg, 'extra-service', click=True); pg.wait_for_timeout(500)
         check(pg.locator('.wm-extra').count() == 10, f'{name}: mit „Service“ 10 Einträge im Ausschnitt ({pg.locator(".wm-extra").count()})')
         pg.screenshot(path=str(SHOTS / f'{name}_3_ebenen.png'))
         m = pg.locator('.wm-extra', has_text='4,5')
@@ -206,46 +218,19 @@ with sync_playwright() as p:
         (pg.touchscreen.tap if mobile else pg.mouse.click)(bx['x'] + 13, bx['y'] + 13)
         pg.wait_for_selector('#detail .facts', timeout=5000)
         check('Hubbrücke Test' in pg.inner_text('#detail') and pg.locator('.wm-extra.is-selected').count() == 1, f'{name}: Marker-Klick öffnet Detail und hebt hervor')
+        check(pg.locator('#detail #heute-vor-ort').count() == 0, f'{name}: keine Karte „Heute vor Ort“')
         pg.keyboard.press('Escape')
 
         # Deep-Link und gemerkte Ebenen
         pg2 = ctx.new_page(); pg2.goto(BASE + '#x=node%2F9000009')
         pg2.wait_for_selector('#detail .facts', timeout=15000)
         check('Kanuverleih Test' in pg2.inner_text('#detail'), f'{name}: Deep-Link öffnet Eintrag direkt')
-        check(pg2.locator('.chip-extra.is-active').count() == 2, f'{name}: eingeschaltete Ebenen werden gemerkt')
+        check(layer(pg2, 'extra-wasser')[1] == 'true' and layer(pg2, 'extra-service')[1] == 'true', f'{name}: eingeschaltete Ebenen werden gemerkt')
         pg2.close()
 
-        pg.locator('.chip-extra-wasser').click(); pg.locator('.chip-extra-service').click(); pg.wait_for_timeout(300)
+        layer(pg, 'extra-wasser', click=True); layer(pg, 'extra-service', click=True); pg.wait_for_timeout(300)
         check(pg.locator('.wm-extra').count() == 0, f'{name}: Ausschalten entfernt die Marker')
 
-        # „In der Nähe“ live aus OSM: Flächen mit Mittelpunkt, Supermarkt, Campingplatz; Import ergänzt Brücken/Wehre/Kanu/Verleih
-        live['mode'] = 'data'; live['queries'].clear()
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(ANCHOR['id'])})")
-        pg.wait_for_selector('#detail .nearby-item:has-text("Markt Test")', timeout=8000)
-        q = live['queries'][-1] if live['queries'] else {}
-        check(abs(float(q.get('lat', ['0'])[0]) - LAT) < 1e-4 and abs(float(q.get('lon', ['0'])[0]) - LON) < 1e-4, f'{name}: Abfrage mit den Koordinaten des Standorts')
-        check(q.get('direkt') == ['1'], f'{name}: Abfrage direkt beim Overpass-Server')
-        txt = pg.inner_text('#detail .nearby-list')
-        check('Abenteuercamp Test' in txt and 'Markt Test' in txt and 'Gasthof Test' in txt and 'Wohnmobilstellplatz' in txt and 'Parkplatz' in txt,
-              f'{name}: Campingplatz, Supermarkt, Restaurant, Wohnmobilstellplatz, Parkplatz aus OSM')
-        check('Zu weit' not in txt and 'Privat' not in txt, f'{name}: Mittelpunkt über 500 m und private Parkplätze nicht dabei')
-        check('Hubbrücke Test' in txt and 'Wehr Test' in txt and 'Kanuverleih Test' in txt and 'Biergarten am Steg' not in txt,
-              f'{name}: Brücken/Wehre/Kanu aus dem Import, Service nur live (keine Doppelten)')
-        ds = [int(re.sub(r'\D', '', t)) if t.endswith(' m') else 99999 for t in pg.locator('#detail .nearby-dist').all_inner_texts()]
-        check(ds == sorted(ds), f'{name}: nach Entfernung sortiert {ds}')
-        camp = next(t for t in pg.locator('#detail .nearby-item').all_inner_texts() if 'Abenteuercamp' in t)
-        check(re.search(r'\b(29\d|30\d) m', camp) is not None, f'{name}: Entfernung zum Mittelpunkt der Fläche ({camp.splitlines()[-1]})')
-        sub = pg.locator('#detail .nearby-item', has_text='Abenteuercamp').locator('.nearby-sub').inner_text()
-        check(sub == 'Campingplatz', f'{name}: Untertitel nur „Campingplatz“ ({sub})')
-        pg.locator('#detail .nearby-item', has_text='Markt Test').click(); pg.wait_for_timeout(200)
-        check('Markt Test' in pg.inner_text('#detail h2') and 'Supermarkt' in pg.inner_text('#detail'), f'{name}: Live-Eintrag öffnet seine Details')
-        # Nichts gefunden: neuer Text, keine Behauptung über OSM
-        live['mode'] = 'empty'
-        far = next(f for f in slips if abs(f['geometry']['coordinates'][1] - LAT) > 1)
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(far['id'])})")
-        pg.wait_for_selector('#detail .nearby-list:not([aria-busy])'); pg.wait_for_timeout(300)
-        check(pg.inner_text('#detail .nearby-list').strip() == 'Keine weiteren Einrichtungen in unseren Daten gefunden.', f'{name}: Text bei leerem Ergebnis')
-        live['mode'] = 'down'
         pg.keyboard.press('Escape')
 
         csp = pg.evaluate('window.__csp || []')
@@ -255,9 +240,9 @@ with sync_playwright() as p:
 
         # Datei fehlt → Hinweis, Chip bleibt aus (frische Seite, damit nichts zwischengespeichert ist)
         mode['missing'] = True
-        pg3 = ctx.new_page(); pg3.goto(BASE); pg3.wait_for_selector('.chip-extra')
-        pg3.locator('.chip-extra-service').click(); pg3.wait_for_timeout(500)
-        check('nicht geladen' in pg3.inner_text('#toast') and pg3.locator('.chip-extra-service').get_attribute('aria-pressed') == 'false',
+        pg3 = ctx.new_page(); pg3.goto(BASE); pg3.wait_for_selector('#btn-filter')
+        layer(pg3, 'extra-service', click=True); pg3.wait_for_timeout(500)
+        check('nicht geladen' in pg3.inner_text('#toast') and layer(pg3, 'extra-service')[1] == 'false',
               f'{name}: fehlende Datei → Hinweis, Ebene bleibt aus')
         mode['missing'] = False
         ctx.close(); extras_calls.clear()

@@ -3,20 +3,20 @@
 //  * eigene Dateien (Seite, Skripte, Daten): erst Netzwerk, bei Ausfall Zwischenspeicher → Updates kommen sofort an
 //  * Bibliotheken von CDN und bereits gesehene Kartenkacheln: Zwischenspeicher zuerst (mit Obergrenze)
 // Offline heißt deshalb: Standortliste und Details funktionieren; Kartenkacheln nur dort, wo man vorher war.
-const VERSION = 'v7.14.3';
+const VERSION = 'v8.0.0';
 const SHELL = `watermap-shell-${VERSION}`;
 const TILES = `watermap-tiles-${VERSION}`;
 const LIBS = `watermap-libs-${VERSION}`;
 const MAX_TILES = 400;
 
 const SHELL_FILES = [
-  './', './index.html', './css/app.css', './css/chart.css', './css/ampel.css', './css/page.css', './pegel-ampel.html', './manifest.webmanifest',
+  './', './index.html', './css/tokens.css', './css/bausteine.css', './fonts/atkinson-next-latin.woff2', './fonts/atkinson-next-latin-ext.woff2', './css/app.css', './css/chart.css', './css/nav.css', './css/pegel.css', './css/naehe.css', './css/bereiche.css', './css/page.css', './css/bewegung.css', './pegel-ampel.html', './manifest.webmanifest',
   './js/main.js', './js/config.js', './js/dom.js', './js/icons.js', './js/model.js', './js/data.js',
-  './js/map.js', './js/search.js', './js/favorites.js', './js/forms.js', './js/detail.js', './js/pegel.js', './js/wetter.js', './js/chart.js', './js/extras.js', './js/umgebung-abfrage.js', './js/hafeninfo.js', './js/photos.js', './js/ampel.js', './js/ampel-logik.js',
+  './js/map.js', './js/search.js', './js/favorites.js', './js/forms.js', './js/photo-form.js', './js/nav.js', './js/wischen.js', './js/bausteine.js', './js/suchfeld.js', './js/meldungen.js', './js/lage-form.js', './js/pegel-daten.js', './js/pegel-ansicht.js', './js/pegel-sheet.js', './js/pegel-marker.js', './js/pegel-bild.js', './js/alarm.js', './js/pegel-vorhersage.js', './js/pegel-einordnung.js', './js/pegel-fluss.js', './js/pegel-fluss-ansicht.js', './js/pegel-namen.js', './js/gezeiten.js', './js/gezeiten-bsh.js', './js/pegel-tide-ansicht.js', './js/naehe.js', './js/mehr.js', './js/gemerkt.js', './js/bewegung.js', './js/farben.js', './js/suche-ui.js', './js/melden-menue.js', './js/einstellungen.js', './js/meldungen-uebersicht.js', './js/meldung-unpassend.js', './js/slip-ergaenzen.js', './js/gebiet.js', './js/detail.js', './js/pegel.js', './js/wetter.js', './js/chart.js', './js/extras.js', './js/hafeninfo.js', './js/photos.js', './js/foto-kategorien.js', './js/ampel.js', './js/ampel-logik.js', './js/mindestpegel.js', './js/passt-mein-boot.js',
   './icons/icon-192.png', './icons/favicon.svg',
   './vendor/leaflet/leaflet.js', './vendor/leaflet/leaflet.css',
   './vendor/markercluster/leaflet.markercluster.js', './vendor/markercluster/MarkerCluster.css',
-  './data/meta.json',
+  './data/meta.json', './data/gebiet-de.json',
 ];
 
 self.addEventListener('install', (event) => {
@@ -51,6 +51,8 @@ self.addEventListener('fetch', (event) => {
     if (url.pathname.includes('/api/pegel/') && url.pathname.includes('/measurements')) return;
     // Wetter nie aus dem Zwischenspeicher zeigen – veraltete Warnungen wären schlimmer als keine
     if (url.pathname.includes('/api/wetter/')) return;
+    if (url.pathname.startsWith('/api/gezeiten')) return;    // Gezeiten: Offline-Stand je Pegel hält gezeiten-bsh.js (ignoreSearch würde Orte vertauschen)
+    if (url.pathname.startsWith('/api/meldungen')) return;   // Lagemeldungen: immer frisch (Offline-Stand hält meldungen.js)
     event.respondWith((async () => {
       try {
         const res = await fetch(req);
@@ -81,5 +83,24 @@ self.addEventListener('fetch', (event) => {
     } catch {
       return hit || Response.error();
     }
+  })());
+});
+
+// ---------------------------------------------------------------- Pegel-Alarm per Push (netlify/functions/pegel-alarm-pruefen.mjs)
+self.addEventListener('push', (event) => {
+  let n = {};
+  try { n = event.data ? event.data.json() : {}; } catch { n = { body: event.data?.text() }; }
+  event.waitUntil(self.registration.showNotification(n.title || 'WaterMap Pegel-Alarm', {
+    body: n.body || '', tag: n.tag || 'pegel-alarm', icon: './icons/icon-192.png', badge: './icons/icon-192.png', data: { url: n.url || '/' },
+  }));
+});
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const ziel = new URL(event.notification.data?.url || '/', self.registration.scope).href;
+  event.waitUntil((async () => {
+    const fenster = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const offen = fenster.find(c => new URL(c.url).origin === self.location.origin);
+    if (offen) { await offen.navigate(ziel).catch(() => {}); return offen.focus(); }
+    return self.clients.openWindow(ziel);
   })());
 });
