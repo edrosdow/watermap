@@ -88,9 +88,8 @@ with sync_playwright() as p:
             check('Nicht bekannt' in pg.inner_text('#detail'), f'{name}: aufgeklappt als "Nicht bekannt"')
         check('keine Wasserroute' in (pg.get_attribute('#detail .wm-aktion.is-primaer', 'title') or ''), f'{name}: Hinweis Straßenroute ≠ Wasserroute')
         check(pg.locator('#detail', has_text='OpenStreetMap-Route').count() == 0, f'{name}: keine OpenStreetMap-Route')
-        check('OpenStreetMap · ungeprüft' in txt and 'nicht vor ort geprüft' not in txt.lower(), f'{name}: OSM-Herkunft dezent')
-        pg.click('#detail .trust')
-        check('nicht vor ort geprüft' in pg.inner_text('#detail').lower(), f'{name}: OSM-Hinweis beim Antippen')
+        quelle = pg.inner_text('#detail .st-fuss .source')
+        check('OpenStreetMap' in quelle and 'nicht vor ort geprüft' in quelle.lower() and pg.locator('#detail .trust').count() == 0, f'{name}: OSM-Herkunft und Hinweis dezent in der Quellenzeile (8.0.5)')
         check('p=' in pg.url.split('#')[-1], f'{name}: Deep-Link gesetzt ({pg.url.split("#")[-1]})')
         pg.screenshot(path=str(SHOTS / f'{name}_detail.png'))
         # Favorit

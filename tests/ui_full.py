@@ -239,7 +239,7 @@ def desktop(b):
     # Community-Ort
     pg.evaluate("window.__watermap.selectPlace('c/test-1')")
     d = pg.inner_text('#detail')
-    check('WaterMap-Community · geprüft' in d and 'Kostenlos' in d, 'Community-Standort mit eigenem Hinweis')
+    check(re.search(r'Quelle: WaterMap-Community .*geprüft', d) and 'nicht vor Ort' not in d and 'Kostenlos' in d, 'Community-Standort mit eigenem Hinweis in der Quellenzeile (8.0.5)')
     # Preise
     pg.evaluate("window.__watermap.selectPlace('node/7000')"); d = pg.inner_text('#detail')
     check('2,19 €/l' in d, 'Aktuellster Preis gewinnt (2,19 € statt älterer 1,90 €)')
@@ -415,8 +415,8 @@ def photo_form(b, mobile):
     ctx.route(BASE, on_post)
     open_app(pg, mobile)
     pg.evaluate("window.__watermap.selectPlace('node/1', { full: true })"); pg.wait_for_selector('#detail .ph-add, #detail .ph-leer-btn')
-    check(pg.is_visible('#detail .ph-leer') and 'Noch keine Fotos' in pg.inner_text('#detail .ph-leer') and pg.locator('#detail .detail-links button', has_text='Foto hinzufügen').count() == 0,
-          f'{tag}: ohne Fotos Karte „Noch keine Fotos“ mit Knopf')
+    check(pg.is_visible('#detail .ph-leer') and 'Erstes Foto hinzufügen' in pg.inner_text('#detail .ph-leer') and pg.locator('#detail .detail-links button', has_text='Foto hinzufügen').count() == 0,
+          f'{tag}: ohne Fotos Zeile „Erstes Foto hinzufügen“ (8.0.5)')
     pg.click('#detail .ph-add, #detail .ph-leer-btn'); pg.wait_for_selector('#dlg[open]')
     shot = lambda n: pg.screenshot(path=str(SHOTS / f'foto_{"m" if mobile else "d"}_{n}.png'))
     # leer

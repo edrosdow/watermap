@@ -1,7 +1,7 @@
 // Detailansicht eines Standorts im Sheet-Rahmen (Designumbau 3b, 7.72.1): Handy von unten (Stufe klein = Kopf, Aktionen, „Details“),
 // Desktop Panel rechts. Kopf (Titel links, ×) kommt vom Rahmen; renderDetail liefert die Angaben dafür und den Inhalt.
 import { h } from './dom.js';
-import { aktionen } from './bausteine.js';
+import { aktionen, zeile, gruppe } from './bausteine.js';
 import { icon } from './icons.js';
 import { TYPES, UNKNOWN, FILTERS, displayName, describeFacts, describePrices, bootPunkte, formatDate, navUrl, osmUrl, safeHttpUrl, safeTel, formatDistance, haversine } from './model.js';
 import { favorites } from './favorites.js';
@@ -60,17 +60,16 @@ export function tagRow(tags) {
 /** Kopf-Angaben für den Sheet-Rahmen: Name, „Slipanlage · Weser · 4,3 km“. */
 export function detailKopf(p, user) {
   const dist = user ? haversine(user.lat, user.lon, p.lat, p.lon) : null;
-  return { titel: displayName(p), titelId: 'detail-name', unter: [TYPES[p.type].label, p.water?.name || null, dist !== null ? formatDistance(dist) : null].filter(Boolean).join(' · ') };
+  const ort = p.locality ? (p.locality_kind === 'nearest' ? `bei ${p.locality}` : p.locality) : null;   // 8.0.5: Ort im Kopf statt eigener Zeile
+  return { titel: displayName(p), titelId: 'detail-name', unter: [TYPES[p.type].label, p.water?.name || null, ort, dist !== null ? formatDistance(dist) : null].filter(Boolean).join(' · ') };
 }
 
 /** Rückgabe: [kopf-Angaben, Inhalt]. actions.details(): Stufe „groß“ (Knopf „Details“, nur in der Stufe „klein“ sichtbar). */
 export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, pegel, vorOrt }) {
   const isFav = favorites.has(p.id);
-  const ort = p.locality ? (p.locality_kind === 'nearest' ? `bei ${p.locality}` : p.locality) : null;
 
   const body = h('div', { class: 'detail-body' });
-  // Ort und Herkunft („bei Bünde · OpenStreetMap · ungeprüft“) als kleine Zeile unter dem Kopf
-  body.append(h('div', { class: 'st-meta' }, ort ? h('span', { text: `${ort} ·` }) : null, trustLine(p)));
+  // 8.0.5: Ort steht im Kopf, Herkunft („OpenStreetMap · ungeprüft“) in der Quellenzeile ganz unten
   if (vorOrt?.zeile) body.append(vorOrt.zeile);   // wichtigste Lagemeldung („Heute vor Ort“)
   const slip = p.type === 'slip';
   const tags = tagRow(placeTags(p, 4));
@@ -109,10 +108,11 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
       fotos.append(h('button', { type: 'button', class: 'ph-add', onclick: actions.addPhoto }, h('span', { html: icon('camera', 18), 'aria-hidden': 'true' }), h('span', { text: 'Foto hinzufügen' })));
       body.append(fotos);
     } else {
-      body.append(h('section', { class: 'ph-leer', 'aria-label': 'Fotos' },
-        h('span', { class: 'ph-leer-ico', html: icon('camera', 24), 'aria-hidden': 'true' }),
-        h('span', { class: 'ph-leer-text' }, h('strong', { text: 'Noch keine Fotos' }), h('small', { text: 'Zeig anderen, wie es hier aussieht.' })),
-        h('button', { type: 'button', class: 'ph-leer-btn', 'aria-label': 'Foto hinzufügen', onclick: actions.addPhoto }, h('span', { html: icon('plus', 16), 'aria-hidden': 'true' }), h('span', { text: 'Foto' }))));
+      // 8.0.5: schlanke Ortszeile statt großem gestricheltem Kasten
+      const z = zeile({ ico: 'camera', titel: 'Erstes Foto hinzufügen', unter: 'Zeig anderen, wie es hier aussieht', onClick: actions.addPhoto, label: 'Foto hinzufügen' });
+      z.classList.add('ph-leer-btn');
+      const g = gruppe([z]); g.classList.add('ph-leer'); g.setAttribute('aria-label', 'Fotos'); g.setAttribute('role', 'group');
+      body.append(g);
     }
   };
 
@@ -170,22 +170,20 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
   if (p.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) contacts.push(h('a', { class: 'contact', href: 'mailto:' + p.email, title: p.email, html: icon('external', 18) }, h('span', { text: 'E-Mail' })));
   if (contacts.length) body.append(h('section', { class: 'block' }, h('h3', { text: 'Kontakt' }), h('div', { class: 'contacts contact-chips' }, contacts)));
 
-  // Lage
+  // Ende (8.0.5): eine kleine graue Fußzeile – Koordinaten mit „Kopieren“, Quelle mit Herkunft und Hinweis, „Fehler melden“
   const coords = `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`;
-  const copy = h('button', { type: 'button', class: 'btn btn-outline small', text: 'Kopieren' });
+  const copy = h('button', { type: 'button', class: 'st-fuss-link', text: 'Kopieren', 'aria-label': `Koordinaten ${coords} kopieren` });
   copy.onclick = () => navigator.clipboard?.writeText(coords).then(() => { copy.textContent = 'Kopiert'; setTimeout(() => { copy.textContent = 'Kopieren'; }, 1800); }, () => {});
-  body.append(h('div', { class: 'coords-row' }, h('span', { class: 'coords', html: icon('pin', 16) }, h('span', { text: coords })), navigator.clipboard ? copy : null));
-
-  // Quelle (eine Zeile)
   const src = osmUrl(p);
   const stand = formatDate(p.updated);
-  body.append(h('footer', { class: 'source' },
-    'Quelle: ', src ? h('a', { href: src, target: '_blank', rel: 'noopener noreferrer', text: '© OpenStreetMap', title: `OpenStreetMap ${p.osm.type}/${p.osm.id} · ODbL` }) : 'WaterMap-Community',
-    p.community_fields.length ? ' + Community' : '', stand ? ` · Stand ${stand}` : ''));
-
-  // Ganz unten, für genau diesen Standort
-  body.append(h('div', { class: 'detail-links' },
-    h('button', { type: 'button', onclick: actions.report, text: 'Fehler melden' })));
+  const community = p.source === 'community';
+  body.append(h('footer', { class: 'st-fuss' },
+    h('p', { class: 'coords-row' }, h('span', { class: 'coords', text: coords }), navigator.clipboard ? [' · ', copy] : null),
+    h('p', { class: 'source' },
+      'Quelle: ', src ? h('a', { href: src, target: '_blank', rel: 'noopener noreferrer', text: '© OpenStreetMap', title: `OpenStreetMap ${p.osm.type}/${p.osm.id} · ODbL` }) : 'WaterMap-Community',
+      p.community_fields.length ? ' + Community' : '', stand ? ` · Stand ${stand}` : '',
+      community ? ' · geprüft. ' : ' · nicht vor Ort geprüft – Zugang, Gebühren und Eignung vor der Anfahrt klären. ',
+      h('span', { class: 'detail-links' }, h('button', { type: 'button', class: 'st-fuss-link', onclick: actions.report, text: 'Fehler melden' })))));
 
   return [detailKopf(p, user), body];
 }
@@ -205,16 +203,4 @@ function bootBox(p, actions) {
     h('div', { class: 'wb-fuss' },
       h('span', { text: fehlen ? `${fehlen} ${fehlen === 1 ? 'Angabe fehlt' : 'Angaben fehlen'}` : 'Angaben laut OpenStreetMap' }),
       h('button', { type: 'button', class: 'wb-link', onclick: actions.ergaenzen || actions.report }, fehlen ? 'Weißt du mehr? Ergänzen' : 'Angaben ändern', h('span', { html: icon('chevron', 16), 'aria-hidden': 'true' }))));
-}
-
-/** Kleine Herkunftszeile unter dem Namen; Antippen zeigt den Hinweis. */
-function trustLine(p) {
-  const community = p.source === 'community';
-  const tip = h('span', { class: 'trust-tip', hidden: true, text: community
-    ? 'Von der Community gemeldet und geprüft. Bitte vor Ort auf Hinweise achten.'
-    : 'Nicht vor Ort geprüft. Zugang, Gebühren und Eignung vor der Anfahrt klären.' });
-  const btn = h('button', { type: 'button', class: 'trust', 'aria-expanded': 'false', html: icon('info', 14) },
-    h('span', { text: community ? 'WaterMap-Community · geprüft' : 'OpenStreetMap · ungeprüft' }));
-  btn.onclick = () => { tip.hidden = !tip.hidden; btn.setAttribute('aria-expanded', String(!tip.hidden)); };
-  return h('div', { class: 'trust-wrap' }, btn, tip);
 }
