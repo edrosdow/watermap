@@ -20,7 +20,7 @@ Voraussetzung: Python 3. Das Kartenmodul wird beim ersten Start aus dem Internet
 
 ## 3. Formulare aktivieren (Netlify Forms)
 Nach dem ersten Veröffentlichen: Netlify → *Forms*. Es müssen vier Formulare stehen:
-`slipanlage-melden`, `tankpreis-melden`, `foto-einreichen`, `fehler-melden`.
+`slipanlage-melden`, `slip-ergaenzen`, `foto-einreichen`, `fehler-melden`.
 - *Forms → Settings & notifications → Form notifications*: E-Mail-Benachrichtigung bei neuer Meldung einrichten.
 - *Spam:* Honeypot ist eingebaut, Netlify filtert zusätzlich. Bei viel Spam kann reCAPTCHA in Netlify aktiviert werden (dann Datenschutzerklärung ergänzen).
 - Kostenloser Netlify-Tarif: begrenzte Zahl Einsendungen pro Monat und 8 MB pro Upload – für den Start ausreichend; bei Erfolg Phase 2 (Supabase) einplanen.

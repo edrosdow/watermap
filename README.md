@@ -6,7 +6,7 @@ Statische Web-App (HTML/CSS/JavaScript, Leaflet), kostenlos auf Netlify betreibb
 ## In 3 Schritten online
 1. **Ordner `public` bei Netlify hochladen** (Netlify → *Add new site → Deploy manually* → Ordner `public` hineinziehen).
 2. **Impressum und Datenschutz ausfüllen** (`public/impressum.html`, `public/datenschutz.html`; gelb markierte Stellen).
-3. **Formulare prüfen:** Netlify → *Forms* → vier Formulare müssen erscheinen (`slipanlage-melden`, `tankpreis-melden`, `foto-einreichen`, `fehler-melden`).
+3. **Formulare prüfen:** Netlify → *Forms* → diese Formulare müssen erscheinen (`slipanlage-melden`, `slip-ergaenzen`, `foto-einreichen`, `fehler-melden`).
 
 Details: [docs/INSTALLATION.md](docs/INSTALLATION.md)
 

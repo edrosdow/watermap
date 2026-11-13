@@ -34,12 +34,7 @@ def build_site(tmp: pathlib.Path):
     wr = lambda p, feats: (site / 'data' / 'osm' / p).write_text(json.dumps({'type': 'FeatureCollection', 'features': feats}))
     wr('slip.geojson', slips); wr('marina.geojson', marinas); wr('fuel.geojson', fuel)
     today = dt.date.today(); old = (today - dt.timedelta(days=40)).isoformat(); fresh = (today - dt.timedelta(days=2)).isoformat()
-    (site / 'data' / 'community' / 'prices.json').write_text(json.dumps([
-        {'station_id': 'node/7000', 'fuel': 'diesel', 'price': 2.189, 'observed': fresh, 'status': 'approved'},
-        {'station_id': 'node/7000', 'fuel': 'diesel', 'price': 1.9, 'observed': old, 'status': 'approved'},     # älter → darf nicht gewinnen
-        {'station_id': 'node/7002', 'fuel': 'diesel', 'price': 2.05, 'observed': old, 'status': 'approved'},     # veraltet
-        {'station_id': 'node/7004', 'fuel': 'diesel', 'price': 1.5, 'observed': fresh, 'status': 'pending'},     # nicht freigegeben
-        {'station_id': 'node/7004', 'fuel': 'petrol', 'price': 99, 'observed': fresh, 'status': 'approved'}]))     # unplausibel
+    # unplausibel
     (site / 'data' / 'community' / 'places.json').write_text(json.dumps([
         {'id': 'c/test-1', 'status': 'approved', 'type': 'slip', 'name': 'TEST Community-Slip', 'lat': 51.7, 'lon': 7.7, 'fee': False, 'access': 'public',
          'attrs': {'trailer_parking': True, 'parking': True}, 'updated': fresh},
@@ -186,7 +181,7 @@ def defaults(b):
         ctx.close()
 
 def desktop(b):
-    print('--- Desktop: Daten, Filter, Preise')
+    print('--- Desktop: Daten, Filter')
     ctx, pg = new_page(b); open_app(pg)
     st = lambda js: pg.evaluate(js)
     n = st('window.__watermap.state.places.length')
@@ -245,7 +240,6 @@ def desktop(b):
     pg.evaluate("window.__watermap.selectPlace('node/7000')"); pg.wait_for_timeout(300); d = pg.inner_text('#detail')
     check('€/l' not in d and 'Kein Preis gemeldet' not in d and 'Kraftstoffpreise' not in d, 'Tankstelle ohne Kraftstoffpreise')
     pg.evaluate("window.__watermap.selectPlace('node/7004')"); d = pg.inner_text('#detail')
-    check('1,50' not in d and '99' not in d, 'Nicht freigegebene/unplausible Preise werden nie angezeigt')
     pg.screenshot(path=str(SHOTS / 'full_fuel_detail.png'))
     # XSS-Anzeige als Text
     pg.evaluate("window.__watermap.selectPlace('node/9001')"); d = pg.inner_text('#detail')

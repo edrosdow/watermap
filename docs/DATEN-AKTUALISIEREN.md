@@ -43,7 +43,7 @@ Mit Variante B aus der Installationsanleitung (Git-Verbindung): Die Datei `.gith
 ```
 python3 scripts/validate_data.py
 ```
-Prüft Schema, Koordinatenbereiche, doppelte IDs, Preisgrenzen u. a. Warnungen („ohne Namen“) sind normal – viele OSM-Slipanlagen haben keinen Namen.
+Prüft Schema, Koordinatenbereiche, doppelte IDs u. a. Warnungen („ohne Namen“) sind normal – viele OSM-Slipanlagen haben keinen Namen.
 
 ## Lizenz (ODbL) und Namensnennung
 OSM-Daten stehen unter der [ODbL 1.0](https://www.openstreetmap.org/copyright). Pflichten, die die App erfüllt: sichtbare Namensnennung „© OpenStreetMap-Mitwirkende“ in der Karte, in jeder Standortansicht und im Impressum, Link zur Lizenz, Kennzeichnung des Datenstands. Die Standortdateien selbst sind eine abgeleitete Datenbank und müssen bei Weitergabe wieder unter ODbL stehen. Bei Zweifeln (z. B. Kombination mit eigenen Daten, Werbung) Lizenzrat einholen: https://osmfoundation.org/wiki/Licence/Licence_and_Legal_FAQ.

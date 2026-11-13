@@ -23,15 +23,12 @@ const ID_RE = /^(node|way|relation|community|c)\/[A-Za-z0-9_-]{1,80}$/;
 const OVERRIDES = 'public/data/community/overrides.json';
 const HISTORY = 'admin/verlauf.json';
 const PLACES = 'public/data/community/places.json';
-const PRICES = 'public/data/community/prices.json';
-const SLIP_FORM = 'slipanlage-melden', PRICE_FORM = 'tankpreis-melden', ERG_FORM = 'slip-ergaenzen';
-const FILE_FIELD = { [FORM]: 'foto', [SLIP_FORM]: 'foto', [PRICE_FORM]: 'beleg' };   // Datei-Feld je Formular
+const SLIP_FORM = 'slipanlage-melden', ERG_FORM = 'slip-ergaenzen';   // Kraftstoffpreise (tankpreis-melden) entfernt (8.0.9)
+const FILE_FIELD = { [FORM]: 'foto', [SLIP_FORM]: 'foto' };   // Datei-Feld je Formular
 const ACCESS = { oeffentlich: 'public', privat: 'private', kunden: 'customers' };
 const YNU = { ja: true, nein: false };
-const FUEL = { diesel: 'diesel', benzin: 'petrol' };
-const PRICE_MIN = 0.5, PRICE_MAX = 5;
 const ART = { 'existiert-nicht': 'Existiert nicht mehr', koordinaten: 'Falsche Koordinaten', 'nicht-oeffentlich': 'Nicht öffentlich',
-  preis: 'Falscher Preis', oeffnungszeiten: 'Falsche Öffnungszeiten', foto: 'Unpassendes Foto', meldung: 'Unpassende Lagemeldung', sonstiges: 'Sonstiges' };
+  preis: 'Falscher Preis (alt)', oeffnungszeiten: 'Falsche Öffnungszeiten', foto: 'Unpassendes Foto', meldung: 'Unpassende Lagemeldung', sonstiges: 'Sonstiges' };
 const MAX_HISTORY = 500;
 
 const json = (status, body) => new Response(JSON.stringify(body), {
@@ -134,31 +131,12 @@ export function slipFromSubmission(sub, today) {
   };
 }
 
-/** Preismeldung → Eintrag für community/prices.json (nur plausible Preise an bekannten Tankstellen). */
-export function priceFromSubmission(sub, today) {
-  const d = sub.data || {};
-  const sid = text(d.tankstelle_id);
-  if (!ID_RE.test(sid)) throw new Error('Tankstelle nicht in der Liste – nicht zuzuordnen');
-  const price = num(d.preis), fuel = FUEL[text(d.kraftstoff)];
-  if (!fuel) throw new Error('Kraftstoff ungültig');
-  if (price === null || price < PRICE_MIN || price > PRICE_MAX) throw new Error(`Preis außerhalb ${PRICE_MIN}–${PRICE_MAX} €/l`);
-  const observed = /^\d{4}-\d{2}-\d{2}/.test(text(d.datum)) ? text(d.datum).slice(0, 10) : today;
-  return { station_id: sid, fuel, price: Math.round(price * 1000) / 1000, observed: observed > today ? today : observed,
-    status: 'approved', submitted: String(sub.created_at || today).slice(0, 10) };
-}
-
 export function slipView(s) {
   const d = s.data || {};
   return { id: s.id, created: s.created_at || null, name: text(d.name, 120), gewaesser: text(d.gewaesser, 120), lat: num(d.lat), lon: num(d.lon),
     zugang: text(d.zugang), gebuehr: text(d.gebuehr), gebuehr_betrag: text(d.gebuehr_betrag, 80), parkplatz: text(d.parkplatz),
     trailerparkplatz: text(d.trailerparkplatz), beschreibung: text(d.beschreibung, 1000), kontakt: text(d.kontakt, 120),
     hat_foto: Boolean(fileUrl(d.foto)), rechte: Boolean(d.foto_rechte), dublette: Boolean(d.dublette_bestaetigt) };
-}
-
-export function priceView(s) {
-  const d = s.data || {};
-  return { id: s.id, created: s.created_at || null, tankstelle_id: text(d.tankstelle_id), tankstelle_name: text(d.tankstelle_name, 120),
-    kraftstoff: text(d.kraftstoff), preis: num(d.preis), datum: text(d.datum, 10), kommentar: text(d.kommentar), hat_beleg: Boolean(fileUrl(d.beleg)) };
 }
 
 export function hintView(s) {
@@ -430,7 +408,7 @@ export async function handle(req, { env, siteId, deploy = null, fetchFn = fetch,
 
     // Einreichungen eines Formulars: auflisten, Datei zeigen, freigeben/ablehnen/erledigen
     const formName = body.form || q.get('form') || FORM;
-    if (![FORM, SLIP_FORM, PRICE_FORM, REPORT_FORM, ERG_FORM].includes(formName)) return json(400, { fehler: 'Unbekanntes Formular.' });
+    if (![FORM, SLIP_FORM, REPORT_FORM, ERG_FORM].includes(formName)) return json(400, { fehler: 'Unbekanntes Formular.' });
     const subs = await formSubmissions(nf, siteId, formName);
     if (req.method === 'GET' && q.has('bild')) {
       const sub = subs.find(s => s.id === q.get('bild'));
@@ -444,7 +422,6 @@ export async function handle(req, { env, siteId, deploy = null, fetchFn = fetch,
     }
     if (req.method === 'GET') {
       if (formName === SLIP_FORM) return json(200, { slips: subs.map(slipView) });
-      if (formName === PRICE_FORM) return json(200, { preise: subs.map(priceView) });
       if (formName === REPORT_FORM) return json(200, { hinweise: subs.filter(s => !photoReport(s)).map(hintView) });
       if (formName === ERG_FORM) return json(200, { ergaenzungen: subs.map(ergaenzungView) });
       return json(200, { fotos: subs.map(submissionView) });
@@ -478,22 +455,6 @@ export async function handle(req, { env, siteId, deploy = null, fetchFn = fetch,
       if (body.aktion === 'ablehnen') {
         await finish(`Slipanlage abgelehnt: ${text(d.name, 60) || 'ohne Namen'}`, async (read) => [
           await history({ bereich: 'slip', aktion: 'abgelehnt', standort_id: '', standort_name: text(d.name, 120), beschreibung: text(d.gewaesser, 120) })(read)]);
-        return json(200, { ok: true });
-      }
-    }
-    if (formName === PRICE_FORM) {
-      const label = `${text(d.kraftstoff) === 'benzin' ? 'Benzin' : 'Diesel'} ${text(d.preis, 10)} €/l`;
-      if (body.aktion === 'freigeben') {
-        const entry = priceFromSubmission(sub, today);
-        await finish(`Preis freigegeben: ${entry.station_id}`, async (read) => [
-          jsonFile(PRICES, [...await read(PRICES, []), entry]),
-          await history({ bereich: 'preis', aktion: 'freigegeben', standort_id: entry.station_id, standort_name: text(d.tankstelle_name, 120),
-            beschreibung: `${label}, beobachtet ${entry.observed}` })(read)]);
-        return json(200, { ok: true });
-      }
-      if (body.aktion === 'ablehnen') {
-        await finish(`Preis abgelehnt: ${text(d.tankstelle_id) || 'ohne Tankstelle'}`, async (read) => [
-          await history({ bereich: 'preis', aktion: 'abgelehnt', standort_id: text(d.tankstelle_id), standort_name: text(d.tankstelle_name, 120), beschreibung: label })(read)]);
         return json(200, { ok: true });
       }
     }

@@ -1,6 +1,6 @@
 // Tests für netlify/functions/fotos.mjs mit nachgebauter Netlify- und GitHub-API (node tests/fotos_function_test.mjs).
 import assert from 'node:assert/strict';
-import { handle, ergaenzungLesen, ergaenzungEintragen, imageType, addPhoto, passwordOk, fileUrl, standortAus, addHistory, photoReport, slug, slipFromSubmission, priceFromSubmission } from '../netlify/functions/fotos.mjs';
+import { handle, ergaenzungLesen, ergaenzungEintragen, imageType, addPhoto, passwordOk, fileUrl, standortAus, addHistory, photoReport, slug, slipFromSubmission } from '../netlify/functions/fotos.mjs';
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
 const env = { FOTO_ADMIN_PASSWORT: 'geheim-123', NETLIFY_API_TOKEN: 'nf', GITHUB_TOKEN: 'gh' };
@@ -254,23 +254,9 @@ assert.equal(slug('Slip „Großer Müggelsee“ – Nord'), 'slip-grosser-mugge
   assert.deepEqual(w.state.messages.at(-1), 'Slipanlage abgelehnt: Doppelt');
   assert.equal(w.jsonAt('public/data/community/places.json').length, 1); }
 
-// Preise
-{ assert.throws(() => priceFromSubmission({ id: 'p', data: { tankstelle_id: '__other', kraftstoff: 'diesel', preis: '2' } }, '2026-10-20'), /nicht in der Liste/);
-  assert.throws(() => priceFromSubmission({ id: 'p', data: { tankstelle_id: 'node/7', kraftstoff: 'diesel', preis: '25' } }, '2026-10-20'), /außerhalb/);
-  assert.deepEqual(priceFromSubmission({ id: 'p', created_at: '2026-10-20T09:00:00Z', data: { tankstelle_id: 'node/7', kraftstoff: 'benzin', preis: '2,1899', datum: '2026-10-30' } }, '2026-10-20'),
-    { station_id: 'node/7', fuel: 'petrol', price: 2.19, observed: '2026-10-20', status: 'approved', submitted: '2026-10-20' }, 'Datum nie in der Zukunft');
-  const w = fakeWorld({ prices: [{ id: 'p1', created_at: '2026-10-20T09:00:00Z', data: { tankstelle_id: 'node/7000', tankstelle_name: 'Tanke', kraftstoff: 'diesel', preis: '2,189', datum: '2026-10-19', kommentar: 'Schild', beleg: { url: 'https://files.netlify.example/s1/x.jpg' } } },
-    { id: 'p2', data: { tankstelle_id: '__other', tankstelle_name: 'Irgendwo', kraftstoff: 'diesel', preis: '2' } }], files: { 'public/data/community/prices.json': '[{"station_id":"node/7000","fuel":"diesel","price":2.1,"observed":"2026-10-01","status":"approved"}]' } });
-  const list = (await (await run(req('GET', '?form=tankpreis-melden'), w)).json()).preise;
-  assert.deepEqual(list.map(x => [x.id, x.preis, x.hat_beleg]), [['p1', 2.189, true], ['p2', 2, false]]);
-  assert.equal((await run(req('GET', '?form=tankpreis-melden&bild=p1'), w)).status, 200, 'Belegfoto ansehbar');
-  assert.equal((await run(req('POST', '', { form: 'tankpreis-melden', aktion: 'freigeben', id: 'p1' }), w)).status, 200);
-  assert.deepEqual(w.jsonAt('public/data/community/prices.json').map(x => x.price), [2.1, 2.189], 'nur anhängen');
-  assert.equal(w.jsonAt(HIST)[0].beschreibung, 'Diesel 2,189 €/l, beobachtet 2026-10-19');
-  const bad = await run(req('POST', '', { form: 'tankpreis-melden', aktion: 'freigeben', id: 'p2' }), w);
-  assert.equal(bad.status, 502); assert.deepEqual(w.state.deleted, ['p1'], 'unzuordenbarer Preis bleibt liegen');
-  assert.equal((await run(req('POST', '', { form: 'tankpreis-melden', aktion: 'ablehnen', id: 'p2' }), w)).status, 200);
-  assert.equal(w.state.messages.at(-1), 'Preis abgelehnt: __other'); }
+// Kraftstoffpreise entfernt (8.0.9): das Formular ist unbekannt
+{ const w = fakeWorld();
+  assert.equal((await run(req('GET', '?form=tankpreis-melden'), w)).status, 400, 'tankpreis-melden gibt es nicht mehr'); }
 
 // Hinweise (Fehler melden ohne Foto)
 { const w = fakeWorld({ reports: [

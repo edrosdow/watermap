@@ -2,7 +2,6 @@
 """Wandelt den CSV-Export einer Netlify-Form in prüfbare JSON-Einträge für die Community-Schicht um.
 
   python3 scripts/submissions_to_json.py slipanlage-melden export.csv
-  python3 scripts/submissions_to_json.py tankpreis-melden  export.csv
 
 Netlify-Dashboard → Forms → Formular wählen → „Export CSV“.
 Ausgabe: JSON auf dem Bildschirm. Alle Einträge haben "status": "pending". Prüfe jeden Eintrag
@@ -62,19 +61,7 @@ def slip(row, n):
     return item, None
 
 
-def price(row, n):
-    sid = (row.get("tankstelle_id") or "").strip()
-    if not sid or sid == "__other":
-        return None, f"Tankstelle nicht in der Liste ({row.get('tankstelle_name', '?')}) – bitte manuell zuordnen"
-    p = num(row.get("preis"))
-    fuel = FUEL.get((row.get("kraftstoff") or "").strip())
-    if p is None or fuel is None:
-        return None, "Preis oder Kraftstoff ungültig"
-    return {"station_id": sid, "fuel": fuel, "price": round(p, 3), "observed": (row.get("datum") or day(row))[:10],
-            "status": "pending", "submitted": day(row)}, None
-
-
-HANDLERS = {"slipanlage-melden": slip, "tankpreis-melden": price}
+HANDLERS = {"slipanlage-melden": slip}
 
 
 def main(argv):

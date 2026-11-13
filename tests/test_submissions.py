@@ -24,13 +24,10 @@ class SubmissionTests(unittest.TestCase):
         self.assertNotIn('geheim', r.stdout); self.assertNotIn('1.2.3.4', r.stdout)
         self.assertIn('ÜBERSPRUNGEN', r.stderr)
 
-    def test_price_mapping(self):
-        r = self.run_script('tankpreis-melden', [
-            {'tankstelle_id': 'node/7', 'kraftstoff': 'benzin', 'preis': '2,149', 'datum': '2026-10-02'},
-            {'tankstelle_id': '__other', 'tankstelle_name': 'Irgendwo', 'kraftstoff': 'diesel', 'preis': '2', 'datum': '2026-10-02'}])
-        d = json.loads(r.stdout)
-        self.assertEqual(d, [{'station_id': 'node/7', 'fuel': 'petrol', 'price': 2.149, 'observed': '2026-10-02', 'status': 'pending', 'submitted': d[0]['submitted']}])
-        self.assertIn('nicht in der Liste', r.stderr)
+    def test_price_form_removed(self):
+        # Kraftstoffpreise entfernt (8.0.9): das Skript kennt tankpreis-melden nicht mehr
+        r = self.run_script('tankpreis-melden', [{'tankstelle_id': 'node/7', 'kraftstoff': 'benzin', 'preis': '2,149'}])
+        self.assertNotEqual(r.returncode, 0)
 
 if __name__ == '__main__':
     unittest.main()

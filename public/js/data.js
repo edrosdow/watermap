@@ -111,14 +111,14 @@ export async function loadAll() {
   catch (e) { issues.push(`meta.json: ${e.message}`); }
 
   const osmFiles = meta?.files?.osm || ['osm/slip.geojson', 'osm/marina.geojson', 'osm/fuel.geojson'];
-  const comFiles = meta?.files?.community || { places: 'community/places.json', overrides: 'community/overrides.json', prices: 'community/prices.json' };
+  const comFiles = meta?.files?.community || { places: 'community/places.json', overrides: 'community/overrides.json' };
 
   const settle = async (path) => {
     try { return { path, json: await fetchJson(base + path) }; }
     catch (e) { issues.push(`${path}: ${e.message}`); return { path, json: null }; }
   };
 
-  const [osm, places, overrides] = await Promise.all([   // Kraftstoffpreise gibt es seit 8.0.8 nicht mehr in der App
+  const [osm, places, overrides] = await Promise.all([   // Kraftstoffpreise gibt es seit 8.0.8 nicht mehr (8.0.9: auch nicht in Verwaltung und Daten)
     Promise.all(osmFiles.map(settle)),
     settle(comFiles.places), settle(comFiles.overrides),
   ]);
