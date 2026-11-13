@@ -35,8 +35,6 @@ SLIPS = [{'id': 'n1', 'created': '2026-10-20T09:00:00Z', 'name': 'Doppelt', 'gew
           'hat_foto': True, 'rechte': False, 'dublette': True},
          {'id': 'n2', 'created': '2026-10-20T09:30:00Z', 'name': 'Neu am Meer', 'gewaesser': 'Nordsee', 'lat': 54.9, 'lon': 2.0, 'zugang': '', 'gebuehr': '',
           'gebuehr_betrag': '', 'parkplatz': '', 'trailerparkplatz': '', 'beschreibung': '', 'kontakt': '', 'hat_foto': False, 'rechte': False, 'dublette': False}]
-PREISE = [{'id': 'p1', 'created': '2026-10-20T10:00:00Z', 'tankstelle_id': 'node/7000', 'tankstelle_name': 'Tanke', 'kraftstoff': 'diesel', 'preis': 2.189, 'datum': '2026-10-19', 'kommentar': 'Schild', 'hat_beleg': True},
-          {'id': 'p2', 'created': '2026-10-20T10:30:00Z', 'tankstelle_id': '__other', 'tankstelle_name': 'Irgendwo', 'kraftstoff': 'benzin', 'preis': 2.0, 'datum': '2026-10-19', 'kommentar': '', 'hat_beleg': False}]
 HINWEISE = [{'id': 'h1', 'created': '2026-10-20T11:00:00Z', 'standort_id': 'node/5', 'standort_name': 'Hafen', 'art': 'oeffnungszeiten', 'art_text': 'Falsche Öffnungszeiten',
              'details': 'Montags <u>zu</u>', 'kontakt': 'x@y.de'},
             {'id': 'u1', 'created': '2026-10-20T12:00:00Z', 'standort_id': 'node/9', 'standort_name': 'Slip Nord', 'art': 'meldung', 'art_text': 'Unpassende Lagemeldung',
@@ -59,7 +57,6 @@ def api(route):
         if 'verlauf' in r.url: return j({'verlauf': LOG})
         if 'bild=' in r.url or 'datei=' in r.url: return route.fulfill(status=200, content_type='image/png', body=PNG)
         if 'form=slipanlage-melden' in r.url: return j({'slips': SLIPS})
-        if 'form=tankpreis-melden' in r.url: return j({'preise': PREISE})
         if 'form=fehler-melden' in r.url: return j({'hinweise': HINWEISE})
         if 'form=slip-ergaenzen' in r.url: return j({'ergaenzungen': ERG})
         return j({'fotos': FOTOS})
@@ -89,7 +86,7 @@ with sync_playwright() as p:
     check(pg.locator('#login').is_hidden() and pg.inner_text('#n-neu') == '3' and pg.inner_text('#n-gemeldet') == '1' and pg.inner_text('#n-veroeffentlicht') == '2',
           'Reiter mit Anzahlen (3 eingereicht, 1 gemeldet, 2 veröffentlicht)')
     check('hot' in pg.get_attribute('#n-gemeldet', 'class'), 'Meldungen sind hervorgehoben')
-    check(pg.inner_text('#n-slips') == '2' and pg.inner_text('#n-preise') == '2' and pg.inner_text('#n-hinweise') == '2', 'Reiter Slipanlagen, Preise, Hinweise mit Anzahlen')
+    check(pg.inner_text('#n-slips') == '2' and pg.inner_text('#n-hinweise') == '2' and pg.locator('#tabs [data-tab=preise]').count() == 0, 'Reiter Slipanlagen und Hinweise mit Anzahlen, kein Reiter Preise (8.0.9)')
 
     # Eingereicht
     cards = pg.locator('#tab-neu .card')
@@ -161,14 +158,6 @@ with sync_playwright() as p:
     check(posted == [{'form': 'slipanlage-melden', 'aktion': 'ablehnen', 'id': 'n1'}], f'Slipanlage ablehnen ({posted})')
     posted.clear()
     pg.screenshot(path=str(SHOTS / 'verwaltung_slips.png'), full_page=True)
-    # Preise
-    pg.click('#tabs [data-tab=preise]')
-    pr = pg.locator('#tab-preise .card')
-    check('2,189 €/l' in pr.nth(0).inner_text() and not pr.nth(0).locator('button.ok').is_disabled(), 'Preis mit Betrag, freigebbar')
-    check(pr.nth(1).locator('button.ok').is_disabled() and 'nicht in der Liste' in pr.nth(1).inner_text(), 'unbekannte Tankstelle nicht freigebbar')
-    pr.nth(0).locator('button.ok').click(); pg.locator('#msg', has_text='Preis freigegeben').wait_for()
-    check(posted == [{'form': 'tankpreis-melden', 'aktion': 'freigeben', 'id': 'p1'}], f'Preis freigeben ({posted})')
-    posted.clear()
     # Hinweise
     pg.click('#tabs [data-tab=hinweise]')
     hi = pg.locator('#tab-hinweise .card', has_text='Hafen')

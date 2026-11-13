@@ -15,8 +15,7 @@
   ],
   "community": {
    "places": "community/places.json",
-   "overrides": "community/overrides.json",
-   "prices": "community/prices.json"
+   "overrides": "community/overrides.json"
   }
  },
  "categories": {

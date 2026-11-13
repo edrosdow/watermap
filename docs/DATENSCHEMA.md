@@ -11,7 +11,6 @@ public/data/
   osm/fuel.geojson          Tankstellen   (Import)
   community/places.json     neue Standorte aus der Community (von Hand gepflegt)
   community/overrides.json  freigegebene Korrekturen/Fotos zu vorhandenen Standorten
-  community/prices.json     freigegebene Kraftstoffpreise (nur anhängen, nie löschen)
 ```
 OSM-Schicht und Community-Schicht werden erst im Browser zusammengeführt. So kann ein neuer Import nie Community-Wissen überschreiben. Beispiele: `docs/beispiele/`.
 
@@ -38,13 +37,12 @@ OSM-Schicht und Community-Schicht werden erst im Browser zusammengeführt. So ka
 - **Marina:** `berths` (Zahl), `visitor_berths`, `electricity`, `water_tap`, `toilets`, `showers`, `restaurant`, `harbour_master` (true/false/null), `berth_fee` (Text)
 - **Tankstelle:** `diesel`, `petrol`, `reach_water`, `reach_land` (true/false/null), `payment` (Liste)
 
-Welche OSM-Tags in welche Felder fließen, steht in `scripts/import_osm.py` (Funktionen `_slip`, `_marina`, `_fuel`). OSM kennt für Trailerparkplatz, Erreichbarkeit und Preise keinen verlässlichen Standard-Tag – diese Felder kommen nur aus der Community-Schicht.
+Welche OSM-Tags in welche Felder fließen, steht in `scripts/import_osm.py` (Funktionen `_slip`, `_marina`, `_fuel`). OSM kennt für Trailerparkplatz und Erreichbarkeit keinen verlässlichen Standard-Tag – diese Felder kommen nur aus der Community-Schicht.
 
 ## Community-Dateien
 **`places.json`** – neuer Standort: wie oben, plus `status` (`pending` \| `approved` \| `rejected`) und `submitted`. Nur `approved` wird angezeigt.
 
 **`overrides.json`** – Korrektur: `{ "id": "node/…", "status": "approved", "fields": {…}, "attrs": {…}, "photos": [{ "url": "photos/…jpg", "credit": "…", "alt": "…", "kategorie": "rampe" }], "updated": "JJJJ-MM-TT" }`. Änderbare `fields`: name, locality, access, fee, fee_note, opening_hours, operator, website, phone, email, description, lat+lon. Fotos müssen unter `public/photos/` liegen. `kategorie` (optional bei älteren Fotos): rampe, steg, zufahrt, parkplatz, umgebung, sonstiges (`public/js/foto-kategorien.js`).
 
-**`prices.json`** – Preismeldung: `{ "station_id": "node/…", "fuel": "diesel" \| "petrol", "price": 2.189, "observed": "JJJJ-MM-TT", "status": "approved", "submitted": "…" }`. Die App zeigt je Tankstelle und Kraftstoff die **neueste freigegebene** Meldung mit Datum. Ältere bleiben zur Nachvollziehbarkeit stehen. Preise außerhalb 0,50–5,00 €/l werden nie angezeigt. Ab 14 Tagen Alter erscheint ein Hinweis auf mögliche Veraltung (`PRICE_STALE_DAYS` in `config.js`).
 
 `python3 scripts/validate_data.py` prüft alle Dateien.

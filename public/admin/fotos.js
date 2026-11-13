@@ -1,4 +1,4 @@
-// Verwaltung: Fotos · Gemeldete Fotos · Slipanlagen · Preise · Hinweise · Veröffentlicht · Verlauf (netlify/functions/fotos.mjs).
+// Verwaltung: Fotos · Gemeldete Fotos · Slipanlagen · Hinweise · Veröffentlicht · Verlauf (netlify/functions/fotos.mjs).
 const API = '/.netlify/functions/fotos';
 const $ = (s) => document.querySelector(s);
 const el = (tag, props = {}, ...kids) => {
@@ -67,9 +67,9 @@ async function loadAll() {
   const all = await Promise.allSettled([
     call('GET').then(r => r.json()), call('GET', '?meldungen=1').then(r => r.json()),
     call('GET', '?veroeffentlicht=1').then(r => r.json()), call('GET', '?verlauf=1').then(r => r.json()),
-    call('GET', '?form=slipanlage-melden').then(r => r.json()), call('GET', '?form=tankpreis-melden').then(r => r.json()),
+    call('GET', '?form=slipanlage-melden').then(r => r.json()),
     call('GET', '?form=fehler-melden').then(r => r.json()), call('GET', '?form=slip-ergaenzen').then(r => r.json())]);
-  const [neu, gemeldet, veroeffentlicht, verlauf, slips, preise, hinweise, ergaenzungen] = all;
+  const [neu, gemeldet, veroeffentlicht, verlauf, slips, hinweise, ergaenzungen] = all;
   const failed = all.find(x => x.status === 'rejected');
   if (failed && /Passwort/.test(failed.reason?.message)) throw failed.reason;
   try { sessionStorage.setItem('wm.fotoPw', pw); } catch { /* privat */ }
@@ -79,7 +79,6 @@ async function loadAll() {
   renderPublished(veroeffentlicht.status === 'fulfilled' ? veroeffentlicht.value.fotos : null, veroeffentlicht.reason);
   renderLog(verlauf.status === 'fulfilled' ? verlauf.value.verlauf : null, verlauf.reason);
   renderSlips(slips.status === 'fulfilled' ? slips.value.slips : null, slips.reason);
-  renderPrices(preise.status === 'fulfilled' ? preise.value.preise : null, preise.reason);
   renderHints(hinweise.status === 'fulfilled' ? hinweise.value.hinweise : null, hinweise.reason);
   renderErgaenzungen(ergaenzungen.status === 'fulfilled' ? ergaenzungen.value.ergaenzungen : null, ergaenzungen.reason);
   showTab(tab);
@@ -233,31 +232,6 @@ function renderSlips(list, err) {
       s.dublette ? el('p', { className: 'warn', textContent: 'Der Melder hat bestätigt, dass in der Nähe schon eine Slipanlage ist.' }) : null,
       s.hat_foto && !s.rechte ? el('p', { className: 'warn', textContent: 'Rechte am Foto nicht bestätigt – das Foto wird nicht übernommen.' }) : null,
       near, el('div', { className: 'actions' }, yes, no)));
-  }
-}
-
-// ---------------------------------------------------------------- Preise
-function renderPrices(list, err) {
-  const box = $('#preise');
-  box.replaceChildren();
-  setCount('preise', list ? list.length : 0, true);
-  if (!list) { box.append(failNote(err)); return; }
-  if (!list.length) { box.append(el('p', { className: 'empty', textContent: 'Keine neuen Preise.' })); return; }
-  for (const pr of list) {
-    const inList = ID.test(pr.tankstelle_id), plausible = Number.isFinite(pr.preis) && pr.preis >= 0.5 && pr.preis <= 5;
-    const yes = el('button', { className: 'ok', type: 'button', textContent: 'Freigeben', disabled: !(inList && plausible) });
-    const no = el('button', { type: 'button', textContent: 'Ablehnen' });
-    yes.addEventListener('click', () => act(yes, { form: 'tankpreis-melden', aktion: 'freigeben', id: pr.id }, 'Preis freigegeben – in etwa einer Minute in der App.'));
-    no.addEventListener('click', () => act(no, { form: 'tankpreis-melden', aktion: 'ablehnen', id: pr.id }, 'Preis abgelehnt.', 'Preismeldung wirklich ablehnen?'));
-    box.append(el('section', { className: 'card' },
-      el('h2', {}, placeLink(inList ? pr.tankstelle_id : '', pr.tankstelle_name || pr.tankstelle_id)),
-      el('p', { className: 'meta', textContent: `Gemeldet ${when(pr.created)}` }),
-      facts([['Kraftstoff', pr.kraftstoff === 'benzin' ? 'Benzin' : 'Diesel'], ['Preis', Number.isFinite(pr.preis) ? `${pr.preis.toFixed(3).replace('.', ',')} €/l` : 'ungültig'],
-        ['Beobachtet am', pr.datum], ['Kommentar', pr.kommentar]]),
-      inList ? null : el('p', { className: 'warn', textContent: 'Tankstelle nicht in der Liste – nicht zuzuordnen.' }),
-      plausible ? null : el('p', { className: 'warn', textContent: 'Preis außerhalb 0,50–5,00 €/l – nicht freigebbar.' }),
-      pr.hat_beleg ? image(`?form=tankpreis-melden&bild=${encodeURIComponent(pr.id)}`, 'Belegfoto') : null,
-      el('div', { className: 'actions' }, yes, no)));
   }
 }
 

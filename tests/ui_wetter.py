@@ -127,9 +127,8 @@ with sync_playwright() as p:
         zeile = pg.inner_text('#detail .wxz')
         check('Amtliche Warnung: Sturmböen (+1)' in zeile and 'jetzt 3 Bft SW' in zeile and pg.locator('#detail .wx-block').count() == 0, f'{name}: Zeile zeigt die Warnung ({zeile!r}), kein Abschnitt in der Seite')
         check(pg.locator('#detail .wxz').get_attribute('class').endswith('wxz-moderate') and pg.locator('#detail .wxz').get_attribute('aria-haspopup') == 'dialog', f'{name}: Warnstufe als Klasse, Zeile öffnet ein Fenster')
-        i = pos(['.dbtns', '.dtags', '.photos, .ph-leer', '#heute-vor-ort', '.wxz', '.wb'])
-        i = [i[0]] + i[2:] if i[1] in (-1, i[0] + 1) else i   # Etiketten gibt es nur bei Standorten mit Angaben; wenn da, direkt nach den Knöpfen
-        check(all(x >= 0 for x in i) and i == sorted(i), f'{name}: Reihenfolge Knöpfe · Etiketten · Fotos · Heute vor Ort · Wetterwarnung · Boot ({i})')
+        i = pos(['.dbtns', '.photos, .ph-leer', '#heute-vor-ort', '.wxz', '.wb'])   # 8.0.8: keine Etiketten mehr
+        check(all(x >= 0 for x in i) and i == sorted(i) and pg.locator('#detail .dtags').count() == 0, f'{name}: Reihenfolge Knöpfe · Fotos · Heute vor Ort · Wetterwarnung · Boot ({i})')
         check(pg.locator('#detail .wxz').bounding_box()['height'] >= 44, f'{name}: Zeile ≥ 44 px hoch')
         pg.click('#detail .wxz'); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen .wx-wind', timeout=8000)
         txt = pg.inner_text('.wm-sheet.wxd-wetter')
@@ -187,17 +186,16 @@ with sync_playwright() as p:
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(south)}, {{ full: true }})"); pg.wait_for_selector('#detail .wxz:not(.wxz-warn) small:not(:has-text("Wird geladen"))', timeout=8000)
         zeile = pg.inner_text('#detail .wxz')
         check('3 Bft aus SW · Böen 34 km/h · 12 °C · keine Warnung' in zeile, f'{name}: Kurzwerte in der Zeile ({zeile!r})')
-        i = pos(['.dbtns', '.dtags', '.photos, .ph-leer', '#heute-vor-ort', '.wb', '.wxz'])
-        i = [i[0]] + i[2:] if i[1] in (-1, i[0] + 1) else i
+        i = pos(['.dbtns', '.photos, .ph-leer', '#heute-vor-ort', '.wb', '.wxz'])
         check(all(x >= 0 for x in i) and i == sorted(i), f'{name}: Reihenfolge … Heute vor Ort · Boot · Wetter ({i})')
         pg.click('#detail .wxz'); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen .wx-noalert')
         check('keine amtlichen Wetterwarnungen für Stadt Mainz' in pg.inner_text('.wm-sheet.wxd-wetter'), f'{name}: Hinweis ohne Warnung nennt den Warnbereich')
         pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
 
-        # Andere Standorte (Hafen, Tankstelle): Abschnitt wie bisher in der Seite
+        # Andere Standorte (Hafen, Tankstelle): 8.0.8 ebenfalls die Zeile, kein Abschnitt
         marina = pg.evaluate("window.__watermap.state.places.find(p => p.type === 'marina' && p.lat > 51.5).id")
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(marina)}, {{ full: true }})"); pg.wait_for_selector('#detail .wx-block .wx-wind', timeout=8000)
-        check(pg.locator('#detail .wxz').count() == 0, f'{name}: Hafen: Wetter weiter als Abschnitt, keine Zeile')
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(marina)}, {{ full: true }})"); pg.wait_for_selector('#detail .wxz', timeout=8000)
+        check(pg.locator('#detail .wx-block').count() == 0 and pg.locator('#detail .wxz').count() == 1, f'{name}: Hafen: Wetter als Zeile wie beim Slip (8.0.8)')
 
         # Pegel-Detail enthält ebenfalls Wetter
         pg.evaluate("window.__watermap.setGauges(true)"); next((True for _ in range(60) if pg.evaluate('!!window.__watermap.state.gauges') or pg.wait_for_timeout(100)), None)   # Cluster zeichnen nur Marker im Ausschnitt

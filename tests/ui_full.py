@@ -34,12 +34,7 @@ def build_site(tmp: pathlib.Path):
     wr = lambda p, feats: (site / 'data' / 'osm' / p).write_text(json.dumps({'type': 'FeatureCollection', 'features': feats}))
     wr('slip.geojson', slips); wr('marina.geojson', marinas); wr('fuel.geojson', fuel)
     today = dt.date.today(); old = (today - dt.timedelta(days=40)).isoformat(); fresh = (today - dt.timedelta(days=2)).isoformat()
-    (site / 'data' / 'community' / 'prices.json').write_text(json.dumps([
-        {'station_id': 'node/7000', 'fuel': 'diesel', 'price': 2.189, 'observed': fresh, 'status': 'approved'},
-        {'station_id': 'node/7000', 'fuel': 'diesel', 'price': 1.9, 'observed': old, 'status': 'approved'},     # älter → darf nicht gewinnen
-        {'station_id': 'node/7002', 'fuel': 'diesel', 'price': 2.05, 'observed': old, 'status': 'approved'},     # veraltet
-        {'station_id': 'node/7004', 'fuel': 'diesel', 'price': 1.5, 'observed': fresh, 'status': 'pending'},     # nicht freigegeben
-        {'station_id': 'node/7004', 'fuel': 'petrol', 'price': 99, 'observed': fresh, 'status': 'approved'}]))     # unplausibel
+    # unplausibel
     (site / 'data' / 'community' / 'places.json').write_text(json.dumps([
         {'id': 'c/test-1', 'status': 'approved', 'type': 'slip', 'name': 'TEST Community-Slip', 'lat': 51.7, 'lon': 7.7, 'fee': False, 'access': 'public',
          'attrs': {'trailer_parking': True, 'parking': True}, 'updated': fresh},
@@ -186,7 +181,7 @@ def defaults(b):
         ctx.close()
 
 def desktop(b):
-    print('--- Desktop: Daten, Filter, Preise')
+    print('--- Desktop: Daten, Filter')
     ctx, pg = new_page(b); open_app(pg)
     st = lambda js: pg.evaluate(js)
     n = st('window.__watermap.state.places.length')
@@ -241,15 +236,10 @@ def desktop(b):
     pg.evaluate("window.__watermap.selectPlace('c/test-1')")
     d = pg.inner_text('#detail')
     check(re.search(r'Quelle: WaterMap-Community .*geprüft', d) and 'nicht vor Ort' not in d and 'Kostenlos' in d, 'Community-Standort mit eigenem Hinweis in der Quellenzeile (8.0.5)')
-    # Preise
-    pg.evaluate("window.__watermap.selectPlace('node/7000')"); d = pg.inner_text('#detail')
-    check('2,19 €/l' in d, 'Aktuellster Preis gewinnt (2,19 € statt älterer 1,90 €)')
-    check('Kein Preis gemeldet' in d, 'Benzin ohne Meldung: "Kein Preis gemeldet"')
-    check('gemeldet am' in d, 'Preis mit Datum')
-    pg.evaluate("window.__watermap.selectPlace('node/7002')"); d = pg.inner_text('#detail')
-    check('Älter als 14 Tage' in d, 'Veralteter Preis wird gewarnt')
+    # Kraftstoffpreise sind entfernt (8.0.8, Nutzer): auch mit Preisdatei keine Preise im Sheet
+    pg.evaluate("window.__watermap.selectPlace('node/7000')"); pg.wait_for_timeout(300); d = pg.inner_text('#detail')
+    check('€/l' not in d and 'Kein Preis gemeldet' not in d and 'Kraftstoffpreise' not in d, 'Tankstelle ohne Kraftstoffpreise')
     pg.evaluate("window.__watermap.selectPlace('node/7004')"); d = pg.inner_text('#detail')
-    check('1,50' not in d and '99' not in d, 'Nicht freigegebene/unplausible Preise werden nie angezeigt')
     pg.screenshot(path=str(SHOTS / 'full_fuel_detail.png'))
     # XSS-Anzeige als Text
     pg.evaluate("window.__watermap.selectPlace('node/9001')"); d = pg.inner_text('#detail')
@@ -379,15 +369,15 @@ def desktop(b):
     pg.click('#detail .ph-add, #detail .ph-leer-btn'); pg.wait_for_selector('.pf-sheet.is-offen')
     check(pg.locator('.wm-sheet.pf-sheet input[name=standort_id]').get_attribute('value') == last, f'Foto aus Detail: Standort-ID fest ({last})')
     pg.click('.wm-sheet.pf-sheet .wm-zu'); pg.wait_for_selector('.wm-sheet.pf-sheet', state='detached')
-    # Preis melden ist entfernt: Tankstelle zeigt Preise, aber keinen Knopf
-    pg.evaluate("window.__watermap.selectPlace('node/7001', { full: true })"); pg.wait_for_selector('#detail:not([hidden]) .prices')
-    check(pg.locator('#detail button:has-text("Preis melden")').count() == 0, 'Tankstelle: Preise ohne „Preis melden“')
+    # Kraftstoffpreise sind entfernt (8.0.8, Nutzer): Tankstelle ohne Preise und ohne „Preis melden“
+    pg.evaluate("window.__watermap.selectPlace('node/7001', { full: true })"); pg.wait_for_selector('#detail:not([hidden]) .facts-block')
+    check(pg.locator('#detail .prices').count() == 0 and 'Kraftstoffpreise' not in pg.inner_text('#detail') and pg.locator('#detail button:has-text("Preis melden")').count() == 0, 'Tankstelle: keine Kraftstoffpreise')
     # Honeypot
     pg.evaluate("localStorage.clear()")
     report(pg, 'Fehler'); pg.wait_for_selector('#pickbar:not([hidden])')
     pg.click('#pickbar button:has-text("Ohne Standort")'); pg.wait_for_selector('#dlg[open]')
     check('Allgemeiner Hinweis' in pg.inner_text('#dlg') and pg.locator('#dlg input[name=standort_id]').get_attribute('value') == '__other', 'Fehler ohne Standort möglich')
-    pg.select_option('select[name=art]', 'preis'); pg.fill('textarea[name=details]', 'x')
+    pg.select_option('select[name=art]', 'nicht-oeffentlich'); pg.fill('textarea[name=details]', 'x')
     pg.evaluate("document.querySelector('input[name=bot-field]').value='spam'")
     n0 = len(posts); pg.click('#dlg-body button:has-text("Korrektur senden")'); pg.wait_for_timeout(200)
     check(len(posts) == n0, 'Honeypot: Bot-Meldung wird nicht gesendet')
@@ -397,7 +387,7 @@ def desktop(b):
     pg.evaluate("localStorage.clear()")
     report(pg, 'Fehler'); pg.wait_for_selector('#pickbar:not([hidden])')
     pg.click('#pickbar button:has-text("Ohne Standort")'); pg.wait_for_selector('#dlg[open]')
-    pg.select_option('select[name=art]', 'preis'); pg.fill('textarea[name=details]', 'Mein Text')
+    pg.select_option('select[name=art]', 'nicht-oeffentlich'); pg.fill('textarea[name=details]', 'Mein Text')
     pg.click('#dlg-body button:has-text("Korrektur senden")'); pg.wait_for_timeout(300)
     check('abgelehnt' in pg.inner_text('#dlg .form-status') and pg.input_value('textarea[name=details]') == 'Mein Text', 'Serverfehler: klare Meldung, Eingaben bleiben erhalten')
     check(pg.locator('#dlg-body button:has-text("Korrektur senden")').is_enabled(), 'Nach Fehler erneut sendbar')

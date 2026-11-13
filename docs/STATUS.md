@@ -8,7 +8,7 @@ Stand: Oktober 2026. Ehrliche Übersicht gegenüber dem Master-Prompt.
 - Daten: OSM-Schicht und Community-Schicht getrennt, zusammengeführt im Browser; Schema-Validierung; Überschreibschutz.
 - Filter nach Kategorie und Eigenschaften – nur auf bestätigten Daten; Zähler je Filter; Leerzustände.
 - Suche: lokal (Name, Ort, Gewässer) plus Ortssuche (Nominatim, nur auf Nutzeraktion).
-- Detailansicht mit „Nicht bekannt“, Preisen mit Datum und Veraltungshinweis, Navigation, Teilen (Deep-Link), Favoriten (lokal), Fehler melden, Foto, Preis.
+- Detailansicht mit „Nicht bekannt“, Navigation, Teilen (Deep-Link), Favoriten (lokal), Fehler melden, Foto, Angaben ergänzen (Slipanlagen und Häfen). Kraftstoffpreise seit 8.0.9 entfernt.
 - Hinweis: Straßenroute ≠ Wasserroute.
 - Standortfreigabe freiwillig, Karte bleibt ohne sie voll nutzbar.
 - Community-Formulare (Netlify Forms): Pflichtfelder, Prüfung auf nahe Slipanlage, Foto-Prüfung am Dateiinhalt, Größenlimit, EXIF/GPS-Entfernung, Rechte-Bestätigung, Honeypot, Fehlerbehandlung mit erhaltenen Eingaben.

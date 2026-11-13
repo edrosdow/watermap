@@ -137,20 +137,6 @@ export function wxIcon(code, px = 22) {
 
 const windText = (kmh, dir) => `${fmtNum(kmh)} km/h · ${beaufort(kmh)} Bft${dir !== null ? ` aus ${compass(dir)}` : ''}`;
 
-/** Abschnitt „Wetter und Wind“; füllt sich selbst, sobald die Daten da sind. */
-export function weatherSection(lat, lon) {
-  const box = h('div', { class: 'wx', 'aria-busy': 'true' }, h('p', { class: 'muted small', text: 'Wetter wird geladen …' }));
-  const section = h('section', { class: 'block wx-block' }, h('h3', { text: 'Wetter und Wind' }), box);
-  loadWeather(lat, lon).then((d) => {
-    box.removeAttribute('aria-busy');
-    box.replaceChildren(...renderWeather(d));
-  }, () => {
-    box.removeAttribute('aria-busy');
-    box.replaceChildren(h('p', { class: 'unknown', text: 'Wetterdaten sind gerade nicht erreichbar.' }));
-  });
-  return section;
-}
-
 /** Kurzwerte für die Wetter-Zeile, z. B. „3 Bft aus SW · Böen 34 km/h · 12 °C · keine Warnung“. */
 export function kurzwerte({ current, alerts }) {
   const t = [];

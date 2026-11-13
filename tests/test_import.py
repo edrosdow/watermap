@@ -445,7 +445,7 @@ class CliTests(unittest.TestCase):
             (tmp / "water.json").write_text(json.dumps({"elements": WATER}))
             out = tmp / "data"
             (out / "community").mkdir(parents=True)
-            for n in ("places", "overrides", "prices"):
+            for n in ("places", "overrides"):
                 (out / "community" / f"{n}.json").write_text("[]")
             r = self.run_cli("--input", str(tmp / "main.json"), "--places-input", str(tmp / "places.json"),
                              "--water-input", str(tmp / "water.json"), "--out", str(out))
@@ -556,11 +556,10 @@ class ValidatorTests(unittest.TestCase):
                 (tmp / "osm" / f"{n}.geojson").write_text(json.dumps({"type": "FeatureCollection", "features": []}))
             (tmp / "community" / "places.json").write_text("[]")
             (tmp / "community" / "overrides.json").write_text("[]")
-            (tmp / "community" / "prices.json").write_text(json.dumps([{"station_id": "node/1", "fuel": "diesel", "price": 25.0, "observed": "2999-01-01", "status": "approved"}]))
             (tmp / "meta.json").write_text("{}")
             v = subprocess.run([sys.executable, "-I", str(SCRIPTS / "validate_data.py"), "--data", str(tmp)], capture_output=True, text=True)
             self.assertEqual(v.returncode, 1)
-            for needle in ("ungültiger Zugang", "fee muss", "website", "attrs.motorboat", "doppelte id", "Preis außerhalb", "Zukunft"):
+            for needle in ("ungültiger Zugang", "fee muss", "website", "attrs.motorboat", "doppelte id"):
                 self.assertIn(needle, v.stdout)
 
 

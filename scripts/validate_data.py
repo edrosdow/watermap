@@ -9,7 +9,6 @@ Exit-Code 0 = in Ordnung (Warnungen möglich), 1 = Fehler gefunden.
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import json
 import math
 import pathlib
@@ -25,8 +24,6 @@ STR_ATTRS = {"surface", "incline", "suitable_boats", "suitable_trailers", "berth
 PATCH_FIELDS = {"name", "locality", "access", "fee", "fee_note", "opening_hours", "operator", "website", "phone", "email", "description", "lat", "lon"}
 STATUS = {"pending", "approved", "rejected"}
 FOTO_KATEGORIEN = {"rampe", "steg", "zufahrt", "parkplatz", "umgebung", "sonstiges"}   # wie public/js/foto-kategorien.js
-ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}")
-PRICE_MIN, PRICE_MAX = 0.5, 5.0
 FILE_TYPE = {"slip": "slip", "marina": "marina", "fuel": "fuel"}
 
 
@@ -97,7 +94,7 @@ def main(argv=None) -> int:
     meta = load(d / "meta.json", rep) or {}
     files = meta.get("files") or {}
     osm_files = files.get("osm") or ["osm/slip.geojson", "osm/marina.geojson", "osm/fuel.geojson"]
-    com = files.get("community") or {"places": "community/places.json", "overrides": "community/overrides.json", "prices": "community/prices.json"}
+    com = files.get("community") or {"places": "community/places.json", "overrides": "community/overrides.json"}
 
     ids: dict[str, str] = {}
     counts = {t: 0 for t in TYPES}
@@ -216,28 +213,10 @@ def main(argv=None) -> int:
             if ph.get("kategorie") is not None and ph.get("kategorie") not in FOTO_KATEGORIEN:
                 rep.err(where, f"unbekannte Foto-Kategorie: {ph.get('kategorie')}")
 
-    prices = load(d / com["prices"], rep) or []
-    today = dt.date.today().isoformat()
-    for i, r in enumerate(prices if isinstance(prices, list) else []):
-        where = f"{com['prices']}[{i}] {r.get('station_id')}"
-        if r.get("status") not in STATUS:
-            rep.err(where, "status fehlt oder ungültig")
-        if r.get("fuel") not in ("diesel", "petrol"):
-            rep.err(where, "fuel muss 'diesel' oder 'petrol' sein")
-        if not finite(r.get("price")) or not (PRICE_MIN <= r["price"] <= PRICE_MAX):
-            rep.err(where, f"Preis außerhalb {PRICE_MIN}–{PRICE_MAX} €/l: {r.get('price')!r}")
-        obs = r.get("observed")
-        if not (isinstance(obs, str) and ISO_DATE.match(obs)):
-            rep.err(where, "observed braucht ein Datum (JJJJ-MM-TT)")
-        elif obs[:10] > today:
-            rep.err(where, "observed liegt in der Zukunft")
-        if r.get("station_id") not in ids:
-            rep.err(where, "station_id unbekannt")
-
     if not args.quiet:
         print(f"Geprüft: {sum(counts.values())} OSM-Standorte "
               f"({counts['slip']} Slipanlagen, {counts['marina']} Marinas, {counts['fuel']} Tankstellen), "
-              f"{len(places)} Community-Standorte, {len(prices)} Preismeldungen"
+              f"{len(places)} Community-Standorte"
               f"{f', {n_extras} Extras' if n_extras else ''}.")
         unnamed = sum(1 for w in rep.warnings if w.endswith("ohne Namen"))
         other = [w for w in rep.warnings if not w.endswith("ohne Namen")]

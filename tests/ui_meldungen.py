@@ -198,6 +198,7 @@ def run(b, mobile):
     check(pg.locator('.wm-sheet.lf-sheet .lf-tile[aria-pressed=true]').count() == 1, f'{tag}: Einfachauswahl mit aria-pressed')
     pg.fill('#lf-note', 'Algen')
     check(pg.inner_text('.wm-sheet.lf-sheet .lf-count') == '5 / 140', f'{tag}: Zähler „5 / 140“')
+    send.evaluate("e => e.scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(200)   # kleines Handy: nicht unter der Navigation antippen
     send.click(); pg.wait_for_selector('.wm-sheet.lf-sheet', state='detached'); pg.wait_for_timeout(300)
     check(pg.inner_text('#detail .vo-status') == 'Rampe rutschig', f'{tag}: Detail zeigt sofort die neue Meldung')
     pg.evaluate("window.__watermap.state.user = null")
@@ -249,12 +250,14 @@ def run(b, mobile):
     pg.click('.wm-sheet.lf-sheet .wm-zu'); pg.wait_for_selector('.wm-sheet.lf-sheet', state='detached')
     check(pg.locator('#report-menu.is-offen').count() == 1, f'{tag}: Schließen führt zurück zu „Was möchtest du melden?“ (8.0.6)')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
-    # „Angaben ergänzen“ aus dem Menü: Standortauswahl nur Slipanlagen → Formular
+    # „Angaben ergänzen“ aus dem Menü: Standortauswahl Slipanlage oder Hafen (8.0.8) → Formular; Tankstelle nicht
     pg.click(opener); pg.wait_for_selector('#report-menu.is-offen')
     pg.locator('#report-menu .rm-item', has_text='Angaben ergänzen').click(); pg.wait_for_selector('#pickbar:not([hidden])')
-    check('Slipanlage, die du ergänzen' in pg.inner_text('#pickbar'), f'{tag}: „Angaben ergänzen“ startet die Standortauswahl')
-    r = pg.evaluate("window.__watermap.selectPlace('node/5000')"); pg.wait_for_timeout(150)
-    check(r is False and pg.locator('.wm-sheet.ae-sheet.is-offen').count() == 0, f'{tag}: Hafen wird für „Angaben ergänzen“ nicht angenommen')
+    check('Slipanlage oder den Hafen' in pg.inner_text('#pickbar'), f'{tag}: „Angaben ergänzen“ startet die Standortauswahl')
+    tanke = pg.evaluate("(window.__watermap.state.places.find(p => p.type === 'fuel') || {}).id || null")
+    if tanke:
+        r = pg.evaluate(f"window.__watermap.selectPlace({tanke!r})"); pg.wait_for_timeout(150)
+        check(r is False and pg.locator('.wm-sheet.ae-sheet.is-offen').count() == 0, f'{tag}: Tankstelle wird für „Angaben ergänzen“ nicht angenommen')
     pg.evaluate("window.__watermap.selectPlace('node/1')"); pg.wait_for_selector('.wm-sheet.ae-sheet.is-offen')
     check(pg.locator('.wm-sheet.ae-sheet.is-offen').count() == 1, f'{tag}: Formular „Angaben ergänzen“ öffnet für die gewählte Slipanlage')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(150)

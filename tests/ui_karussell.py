@@ -118,7 +118,7 @@ with sync_playwright() as p:
         pg.screenshot(path=str(SHOTS / f'karussell_{name}_kategorie.png'))
         # Reihenfolge bei Slipanlagen: Knöpfe · Etiketten · Fotos · Heute vor Ort · Boot · Wetter-Zeile · Rest
         folge = pg.evaluate("""() => { const b = document.querySelector('#detail .detail-body');
-          return ['.dbtns', '.dtags', '.photos, .ph-leer', '#heute-vor-ort', '.wb', '.wxz', '.st-fuss'].map(s => [...b.children].findIndex(e => e.matches(s))); }""")
+          return ['.dbtns', '.photos, .ph-leer', '#heute-vor-ort', '.wb', '.wxz', '.st-fuss'].map(s => [...b.children].findIndex(e => e.matches(s))); }""")
         check(all(i >= 0 for i in folge) and folge == sorted(folge), f'{name}: Reihenfolge Knöpfe · Etiketten · Fotos · Heute vor Ort · Boot · Wetter-Zeile · Rest ({folge})')
         check(pg.locator('#detail .wx-block').count() == 0, f'{name}: Wetter bei Slipanlagen nicht mehr als Abschnitt in der Seite')
         # „Foto hinzufügen“ direkt unter den Fotos; unten nur noch „Fehler melden“

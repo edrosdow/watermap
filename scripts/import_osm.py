@@ -912,7 +912,7 @@ def main(argv=None) -> int:
         "notice": None,
         "files": meta.get("files") or {
             "osm": [FILES[k] for k in CATEGORIES],
-            "community": {"places": "community/places.json", "overrides": "community/overrides.json", "prices": "community/prices.json"}},
+            "community": {"places": "community/places.json", "overrides": "community/overrides.json"}},
         "categories": {k: built["stats"][k] for k in CATEGORIES},
         "enrichment": enrich,
         "total": sum(s["final"] for s in built["stats"].values()),

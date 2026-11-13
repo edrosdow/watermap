@@ -32,7 +32,7 @@ import { imGebiet, gebietLaden } from './gebiet.js';
 import { sheetOeffnen, offeneSheets, kopf, marke, zeile, gruppe } from './bausteine.js';
 import { staffeln, merkFlug, sternPop, markerPlopp, hakenSvg } from './bewegung.js';
 import { pegelSheet, slipsAmPegel } from './pegel-sheet.js';
-import { weatherSection, wetterZeile } from './wetter.js';
+import { wetterZeile } from './wetter.js';
 import { GROUPS, loadExtras, renderExtraDetail } from './extras.js';
 import { enrichFacts } from './hafeninfo.js';
 import { sucheEinrichten } from './suche-ui.js';
@@ -478,7 +478,7 @@ function selectPlace(id, { fly = true, updateHash = true, full = false } = {}) {
   const p = state.byId.get(id);
   if (!p) return false;
   const pick = state.placePick;
-  if (pick && pick.type && p.type !== pick.type) { toast('Bitte eine Slipanlage antippen.'); return false; }
+  if (pick && pick.type && ![].concat(pick.type).includes(p.type)) { toast(PLACE_PICK[pick.formName]?.falsch || 'Bitte eine Slipanlage antippen.'); return false; }
   if (state.view !== 'karte') setView('karte');   // ein offener Bereich (Sheet) würde den Standort verdecken – Zurück holt ihn wieder
   pegelZu();
   if (state.extraId) { state.extraId = null; state.map?.selectExtra(null); }
@@ -499,7 +499,7 @@ function showDetail(p, { scrollTo = null, stufe = null } = {}) {
   const [kopf, body] = renderDetail(p, {
     user: state.user,
     enrichFacts: enrichFacts(state.meta, p.id),
-    weather: p.type === 'slip' ? wetterZeile(p.lat, p.lon, { name: displayName(p) }) : weatherSection(p.lat, p.lon),   // Slipanlagen: Zeile + Fenster
+    weather: wetterZeile(p.lat, p.lon, { name: displayName(p) }),   // 8.0.8: überall eine Zeile, Tipp öffnet das Wetter-Sheet
     actions: {
       close: closeDetail,
       onFavorite: (e) => {
@@ -1229,7 +1229,7 @@ const PLACE_PICK = {
   'lage-melden': { text: 'Tippe auf der Karte auf die Slipanlage, an der du gerade bist.', type: 'slip' },
   'foto-einreichen': { text: 'Tippe auf der Karte auf die Slipanlage, Marina oder Tankstelle, zu der das Foto gehört.' },
   'fehler-melden': { text: 'Tippe auf der Karte auf den Standort, zu dem du etwas melden möchtest.', general: true },
-  'slip-ergaenzen': { text: 'Tippe auf der Karte auf die Slipanlage, die du ergänzen möchtest.', type: 'slip' },
+  'slip-ergaenzen': { text: 'Tippe auf der Karte auf die Slipanlage oder den Hafen, den du ergänzen möchtest.', type: ['slip', 'marina'], falsch: 'Bitte eine Slipanlage oder einen Hafen antippen.' },
 };
 
 function choosePlaceFor(formName, preset = {}) {
@@ -1264,7 +1264,7 @@ function openReport(formName, preset = {}) {
   if (formName === 'slipanlage-melden' && !preset.lat && state.user) { /* Position wird nur auf Wunsch übernommen */ }
   closeMenu();
   if (formName === 'lage-melden') { const pl = state.byId.get(preset.standort_id); if (pl?.type === 'slip') lageMelden(pl); return; }
-  if (formName === 'slip-ergaenzen') { const pl = state.byId.get(preset.standort_id); if (pl?.type === 'slip') slipErgaenzen({ place: pl, toast }); return; }
+  if (formName === 'slip-ergaenzen') { const pl = state.byId.get(preset.standort_id); if (pl?.type === 'slip' || pl?.type === 'marina') slipErgaenzen({ place: pl, toast }); return; }
   openForm(formName, ctx, preset);
 }
 

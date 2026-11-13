@@ -165,8 +165,8 @@ with sync_playwright() as p:
         pg.wait_for_selector('#detail .facts-block .hi-note', timeout=8000)
         fb = pg.locator('#detail .facts-block')
         hi = fb.text_content()   # Überschrift in Großbuchstaben (CSS) – Text ohne Umwandlung
-        check('Eigenschaften' in hi and 'Liegeplatzgebühr' in hi and '3,00 € pro lfd. Meter und Tag' in hi and 'Fäkalienabsaugung' in hi and 'WLAN' in hi,
-              f'{name}: Website-Angaben als Zeilen der Eigenschaften')
+        check('Wichtig für dein Boot' in hi and 'Laut Website' in hi and 'Liegeplatzgebühr' in hi and '3,00 € pro lfd. Meter und Tag' in hi and 'Fäkalienabsaugung' in hi and 'WLAN' in hi,
+              f'{name}: Hafen wie Slip, Website-Angaben darunter (8.0.8)')
         check(pg.locator('#detail .facts-block .facts').count() == 1 and pg.locator('#detail .hi-block').count() == 0, f'{name}: eine Tabelle, kein eigener Block')
         check(pg.locator('#detail .facts-block dd.from-web .web-mark').count() == 3, f'{name}: Website-Werte markiert')
         check('darf nicht erscheinen' not in hi, f'{name}: unbekannte Schlüssel werden nicht gezeigt')
