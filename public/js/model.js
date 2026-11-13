@@ -18,7 +18,6 @@ export const ACCESS_LABEL = {
   private: 'Privat / gesperrt',
 };
 
-export const FUEL_LABEL = { diesel: 'Diesel', petrol: 'Benzin' };
 
 export const UNKNOWN = 'Nicht bekannt';
 
@@ -55,10 +54,6 @@ export function formatDate(s) {
 export function ageInDays(s, now = new Date()) {
   const d = parseISODate(s);
   return d ? Math.floor((now - d) / 86400000) : null;
-}
-
-export function formatPrice(n) {
-  return Number.isFinite(n) ? n.toFixed(2).replace('.', ',') + ' €/l' : null;
 }
 
 /** Nur http(s)-Adressen werden verlinkt. */
@@ -99,9 +94,8 @@ export const FILTERS = {
     { id: 'sanitary', label: 'Sanitäranlagen',       test: p => p.attrs.toilets === true || p.attrs.showers === true },
   ],
   fuel: [
-    { id: 'diesel',   label: 'Diesel',               test: p => p.attrs.diesel === true || !!p.prices?.diesel },
-    { id: 'petrol',   label: 'Benzin',               test: p => p.attrs.petrol === true || !!p.prices?.petrol },
-    { id: 'priced',   label: 'Preise vorhanden',     test: p => !!(p.prices?.diesel || p.prices?.petrol) },
+    { id: 'diesel',   label: 'Diesel',               test: p => p.attrs.diesel === true },
+    { id: 'petrol',   label: 'Benzin',               test: p => p.attrs.petrol === true },
   ],
 };
 
@@ -176,20 +170,39 @@ export function bootPunkte(p) {
   ];
 }
 
-/** Preis-Anzeige je Kraftstoff mit Aktualitätshinweis. */
-export function describePrices(p, now = new Date()) {
-  const out = [];
-  for (const kind of ['diesel', 'petrol']) {
-    const pr = p.prices?.[kind];
-    if (!pr) { out.push({ kind, label: FUEL_LABEL[kind], price: null }); continue; }
-    const age = ageInDays(pr.observed, now);
-    out.push({
-      kind, label: FUEL_LABEL[kind], price: formatPrice(pr.price),
-      observed: formatDate(pr.observed), age,
-      stale: age === null || age > CONFIG.PRICE_STALE_DAYS,
-    });
-  }
-  return out;
+/**
+ * „Wichtig für dein Boot“ bei Häfen (8.0.8): sechs Angaben mit Ampel wie bei Slipanlagen. Nichts wird erfunden.
+ * Restaurant, Öffnungszeiten und Betreiber stehen als Zusatzzeile darunter (hafenExtra).
+ */
+export function hafenPunkte(p) {
+  const a = p.attrs || {};
+  const pkt = (titel, wert, ton) => ({ titel, wert: wert || 'Unbekannt', ton: wert ? ton : 'unb' });
+  const zugang = { public: 'ok', permissive: 'ok', customers: 'warn', members: 'warn', permit: 'warn', private: 'stop' }[p.access];
+  const anzahl = Number.isFinite(a.berths) ? `${a.berths} Liegeplätze` : null;
+  const gast = a.visitor_berths === true ? [['Ja', anzahl].filter(Boolean).join(' · '), 'ok'] : a.visitor_berths === false ? [['Nein', anzahl].filter(Boolean).join(' · '), 'stop'] : [anzahl, 'warn'];
+  const zwei = (x, y, tx, ty) => {   // zwei Ja/Nein-Angaben zu einem Punkt: beide ja → ok, eine → warn, keine → stop
+    if (x === null && y === null) return [null];
+    const ja = [x === true ? tx : null, y === true ? ty : null].filter(Boolean);
+    const nein = [x === false ? `ohne ${tx}` : null, y === false ? `ohne ${ty}` : null].filter(Boolean);
+    return [[...ja, ...nein].join(' · '), ja.length === 2 ? 'ok' : ja.length ? 'warn' : nein.length ? 'stop' : 'warn'];
+  };
+  const strom = zwei(a.electricity, a.water_tap, 'Strom', 'Wasser');
+  const sanitaer = zwei(a.toilets, a.showers, 'Toiletten', 'Duschen');
+  const meister = a.harbour_master === true ? ['Ja', 'ok'] : a.harbour_master === false ? ['Nein', 'warn'] : [null];
+  return [
+    pkt('Zugang', p.access ? ACCESS_LABEL[p.access] : null, zugang || 'warn'),
+    pkt('Gastliegeplätze', gast[0], gast[1]),
+    pkt('Liegegebühr', a.berth_fee, 'ok'),
+    pkt('Strom und Wasser', strom[0], strom[1]),
+    pkt('Toiletten und Duschen', sanitaer[0], sanitaer[1]),
+    pkt('Hafenmeister', meister[0], meister[1]),
+  ];
+}
+
+/** Zusatzzeile unter den Hafen-Punkten. */
+export function hafenExtra(p) {
+  const a = p.attrs || {};
+  return [a.restaurant === true ? 'Restaurant' : null, p.opening_hours ? `Öffnungszeiten: ${p.opening_hours}` : null, p.operator ? `Betreiber: ${p.operator}` : null].filter(Boolean);
 }
 
 /** Zeile unter dem Namen: Ort und Gewässer, ehrlich benannt. */

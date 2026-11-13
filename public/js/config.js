@@ -1,6 +1,6 @@
 // Zentrale Einstellungen. Hier – und nur hier – werden Dienste und Grenzwerte angepasst.
 export const CONFIG = {
-  VERSION: '8.0.7',
+  VERSION: '8.0.8',
 
   // Datenquellen (relativ zur Seite). Welche Dateien geladen werden, steht in data/meta.json.
   DATA_BASE: './data/',
@@ -69,11 +69,6 @@ export const CONFIG = {
   MAX_PHOTO_BYTES: 5 * 1024 * 1024,
   PHOTO_MAX_EDGE_PX: 2000,
   SUBMIT_COOLDOWN_MS: 20000,   // einfache Bremse gegen Mehrfach-Absenden
-
-  // Preise
-  PRICE_STALE_DAYS: 14,
-  PRICE_MIN: 0.5,
-  PRICE_MAX: 5,
 
   // Bibliotheken (Leaflet + MarkerCluster). Standard: CDN mit Ausweichadresse.
   // Selbst hosten (empfohlen für Produktion, siehe docs/INSTALLATION.md): `python3 scripts/vendor_libs.py`

@@ -169,7 +169,10 @@ export function hintView(s) {
 }
 
 // „Angaben ergänzen“ (public/js/slip-ergaenzen.js): erlaubte Werte → Felder in community/overrides.json
+// Häfen seit 8.0.8: gast, strom, wasser, toiletten, duschen, hafenmeister (Ja/Nein) und liegegeld (freier Text, wie fee_note).
+const jn = (attr) => ({ ja: ['Ja', null, { [attr]: true }], nein: ['Nein', null, { [attr]: false }] });
 const ERGAENZUNG = {
+  gast: jn('visitor_berths'), strom: jn('electricity'), wasser: jn('water_tap'), toiletten: jn('toilets'), duschen: jn('showers'), hafenmeister: jn('harbour_master'),
   access: { public: ['Öffentlich', { access: 'public' }], customers: ['Nur Kunden', { access: 'customers' }], members: ['Nur Mitglieder', { access: 'members' }], private: ['Privat', { access: 'private' }] },
   fee: { kostenlos: ['Kostenlos', { fee: false, fee_note: null }], kostenpflichtig: ['Kostenpflichtig', { fee: true }] },
   surface: Object.fromEntries(['Beton', 'Pflaster', 'Asphalt', 'Kies', 'Holz', 'Naturboden'].map(v => [v, [v, null, { surface: v }]])),
@@ -180,7 +183,7 @@ const ERGAENZUNG = {
   boote: { bis5: ['bis 5 m', null, { suitable_boats: 'bis 5 m' }], bis7: ['bis 7 m', null, { suitable_boats: 'bis 7 m' }], bis9: ['bis 9 m', null, { suitable_boats: 'bis 9 m' }],
     groesser: ['größer als 9 m', null, { suitable_boats: 'größer als 9 m' }] },
 };
-const ERG_TITEL = { access: 'Zugang', fee: 'Gebühr', surface: 'Belag', incline: 'Neigung', trailer: 'Trailer parken', motorboat: 'Motorboote', boote: 'Bootsgröße' };
+const ERG_TITEL = { gast: 'Gastliegeplätze', strom: 'Strom', wasser: 'Wasser', toiletten: 'Toiletten', duschen: 'Duschen', hafenmeister: 'Hafenmeister', access: 'Zugang', fee: 'Gebühr', surface: 'Belag', incline: 'Neigung', trailer: 'Trailer parken', motorboat: 'Motorboote', boote: 'Bootsgröße' };
 
 /** Angaben aus dem Formular prüfen → { fields, attrs, liste: [[Titel, Text]] }; Unbekanntes fällt weg. */
 export function ergaenzungLesen(roh) {
@@ -194,6 +197,10 @@ export function ergaenzungLesen(roh) {
     const [anzeige, f, at] = e;
     Object.assign(fields, f || {}); Object.assign(attrs, at || {});
     liste.push([ERG_TITEL[k], anzeige]);
+  }
+  if (typeof a.liegegeld === 'string' && a.liegegeld.trim()) {
+    attrs.berth_fee = text(a.liegegeld.replace(/[<>]/g, ''), 80);
+    liste.push(['Liegegebühr', attrs.berth_fee]);
   }
   if (fields.fee === true && typeof a.fee_note === 'string' && a.fee_note.trim()) {
     fields.fee_note = text(a.fee_note.replace(/[<>]/g, ''), 80);

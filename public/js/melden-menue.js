@@ -73,7 +73,7 @@ export function meldenEinrichten(ctx) {
       abschnitt('Standort verbessern'),
       gruppe([
         item('camera', 'rm-foto', 'Foto einreichen', 'Zeig anderen, wie es dort aussieht', () => choosePlaceFor('foto-einreichen')),
-        item('doc', 'rm-ergaenzen', 'Angaben ergänzen', 'Gebühr, Rampe, Parken …', () => choosePlaceFor('slip-ergaenzen'), { online: true }),
+        item('doc', 'rm-ergaenzen', 'Angaben ergänzen', 'Slipanlage oder Hafen: Gebühr, Strom, Parken …', () => choosePlaceFor('slip-ergaenzen'), { online: true }),
         item('plus', 'rm-slip', 'Neue Slipanlage melden', 'Fehlt eine auf der Karte?', () => openReport('slipanlage-melden'))], { label: 'Standort verbessern' }),
       abschnitt('Fehler und Hinweise'),
       gruppe([

@@ -305,6 +305,10 @@ assert.equal(slug('Slip „Großer Müggelsee“ – Nord'), 'slip-grosser-mugge
   assert.deepEqual(e.attrs, { surface: 'Beton', trailer_parking: true, trailer_note: 'in der Nähe', motorboat: false, suitable_boats: 'bis 7 m' });
   assert.deepEqual(e.liste.map(x => x[0]), ['Zugang', 'Gebühr', 'Belag', 'Trailer parken', 'Motorboote', 'Bootsgröße', 'Betrag'], 'unbekannter Wert (Neigung „quer“) fällt weg');
   assert.deepEqual(ergaenzungLesen('kaputt').liste, []);
+  // Häfen (8.0.8): Ja/Nein-Angaben und Liegegebühr als Text (ohne HTML)
+  { const h = ergaenzungLesen(JSON.stringify({ gast: 'ja', strom: 'nein', wasser: 'ja', toiletten: 'ja', duschen: 'nein', hafenmeister: 'ja', liegegeld: '<i>1,50 €</i> pro m', gast2: 'x' }));
+    assert.deepEqual(h.attrs, { visitor_berths: true, electricity: false, water_tap: true, toilets: true, showers: false, harbour_master: true, berth_fee: 'i1,50 €/i pro m' });
+    assert.equal(h.liste.length, 7); assert.deepEqual(h.liste[6], ['Liegegebühr', 'i1,50 €/i pro m']); }
   assert.deepEqual(ergaenzungLesen(JSON.stringify({ access: '__proto__' })).liste, []);
   const ov = ergaenzungEintragen([{ id: 'node/1', status: 'approved', photos: [{ url: 'photos/a.jpg' }], fields: { fee: true, fee_note: 'alt' } }],
     'node/1', ergaenzungLesen(JSON.stringify({ fee: 'kostenlos', trailer: 'ja' })), '2026-10-26');

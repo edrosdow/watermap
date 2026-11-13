@@ -3,9 +3,8 @@
 import { h } from './dom.js';
 import { aktionen, zeile, gruppe } from './bausteine.js';
 import { icon } from './icons.js';
-import { TYPES, UNKNOWN, FILTERS, displayName, describeFacts, describePrices, bootPunkte, formatDate, navUrl, osmUrl, safeHttpUrl, safeTel, formatDistance, haversine } from './model.js';
+import { TYPES, UNKNOWN, displayName, describeFacts, bootPunkte, hafenPunkte, hafenExtra, formatDate, navUrl, osmUrl, safeHttpUrl, safeTel, formatDistance, haversine } from './model.js';
 import { favorites } from './favorites.js';
-import { CONFIG } from './config.js';
 import { photoCarousel } from './photos.js';
 
 /**
@@ -20,14 +19,13 @@ export function factList(rows) {
     const web = f.web || [];
     const known = isKnown(f);
     const hide = known ? null : 'is-unknown';
-    return [
+    return h('div', { class: 'af-p' + (known ? '' : ' is-unknown') },   // 8.0.8: Kachel je Angabe
       h('dt', { class: hide, text: f.label }),
       h('dd', { class: known ? (web.length ? 'from-web' : null) : 'unknown is-unknown' },
         f.value && !web.length ? f.value : null,
         !known ? UNKNOWN : null,
         f.value && f.web && !web.length ? webMark() : null,                 // aus der Website abgeleitet („Ja“)
-        web.map(w => h('span', { class: 'web-line', title: w.quote ? `„${w.quote}“` : null }, w.value, webMark()))),
-    ];
+        web.map(w => h('span', { class: 'web-line', title: w.quote ? `„${w.quote}“` : null }, w.value, webMark()))));
   }));
   const wrap = h('div', { class: 'facts-list' }, unknown === rows.length ? h('p', { class: 'unknown facts-none', text: 'Noch keine Angaben bekannt.' }) : null, dl);
   if (unknown) {
@@ -48,15 +46,6 @@ function webMark() {
   return h('span', { class: 'web-mark', html: icon('globe', 13), title: 'laut Website des Hafens', 'aria-label': '(laut Website)', role: 'img' });
 }
 
-/** Bis zu `max` Merkmal-Etiketten aus den Filtern (nur bestätigte Angaben), z. B. „Kostenlos“, „Öffentlich“. */
-export function placeTags(p, max = 3) {
-  return (FILTERS[p.type] || []).filter(d => d.test(p)).slice(0, max).map(d => ({ text: d.label, good: d.id === 'free' }));
-}
-
-export function tagRow(tags) {
-  return tags.length ? h('div', { class: 'dtags' }, tags.map(t => h('span', { class: 'dtag' + (t.good ? ' is-good' : '') + (t.cls ? ' ' + t.cls : ''), text: t.text }))) : null;
-}
-
 /** Kopf-Angaben für den Sheet-Rahmen: Name, „Slipanlage · Weser · 4,3 km“. */
 export function detailKopf(p, user) {
   const dist = user ? haversine(user.lat, user.lon, p.lat, p.lon) : null;
@@ -72,8 +61,7 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
   // 8.0.5: Ort steht im Kopf, Herkunft („OpenStreetMap · ungeprüft“) in der Quellenzeile ganz unten
   if (vorOrt?.zeile) body.append(vorOrt.zeile);   // wichtigste Lagemeldung („Heute vor Ort“)
   const slip = p.type === 'slip';
-  const tags = tagRow(placeTags(p, 4));
-  if (tags && !slip) body.append(tags);   // Slipanlagen: Etiketten erst nach den Knöpfen
+  // 8.0.8 (Nutzer): keine Etiketten mehr – dieselben Angaben stehen in „Wichtig für dein Boot“ bzw. „Ausstattung“
 
   // Aktionsleiste (Bausteine): Route (primär) · Merken · Teilen
   const leiste = aktionen([
@@ -91,7 +79,6 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
   body.append(leiste);
   // Handy, Stufe „klein“: „Details“ öffnet die Stufe „groß“; bis hierher reicht die Stufe „klein“
   body.append(h('button', { type: 'button', class: 'wm-btn is-primaer st-details', onclick: actions.details }, 'Details'), h('span', { class: 'st-klein-ende', 'aria-hidden': 'true' }));
-  if (tags && slip) body.append(tags);
 
   // Pegel am selben Gewässer (wird nachgeladen; ohne Pegel bleibt der Platz leer)
   const pegelTeil = () => {
@@ -123,52 +110,49 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
     const wxOben = h('span', { hidden: true });   // Platz für die Wetter-Zeile, wenn eine amtliche Warnung vorliegt
     body.append(wxOben);
     pegelTeil();
-    body.append(bootBox(p, actions));
+    body.append(punkteBox(bootPunkte(p), [p.opening_hours ? `Öffnungszeiten: ${p.opening_hours}` : null, p.operator ? `Betreiber: ${p.operator}` : null].filter(Boolean), actions));
     if (weather?.zeile) {
       body.append(weather.zeile);
       weather.warnung.then((warnung) => { if (warnung) wxOben.replaceWith(weather.zeile); });
     }
   } else {
-    pegelTeil();
-    // „Heute vor Ort“ direkt unter Titel und Knöpfen, vor Fotos und Wetter
-    if (vorOrt?.section) body.append(vorOrt.section);
+    // Hafen, Tankstelle, Zusatzorte (8.0.8): wie beim Slip – Fotos → Heute vor Ort → Pegel → Ausstattung → Wetter-Zeile → Kontakt → Rest
     fotenTeil();
+    if (vorOrt?.section) body.append(vorOrt.section);
+    pegelTeil();
+    // Häfen (8.0.8, Nutzer): „Wichtig für dein Boot“ wie bei Slipanlagen, mit „Ergänzen“; Angaben laut Website darunter.
+    // Tankstellen und Zusatzorte: „Ausstattung“ als Kacheln.
+    let factsBlock;
+    if (p.type === 'marina') {
+      factsBlock = punkteBox(hafenPunkte(p), hafenExtra(p), actions);
+      factsBlock.classList.add('facts-block');
+      const web = h('div', { class: 'facts-list hb-web' });   // Platz für die Website-Angaben (enrichFacts ersetzt ihn)
+      factsBlock.querySelector('.wb-fuss').before(web);
+      if (enrichFacts) enrichFacts(factsBlock, describeFacts(p), (rows) => webListe(rows));
+    } else {
+      const facts = describeFacts(p);
+      factsBlock = h('section', { class: 'block facts-block af-karte', 'aria-labelledby': 'af-titel' }, h('h3', { id: 'af-titel', text: 'Ausstattung' }), factList(facts));
+      if (enrichFacts) enrichFacts(factsBlock, facts, factList);
+    }
+    body.append(factsBlock);
+    if (weather?.zeile) {
+      body.append(weather.zeile);
+      weather.warnung.then((warnung) => { if (warnung) factsBlock.before(weather.zeile); });   // amtliche Warnung rückt nach oben
+    }
   }
 
   if (p.description) body.append(h('p', { class: 'desc', text: p.description }));
 
-  if (weather && !slip) body.append(weather);
-
-  // Preise (nur Bootstankstellen)
-  if (p.type === 'fuel') {
-    const rows = describePrices(p);
-    body.append(h('section', { class: 'block' }, h('h3', { text: 'Kraftstoffpreise' }),
-      h('div', { class: 'prices' }, rows.map(r => h('div', { class: 'price' + (r.stale ? ' is-stale' : '') },
-        h('span', { class: 'price-label', text: r.label }),
-        r.price
-          ? [h('strong', { text: r.price }), h('span', { class: 'price-date', text: `gemeldet am ${r.observed || 'unbekanntem Datum'}` }),
-             r.stale ? h('span', { class: 'price-warn', text: r.age === null ? 'Aktualität unklar' : `Älter als ${CONFIG.PRICE_STALE_DAYS} Tage – möglicherweise nicht mehr aktuell` }) : null]
-          : h('span', { class: 'unknown', text: 'Kein Preis gemeldet' }))))));
-  }
-
-  // Fakten (Hafeninfos von der Website füllen die Tabelle nach, sobald sie geladen sind) – bei Slipanlagen steht alles in „Wichtig für dein Boot“
-  if (!slip) {
-    const facts = describeFacts(p);
-    const factsBlock = h('section', { class: 'block facts-block' }, h('h3', { text: 'Eigenschaften' }), factList(facts));
-    body.append(factsBlock);
-    if (enrichFacts) enrichFacts(factsBlock, facts, factList);
-  }
+  // Kontakt als Ortszeilen in einer weißen Gruppe (8.0.8)
+  const kontakt = [];
+  const web = safeHttpUrl(p.website);
+  if (web) kontakt.push(Object.assign(zeile({ ico: 'globe', titel: 'Website', unter: web.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''), href: web }), { target: '_blank', rel: 'noopener noreferrer' }));
+  const tel = safeTel(p.phone);
+  if (tel) kontakt.push(zeile({ ico: 'phone', titel: 'Anrufen', unter: p.phone, href: 'tel:' + tel }));
+  if (p.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) kontakt.push(zeile({ ico: 'mail', titel: 'E-Mail', unter: p.email, href: 'mailto:' + p.email }));
+  if (kontakt.length) { const g = gruppe(kontakt, { label: 'Kontakt' }); g.classList.add('st-kontakt'); body.append(g); }
 
   if (nearby) body.append(nearby);
-
-  // Kontakt
-  const contacts = [];
-  const web = safeHttpUrl(p.website);
-  if (web) contacts.push(h('a', { class: 'contact', href: web, target: '_blank', rel: 'noopener noreferrer', title: web.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''), html: icon('globe', 18) }, h('span', { text: 'Website' })));
-  const tel = safeTel(p.phone);
-  if (tel) contacts.push(h('a', { class: 'contact', href: 'tel:' + tel, title: p.phone, html: icon('phone', 18) }, h('span', { text: 'Anrufen' })));
-  if (p.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) contacts.push(h('a', { class: 'contact', href: 'mailto:' + p.email, title: p.email, html: icon('external', 18) }, h('span', { text: 'E-Mail' })));
-  if (contacts.length) body.append(h('section', { class: 'block' }, h('h3', { text: 'Kontakt' }), h('div', { class: 'contacts contact-chips' }, contacts)));
 
   // Ende (8.0.5): eine kleine graue Fußzeile – Koordinaten mit „Kopieren“, Quelle mit Herkunft und Hinweis, „Fehler melden“
   const coords = `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`;
@@ -188,12 +172,19 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
   return [detailKopf(p, user), body];
 }
 
-/** „Wichtig für dein Boot“: sechs Angaben mit Ampel (Text, nie nur Farbe), fehlende Angaben zum Ergänzen. */
-function bootBox(p, actions) {
-  const punkte = bootPunkte(p);
+/** Nur die Angaben laut Website (Hafeninfos) als kleine Liste unter den Hafen-Punkten. */
+function webListe(rows) {
+  const web = rows.filter(f => (f.web || []).length);
+  if (!web.length) return h('div', { class: 'facts-list hb-web' });
+  return h('div', { class: 'facts-list hb-web' }, h('p', { class: 'hb-web-titel', text: 'Laut Website des Hafens' }),
+    h('dl', { class: 'facts' }, web.map(f => h('div', { class: 'af-p' }, h('dt', { text: f.label }),
+      h('dd', { class: 'from-web' }, f.web.map(w => h('span', { class: 'web-line', title: w.quote ? `„${w.quote}“` : null }, w.value, webMark())))))));
+}
+
+/** „Wichtig für dein Boot“ (Slipanlage und Hafen): sechs Angaben mit Ampel (Text, nie nur Farbe), fehlende Angaben zum Ergänzen. */
+function punkteBox(punkte, extra, actions) {
   const fehlen = punkte.filter(x => x.ton === 'unb').length;
   const TON = { ok: 'passt', warn: 'mit Einschränkung', stop: 'nicht möglich', unb: 'unbekannt' };
-  const extra = [p.opening_hours ? `Öffnungszeiten: ${p.opening_hours}` : null, p.operator ? `Betreiber: ${p.operator}` : null].filter(Boolean);
   return h('section', { class: 'wb', 'aria-labelledby': 'wb-titel' },
     h('h3', { class: 'wm-abschnitt wb-titel', id: 'wb-titel', text: 'Wichtig für dein Boot' }),
     h('ul', { class: 'wb-liste' }, punkte.map(x => h('li', { class: `wb-p is-${x.ton}` },

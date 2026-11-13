@@ -331,13 +331,6 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -.01em; margin: 0; }
 .facts { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 0; margin: 0; font-size: var(--wm-t-s); }
 .facts dt, .facts dd { margin: 0; padding: 8px 0; border-bottom: 1px solid var(--wm-flaeche-2); }
 .facts dt { color: var(--wm-matt); padding-right: 12px; }
-.prices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.price { border: 1px solid var(--wm-linie); border-radius: var(--wm-r-s); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
-.price strong { font-size: var(--wm-t-l); font-variant-numeric: tabular-nums; }
-.price-label { font-size: var(--wm-t-xs); color: var(--wm-matt); font-weight: 700; }
-.price-date { font-size: var(--wm-t-xs); color: var(--wm-matt); }
-.price.is-stale { border-color: var(--wm-warn-rand); background: var(--wm-warn-hell); }
-.price-warn { font-size: var(--wm-t-xs); color: var(--wm-warn-text); font-weight: 700; }
 .contacts { display: flex; flex-direction: column; gap: 4px; }
 .contact { display: flex; gap: 10px; align-items: center; min-height: 40px; word-break: break-word; }
 .coords { margin: 0; font-variant-numeric: tabular-nums; color: var(--wm-matt); }
@@ -355,11 +348,6 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -.01em; margin: 0; }
 @keyframes tip-in { from { opacity: 0; transform: translateY(-3px); } }
 
 /* Kopf und Aktionen im Detailpanel (Entwurf A) */
-.dtags { display: flex; flex-wrap: wrap; gap: 6px; }
-.dtag { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: var(--wm-r-rund); background: var(--wm-flaeche-2); color: var(--wm-matt); font-size: var(--wm-t-s); font-weight: 700; }
-.dtag.is-good { background: var(--wm-gut-hell); color: var(--wm-gut-text); }
-.dtag.is-warn { background: var(--wm-warn-hell); color: var(--wm-warn-text); }
-.dtag.is-bad { background: var(--wm-stop-hell); color: var(--wm-stop-text); }
 .pegel-box { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: var(--wm-r-s); background: var(--wm-warn-hell); border: 1px solid var(--wm-warn-rand); }
 .pegel-box.is-gruen { background: var(--wm-gut-hell); border-color: var(--wm-gut-rand); }
 .pegel-box.is-rot { background: var(--wm-stop-hell); border-color: var(--wm-stop-rand); }
@@ -956,3 +944,30 @@ input.hat-x { padding-right: calc(var(--x-rechts, 2px) + 44px) !important; }
 .st-fuss .detail-links { display: inline; padding: 0; }
 .st-fuss-link, .st-fuss .detail-links .st-fuss-link { display: inline; min-height: 0; padding: 0; border: 0; background: none; color: var(--wm-petrol-tief); font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
 .st-fuss-link:hover { text-decoration: underline; }
+
+/* Außerhalb der Karte (z. B. Zusatzorte) bleibt die zweispaltige Tabelle: die Kachel-Hülle zählt dort nicht */
+.facts .af-p { display: contents; }
+/* Ausstattung (8.0.8): Karte wie „Wichtig für dein Boot“ – je Angabe eine Kachel, bekannt fett, unbekannt grau */
+.af-karte { gap: 0; padding: var(--wm-3) var(--wm-3) var(--wm-2); border-radius: var(--wm-r-m); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
+.af-karte h3 { margin: 0 var(--wm-1) var(--wm-2); font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-matt); }
+.af-karte .facts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--wm-2); font-size: var(--wm-t-s); }
+.af-karte .af-p { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: var(--wm-2) var(--wm-3); border-radius: var(--wm-r-s); background: var(--wm-flaeche-2); }
+.af-karte .facts dt, .af-karte .facts dd { margin: 0; padding: 0; border: 0; }
+.af-karte .facts dt { font-size: var(--wm-t-xs); color: var(--wm-matt); }
+.af-karte .facts dd { font-size: var(--wm-t-m); font-weight: 700; color: var(--wm-tinte); overflow-wrap: anywhere; }
+.af-karte .facts dd.unknown { font-weight: 400; color: var(--wm-matt); }
+.af-karte .facts-list:not(.show-all) .af-p.is-unknown { display: none; }
+.af-karte .facts-more { align-self: stretch; min-height: 44px; margin: var(--wm-1) 0 0; padding: 0 var(--wm-1); text-align: left; border-top: 1px solid var(--wm-linie); font-size: var(--wm-t-s); }
+.af-karte .facts-none { padding: var(--wm-1); color: var(--wm-matt); }
+.af-karte .hi-note { margin: var(--wm-2) var(--wm-1) 0; }
+
+/* Hafen (8.0.8): Angaben laut Website unter den sechs Punkten von „Wichtig für dein Boot“ */
+.wb .hb-web { padding: 0 var(--wm-3) var(--wm-3); }
+.wb .hb-web:empty { display: none; }
+.wb .hb-web-titel { margin: 0 var(--wm-1) var(--wm-2); font-size: var(--wm-t-xs); font-weight: 700; color: var(--wm-matt); }
+.wb .hb-web .facts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--wm-2); margin: 0; }
+.wb .hb-web .af-p { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: var(--wm-2) var(--wm-3); border-radius: var(--wm-r-s); background: var(--wm-flaeche-2); }
+.wb .hb-web dt, .wb .hb-web dd { margin: 0; padding: 0; border: 0; }
+.wb .hb-web dt { font-size: var(--wm-t-xs); color: var(--wm-matt); }
+.wb .hb-web dd { font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-tinte); overflow-wrap: anywhere; }
+.wb > .hi-note { margin: 0 var(--wm-4) var(--wm-3); }

@@ -62,7 +62,6 @@ export function normalizePlace(raw, source) {
       payment: Array.isArray(a.payment) ? a.payment.filter(x => typeof x === 'string').slice(0, 8) : null,
     },
     photos: [],
-    prices: {},
     osm: raw.osm && raw.osm.type && raw.osm.id ? { type: String(raw.osm.type), id: Number(raw.osm.id), timestamp: str(raw.osm.timestamp) } : null,
     updated: str(raw.updated) || str(raw.imported) || null,
     community_fields: [],
@@ -100,26 +99,6 @@ function applyOverride(place, ov) {
   if (ov.updated) place.updated = ov.updated;
 }
 
-/** Aktuellster freigegebener Preis je Tankstelle und Kraftstoff. Ältere bleiben in der Datei erhalten. */
-function applyPrices(byId, reports) {
-  const latest = new Map();
-  for (const r of reports) {
-    if (!r || r.status !== 'approved') continue;
-    if (!['diesel', 'petrol'].includes(r.fuel)) continue;
-    const price = num(r.price);
-    if (price === null || price < CONFIG.PRICE_MIN || price > CONFIG.PRICE_MAX) continue;
-    if (!byId.has(r.station_id)) continue;
-    const key = r.station_id + '|' + r.fuel;
-    const cur = latest.get(key);
-    if (!cur || String(r.observed) > String(cur.observed)) latest.set(key, r);
-  }
-  for (const [key, r] of latest) {
-    const p = byId.get(r.station_id);
-    p.prices[r.fuel] = { price: r.price, observed: r.observed };
-    p.community_fields.push('price');
-  }
-}
-
 /**
  * Lädt alles. Wirft nur, wenn GAR keine Standortdatei lesbar war.
  * Einzelne fehlende Dateien werden in `issues` gemeldet, die App bleibt nutzbar.
@@ -139,9 +118,9 @@ export async function loadAll() {
     catch (e) { issues.push(`${path}: ${e.message}`); return { path, json: null }; }
   };
 
-  const [osm, places, overrides, prices] = await Promise.all([
+  const [osm, places, overrides] = await Promise.all([   // Kraftstoffpreise gibt es seit 8.0.8 nicht mehr in der App
     Promise.all(osmFiles.map(settle)),
-    settle(comFiles.places), settle(comFiles.overrides), settle(comFiles.prices),
+    settle(comFiles.places), settle(comFiles.overrides),
   ]);
 
   if (osm.every(r => r.json === null)) {
@@ -165,7 +144,6 @@ export async function loadAll() {
     const p = ov && byId.get(ov.id);
     if (p && ov.status === 'approved') applyOverride(p, ov);
   }
-  applyPrices(byId, asRecords(prices.json));
 
   return { places: [...byId.values()], meta, issues, invalid };
 }
