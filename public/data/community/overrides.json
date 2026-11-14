@@ -90,7 +90,7 @@
     "id": "node/1970416169",
     "status": "approved",
     "fields": {
-      "access": "customers"
+      "access": "members"
     },
     "attrs": {
       "visitor_berths": true,
