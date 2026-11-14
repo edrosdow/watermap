@@ -174,6 +174,12 @@ with sync_playwright() as p:
         check('Wichtig für dein Boot' in hi and 'Laut Website' not in hi and pg.locator('#detail .hb-web, #detail .web-line, #detail .facts').count() == 0, f'{name}: kein Block „Laut Website“ mehr ({hi[:120]!r})')
         check(punkte.get('Gastliegeplätze', '').startswith('Ja') and punkte.get('Liegegebühr') == '3 € je Meter und Nacht' and 'Toiletten' in punkte.get('Toiletten und Duschen', ''),
               f'{name}: Website füllt Gastliegeplätze, Liegegebühr (kurz) und Toiletten ({punkte})')
+        ampel = pg.evaluate("""() => import('./js/model.js').then(m => [
+            { electricity: true }, { electricity: true, water_tap: false }, { electricity: false }, { electricity: true, water_tap: true }, {}]
+            .map(attrs => { const x = m.hafenPunkte({ attrs })[3]; return [x.wert, x.ton]; }))""")
+        check(ampel == [['Strom', 'ok'], ['Strom · ohne Wasser', 'warn'], ['ohne Strom', 'stop'], ['Strom · Wasser', 'ok'], ['Unbekannt', 'unb']],
+              f'{name}: Strom und Wasser – unbekannt schränkt nicht ein, nur ein ausdrückliches Nein (8.0.12) ({ampel})')
+        check(fb.locator('.wb-p', has_text='Toiletten und Duschen').get_attribute('class').endswith('is-ok'), f'{name}: nur Toiletten bekannt → grün')
         check('Fäkalien' not in hi and 'WLAN' not in hi and 'kostenlos' not in hi and 'darf nicht erscheinen' not in hi, f'{name}: andere Website-Angaben werden nicht gezeigt')
         check('Teilweise laut Website des Hafens' in hi and 'marina-test.de' in hi and 'ohne Gewähr' in hi and '20.10.2026' in hi, f'{name}: Herkunftszeile mit Quelle, Datum und Hinweis')
         check(not pg.evaluate('window.__xss') and pg.locator('#detail .facts-block img').count() == 0, f'{name}: HTML in Daten wird nicht eingefügt')

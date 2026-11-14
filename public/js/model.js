@@ -180,11 +180,13 @@ export function hafenPunkte(p) {
   const zugang = { public: 'ok', permissive: 'ok', customers: 'warn', members: 'warn', permit: 'warn', private: 'stop' }[p.access];
   const anzahl = Number.isFinite(a.berths) ? `${a.berths} Liegeplätze` : null;
   const gast = a.visitor_berths === true ? [['Ja', anzahl].filter(Boolean).join(' · '), 'ok'] : a.visitor_berths === false ? [['Nein', anzahl].filter(Boolean).join(' · '), 'stop'] : [anzahl, 'warn'];
-  const zwei = (x, y, tx, ty) => {   // zwei Ja/Nein-Angaben zu einem Punkt: beide ja → ok, eine → warn, keine → stop
-    if (x === null && y === null) return [null];
+  // zwei Ja/Nein-Angaben zu einem Punkt. 8.0.12 (Nutzer): nur ein ausdrückliches „Nein“ schränkt ein – unbekannt zählt nicht dagegen.
+  // nur ja (auch wenn die andere unbekannt ist) → ok, ja und nein → warn, nur nein → stop
+  const zwei = (x, y, tx, ty) => {
     const ja = [x === true ? tx : null, y === true ? ty : null].filter(Boolean);
     const nein = [x === false ? `ohne ${tx}` : null, y === false ? `ohne ${ty}` : null].filter(Boolean);
-    return [[...ja, ...nein].join(' · '), ja.length === 2 ? 'ok' : ja.length ? 'warn' : nein.length ? 'stop' : 'warn'];
+    if (!ja.length && !nein.length) return [null];
+    return [[...ja, ...nein].join(' · '), nein.length ? (ja.length ? 'warn' : 'stop') : 'ok'];
   };
   const strom = zwei(a.electricity, a.water_tap, 'Strom', 'Wasser');
   const sanitaer = zwei(a.toilets, a.showers, 'Toiletten', 'Duschen');
