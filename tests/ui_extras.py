@@ -27,7 +27,10 @@ slips = json.loads((ROOT / 'data/osm/slip.geojson').read_text(encoding='utf-8'))
 ANCHOR = next(f for f in slips if f['properties'].get('name') and 50.5 < f['geometry']['coordinates'][1] < 52)
 LON, LAT = ANCHOR['geometry']['coordinates']
 # Hafeninfos gibt es nur für Häfen (Slipanlagen zeigen „Wichtig für dein Boot“ statt der Eigenschaften-Tabelle)
-HAFEN = next(f for f in json.loads((ROOT / 'data/osm/marina.geojson').read_text(encoding='utf-8'))['features'] if f['properties'].get('name'))
+# 8.0.10: ein Hafen, bei dem Gastliegeplätze, Liegegebühr und Toiletten noch unbekannt sind (die Website füllt nur Unbekanntes)
+HAFEN = next(f for f in json.loads((ROOT / 'data/osm/marina.geojson').read_text(encoding='utf-8'))['features'] if f['properties'].get('name')
+             and (f['properties'].get('attrs') or {}).get('visitor_berths') is None and not (f['properties'].get('attrs') or {}).get('berth_fee')
+             and (f['properties'].get('attrs') or {}).get('toilets') is None)
 D = 0.0009   # ≈ 100 m
 
 def feat(i, kind, dlat, dlon, **p):
@@ -56,6 +59,7 @@ HAFENINFO = json.dumps({'generated': '2026-10-20', 'places': {HAFEN['id']: {
     'checked': '2026-10-20', 'status': 'ok', 'source': 'https://www.marina-test.de/', 'facts': [
         {'key': 'gast_liegeplatz', 'value': '3,00 € pro lfd. Meter und Tag (mind. 7 m), inkl. Strom', 'price_eur': 3.0,
          'quote': '3,00 € / lfd. Meter / Tag (Berechnung mind. 7m) inkl. Strom', 'url': 'https://www.marina-test.de/hafen/'},
+        {'key': 'toiletten', 'value': 'Kostenlose Nutzung der Sanitäranlagen', 'price_eur': None, 'quote': 'Sanitäranlagen kostenlos', 'url': 'https://www.marina-test.de/hafen/'},
         {'key': 'faekalien', 'value': '15,00 € pro Tank (bis 300 l)', 'price_eur': 15.0, 'quote': '15,00 € Fäkalienabsaugung pro Tank (bis 300L)', 'url': 'https://www.marina-test.de/hafen/'},
         {'key': 'wlan', 'value': '<img src=x onerror="window.__xss=1">kostenlos', 'price_eur': None, 'quote': 'WLAN - kostenlos', 'url': 'https://www.marina-test.de/hafen/'},
         {'key': 'unbekannt', 'value': 'darf nicht erscheinen', 'price_eur': None, 'quote': 'x', 'url': 'https://www.marina-test.de/'}]}}})
@@ -160,19 +164,25 @@ with sync_playwright() as p:
         check(pg.locator('#detail .nearby-list').count() == 0 and 'Umgebung (bis' not in pg.inner_text('#detail'), f'{name}: keine Liste „Umgebung“ im Standort-Detail')
         check(not live['queries'], f'{name}: keine Live-Abfrage der Umgebung')
 
-        # Hafeninfos laut Website füllen die Eigenschaften-Tabelle (Hafen)
+        # Hafeninfos laut Website (8.0.10): kein eigener Block mehr – sie füllen nur unbekannte Punkte von „Wichtig für dein Boot“,
+        # und nur solche, die es auch in „Angaben ergänzen“ gibt (Gastliegeplätze, Liegegebühr, Strom, Wasser, Toiletten, Duschen, Hafenmeister)
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(HAFEN['id'])}, {{ full: true }})")
-        pg.wait_for_selector('#detail .facts-block .hi-note', timeout=8000)
+        pg.wait_for_selector('#detail .facts-block .wb-herkunft', timeout=8000)
         fb = pg.locator('#detail .facts-block')
-        hi = fb.text_content()   # Überschrift in Großbuchstaben (CSS) – Text ohne Umwandlung
-        check('Wichtig für dein Boot' in hi and 'Laut Website' in hi and 'Liegeplatzgebühr' in hi and '3,00 € pro lfd. Meter und Tag' in hi and 'Fäkalienabsaugung' in hi and 'WLAN' in hi,
-              f'{name}: Hafen wie Slip, Website-Angaben darunter (8.0.8)')
-        check(pg.locator('#detail .facts-block .facts').count() == 1 and pg.locator('#detail .hi-block').count() == 0, f'{name}: eine Tabelle, kein eigener Block')
-        check(pg.locator('#detail .facts-block dd.from-web .web-mark').count() == 3, f'{name}: Website-Werte markiert')
-        check('darf nicht erscheinen' not in hi, f'{name}: unbekannte Schlüssel werden nicht gezeigt')
-        check('marina-test.de' in hi and 'ohne gewähr' in hi.lower() and '20.10.2026' in hi, f'{name}: Quelle, Datum und Hinweis')
-        check('<img' in hi and not pg.evaluate('window.__xss') and pg.locator('#detail .facts-block img').count() == 0, f'{name}: HTML in Daten bleibt Text')
-        check(fb.locator('.web-line').first.get_attribute('title') == '„3,00 € / lfd. Meter / Tag (Berechnung mind. 7m) inkl. Strom“', f'{name}: Zitat als Tooltip')
+        hi = fb.text_content()
+        punkte = dict(zip([t.strip() for t in fb.locator('.wb-p small').all_text_contents()], [t.strip() for t in fb.locator('.wb-p strong').all_text_contents()]))
+        check('Wichtig für dein Boot' in hi and 'Laut Website' not in hi and pg.locator('#detail .hb-web, #detail .web-line, #detail .facts').count() == 0, f'{name}: kein Block „Laut Website“ mehr ({hi[:120]!r})')
+        check(punkte.get('Gastliegeplätze', '').startswith('Ja') and punkte.get('Liegegebühr') == '3 € je Meter und Nacht' and 'Toiletten' in punkte.get('Toiletten und Duschen', ''),
+              f'{name}: Website füllt Gastliegeplätze, Liegegebühr (kurz) und Toiletten ({punkte})')
+        check('Fäkalien' not in hi and 'WLAN' not in hi and 'kostenlos' not in hi and 'darf nicht erscheinen' not in hi, f'{name}: andere Website-Angaben werden nicht gezeigt')
+        check('Teilweise laut Website des Hafens' in hi and 'marina-test.de' in hi and 'ohne Gewähr' in hi and '20.10.2026' in hi, f'{name}: Herkunftszeile mit Quelle, Datum und Hinweis')
+        check(not pg.evaluate('window.__xss') and pg.locator('#detail .facts-block img').count() == 0, f'{name}: HTML in Daten wird nicht eingefügt')
+        kurz = pg.evaluate("""() => import('./js/hafeninfo.js').then(m => [
+            m.liegegeldKurz([{ value: 'je lfd. Meter Boot (Mindestlänge 4m) 23,00 Euro' }, { value: 'je lfd. Meter Boot (Mindestlänge 4m) 30,00 Euro' }]),
+            m.liegegeldKurz([{ value: '15 € pro Nacht' }]), m.liegegeldKurz([{ value: 'auf Anfrage' }]), m.liegegeldKurz([{ value: '1,50 € pro m', price_eur: 1.5 }]),
+            m.webAttrs({ toilets: false, berth_fee: '2 €' }, [{ key: 'toiletten' }, { key: 'gast_liegeplatz', value: '9 €' }, { key: 'wlan' }])])""")
+        check(kurz[:4] == ['23–30 € je Meter', '15 € pro Nacht', None, '1,50 € je Meter'] and kurz[4] == {'attrs': {'toilets': False, 'berth_fee': '2 €', 'visitor_berths': True}, 'gefuellt': 1},
+              f'{name}: Kurzpreis und Vorrang von OSM/Community ({kurz})')
         rows = pg.evaluate("""() => import('./js/hafeninfo.js').then(m => m.mergeFacts(
             ['Zugang', 'Gastliegeplätze', 'Liegeplatzgebühr', 'Stromanschluss', 'Öffnungszeiten'].map(label => ({ label, value: null })),
             [{ key: 'gast_liegeplatz', value: '3 €' }, { key: 'strom', value: '0,70 €/kWh' }, { key: 'kran', value: 'Kran bis 10 t' }, { key: 'sonstiges', value: 'x' }])

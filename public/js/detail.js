@@ -6,6 +6,7 @@ import { icon } from './icons.js';
 import { TYPES, UNKNOWN, displayName, describeFacts, bootPunkte, hafenPunkte, hafenExtra, formatDate, navUrl, osmUrl, safeHttpUrl, safeTel, formatDistance, haversine } from './model.js';
 import { favorites } from './favorites.js';
 import { photoCarousel } from './photos.js';
+import { webAttrs, webHerkunft } from './hafeninfo.js';
 
 /**
  * actions = { close, share, report, addPhoto, reportPhoto, onFavorite, ergaenzen }
@@ -54,7 +55,7 @@ export function detailKopf(p, user) {
 }
 
 /** Rückgabe: [kopf-Angaben, Inhalt]. actions.details(): Stufe „groß“ (Knopf „Details“, nur in der Stufe „klein“ sichtbar). */
-export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, pegel, vorOrt }) {
+export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, hafenWeb, pegel, vorOrt }) {
   const isFav = favorites.has(p.id);
 
   const body = h('div', { class: 'detail-body' });
@@ -120,15 +121,21 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
     fotenTeil();
     if (vorOrt?.section) body.append(vorOrt.section);
     pegelTeil();
-    // Häfen (8.0.8, Nutzer): „Wichtig für dein Boot“ wie bei Slipanlagen, mit „Ergänzen“; Angaben laut Website darunter.
+    // Häfen (8.0.8, Nutzer): „Wichtig für dein Boot“ wie bei Slipanlagen, mit „Ergänzen“.
+    // 8.0.10 (Nutzer): kein eigener Block „Laut Website“ mehr – die Website füllt nur unbekannte Punkte, die es auch in „Angaben ergänzen“ gibt.
     // Tankstellen und Zusatzorte: „Ausstattung“ als Kacheln.
     let factsBlock;
     if (p.type === 'marina') {
       factsBlock = punkteBox(hafenPunkte(p), hafenExtra(p), actions);
       factsBlock.classList.add('facts-block');
-      const web = h('div', { class: 'facts-list hb-web' });   // Platz für die Website-Angaben (enrichFacts ersetzt ihn)
-      factsBlock.querySelector('.wb-fuss').before(web);
-      if (enrichFacts) enrichFacts(factsBlock, describeFacts(p), (rows) => webListe(rows));
+      hafenWeb?.then((w) => {
+        if (!w || !factsBlock.isConnected) return;
+        const { attrs, gefuellt } = webAttrs(p.attrs, w.facts);
+        if (!gefuellt) return;
+        const neu = punkteBox(hafenPunkte({ ...p, attrs }), hafenExtra(p), actions, webHerkunft(w.entry));
+        neu.classList.add('facts-block');
+        factsBlock.replaceWith(neu); factsBlock = neu;
+      });
     } else {
       const facts = describeFacts(p);
       factsBlock = h('section', { class: 'block facts-block af-karte', 'aria-labelledby': 'af-titel' }, h('h3', { id: 'af-titel', text: 'Ausstattung' }), factList(facts));
@@ -172,17 +179,9 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, p
   return [detailKopf(p, user), body];
 }
 
-/** Nur die Angaben laut Website (Hafeninfos) als kleine Liste unter den Hafen-Punkten. */
-function webListe(rows) {
-  const web = rows.filter(f => (f.web || []).length);
-  if (!web.length) return h('div', { class: 'facts-list hb-web' });
-  return h('div', { class: 'facts-list hb-web' }, h('p', { class: 'hb-web-titel', text: 'Laut Website des Hafens' }),
-    h('dl', { class: 'facts' }, web.map(f => h('div', { class: 'af-p' }, h('dt', { text: f.label }),
-      h('dd', { class: 'from-web' }, f.web.map(w => h('span', { class: 'web-line', title: w.quote ? `„${w.quote}“` : null }, w.value, webMark())))))));
-}
-
-/** „Wichtig für dein Boot“ (Slipanlage und Hafen): sechs Angaben mit Ampel (Text, nie nur Farbe), fehlende Angaben zum Ergänzen. */
-function punkteBox(punkte, extra, actions) {
+/** „Wichtig für dein Boot“ (Slipanlage und Hafen): sechs Angaben mit Ampel (Text, nie nur Farbe), fehlende Angaben zum Ergänzen.
+ *  herkunft: optionale Zeile „Teilweise laut Website des Hafens …“ (Häfen, 8.0.10). */
+function punkteBox(punkte, extra, actions, herkunft = null) {
   const fehlen = punkte.filter(x => x.ton === 'unb').length;
   const TON = { ok: 'passt', warn: 'mit Einschränkung', stop: 'nicht möglich', unb: 'unbekannt' };
   return h('section', { class: 'wb', 'aria-labelledby': 'wb-titel' },
@@ -191,6 +190,7 @@ function punkteBox(punkte, extra, actions) {
       h('i', { 'aria-hidden': 'true' }),
       h('div', {}, h('small', { text: x.titel }), h('strong', { text: x.wert }), h('span', { class: 'sr-only', text: ` (${TON[x.ton]})` }))))),
     extra.length ? h('p', { class: 'wb-extra', text: extra.join(' · ') }) : null,
+    herkunft,
     h('div', { class: 'wb-fuss' },
       h('span', { text: fehlen ? `${fehlen} ${fehlen === 1 ? 'Angabe fehlt' : 'Angaben fehlen'}` : 'Angaben laut OpenStreetMap' }),
       h('button', { type: 'button', class: 'wb-link', onclick: actions.ergaenzen || actions.report }, fehlen ? 'Weißt du mehr? Ergänzen' : 'Angaben ändern', h('span', { html: icon('chevron', 16), 'aria-hidden': 'true' }))));
