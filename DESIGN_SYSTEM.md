@@ -29,6 +29,7 @@ Alle Farben als CSS-Variablen auf `:root` mit Präfix `--wm-`. Neue Hex-Werte im
 | `--wm-flaeche` | `#FFFFFF` | Karten, Gruppen, Knöpfe, Felder |
 | `--wm-flaeche-2` | `#F1F6F8` | Felder in Karten (Fakten-Kacheln, Segment-Spur, Eingabefelder) |
 | `--wm-linie` | `#E3EBEF` | Trennlinien in Listen, Feldrahmen |
+| `--wm-spur` | `leise` 25 % auf Weiß (≈ `#DEE3E6`) | Spur des Segment-Umschalters; inaktive Optionen `matt` darauf 4,6 : 1 (ergänzt 8.0.10, Nutzer 14.11.2026: `flaeche-2` war auf hellen Sheets kaum zu sehen) |
 | `--wm-rand` | `leise` 50 % auf Weiß (≈ `#BEC7CE`) | kräftigere Linie: Sheet-Griffe, Hover-Rahmen, gestrichelte Ablageflächen, Schraffur (ergänzt 7.66.0, weil `linie` auf Wassergrund nicht sichtbar ist) |
 
 ### Text
@@ -138,7 +139,7 @@ Nie tiefer verschachteln. Keine Karte in einer Karte mit Schatten.
 | **Wert-Kachel** | Beschriftung `s matt` mit Icon, Wert `xxl` tabular, darunter eine Zustandsmarke. Zwei Kacheln nebeneinander. |
 | **Zustandsmarke** | Pille, Radius rund, `s 700`, Grund `*-hell`, Text `*-text`. Immer mit Wort („Niedrig“), nie nur Farbe. |
 | **Chip** (Filter) | Höhe 40, Radius rund, weiß + schatten, `s 700`. Kategorie-Chips (Slipanlagen, Häfen, Tanken, Pegel) haben links einen 10-px-Farbpunkt der Kategorie (Pegel: `--wm-gut`). Aktiv: Grund `--wm-tinte`, Text weiß, der Punkt schrumpft auf 0, ein Häkchen (16 px) wächst hinein (Nutzer, 10.11.2026, Prototyp freigegeben). |
-| **Segment-Umschalter** | Spur `flaeche-2`, Radius s, aktive Option weiß + schatten. |
+| **Segment-Umschalter** | Spur `--wm-spur` (8.0.10, vorher `flaeche-2`), Radius s, aktive Option weiß + schatten. |
 | **Eingabefeld** | Höhe 48, weiß, Rahmen 1,5 px `--wm-linie`, Radius s, Text `m`. Fokus: Rahmen Petrol + Fokusring. Fehler: Rahmen `--wm-stop`, Text darunter `s stop-text`. Beschriftung immer sichtbar über dem Feld. |
 | **Hinweis / Warnung** | Karte mit Grund `*-hell`, Rahmen 1,5 px in Punktfarbe, Icon links. Amtliche Warnungen zusätzlich linker Streifen 4 px. |
 | **Navigation unten** (Handy) | schwebende Pille, 5 Ziele in dieser Reihenfolge: **Karte · Meldungen · Melden · Gemerkt · Mehr**; aktives Ziel `petrol-hell` / `petrol`. Melden mittig als runder Petrol-Knopf. Abzeichen an „Meldungen“ (neue Meldungen) und an „Gemerkt“ (Anzahl gemerkter Orte + Pegel). „Gemerkt“ = heute „Mehr › Merkliste“. Desktop-Kopfleiste: Karte · Meldungen · Gemerkt · Mehr, dazu „+ Melden“ (Nutzer, 10.11.2026, Prototyp freigegeben). |
