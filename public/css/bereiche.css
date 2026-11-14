@@ -300,7 +300,11 @@ a.ei-reihe-text { display: flex; flex-direction: column; color: inherit; text-de
 .mu-karte .mu-ico { background: color-mix(in srgb, var(--c) 16%, var(--wm-flaeche)); color: var(--c); }
 .mu-karte .mu-zeit, .mu-karte .mu-wo { font-size: var(--wm-t-s); color: var(--wm-matt); }
 .mu-karte .mu-notiz { margin: 0 var(--wm-3) var(--wm-2); font-size: var(--wm-t-s); color: var(--wm-tinte); }
-.mu-karte .mu-knoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: var(--wm-2); padding: 0 var(--wm-3); }
+.mu-karte .mu-knoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: var(--wm-2); padding: var(--wm-2) var(--wm-3) 0; }
+/* 8.0.10: „Stimmt das noch?“ + Pillen wie „Heute vor Ort“; auf der weißen Karte mit hellem Grund statt Schatten (wie .ae-chips) */
+.mu-karte .mu-frage { font-size: var(--wm-t-s); color: var(--wm-matt); }
+.mu-karte .vo-pille.mu-knopf { min-height: 40px; padding: 0 var(--wm-4); border-radius: var(--wm-r-rund); background: var(--wm-flaeche-2); box-shadow: none; }
+@media (hover: hover) { .mu-karte .vo-pille.mu-knopf:hover:not(:disabled) { background: var(--wm-linie); } }
 .mu-karte .mu-bewertet { margin: var(--wm-2) var(--wm-3) 0; }
 .mu-leer { display: flex; flex-direction: column; align-items: center; gap: var(--wm-2); }
 .mu-leer-titel { margin: 0; font-weight: 700; color: var(--wm-tinte); }

@@ -98,6 +98,11 @@ div.wm-zeile { cursor: default; }
 .wm-chip-punkt { flex: none; width: 10px; height: 10px; margin-right: 7px; border-radius: var(--wm-r-rund); background: var(--punkt, var(--wm-leise));
   transition: width var(--wm-mittel) var(--wm-feder), margin var(--wm-mittel) var(--wm-feder); }
 .wm-chip[aria-pressed="true"] .wm-chip-punkt { width: 0; margin-right: 0; }
+/* Chip mit Symbol statt Punkt (8.0.10, Meldungsarten): 16 px in der Farbe --punkt, schrumpft beim Auswählen wie der Punkt */
+.wm-chip-ico { flex: none; display: grid; width: 16px; margin-right: 6px; overflow: hidden; color: var(--punkt, var(--wm-matt));
+  transition: width var(--wm-mittel) var(--wm-feder), margin var(--wm-mittel) var(--wm-feder); }
+.wm-chip-ico svg { display: block; flex: none; }
+.wm-chip[aria-pressed="true"] .wm-chip-ico { width: 0; margin-right: 0; }
 
 /* ---------------------------------------------------------------- Umschalter mit gleitender Markierung (--n Optionen, --i gewählt) */
 .wm-seg { position: relative; display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); padding: 3px; border-radius: var(--wm-r-s); background: var(--wm-spur); }

@@ -112,6 +112,9 @@ def run(b, w, hh):
     check(lay['segVoll'] and lay['segKante'] and not lay['abgeschnitten'], f'{tag}: Umschalter volle Breite, gleiche Kante wie die Liste, Wörter ganz ({lay})')
     check(lay['eineZeile'] and lay['fussZeile'], f'{tag}: Zählzeile neben Sortierung; „Standort“ und „Unpassend melden“ in einer Zeile ({lay})')
     check(pg.inner_text('.mu-zahl') == '4 Meldungen', f'{tag}: Zählzeile „4 Meldungen“')
+    check(pg.locator('.mu-chip .wm-chip-ico svg').count() == 5 and pg.locator('.mu-chip .wm-chip-punkt').count() == 0, f'{tag}: Chips mit Symbol der Art statt Punkt')
+    fr = pg.locator('.mu-karte').first.locator('.mu-knoepfe').inner_text().replace('\n', ' ')
+    check('Stimmt das noch?' in fr and 'Ja' in fr and 'Nicht mehr' in fr and pg.locator('.mu-karte').first.locator('.vo-pille').count() == 2, f'{tag}: „Stimmt das noch?“ mit Pillen Ja / Nicht mehr ({fr!r})')
     pg.select_option('.mu-sort', 'wichtig'); pg.wait_for_timeout(100)
     check(pg.locator('.mu-typ').first.inner_text() == 'Gesperrt', f'{tag}: „Wichtigste zuerst“')
     check(pg.locator('.mu-sort option[value=nah]').count() == 0, f'{tag}: ohne bekannte Position keine Sortierung nach Entfernung')
@@ -148,9 +151,9 @@ def run(b, w, hh):
     pg.screenshot(path=str(SHOTS / f'bereiche_{w}_1meldungen.png'))
     # Bewerten
     k = pg.locator('.mu-karte', has_text='Gesperrt')
-    k.locator('button:has-text("Stimmt noch")').click(); pg.wait_for_timeout(400)
+    k.locator('button.mu-knopf', has_text='Ja').click(); pg.wait_for_timeout(400)
     k = pg.locator('.mu-karte', has_text='Gesperrt')
-    check(('aa01', True) in pg.st['votes'] and '4× bestätigt' in k.inner_text() and k.locator('button:has-text("Stimmt noch")').is_disabled(), f'{tag}: „Stimmt noch“ zählt und sperrt erneutes Bewerten')
+    check(('aa01', True) in pg.st['votes'] and '4× bestätigt' in k.inner_text() and k.locator('button.mu-knopf', has_text='Ja').is_disabled(), f'{tag}: „Stimmt noch“ zählt und sperrt erneutes Bewerten')
     # Unpassend melden: nur bei Notiz; Fehler bleibt im Fenster; danach Hinweis an Netlify Forms und Meldung ausgeblendet
     check(pg.locator('.mu-karte', has_text='Parkplatz voll').locator('.vo-unpassend').count() == 0 and pg.locator('.mu-karte .vo-unpassend').count() == 2, f'{tag}: „Unpassend melden“ nur bei Meldungen mit Notiz')
     pg.locator('.mu-karte', has_text='Warteschlange').locator('.vo-unpassend').click(); pg.wait_for_selector('.um-dlg[open]')

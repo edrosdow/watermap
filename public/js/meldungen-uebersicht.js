@@ -73,7 +73,8 @@ export function meldungenSeite(root, ctx) {
     const bewertet = schonBewertet(m.id), aus = daten.offline || bewertet;
     const unter = [`Gemeldet ${alter(m.erstelltAm)}`, m.bestaetigt ? `${m.bestaetigt}× bestätigt` : null, m.widersprochen ? `${m.widersprochen}× nicht mehr` : null].filter(Boolean).join(' · ');
     const entf = bezug && o ? ctx.formatDistance(d(m)) : null;
-    const knopf = (text, stimmt) => h('button', { type: 'button', class: 'mu-knopf', disabled: aus, onclick: async (e) => {
+    // 8.0.10: wie „Heute vor Ort“ – Frage links, Pillen „Ja“ / „Nicht mehr“ rechts (vorher zwei weiße Knöpfe mit Schatten auf weißer Karte)
+    const knopf = (text, stimmt) => h('button', { type: 'button', class: 'vo-pille mu-knopf', disabled: aus, 'aria-label': `${stimmt ? 'Stimmt noch' : 'Nicht mehr aktuell'}: ${t.text}${o ? `, ${o.name}` : ''}`, onclick: async (e) => {
       e.currentTarget.disabled = true;
       try { await bestaetigen(m, stimmt); ctx.toast(stimmt ? 'Danke – als „stimmt noch“ bestätigt.' : 'Danke – als „nicht mehr aktuell“ markiert.'); await laden(false); }
       catch (err) { ctx.toast(err.message); e.currentTarget.disabled = false; }
@@ -89,7 +90,8 @@ export function meldungenSeite(root, ctx) {
           h('small', { class: 'mu-zeit', text: unter })),
         art),
       m.notiz ? h('p', { class: 'mu-notiz', text: `„${m.notiz}“` }) : null,
-      h('div', { class: 'mu-knoepfe' }, knopf('Stimmt noch', true), knopf('Nicht mehr aktuell', false)),
+      h('div', { class: 'vo-frage mu-knoepfe' }, h('span', { class: 'vo-frage-text mu-frage', text: 'Stimmt das noch?' }),
+        h('span', { class: 'vo-pillen' }, knopf('Ja', true), knopf('Nicht mehr', false))),
       bewertet && !daten.offline ? h('p', { class: 'mu-bewertet', text: 'Du hast diese Meldung schon bewertet.' }) : null,
       // 8.0.10: Fußzeile – links „Standort ›“, rechts „Unpassend melden“ (nur Meldungen mit Notiz können unpassend sein)
       fuss(m, o));
@@ -152,7 +154,8 @@ export function meldungenSeite(root, ctx) {
       return h('button', { type: 'button', class: 'wm-chip mu-chip' + (ui.filter === k ? ' is-an' : ''), 'aria-pressed': String(ui.filter === k), dataset: { fokus: `f-${k}` },
         style: farbe ? `--punkt: ${farbe}` : null, onclick: () => { ui.filter = k; zeichnen(); } },
         h('span', { class: 'wm-chip-haken', html: icon('check', 16), 'aria-hidden': 'true' }),
-        farbe ? h('span', { class: 'wm-chip-punkt', 'aria-hidden': 'true' }) : null, text);
+        // 8.0.10: Symbol der Art statt Farbpunkt (vier Arten hatten denselben orangen Punkt); schrumpft beim Auswählen wie der Punkt
+        typen ? h('span', { class: 'wm-chip-ico', html: icon(TYPEN[typen[0]]?.ico || 'alert', 16), 'aria-hidden': 'true' }) : null, text);
     }));
     const kartenOk = !!ctx.grenzen();
     const BEREICHE = [['ueberall', 'Überall'], ['karte', 'Ausschnitt'], ['standort', 'Mein Standort']];
