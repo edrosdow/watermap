@@ -180,22 +180,25 @@ export function hafenPunkte(p) {
   const zugang = { public: 'ok', permissive: 'ok', customers: 'warn', members: 'warn', permit: 'warn', private: 'stop' }[p.access];
   const anzahl = Number.isFinite(a.berths) ? `${a.berths} Liegeplätze` : null;
   const gast = a.visitor_berths === true ? [['Ja', anzahl].filter(Boolean).join(' · '), 'ok'] : a.visitor_berths === false ? [['Nein', anzahl].filter(Boolean).join(' · '), 'stop'] : [anzahl, 'warn'];
-  const zwei = (x, y, tx, ty) => {   // zwei Ja/Nein-Angaben zu einem Punkt: beide ja → ok, eine → warn, keine → stop
-    if (x === null && y === null) return [null];
+  // zwei Ja/Nein-Angaben zu einem Punkt. 8.0.12 (Nutzer): nur ein ausdrückliches „Nein“ schränkt ein – unbekannt zählt nicht dagegen.
+  // nur ja (auch wenn die andere unbekannt ist) → ok, ja und nein → warn, nur nein → stop
+  const zwei = (x, y, tx, ty) => {
     const ja = [x === true ? tx : null, y === true ? ty : null].filter(Boolean);
     const nein = [x === false ? `ohne ${tx}` : null, y === false ? `ohne ${ty}` : null].filter(Boolean);
-    return [[...ja, ...nein].join(' · '), ja.length === 2 ? 'ok' : ja.length ? 'warn' : nein.length ? 'stop' : 'warn'];
+    if (!ja.length && !nein.length) return [null];
+    return [[...ja, ...nein].join(' · '), nein.length ? (ja.length ? 'warn' : 'stop') : 'ok'];
   };
-  const strom = zwei(a.electricity, a.water_tap, 'Strom', 'Wasser');
   const sanitaer = zwei(a.toilets, a.showers, 'Toiletten', 'Duschen');
-  const meister = a.harbour_master === true ? ['Ja', 'ok'] : a.harbour_master === false ? ['Nein', 'warn'] : [null];
+  // 8.0.12 (Nutzer): Strom und Frischwasser einzeln, Hafenmeister nicht mehr im Kasten; Nein = rot wie „nur Nein“ bei Toiletten und Duschen
+  const jn = (v) => (v === true ? ['Ja', 'ok'] : v === false ? ['Nein', 'stop'] : [null]);
+  const strom = jn(a.electricity), wasser = jn(a.water_tap);
   return [
     pkt('Zugang', p.access ? ACCESS_LABEL[p.access] : null, zugang || 'warn'),
     pkt('Gastliegeplätze', gast[0], gast[1]),
     pkt('Liegegebühr', a.berth_fee, 'ok'),
-    pkt('Strom und Wasser', strom[0], strom[1]),
+    pkt('Strom', strom[0], strom[1]),
+    pkt('Frischwasser', wasser[0], wasser[1]),
     pkt('Toiletten und Duschen', sanitaer[0], sanitaer[1]),
-    pkt('Hafenmeister', meister[0], meister[1]),
   ];
 }
 

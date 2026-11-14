@@ -132,7 +132,9 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, h
         if (!w || !factsBlock.isConnected) return;
         const { attrs, gefuellt } = webAttrs(p.attrs, w.facts);
         if (!gefuellt) return;
-        const neu = punkteBox(hafenPunkte({ ...p, attrs }), hafenExtra(p), actions, webHerkunft(w.entry));
+        // 8.0.12: auch „Angaben ergänzen“ kennt die Website-Werte (sonst zählte das Formular mehr fehlende Angaben als der Kasten)
+        const mitWeb = { ...p, attrs };
+        const neu = punkteBox(hafenPunkte(mitWeb), hafenExtra(p), { ...actions, ergaenzen: actions.ergaenzen && (() => actions.ergaenzen(mitWeb)) }, webHerkunft(w.entry));
         neu.classList.add('facts-block');
         factsBlock.replaceWith(neu); factsBlock = neu;
       });

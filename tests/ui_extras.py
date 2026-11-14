@@ -165,7 +165,7 @@ with sync_playwright() as p:
         check(not live['queries'], f'{name}: keine Live-Abfrage der Umgebung')
 
         # Hafeninfos laut Website (8.0.10): kein eigener Block mehr – sie füllen nur unbekannte Punkte von „Wichtig für dein Boot“,
-        # und nur solche, die es auch in „Angaben ergänzen“ gibt (Gastliegeplätze, Liegegebühr, Strom, Wasser, Toiletten, Duschen, Hafenmeister)
+        # und nur solche, die es auch in „Angaben ergänzen“ gibt (Gastliegeplätze, Liegegebühr, Strom, Frischwasser, Toiletten, Duschen; 8.0.12 ohne Hafenmeister)
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(HAFEN['id'])}, {{ full: true }})")
         pg.wait_for_selector('#detail .facts-block .wb-herkunft', timeout=8000)
         fb = pg.locator('#detail .facts-block')
@@ -174,6 +174,14 @@ with sync_playwright() as p:
         check('Wichtig für dein Boot' in hi and 'Laut Website' not in hi and pg.locator('#detail .hb-web, #detail .web-line, #detail .facts').count() == 0, f'{name}: kein Block „Laut Website“ mehr ({hi[:120]!r})')
         check(punkte.get('Gastliegeplätze', '').startswith('Ja') and punkte.get('Liegegebühr') == '3 € je Meter und Nacht' and 'Toiletten' in punkte.get('Toiletten und Duschen', ''),
               f'{name}: Website füllt Gastliegeplätze, Liegegebühr (kurz) und Toiletten ({punkte})')
+        ampel = pg.evaluate("""() => import('./js/model.js').then(m => [
+            { toilets: true }, { toilets: true, showers: false }, { toilets: false }, { toilets: true, showers: true }, {}, { electricity: true, water_tap: false }]
+            .map(attrs => { const x = m.hafenPunkte({ attrs }); return [x.map(y => y.titel).join('|'), x[5].wert, x[5].ton, x[3].wert, x[3].ton, x[4].wert, x[4].ton]; }))""")
+        titel = 'Zugang|Gastliegeplätze|Liegegebühr|Strom|Frischwasser|Toiletten und Duschen'
+        check([a[0] for a in ampel] == [titel] * 6 and [a[1:3] for a in ampel] == [['Toiletten', 'ok'], ['Toiletten · ohne Duschen', 'warn'], ['ohne Toiletten', 'stop'], ['Toiletten · Duschen', 'ok'], ['Unbekannt', 'unb'], ['Unbekannt', 'unb']]
+              and ampel[5][3:] == ['Ja', 'ok', 'Nein', 'stop'] and ampel[4][3:] == ['Unbekannt', 'unb', 'Unbekannt', 'unb'],
+              f'{name}: Strom und Frischwasser einzeln, ohne Hafenmeister; unbekannt schränkt nicht ein (8.0.12) ({ampel})')
+        check(fb.locator('.wb-p', has_text='Toiletten und Duschen').get_attribute('class').endswith('is-ok'), f'{name}: nur Toiletten bekannt → grün')
         check('Fäkalien' not in hi and 'WLAN' not in hi and 'kostenlos' not in hi and 'darf nicht erscheinen' not in hi, f'{name}: andere Website-Angaben werden nicht gezeigt')
         check('Teilweise laut Website des Hafens' in hi and 'marina-test.de' in hi and 'ohne Gewähr' in hi and '20.10.2026' in hi, f'{name}: Herkunftszeile mit Quelle, Datum und Hinweis')
         check(not pg.evaluate('window.__xss') and pg.locator('#detail .facts-block img').count() == 0, f'{name}: HTML in Daten wird nicht eingefügt')

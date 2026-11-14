@@ -22,11 +22,10 @@ export const HAFEN_FELDER = [
   { key: 'gast', titel: 'Gastliegeplätze', art: 'seg', optionen: JN },
   { key: 'liegegeld', titel: 'Liegegebühr', art: 'text', platzhalter: 'z. B. 1,50 € pro Meter und Nacht' },
   { key: 'strom', titel: 'Strom', art: 'seg', optionen: JN },
-  { key: 'wasser', titel: 'Wasser', art: 'seg', optionen: JN },
+  { key: 'wasser', titel: 'Frischwasser', art: 'seg', optionen: JN },
   { key: 'toiletten', titel: 'Toiletten', art: 'seg', optionen: JN },
   { key: 'duschen', titel: 'Duschen', art: 'seg', optionen: JN },
-  { key: 'hafenmeister', titel: 'Hafenmeister', art: 'seg', optionen: JN },
-];
+];   // 8.0.12: „Hafenmeister“ entfernt (nicht mehr im Kasten); die Verwaltung kennt den Schlüssel weiter
 export const BELAG = ['Beton', 'Pflaster', 'Asphalt', 'Kies', 'Holz', 'Naturboden'];
 export const NEIGUNG = ['flach', 'mittel', 'steil'];
 const ACCESS_TEXT = { public: 'Öffentlich', permissive: 'Öffentlich (geduldet)', customers: 'Nur Kunden', members: 'Nur Mitglieder', permit: 'Mit Erlaubnis', private: 'Privat' };
@@ -39,7 +38,7 @@ export function bekannteAngaben(p) {
     if (p.access) out.push({ key: 'access', text: ACCESS_TEXT[p.access] || p.access });
     if (a.visitor_berths === true || a.visitor_berths === false) out.push({ key: 'gast', text: jn(a.visitor_berths) });
     if (a.berth_fee) out.push({ key: 'liegegeld', text: a.berth_fee });
-    for (const [key, attr] of [['strom', 'electricity'], ['wasser', 'water_tap'], ['toiletten', 'toilets'], ['duschen', 'showers'], ['hafenmeister', 'harbour_master']]) {
+    for (const [key, attr] of [['strom', 'electricity'], ['wasser', 'water_tap'], ['toiletten', 'toilets'], ['duschen', 'showers']]) {
       if (a[attr] === true || a[attr] === false) out.push({ key, text: jn(a[attr]) });
     }
     return out;

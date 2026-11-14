@@ -515,7 +515,7 @@ function showDetail(p, { scrollTo = null, stufe = null } = {}) {
       report: () => openReport('fehler-melden', { standort_id: p.id }),
       addPhoto: () => openReport('foto-einreichen', { standort_id: p.id }),
       reportPhoto: (ph) => openReport('fehler-melden', { standort_id: p.id, art: 'foto', details: `Foto unpassend: ${ph.url}\nGrund: ` }),
-      ergaenzen: () => slipErgaenzen({ place: p, toast }),
+      ergaenzen: (q) => slipErgaenzen({ place: q?.id === p.id ? q : p, toast }),   // q: Hafen mit Website-Werten (8.0.12), sonst Klick-Ereignis
       details: () => standort?.sheet.stufe('gross'),
     },
     pegel: pegelInfo(p).then(info => info && pegelBox(info)),
