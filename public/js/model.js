@@ -188,16 +188,17 @@ export function hafenPunkte(p) {
     if (!ja.length && !nein.length) return [null];
     return [[...ja, ...nein].join(' · '), nein.length ? (ja.length ? 'warn' : 'stop') : 'ok'];
   };
-  const strom = zwei(a.electricity, a.water_tap, 'Strom', 'Wasser');
   const sanitaer = zwei(a.toilets, a.showers, 'Toiletten', 'Duschen');
-  const meister = a.harbour_master === true ? ['Ja', 'ok'] : a.harbour_master === false ? ['Nein', 'warn'] : [null];
+  // 8.0.12 (Nutzer): Strom und Frischwasser einzeln, Hafenmeister nicht mehr im Kasten; Nein = rot wie „nur Nein“ bei Toiletten und Duschen
+  const jn = (v) => (v === true ? ['Ja', 'ok'] : v === false ? ['Nein', 'stop'] : [null]);
+  const strom = jn(a.electricity), wasser = jn(a.water_tap);
   return [
     pkt('Zugang', p.access ? ACCESS_LABEL[p.access] : null, zugang || 'warn'),
     pkt('Gastliegeplätze', gast[0], gast[1]),
     pkt('Liegegebühr', a.berth_fee, 'ok'),
-    pkt('Strom und Wasser', strom[0], strom[1]),
+    pkt('Strom', strom[0], strom[1]),
+    pkt('Frischwasser', wasser[0], wasser[1]),
     pkt('Toiletten und Duschen', sanitaer[0], sanitaer[1]),
-    pkt('Hafenmeister', meister[0], meister[1]),
   ];
 }
 

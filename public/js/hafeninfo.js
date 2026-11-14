@@ -73,10 +73,10 @@ export function enrichFacts(meta, id) {
 
 /**
  * Häfen (8.0.10, Nutzer): Website-Angaben füllen nur die Punkte von „Wichtig für dein Boot“, die es auch in „Angaben ergänzen“ gibt
- * (Gastliegeplätze, Liegegebühr, Strom, Wasser, Toiletten, Duschen, Hafenmeister). Alles andere von der Website wird nicht gezeigt.
+ * (Gastliegeplätze, Liegegebühr, Strom, Frischwasser, Toiletten, Duschen). Alles andere von der Website wird nicht gezeigt.
  * Nur unbekannte Werte werden gefüllt (OSM und Community haben Vorrang). Rückgabe: { attrs, gefuellt } – gefuellt = Anzahl gefüllter Werte.
  */
-const WEB_ATTR = { strom: 'electricity', wasser: 'water_tap', toiletten: 'toilets', duschen: 'showers', hafenmeister: 'harbour_master' };
+const WEB_ATTR = { strom: 'electricity', wasser: 'water_tap', toiletten: 'toilets', duschen: 'showers' };   // 8.0.12: ohne Hafenmeister
 export function webAttrs(attrs, facts) {
   const a = { ...(attrs || {}) }, keys = new Set(facts.map(f => f.key));
   let gefuellt = 0;
