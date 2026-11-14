@@ -813,7 +813,7 @@ function vorbereiten() {
 const BEREICHE = {
   naehe: { klasse: 'nh-sheet', kopf: () => ({ titel: 'In der Nähe', titelId: 'nh-titel', aktion: { icon: 'map', label: 'Auf der Karte zeigen', onclick: () => nah?.aufKarte() } }) },
   gemerkt: { klasse: 'gm-sheet', kopf: () => ({ titel: 'Gemerkt', titelId: 'gm-titel' }) },
-  meldungen: { klasse: 'mu-sheet', kopf: () => ({ titel: 'Aktuelle Meldungen', titelId: 'mu-titel', unter: 'Das berichten Sportbootfahrer aus deinem Revier.' }) },
+  meldungen: { klasse: 'mu-sheet', kopf: () => ({ titel: 'Aktuelle Meldungen', titelId: 'mu-titel', unter: 'Das berichten Sportbootfahrer vor Ort.' }) },
   mehr: { klasse: 'mh-sheet', kopf: () => ({ titel: 'Mehr', titelId: 'mh-titel', unter: `Version ${CONFIG.VERSION}` }) },
 };
 let bereich = null;   // { view, sheet, root }

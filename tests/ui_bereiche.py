@@ -92,12 +92,29 @@ def run(b, w, hh):
     check(pg.url.endswith('#meldungen') and pg.locator(f'{nav} [data-nav=meldungen]').get_attribute('aria-current') == 'page', f'{tag}: #meldungen, „Meldungen“ aktiv')
     check(pg.locator('.wm-sheet.mu-sheet.is-offen').count() == 1, f'{tag}: Meldungen als Sheet über der Karte (Designumbau 3a)')
     kopf = pg.inner_text('.mu-sheet .wm-kopf')
-    check('Aktuelle Meldungen' in kopf and 'aus deinem Revier' in kopf and '4 aktuelle Meldungen' in kopf and pg.locator('.mu-sheet .wm-kopf [aria-label="Meldungen aktualisieren"]').count() == 1, f'{tag}: Kopf mit Anzahl und Aktualisieren')
+    check('Aktuelle Meldungen' in kopf and 'aus deinem Revier' not in kopf and '4 aktuelle Meldungen' in kopf and pg.locator('.mu-sheet .wm-kopf [aria-label="Meldungen aktualisieren"]').count() == 1, f'{tag}: Kopf mit Anzahl und Aktualisieren')
     typen = [t.strip() for t in pg.locator('.mu-typ').all_inner_texts()]
     check(typen == ['Parkplatz voll', 'Gesperrt', 'Alles frei', 'Warteschlange'] and pg.locator('.mu-karte .wm-zeile .wm-marke.mu-typ').count() == 4, f'{tag}: neueste zuerst, Art als Zustandsmarke ({typen})')
     karte0 = pg.locator('.mu-karte', has_text='Gesperrt').text_content()
     check(re.search(r'Gemeldet vor 1\d Min\.', karte0) and '3× bestätigt' in karte0 and '„Rampe überflutet“' in karte0, f'{tag}: Karte mit Zeit, Bestätigungen, Notiz')
     check(pg.locator('.mu-karte.vo-stop').count() == 1 and pg.locator('.mu-karte.vo-gut').count() == 1, f'{tag}: Farbton nach Art (gesperrt rot, alles frei grün)')
+    # 8.0.10: Aufbau – Chips (Handy eine Zeile zum Wischen), Umschalter volle Breite ohne abgeschnittene Wörter, Zählzeile + Sortierung in einer Zeile, Fußzeile der Karte
+    lay = pg.evaluate("""() => { const r = (s) => document.querySelector(s).getBoundingClientRect();
+      const ys = [...document.querySelectorAll('.mu-chip')].map(c => Math.round(c.getBoundingClientRect().top));
+      const seg = r('.mu-seg'), steuer = r('.mu-steuer'), z = r('.mu-zahl'), so = r('.mu-sort'), li = r('.mu-liste');
+      const k = document.querySelector('.mu-karte .mu-unpassend')?.closest('.mu-karte');
+      const ol = k.querySelector('.mu-ort-link').getBoundingClientRect(), up = k.querySelector('.mu-unpassend').getBoundingClientRect();
+      return { zeilen: new Set(ys).size, segVoll: Math.abs(seg.width - steuer.width) <= 1, segKante: Math.abs(seg.left - li.left) <= 1,
+        abgeschnitten: [...document.querySelectorAll('.mu-seg button')].some(b => b.scrollWidth > b.clientWidth + 1),
+        eineZeile: Math.abs((z.top + z.bottom) / 2 - (so.top + so.bottom) / 2) <= 6,
+        fussZeile: Math.abs((ol.top + ol.bottom) / 2 - (up.top + up.bottom) / 2) <= 6 && ol.left < up.left }; }""")
+    check((lay['zeilen'] == 1) if mobile else True, f'{tag}: Filter-Chips in einer Zeile ({lay})')
+    check(lay['segVoll'] and lay['segKante'] and not lay['abgeschnitten'], f'{tag}: Umschalter volle Breite, gleiche Kante wie die Liste, Wörter ganz ({lay})')
+    check(lay['eineZeile'] and lay['fussZeile'], f'{tag}: Zählzeile neben Sortierung; „Standort“ und „Unpassend melden“ in einer Zeile ({lay})')
+    check(pg.inner_text('.mu-zahl') == '4 Meldungen', f'{tag}: Zählzeile „4 Meldungen“')
+    check(pg.locator('.mu-chip .wm-chip-ico svg').count() == 5 and pg.locator('.mu-chip .wm-chip-punkt').count() == 0, f'{tag}: Chips mit Symbol der Art statt Punkt')
+    fr = pg.locator('.mu-karte').first.locator('.mu-knoepfe').inner_text().replace('\n', ' ')
+    check('Stimmt das noch?' in fr and 'Ja' in fr and 'Nicht mehr' in fr and pg.locator('.mu-karte').first.locator('.vo-pille').count() == 2, f'{tag}: „Stimmt das noch?“ mit Pillen Ja / Nicht mehr ({fr!r})')
     pg.select_option('.mu-sort', 'wichtig'); pg.wait_for_timeout(100)
     check(pg.locator('.mu-typ').first.inner_text() == 'Gesperrt', f'{tag}: „Wichtigste zuerst“')
     check(pg.locator('.mu-sort option[value=nah]').count() == 0, f'{tag}: ohne bekannte Position keine Sortierung nach Entfernung')
@@ -107,9 +124,9 @@ def run(b, w, hh):
     check(pg.locator('.mu-karte').count() == 0 and 'Für diesen Filter' in pg.inner_text('.mu-leer'), f'{tag}: leerer Filter mit Hinweis')
     pg.click('.mu-leer .mu-alle'); pg.wait_for_timeout(100)
     check(pg.locator('.mu-karte').count() == 4, f'{tag}: „Alle Meldungen zeigen“')
-    pg.click('.mu-seg button:has-text("Kartenausschnitt")'); pg.wait_for_timeout(100)
+    pg.click('.mu-seg button:has-text("Ausschnitt")'); pg.wait_for_timeout(100)
     n_aus = pg.locator('.mu-karte').count()
-    check(0 <= n_aus <= 4 and pg.locator('.mu-seg button.is-an').inner_text() == 'Kartenausschnitt', f'{tag}: Kartenausschnitt ({n_aus} von 4)')
+    check(0 <= n_aus <= 4 and pg.locator('.mu-seg button.is-an').inner_text() == 'Ausschnitt' and 'im Kartenausschnitt' in pg.inner_text('.mu-zahl'), f'{tag}: Kartenausschnitt ({n_aus} von 4)')
     # Mein Standort: Freigabe erst auf Wunsch, dann Umkreis-Regler 5–100 km mit Live-Liste
     pg.click('.mu-seg button:has-text("Mein Standort")'); pg.wait_for_timeout(150)
     check(pg.locator('.mu-seg button.is-an').inner_text() == 'Mein Standort' and 'Standort verwenden' in pg.inner_text('.mu-pos') and pg.locator('.mu-range').count() == 0 and pg.locator('.mu-karte').count() == 0,
@@ -119,11 +136,11 @@ def run(b, w, hh):
     pg.click('.mu-pos .mu-melden'); pg.wait_for_selector('.mu-range')
     r = pg.locator('.mu-range')
     check(r.get_attribute('min') == '5' and r.get_attribute('max') == '100' and r.get_attribute('step') == '5' and r.input_value() == '25' and pg.inner_text('.mu-km-wert') == '25 km', f'{tag}: Regler 5–100 km in 5er-Schritten, Start 25 km')
-    check(pg.locator('.mu-karte').count() >= 1 and 'Umkreis von 25 km um deinen Standort' in pg.inner_text('.mu-umkreis-zahl') and pg.locator('.mu-wo').count() == pg.locator('.mu-karte').count() and all(' km' in t or ' m' in t for t in pg.locator('.mu-wo').all_inner_texts()), f'{tag}: Liste mit Entfernungen, Zählzeile')
+    check(pg.locator('.mu-karte').count() >= 1 and 'im Umkreis von 25 km' in pg.inner_text('.mu-zahl') and pg.locator('.mu-wo').count() == pg.locator('.mu-karte').count() and all(' km' in t or ' m' in t for t in pg.locator('.mu-wo').all_inner_texts()), f'{tag}: Liste mit Entfernungen, Zählzeile')
     pg.evaluate("document.querySelector('.mu-range').dataset.same = '1'")
     pg.evaluate("(() => { const r = document.querySelector('.mu-range'); r.value = '5'; r.dispatchEvent(new Event('input', { bubbles: true })); })()"); pg.wait_for_timeout(100)
     n5 = pg.locator('.mu-karte').count()
-    check(pg.locator('.mu-range').get_attribute('data-same') == '1' and pg.inner_text('.mu-km-wert') == '5 km' and 'Umkreis von 5 km' in pg.inner_text('.mu-umkreis-zahl') and n5 >= 1, f'{tag}: Ziehen auf 5 km aktualisiert die Liste, der Regler bleibt stehen ({n5} Meldungen)')
+    check(pg.locator('.mu-range').get_attribute('data-same') == '1' and pg.inner_text('.mu-km-wert') == '5 km' and 'Umkreis von 5 km' in pg.inner_text('.mu-zahl') and n5 >= 1, f'{tag}: Ziehen auf 5 km aktualisiert die Liste, der Regler bleibt stehen ({n5} Meldungen)')
     pg.evaluate("(() => { const r = document.querySelector('.mu-range'); r.value = '100'; r.dispatchEvent(new Event('input', { bubbles: true })); r.dispatchEvent(new Event('change', { bubbles: true })); })()"); pg.wait_for_timeout(100)
     check(pg.locator('.mu-karte').count() >= n5 and pg.evaluate("localStorage.getItem('watermap.meldungen.umkreis')") == '100', f'{tag}: 100 km zeigt mindestens so viele, Umkreis wird gemerkt')
     pg.evaluate("(() => { const r = document.querySelector('.mu-range'); r.value = '5'; r.dispatchEvent(new Event('input', { bubbles: true })); r.dispatchEvent(new Event('change', { bubbles: true })); })()")
@@ -134,9 +151,9 @@ def run(b, w, hh):
     pg.screenshot(path=str(SHOTS / f'bereiche_{w}_1meldungen.png'))
     # Bewerten
     k = pg.locator('.mu-karte', has_text='Gesperrt')
-    k.locator('button:has-text("Stimmt noch")').click(); pg.wait_for_timeout(400)
+    k.locator('button.mu-knopf', has_text='Ja').click(); pg.wait_for_timeout(400)
     k = pg.locator('.mu-karte', has_text='Gesperrt')
-    check(('aa01', True) in pg.st['votes'] and '4× bestätigt' in k.inner_text() and k.locator('button:has-text("Stimmt noch")').is_disabled(), f'{tag}: „Stimmt noch“ zählt und sperrt erneutes Bewerten')
+    check(('aa01', True) in pg.st['votes'] and '4× bestätigt' in k.inner_text() and k.locator('button.mu-knopf', has_text='Ja').is_disabled(), f'{tag}: „Stimmt noch“ zählt und sperrt erneutes Bewerten')
     # Unpassend melden: nur bei Notiz; Fehler bleibt im Fenster; danach Hinweis an Netlify Forms und Meldung ausgeblendet
     check(pg.locator('.mu-karte', has_text='Parkplatz voll').locator('.vo-unpassend').count() == 0 and pg.locator('.mu-karte .vo-unpassend').count() == 2, f'{tag}: „Unpassend melden“ nur bei Meldungen mit Notiz')
     pg.locator('.mu-karte', has_text='Warteschlange').locator('.vo-unpassend').click(); pg.wait_for_selector('.um-dlg[open]')

@@ -23,6 +23,7 @@
   --wm-flaeche: #FFFFFF;
   --wm-flaeche-2: #F1F6F8;
   --wm-linie: #E3EBEF;
+  --wm-spur: color-mix(in srgb, var(--wm-leise) 25%, var(--wm-flaeche));   /* ≈ #DEE3E6, Text matt darauf 4,6 : 1: Spur des Segment-Umschalters (8.0.10) */
   --wm-rand: color-mix(in srgb, var(--wm-leise) 50%, var(--wm-flaeche));   /* ≈ #BEC7CE: Griffe, Hover-Rahmen, gestrichelte Flächen */
 
   /* Text */

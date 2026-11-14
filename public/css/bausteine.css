@@ -98,9 +98,14 @@ div.wm-zeile { cursor: default; }
 .wm-chip-punkt { flex: none; width: 10px; height: 10px; margin-right: 7px; border-radius: var(--wm-r-rund); background: var(--punkt, var(--wm-leise));
   transition: width var(--wm-mittel) var(--wm-feder), margin var(--wm-mittel) var(--wm-feder); }
 .wm-chip[aria-pressed="true"] .wm-chip-punkt { width: 0; margin-right: 0; }
+/* Chip mit Symbol statt Punkt (8.0.10, Meldungsarten): 16 px in der Farbe --punkt, schrumpft beim Auswählen wie der Punkt */
+.wm-chip-ico { flex: none; display: grid; width: 16px; margin-right: 6px; overflow: hidden; color: var(--punkt, var(--wm-matt));
+  transition: width var(--wm-mittel) var(--wm-feder), margin var(--wm-mittel) var(--wm-feder); }
+.wm-chip-ico svg { display: block; flex: none; }
+.wm-chip[aria-pressed="true"] .wm-chip-ico { width: 0; margin-right: 0; }
 
 /* ---------------------------------------------------------------- Umschalter mit gleitender Markierung (--n Optionen, --i gewählt) */
-.wm-seg { position: relative; display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); padding: 3px; border-radius: var(--wm-r-s); background: var(--wm-flaeche-2); }
+.wm-seg { position: relative; display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); padding: 3px; border-radius: var(--wm-r-s); background: var(--wm-spur); }
 .wm-seg-ind { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / var(--n, 3)); border-radius: calc(var(--wm-r-s) - 3px);
   background: var(--wm-flaeche); box-shadow: var(--wm-schatten); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform var(--wm-mittel) var(--wm-feder); }
 .wm-seg button { position: relative; z-index: 1; height: 40px; padding: 0 var(--wm-1); border: 0; background: none; color: var(--wm-matt);

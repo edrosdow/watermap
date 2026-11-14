@@ -44,7 +44,8 @@ export function meldungenSeite(root, ctx) {
   function rahmen(...inhalt) {
     const n = daten?.meldungen?.length;
     ctx.setzeKopf?.({ titel: 'Aktuelle Meldungen', titelId: 'mu-titel',
-      unter: n === undefined ? 'Das berichten Sportbootfahrer aus deinem Revier.' : n ? `${n} aktuelle ${n === 1 ? 'Meldung' : 'Meldungen'} · aus deinem Revier` : 'Keine aktuellen Meldungen',
+      // 8.0.10: ohne „aus deinem Revier“ – die Zahl gilt für alle Meldungen, egal welcher Bereich gewählt ist
+      unter: n === undefined ? 'Das berichten Sportbootfahrer vor Ort.' : n ? `${n} aktuelle ${n === 1 ? 'Meldung' : 'Meldungen'}` : 'Keine aktuellen Meldungen',
       aktion: { icon: 'refresh', label: 'Meldungen aktualisieren', onclick: async (e) => {
         const k = e.currentTarget; k.classList.add('is-busy');
         await laden(true); k.classList.remove('is-busy');
@@ -72,7 +73,8 @@ export function meldungenSeite(root, ctx) {
     const bewertet = schonBewertet(m.id), aus = daten.offline || bewertet;
     const unter = [`Gemeldet ${alter(m.erstelltAm)}`, m.bestaetigt ? `${m.bestaetigt}× bestätigt` : null, m.widersprochen ? `${m.widersprochen}× nicht mehr` : null].filter(Boolean).join(' · ');
     const entf = bezug && o ? ctx.formatDistance(d(m)) : null;
-    const knopf = (text, stimmt) => h('button', { type: 'button', class: 'mu-knopf', disabled: aus, onclick: async (e) => {
+    // 8.0.10: wie „Heute vor Ort“ – Frage links, Pillen „Ja“ / „Nicht mehr“ rechts (vorher zwei weiße Knöpfe mit Schatten auf weißer Karte)
+    const knopf = (text, stimmt) => h('button', { type: 'button', class: 'vo-pille mu-knopf', disabled: aus, 'aria-label': `${stimmt ? 'Stimmt noch' : 'Nicht mehr aktuell'}: ${t.text}${o ? `, ${o.name}` : ''}`, onclick: async (e) => {
       e.currentTarget.disabled = true;
       try { await bestaetigen(m, stimmt); ctx.toast(stimmt ? 'Danke – als „stimmt noch“ bestätigt.' : 'Danke – als „nicht mehr aktuell“ markiert.'); await laden(false); }
       catch (err) { ctx.toast(err.message); e.currentTarget.disabled = false; }
@@ -88,15 +90,20 @@ export function meldungenSeite(root, ctx) {
           h('small', { class: 'mu-zeit', text: unter })),
         art),
       m.notiz ? h('p', { class: 'mu-notiz', text: `„${m.notiz}“` }) : null,
-      h('div', { class: 'mu-knoepfe' },
-        knopf('Stimmt noch', true), knopf('Nicht mehr aktuell', false),
-        o ? h('a', { class: 'mu-ort-link', href: `#p=${encodeURIComponent(m.standortId)}`, onclick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); ctx.oeffneOrt(m.standortId); } },
-          'Standort', h('span', { html: icon('chevron', 16), 'aria-hidden': 'true' })) : null),
+      h('div', { class: 'vo-frage mu-knoepfe' }, h('span', { class: 'vo-frage-text mu-frage', text: 'Stimmt das noch?' }),
+        h('span', { class: 'vo-pillen' }, knopf('Ja', true), knopf('Nicht mehr', false))),
       bewertet && !daten.offline ? h('p', { class: 'mu-bewertet', text: 'Du hast diese Meldung schon bewertet.' }) : null,
-      // nur Meldungen mit Notiz können unpassend sein
-      m.notiz && ctx.unpassend && !daten.offline ? h('div', { class: 'mu-unpassend' }, h('button', { type: 'button', class: 'vo-unpassend', 'aria-label': `Notiz „${m.notiz}“ als unpassend melden`,
-        onclick: () => ctx.unpassend(m, o?.name || '', async () => { await laden(false); root.closest('.wm-sheet')?.querySelector('.wm-kopf-titel')?.focus(); }) },
-        h('span', { html: icon('flag', 15), 'aria-hidden': 'true' }), h('span', { text: 'Unpassend melden' }))) : null);
+      // 8.0.10: Fußzeile – links „Standort ›“, rechts „Unpassend melden“ (nur Meldungen mit Notiz können unpassend sein)
+      fuss(m, o));
+  }
+
+  function fuss(m, o) {
+    const link = o ? h('a', { class: 'mu-ort-link', href: `#p=${encodeURIComponent(m.standortId)}`, onclick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); ctx.oeffneOrt(m.standortId); } },
+      'Standort', h('span', { html: icon('chevron', 16), 'aria-hidden': 'true' })) : null;
+    const unp = m.notiz && ctx.unpassend && !daten.offline ? h('div', { class: 'mu-unpassend' }, h('button', { type: 'button', class: 'vo-unpassend', 'aria-label': `Notiz „${m.notiz}“ als unpassend melden`,
+      onclick: () => ctx.unpassend(m, o?.name || '', async () => { await laden(false); root.closest('.wm-sheet')?.querySelector('.wm-kopf-titel')?.focus(); }) },
+      h('span', { html: icon('flag', 15), 'aria-hidden': 'true' }), h('span', { text: 'Unpassend melden' }))) : null;
+    return link || unp ? h('div', { class: 'mu-fuss' }, link, unp) : null;
   }
 
   /** „Mein Standort“ antippen: Position nur auf Wunsch (oder wenn schon freigegeben) abfragen. */
@@ -147,25 +154,29 @@ export function meldungenSeite(root, ctx) {
       return h('button', { type: 'button', class: 'wm-chip mu-chip' + (ui.filter === k ? ' is-an' : ''), 'aria-pressed': String(ui.filter === k), dataset: { fokus: `f-${k}` },
         style: farbe ? `--punkt: ${farbe}` : null, onclick: () => { ui.filter = k; zeichnen(); } },
         h('span', { class: 'wm-chip-haken', html: icon('check', 16), 'aria-hidden': 'true' }),
-        farbe ? h('span', { class: 'wm-chip-punkt', 'aria-hidden': 'true' }) : null, text);
+        // 8.0.10: Symbol der Art statt Farbpunkt (vier Arten hatten denselben orangen Punkt); schrumpft beim Auswählen wie der Punkt
+        typen ? h('span', { class: 'wm-chip-ico', html: icon(TYPEN[typen[0]]?.ico || 'alert', 16), 'aria-hidden': 'true' }) : null, text);
     }));
     const kartenOk = !!ctx.grenzen();
-    const BEREICHE = [['ueberall', 'Überall'], ['karte', 'Kartenausschnitt'], ['standort', 'Mein Standort']];
+    const BEREICHE = [['ueberall', 'Überall'], ['karte', 'Ausschnitt'], ['standort', 'Mein Standort']];
     const seg = h('div', { class: 'wm-seg mu-seg', role: 'group', 'aria-label': 'Bereich', style: `--n: 3; --i: ${Math.max(0, BEREICHE.findIndex(b => b[0] === ui.bereich))}` },
       h('span', { class: 'wm-seg-ind', 'aria-hidden': 'true' }),
-      BEREICHE.map(([k, text]) => h('button', { type: 'button', class: ui.bereich === k ? 'is-an' : '', 'aria-pressed': String(ui.bereich === k),
+      BEREICHE.map(([k, text]) => h('button', { type: 'button', class: ui.bereich === k ? 'is-an' : '', 'aria-pressed': String(ui.bereich === k), title: k === 'karte' ? 'Kartenausschnitt' : null,
         dataset: { fokus: `b-${k}` }, disabled: k === 'karte' && !kartenOk, onclick: () => bereichWaehlen(k) }, text)));
     const sort = h('select', { class: 'mu-sort', 'aria-label': 'Sortierung', dataset: { fokus: 'sort' }, onchange: (e) => { ui.sort = e.target.value; zeichnen(); } },
       Object.entries(SORT).filter(([k]) => k !== 'nah' || bezug).map(([k, text]) => h('option', { value: k, selected: ui.sort === k, text })));
     const hinweis = daten.offline
       ? h('p', { class: 'wm-hinweis mu-offline', role: 'status', text: daten.unbekannt ? 'Offline – noch kein gespeicherter Stand vorhanden.' : `Offline – letzter gespeicherter Stand (${standVon(daten.zeit).replace('Stand von ', '')}). Bewerten ist erst wieder mit Verbindung möglich.` })
       : null;
-    // Liste und Zählzeile werden beim Ziehen des Reglers allein neu gezeichnet (der Regler bleibt stehen)
-    const zaehler = h('p', { class: 'mu-umkreis-zahl', role: 'status' });
+    // Liste und Zählzeile werden beim Ziehen des Reglers allein neu gezeichnet (der Regler bleibt stehen).
+    // 8.0.10: Zählzeile links, Sortierung rechts in einer Zeile über der Liste (vorher Sortierung allein in einer Zeile)
+    const zaehler = h('p', { class: 'mu-zahl', role: 'status' });
+    const listenKopf = h('div', { class: 'mu-listenkopf' }, zaehler, h('span', { class: 'mu-sort-box' }, sort));
     const rumpf = h('div', { class: 'mu-rumpf' });
     const fuellen = () => {
-      const a = auswahl();
-      zaehler.textContent = `${a.liste.length} ${a.liste.length === 1 ? 'Meldung' : 'Meldungen'} im Umkreis von ${ui.km} km um deinen Standort.`;
+      const a = auswahl(), n = a.liste.length;
+      listenKopf.hidden = !daten.meldungen.length || (ui.bereich === 'standort' && !a.bezug);
+      zaehler.textContent = `${n} ${n === 1 ? 'Meldung' : 'Meldungen'}${ui.bereich === 'karte' ? ' im Kartenausschnitt' : ui.bereich === 'standort' ? ` im Umkreis von ${ui.km} km` : ''}`;
       rumpf.replaceChildren(inhaltBauen(a.liste, a.bezug, a.d));
     };
     const regler = ui.bereich === 'standort' && bezug ? h('div', { class: 'mu-umkreis' },
@@ -173,10 +184,9 @@ export function meldungenSeite(root, ctx) {
       h('input', { type: 'range', id: 'mu-km', class: 'mu-range', min: String(KM_MIN), max: String(KM_MAX), step: String(KM_SCHRITT), value: String(ui.km), 'aria-valuetext': `${ui.km} Kilometer`, dataset: { fokus: 'km' },
         oninput: (e) => { ui.km = Number(e.target.value); e.target.setAttribute('aria-valuetext', `${ui.km} Kilometer`); root.querySelector('.mu-km-wert').textContent = `${ui.km} km`; fuellen(); },
         onchange: () => kmMerken(ui.km) }),
-      h('div', { class: 'mu-skala', 'aria-hidden': 'true' }, [5, 25, 50, 75, 100].map(n => h('span', { text: n === 100 ? '100 km' : String(n) }))),
-      zaehler) : null;
+      h('div', { class: 'mu-skala', 'aria-hidden': 'true' }, [5, 25, 50, 75, 100].map(n => h('span', { text: n === 100 ? '100 km' : String(n) })))) : null;
     fuellen();
-    root.replaceChildren(rahmen(chips, h('div', { class: 'mu-steuer' }, seg, h('span', { class: 'mu-sort-box' }, sort)), regler, hinweis, rumpf));
+    root.replaceChildren(rahmen(chips, h('div', { class: 'mu-steuer' }, seg), regler, hinweis, listenKopf, rumpf));
     if (fokus) root.querySelector(`[data-fokus="${fokus}"]`)?.focus();
   }
 
