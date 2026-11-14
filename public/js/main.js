@@ -34,7 +34,7 @@ import { staffeln, merkFlug, sternPop, markerPlopp, hakenSvg } from './bewegung.
 import { pegelSheet, slipsAmPegel } from './pegel-sheet.js';
 import { wetterZeile } from './wetter.js';
 import { GROUPS, loadExtras, renderExtraDetail } from './extras.js';
-import { enrichFacts } from './hafeninfo.js';
+import { enrichFacts, hafenWeb } from './hafeninfo.js';
 import { sucheEinrichten } from './suche-ui.js';
 import { meldenEinrichten } from './melden-menue.js';
 
@@ -499,6 +499,7 @@ function showDetail(p, { scrollTo = null, stufe = null } = {}) {
   const [kopf, body] = renderDetail(p, {
     user: state.user,
     enrichFacts: enrichFacts(state.meta, p.id),
+    hafenWeb: p.type === 'marina' ? hafenWeb(state.meta, p.id) : null,   // 8.0.10: Website füllt nur unbekannte Punkte von „Wichtig für dein Boot“
     weather: wetterZeile(p.lat, p.lon, { name: displayName(p) }),   // 8.0.8: überall eine Zeile, Tipp öffnet das Wetter-Sheet
     actions: {
       close: closeDetail,

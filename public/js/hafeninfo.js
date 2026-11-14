@@ -71,6 +71,60 @@ export function enrichFacts(meta, id) {
   }, () => { /* Zusatzinfo – fehlt die Datei, bleibt die Tabelle wie sie ist */ });
 }
 
+/**
+ * Häfen (8.0.10, Nutzer): Website-Angaben füllen nur die Punkte von „Wichtig für dein Boot“, die es auch in „Angaben ergänzen“ gibt
+ * (Gastliegeplätze, Liegegebühr, Strom, Wasser, Toiletten, Duschen, Hafenmeister). Alles andere von der Website wird nicht gezeigt.
+ * Nur unbekannte Werte werden gefüllt (OSM und Community haben Vorrang). Rückgabe: { attrs, gefuellt } – gefuellt = Anzahl gefüllter Werte.
+ */
+const WEB_ATTR = { strom: 'electricity', wasser: 'water_tap', toiletten: 'toilets', duschen: 'showers', hafenmeister: 'harbour_master' };
+export function webAttrs(attrs, facts) {
+  const a = { ...(attrs || {}) }, keys = new Set(facts.map(f => f.key));
+  let gefuellt = 0;
+  const fuellen = (k, v) => { if (v !== null && v !== undefined && (a[k] === undefined || a[k] === null || a[k] === '')) { a[k] = v; gefuellt++; } };
+  if (keys.has('gast_liegeplatz')) fuellen('visitor_berths', true);
+  fuellen('berth_fee', liegegeldKurz(facts.filter(f => f.key === 'gast_liegeplatz')));
+  for (const [key, attr] of Object.entries(WEB_ATTR)) if (keys.has(key)) fuellen(attr, true);
+  return { attrs: a, gefuellt };
+}
+
+/** Kurzer Preis aus den Website-Zeilen zum Gastliegeplatz: „23–30 € je Meter“, „15 € pro Nacht“; ohne Betrag null. */
+export function liegegeldKurz(facts) {
+  const preise = [], texte = [];
+  for (const f of facts) {
+    const t = `${f.value || ''} ${f.quote || ''}`;
+    const m = String(f.value || '').match(/(\d+(?:[.,]\d{1,2})?)\s*(?:€|euro|eur\b)/i);
+    const n = Number.isFinite(f.price_eur) ? f.price_eur : m ? Number(m[1].replace(',', '.')) : NaN;
+    if (Number.isFinite(n) && n > 0) { preise.push(n); texte.push(t); }
+  }
+  if (!preise.length) return null;
+  const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ','));
+  const lo = Math.min(...preise), hi = Math.max(...preise);
+  const alle = (re) => texte.every(t => re.test(t));
+  const meter = alle(/meter|lfd\.?|\d\s*m\b|(?:pro|je)\s+m\b|\/\s*m\b/i), nacht = alle(/nacht|tag/i);
+  const einheit = meter && nacht ? ' je Meter und Nacht' : meter ? ' je Meter' : nacht ? ' pro Nacht' : '';
+  return `${lo === hi ? fmt(lo) : `${fmt(lo)}–${fmt(hi)}`} €${einheit}`;
+}
+
+/** Lädt die Website-Angaben eines Hafens. → Promise<{ facts, entry } | null> */
+export function hafenWeb(meta, id) {
+  if (!meta?.files?.hafeninfo) return null;
+  return loadHafeninfo(meta).then((places) => {
+    const entry = places?.[id];
+    const facts = (entry?.facts || []).filter(f => LABELS[f.key] && f.key !== 'sonstiges');
+    return facts.length ? { facts, entry } : null;
+  }, () => null);
+}
+
+/** Herkunftszeile unten im Kasten: „Teilweise laut Website des Hafens (host) · Stand … · ohne Gewähr“. */
+export function webHerkunft(entry) {
+  const age = ageInDays(entry.checked);
+  const src = safeHttpUrl(entry.source);
+  return h('p', { class: 'wb-herkunft' + (age !== null && age > CONFIG.HAFENINFO_STALE_DAYS ? ' is-stale' : '') },
+    'Teilweise laut Website des Hafens',
+    src ? [' (', h('a', { href: src, target: '_blank', rel: 'noopener noreferrer', text: host(src) }), ')'] : '',
+    ` · Stand ${formatDate(entry.checked) || 'unbekannt'} · ohne Gewähr`);
+}
+
 function sourceNote(entry) {
   const age = ageInDays(entry.checked);
   const stale = age !== null && age > CONFIG.HAFENINFO_STALE_DAYS;

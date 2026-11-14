@@ -962,12 +962,8 @@ input.hat-x { padding-right: calc(var(--x-rechts, 2px) + 44px) !important; }
 .af-karte .hi-note { margin: var(--wm-2) var(--wm-1) 0; }
 
 /* Hafen (8.0.8): Angaben laut Website unter den sechs Punkten von „Wichtig für dein Boot“ */
-.wb .hb-web { padding: 0 var(--wm-3) var(--wm-3); }
-.wb .hb-web:empty { display: none; }
-.wb .hb-web-titel { margin: 0 var(--wm-1) var(--wm-2); font-size: var(--wm-t-xs); font-weight: 700; color: var(--wm-matt); }
-.wb .hb-web .facts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--wm-2); margin: 0; }
-.wb .hb-web .af-p { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: var(--wm-2) var(--wm-3); border-radius: var(--wm-r-s); background: var(--wm-flaeche-2); }
-.wb .hb-web dt, .wb .hb-web dd { margin: 0; padding: 0; border: 0; }
-.wb .hb-web dt { font-size: var(--wm-t-xs); color: var(--wm-matt); }
-.wb .hb-web dd { font-size: var(--wm-t-s); font-weight: 700; color: var(--wm-tinte); overflow-wrap: anywhere; }
+/* 8.0.10: Herkunft der Website-Angaben als eine kleine Zeile im Kasten (ersetzt den Block „Laut Website des Hafens“) */
+.wb-herkunft { margin: 0; padding: 0 var(--wm-4) var(--wm-3); font-size: var(--wm-t-xs); color: var(--wm-matt); overflow-wrap: anywhere; }
+.wb-herkunft a { color: inherit; }
+.wb-herkunft.is-stale { color: var(--wm-warn-text); }
 .wb > .hi-note { margin: 0 var(--wm-4) var(--wm-3); }
