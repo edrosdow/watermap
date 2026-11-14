@@ -1,5 +1,13 @@
 [
   {
+    "zeit": "2026-11-14T23:08:13.156Z",
+    "bereich": "ergaenzung",
+    "aktion": "übernommen",
+    "standort_id": "node/1970416169",
+    "standort_name": "Verdener Motorboot-Verein (VMV)",
+    "beschreibung": "Gastliegeplätze: Ja, Wasser: Ja, Toiletten: Ja, Duschen: Nein, Zugang: Nur Kunden, Liegegebühr: 10 pro Meter"
+  },
+  {
     "zeit": "2026-10-28T14:39:56.854Z",
     "bereich": "foto",
     "aktion": "freigegeben",
