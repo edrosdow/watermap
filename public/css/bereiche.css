@@ -53,9 +53,7 @@
 
 @media (max-width: 767px) {
         .mu-steuer, .mu-offline, .mu-liste, .mu-leer { margin-left: 16px; margin-right: 16px; }
-    .mu-knoepfe { grid-template-columns: 1fr 1fr; }
     .mu-sort { font-size: var(--wm-t-s); padding: 0; }
-  .mu-ort-link { grid-column: 1 / -1; justify-content: center; border-top: 1px solid var(--wm-flaeche-2); margin-top: 2px; }
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -281,15 +279,29 @@ a.ei-reihe-text { display: flex; flex-direction: column; color: inherit; text-de
 .mh-fuss { margin: var(--wm-2) var(--wm-1) 0; font-size: var(--wm-t-xs); color: var(--wm-matt); }
 
 /* ---- Aktuelle Meldungen: Chips, Umschalter, Meldung als Ortszeile mit Marke, Knöpfe darunter */
-.mu-steuer { display: flex; flex-direction: column; gap: var(--wm-2); }
-.mu-sort-box { align-self: flex-end; }
+/* 8.0.10: Umschalter über die volle Breite; Zählzeile + Sortierung in einer Zeile über der Liste; Chips auf dem Handy eine Zeile zum Wischen */
+.mu-steuer, .mu-liste, .mu-offline { margin-left: 0; margin-right: 0; }   /* gleiche Kante wie Chips und Kopf (vorher doppelt eingerückt) */
+.mu-steuer { display: block; padding: 0; }
+.mu-steuer .mu-seg { width: 100%; }
+.mu-seg button { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mu-listenkopf { display: flex; align-items: center; justify-content: space-between; gap: var(--wm-2); margin-bottom: calc(-1 * var(--wm-1)); }
+.mu-listenkopf[hidden] { display: none; }
+.mu-zahl { flex: 1; min-width: 0; margin: 0; font-size: var(--wm-t-s); color: var(--wm-matt); }
+.mu-sort-box { flex: none; }
+.mu-chips { display: flex; flex-wrap: wrap; gap: var(--wm-2); }
+@media (max-width: 767px) {
+  .mu-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: calc(-1 * var(--wm-1)) calc(-1 * var(--wm-4)); padding: var(--wm-1) var(--wm-4); }
+  .mu-chips::-webkit-scrollbar { display: none; }
+}
 .mu-liste { display: flex; flex-direction: column; gap: var(--wm-3); }
-.mu-karte { padding-bottom: var(--wm-3); }
+.mu-karte { padding-bottom: var(--wm-1); }
+.mu-karte .mu-fuss { display: flex; align-items: center; justify-content: space-between; gap: var(--wm-2); padding: 0 var(--wm-2) 0 var(--wm-1); }
+.mu-karte .mu-fuss .mu-unpassend { margin: 0 0 0 auto; padding: 0; }
 .mu-karte .mu-ico { background: color-mix(in srgb, var(--c) 16%, var(--wm-flaeche)); color: var(--c); }
 .mu-karte .mu-zeit, .mu-karte .mu-wo { font-size: var(--wm-t-s); color: var(--wm-matt); }
 .mu-karte .mu-notiz { margin: 0 var(--wm-3) var(--wm-2); font-size: var(--wm-t-s); color: var(--wm-tinte); }
 .mu-karte .mu-knoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: var(--wm-2); padding: 0 var(--wm-3); }
-.mu-karte .mu-bewertet, .mu-karte .mu-unpassend { margin: var(--wm-2) var(--wm-3) 0; }
+.mu-karte .mu-bewertet { margin: var(--wm-2) var(--wm-3) 0; }
 .mu-leer { display: flex; flex-direction: column; align-items: center; gap: var(--wm-2); }
 .mu-leer-titel { margin: 0; font-weight: 700; color: var(--wm-tinte); }
 .mu-leer-text { margin: 0; max-width: 36ch; }
