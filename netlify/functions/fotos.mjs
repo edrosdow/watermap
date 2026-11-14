@@ -335,7 +335,7 @@ export async function handle(req, { env, siteId, deploy = null, fetchFn = fetch,
   const missing = ['FOTO_ADMIN_PASSWORT', 'NETLIFY_API_TOKEN', 'GITHUB_TOKEN'].filter(k => !env[k]);
   if (missing.length) {
     return json(503, { fehler: `Foto-Freigabe ist noch nicht eingerichtet – in diesem Deploy fehlt: ${missing.join(', ')}. ` +
-      'Werte müssen auch für „Deploy Previews“ gesetzt sein; danach neu deployen.' });
+      'Werte müssen auch für „Deploy Previews“ und „Branch deploys“ gesetzt sein; danach neu deployen.' });
   }
   if (!passwordOk(req.headers.get('x-passwort'), env.FOTO_ADMIN_PASSWORT)) return json(401, { fehler: 'Passwort falsch.' });
   const { nf, gh } = api(env, fetchFn);
