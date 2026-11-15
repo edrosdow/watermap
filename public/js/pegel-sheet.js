@@ -6,7 +6,7 @@ import { h, announce } from './dom.js';
 import { haversine, displayName } from './model.js';
 import { s as svgEl } from './chart.js';
 import { verlaufLaden, aenderung24h } from './pegel-daten.js';
-import { tendenz, tendenzText as tendenzTextKurz, aenderungKurz } from './pegel-einordnung.js';
+import { tendenz, tendenzText as tendenzTextKurz, tendenzVerb, aenderungKurz } from './pegel-einordnung.js';
 import { fmt, zustand, ZUSTAND, pegelDetail } from './pegel-ansicht.js';
 import { formatTime, messluecken } from './pegel.js';
 import { istTidepegel, auswerten } from './gezeiten.js';
@@ -73,7 +73,7 @@ export function pegelSheet(ctx) {
     const z = zustand(g), alt = g.state === 'old', tide = istTidepegel(g);
     const tend = h('b', { text: '…' }), aend = h('b', { text: '…' });
     const zahlen = alt ? null : tide ? h('span', { class: 'pks-zahlen' }, h('b', { text: '…' }))
-      : h('span', { class: 'pks-zahlen' }, h('span', { title: 'Tendenz der letzten 2 Stunden' }, '2 Std. ', tend), h('span', { title: 'Änderung in 24 Stunden' }, '24 Std. ', aend));
+      : h('span', { class: 'pks-zahlen' }, h('span', { title: 'Was der Pegel gerade tut (letzte 2 Stunden)' }, tend), h('span', { title: 'Änderung in 24 Stunden' }, 'seit gestern ', aend));
     const kurveBox = h('div', { class: 'pks-kurve' });
     const fuer = g;
     verlaufLaden(g.id).then((pts) => {
@@ -84,7 +84,7 @@ export function pegelSheet(ctx) {
       const w = kurzWerte(g, pts);
       if ('tide' in w) { zahlen.firstChild.textContent = w.tide || '–'; return; }
       const t = tendenz(pts);
-      tend.textContent = t ? aenderungKurz(t.d) : '–'; tend.title = t ? tendenzTextKurz(t) : 'Keine Tendenz verfügbar';
+      tend.textContent = tendenzVerb(t) || '–'; tend.title = t ? `In den letzten 2 Stunden ${aenderungKurz(t.d)}` : 'Keine Tendenz verfügbar';
       aend.textContent = w.aend || '–';
     }, () => { if (zahlen) zahlen.querySelectorAll('b').forEach((b) => { b.textContent = '–'; }); });
     const zustandText = alt ? `Veraltet – ${formatTime(g.time)}` : tide ? 'Tide' : grossSchreiben(ZUSTAND[z].text);

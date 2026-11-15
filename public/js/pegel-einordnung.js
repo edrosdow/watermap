@@ -31,6 +31,9 @@ const PFEIL = { 1: '↗', 0: '→', '-1': '↘' }, WORT = { 1: 'steigend', 0: 'g
 const cm = (d) => `${d > 0 ? '+' : d < 0 ? '−' : '±'}${fmt(Math.abs(d))} cm`;
 /** „↘ fallend, −3 cm“ bzw. null */
 export const tendenzText = (t) => (t ? `${PFEIL[t.richtung]} ${WORT[t.richtung]}, ${cm(t.d)}` : null);
+const VERB = { 1: 'steigt', 0: 'bleibt gleich', '-1': 'fällt' };
+/** „↘ fällt“ – was der Pegel gerade tut (Tendenz der letzten 2 Stunden) – bzw. null */
+export const tendenzVerb = (t) => (t ? `${PFEIL[t.richtung]} ${VERB[t.richtung]}` : null);
 /** „+1 cm“ bzw. null */
 export const aenderungKurz = (d) => (d === null || d === undefined ? null : cm(d));
 

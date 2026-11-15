@@ -5,7 +5,7 @@ import { icon } from './icons.js';
 import { historyChart, formatTime } from './pegel.js';
 import { aenderung24h, meinePegel, zusatzLaden, vorhersageWLaden, wtAenderungLaden, verlauf30Laden } from './pegel-daten.js';
 import { vorhersageSatz } from './pegel-vorhersage.js';
-import { tendenz, tendenzText as tendenzTextKurz, aenderungKurz, zonenLage, ZONEN } from './pegel-einordnung.js';
+import { tendenz, tendenzText as tendenzTextKurz, tendenzVerb, aenderungKurz, zonenLage, ZONEN } from './pegel-einordnung.js';
 import { alarmFenster, alarmStatus } from './alarm.js';
 import { istTidepegel } from './gezeiten.js';
 import { tideDetail } from './pegel-tide-ansicht.js';
@@ -181,7 +181,7 @@ export function kicker(art, g) {
 export function pegelDetail(g, opts) {
   if (istTidepegel(g)) return tideDetail(g, opts);   // Tidepegel: Tidekurve und Einordnung statt MNW/MHW-Skala
   const z = zustand(g);
-  // Zustand, Tendenz (2 h) und Änderung (24 h) in einer Zeile – aus derselben Messreihe wie das Diagramm
+  // Zustand, was der Pegel gerade tut (2 h, als Wort) und Änderung seit gestern (24 h) in einer Zeile – aus derselben Messreihe wie das Diagramm
   const aend24 = h('b', { class: 'pd-24', text: '…' }), tend = h('b', { class: 'pd-2h', text: '…' });
   const alt = g.state === 'old';
   // Immer im Sheet-Rahmen (Pegel-Sheet, Pegel-Fenster): Name, Gewässer und × stehen im Kopf des Rahmens – hier km, Zeit, Wert, Zustand, Aktionen
@@ -189,7 +189,7 @@ export function pegelDetail(g, opts) {
     h('p', { class: 'pd-ort' + (alt ? ' is-alt' : '') }, [kmText(g), alt ? `veraltet – ${formatTime(g.time)}` : formatTime(g.time)].filter(Boolean).join(' · ')),
     h('p', { class: 'pd-wert' }, grosserWert(g, alt), h('span', { text: g.unit })),
     h('p', { class: 'pd-zeile-kopf' }, h('span', { class: `pd-zdot ${ZUSTAND[z].cls}`, 'aria-hidden': 'true' }), h('b', { text: ZUSTAND[z].text.replace(/^ü/, 'Ü') }),
-      alt ? null : h('span', { class: 'pd-tz' }, ' · 2 Std. ', tend, ' · 24 Std. ', aend24)),
+      alt ? null : h('span', { class: 'pd-tz' }, ' · ', tend, ' · seit gestern ', aend24)),
     h('div', { class: 'pd-knoepfe' }, alarmKnopf(g), merkKnopf(g, opts.onStern),
       glasKnopf('pd-teilen', icon('share', 20), 'Teilen', { 'aria-label': 'Pegel teilen', 'aria-haspopup': 'dialog',
         onclick: (e) => teilenMenue(g, { onShare: opts.onShare, opener: e.currentTarget, daten: async () => ({ pts: await opts.verlauf.catch(() => []), wv: await vorhersage }) }) })));
@@ -246,7 +246,7 @@ export function pegelDetail(g, opts) {
     alle = pts; zeichnen();
     const d = aenderung24h(pts), t = tendenz(pts);
     aend24.textContent = aenderungKurz(d) || '–';
-    tend.textContent = t ? aenderungKurz(t.d) : '–'; tend.title = tendenzTextKurz(t) || 'Keine Tendenz verfügbar';
+    tend.textContent = tendenzVerb(t) || '–'; tend.title = t ? `In den letzten 2 Stunden ${aenderungKurz(t.d)}` : 'Keine Tendenz verfügbar';
   }, () => {
     aend24.textContent = '–'; tend.textContent = '–';
     if (bereich !== '30d') { chart.removeAttribute('aria-busy'); chart.replaceChildren(h('p', { class: 'unknown', text: 'Verlauf konnte nicht geladen werden.' })); }
