@@ -565,9 +565,15 @@ details.pd-zeile[open] { padding-bottom: 10px; }
 .pks-kurve-linie { fill: none; stroke: var(--wm-petrol); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .pks-kurve-flaeche { fill: var(--wm-petrol); opacity: .08; }
 .pks-kurve-punkt { fill: var(--wm-petrol); stroke: var(--wm-flaeche); stroke-width: 2; vector-effect: non-scaling-stroke; }
-.pks-trend { display: flex; align-items: center; flex-wrap: wrap; gap: var(--wm-2) var(--wm-3); margin: 0; font-size: var(--wm-t-s); color: var(--wm-matt); }
-.pks-zahlen { display: inline-flex; gap: var(--wm-3); }
-.pks-zahlen b { color: var(--wm-tinte); }
+/* 8.0.16: Zustand und Tendenz als zwei Kacheln (nur Kurzansicht; die Details behalten die Zeile) */
+.pks-trend { display: grid; grid-template-columns: 1fr 1fr; gap: var(--wm-2); margin: 0; }
+.pks-trend.is-einzeln { grid-template-columns: 1fr; }
+.pks-kachel { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 9px 12px; border-radius: var(--wm-r-s); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
+.pks-kachel small { font-size: var(--wm-t-xs); color: var(--wm-matt); }
+.pks-kachel b { display: flex; align-items: center; gap: 6px; font-size: var(--wm-t-m); color: var(--wm-tinte); }
+.pks-kpunkt { flex: none; width: 9px; height: 9px; border-radius: var(--wm-r-rund); background: var(--wm-leise); }
+.pks-kpunkt.is-gut { background: var(--wm-gut); } .pks-kpunkt.is-warn { background: var(--wm-warn); }
+.pks-kpunkt.is-hoch { background: var(--wm-hoch); } .pks-kpunkt.is-stop { background: var(--wm-stop); }
 .pks-details { width: 100%; }
 /* Details im Sheet: Kopf ohne eigenen Namen und × (stehen im Sheet-Kopf) */
 .wm-sheet .pd { background: none; flex-shrink: 0; }   /* 8.0.3: nicht auf die Sheet-Höhe stauchen – sonst ragt das Ende unter die Navigation */

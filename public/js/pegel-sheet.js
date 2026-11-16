@@ -12,7 +12,7 @@ import { formatTime, messluecken } from './pegel.js';
 import { istTidepegel, auswerten } from './gezeiten.js';
 import { tendenzText } from './pegel-tide-ansicht.js';
 import { normW, gleichesGewaesser, istKueste, slug, KUESTE_SLUG, flussKm } from './pegel-fluss.js';
-import { sheetOeffnen, marke } from './bausteine.js';
+import { sheetOeffnen } from './bausteine.js';
 import { hochzaehlen } from './bewegung.js';
 
 /** Nächste Slipanlagen am selben Gewässer (für die Details). */
@@ -68,12 +68,13 @@ export function pegelSheet(ctx) {
 
   const kopfAngaben = () => ({ titel: g.name, titelId: 'pd-name', unter: [istTidepegel(g) ? 'Tidepegel' : 'Pegel', g.water].filter(Boolean).join(' · ') });
 
-  /** Kurzansicht (Stufe „klein“): Wert mit 24-h-Kurve, Zustand und Tendenz in einer Zeile, „Details“. */
+  /** Kurzansicht (Stufe „klein“): Wert mit 24-h-Kurve, darunter zwei Kacheln „Wasserstand“ und „Tendenz“ (8.0.16), „Details“. */
   function kurz() {
     const z = zustand(g), alt = g.state === 'old', tide = istTidepegel(g);
     const tend = h('b', { text: '…' });
-    const zahlen = alt ? null : tide ? h('span', { class: 'pks-zahlen' }, h('b', { text: '…' }))
-      : h('span', { class: 'pks-zahlen' }, h('span', { title: 'Was der Pegel gerade tut (letzte 2 Stunden)' }, tend));
+    // Zweite Kachel „Tendenz“: was der Pegel gerade tut (letzte 2 Stunden, als Satz) bzw. bei Tidepegeln die Tide; veraltet: keine
+    const zahlen = alt ? null : h('div', { class: 'pks-kachel pks-zahlen', title: tide ? null : 'Was der Pegel gerade tut (letzte 2 Stunden)' },
+      h('small', { text: 'Tendenz' }), tend);
     const kurveBox = h('div', { class: 'pks-kurve' });
     const fuer = g;
     verlaufLaden(g.id).then((pts) => {
@@ -82,7 +83,7 @@ export function pegelSheet(ctx) {
       if (k) kurveBox.replaceChildren(k);
       if (alt) return;
       const w = kurzWerte(g, pts);
-      if ('tide' in w) { zahlen.firstChild.textContent = w.tide || '–'; return; }
+      if ('tide' in w) { tend.textContent = w.tide || '–'; return; }
       const t = tendenz(pts);
       tend.textContent = tendenzSatz(t) || '–'; tend.title = t ? `In den letzten 2 Stunden ${aenderungKurz(t.d)}` : 'Keine Tendenz verfügbar';
     }, () => { if (zahlen) zahlen.querySelectorAll('b').forEach((b) => { b.textContent = '–'; }); });
@@ -93,7 +94,10 @@ export function pegelSheet(ctx) {
       h('div', { class: 'pks-mitte' },
         h('p', { class: 'pks-wert' }, kurzWert, h('small', { text: ` ${g.unit}` })),
         kurveBox),
-      h('p', { class: 'pks-trend' }, marke(alt ? 'leise' : (MARKE[z] || 'leise'), zustandText), zahlen),
+      h('div', { class: 'pks-trend' + (zahlen ? '' : ' is-einzeln') },
+        h('div', { class: 'pks-kachel' }, h('small', { text: 'Wasserstand' }),
+          h('b', null, h('i', { class: `pks-kpunkt is-${alt ? 'leise' : (MARKE[z] || 'leise')}`, 'aria-hidden': 'true' }), zustandText)),
+        zahlen),
       h('button', { type: 'button', class: 'wm-btn is-primaer pks-details', 'aria-expanded': 'false', onclick: () => s?.stufe('gross') }, 'Details'));
   }
 

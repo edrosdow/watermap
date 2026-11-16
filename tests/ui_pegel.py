@@ -168,6 +168,10 @@ with sync_playwright() as p:
             pg.wait_for_selector(S + ' .pks-kurz', timeout=8000); pg.wait_for_timeout(900)   # Wert zählt hoch (Designumbau 4)
             ptxt = pg.inner_text(S)
             check('Köln' in ptxt and '312' in ptxt and 'Details' in ptxt, f'{name}: Kurzansicht mit Wert und „Details“')
+            pg.wait_for_selector(S + ' .pks-zahlen b:not(:text("…"))')
+            ks = pg.locator(S + ' .pks-trend .pks-kachel').all_inner_texts()
+            check(len(ks) == 2 and ks[0].split() == ['Wasserstand', 'Normal'] and pg.locator(S + ' .pks-kpunkt.is-gut').count() == 1
+                  and re.fullmatch(r'Tendenz\s+([↗↘] (steigt|fällt) (leicht|deutlich)|→ bleibt gleich)', ks[1].strip()), f'{name}: Kurzansicht mit Kacheln „Wasserstand“ und „Tendenz“ ({ks})')
             pg.click(S + ' .pks-details')
         pg.wait_for_selector(S + ' .gc-line', timeout=8000)
         txt = pg.inner_text(S)
