@@ -36,30 +36,8 @@ const VERB = { 1: 'steigt', 0: 'bleibt gleich', '-1': 'fällt' };
 export const tendenzVerb = (t) => (t ? `${PFEIL[t.richtung]} ${VERB[t.richtung]}` : null);
 /** „+1 cm“ bzw. null */
 export const aenderungKurz = (d) => (d === null || d === undefined ? null : cm(d));
-
-// Vorübergehend (Vorschau): Varianten der Tendenz-Zeile zum Vergleichen – ?tendenz=a|b|c, gilt bis zum Schließen des Tabs.
-export const TZ_VARIANTE = (() => {
-  try {
-    const q = new URLSearchParams(location.search).get('tendenz');
-    if (q) sessionStorage.setItem('wm-tendenz', q.toLowerCase());
-    const v = (q || sessionStorage.getItem('wm-tendenz') || 'a').toLowerCase();
-    return ['a', 'b', 'c'].includes(v) ? v : 'a';
-  } catch { return 'a'; }
-})();
-const STAERKE = (d) => (Math.abs(d) < 5 ? 'leicht' : 'deutlich');
-/**
- * Inhalt der Tendenz-Zeile: { tend, title, zweit } – zweit ist der Text hinter „seit gestern“ (A) bzw. „gestern“ (C), bei B null.
- * A „↘ fällt · seit gestern −1 cm“, B „↘ fällt leicht“, C „↘ fällt · gestern 290 cm“.
- */
-export function tendenzZeile(t, d24, letzter, variante = TZ_VARIANTE) {
-  const title = t ? `In den letzten 2 Stunden ${cm(t.d)}` : 'Keine Tendenz verfügbar';
-  if (!t) return { tend: '–', title, zweit: variante === 'b' ? null : (aenderungKurz(d24) || '–') };
-  if (variante === 'b') return { tend: t.richtung === 0 ? tendenzVerb(t) : `${tendenzVerb(t)} ${STAERKE(t.d)}`, title, zweit: null };
-  if (variante === 'c') return { tend: tendenzVerb(t), title, zweit: d24 === null || d24 === undefined || letzter == null ? '–' : `${fmt(letzter - d24)} cm` };
-  return { tend: tendenzVerb(t), title, zweit: aenderungKurz(d24) || '–' };
-}
-/** Beschriftung vor dem zweiten Teil der Zeile (null: kein zweiter Teil). */
-export const tendenzZweitLabel = (variante = TZ_VARIANTE) => (variante === 'b' ? null : variante === 'c' ? 'gestern ' : 'seit gestern ');
+/** „↘ fällt leicht“, „↗ steigt deutlich“, „→ bleibt gleich“ – Tendenz der letzten 2 Stunden als Satz ohne Zahl (unter 5 cm „leicht“) – bzw. null */
+export const tendenzSatz = (t) => (!t ? null : t.richtung === 0 ? tendenzVerb(t) : `${tendenzVerb(t)} ${Math.abs(t.d) < 5 ? 'leicht' : 'deutlich'}`);
 
 /**
  * Lage auf dem Balken „Niedrig · Normal · Hoch“ (feste Breiten 22 % · 56 % · 22 %; innerhalb eines Bereichs maßstäblich).

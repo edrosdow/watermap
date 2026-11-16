@@ -174,7 +174,7 @@ with sync_playwright() as p:
         check('Köln' in txt and 'Rhein' in txt.title(), f'{name}: Name und Gewässer lesbar')
         pg.wait_for_selector(S + ' .pd-tz b:not(:text("…"))')
         tz = pg.inner_text(S + ' .pd-tz')
-        check('312' in txt and 'Normal' in txt and re.search(r'[↗→↘] (steigt|fällt|bleibt gleich)\s*·\s*seit gestern [+−±]\d+ cm', tz), f'{name}: Wert, Zustand, Tendenz als Wort und Änderung seit gestern als Text ({tz!r})')
+        check('312' in txt and 'Normal' in txt and re.search(r'·\s*([↗↘] (steigt|fällt) (leicht|deutlich)|→ bleibt gleich)\s*$', tz) and 'cm' not in tz, f'{name}: Wert, Zustand und Tendenz als Satz ohne Zahl ({tz!r})')
         check(pg.locator(S + ' .pd-zmark').count() == 1 and pg.locator(S + ' .pd-znamen small').count() == 3 and 'unter ' in pg.locator(S + ' .pd-znamen').inner_text(), f'{name}: Einordnung mit Punkt, MNW und MHW')
         d = pg.locator(S + ' .gc-line').get_attribute('d')
         check(d.count('M') == 2, f'{name}: Messlücke unterbricht die Linie ({d.count("M")} Abschnitte)')

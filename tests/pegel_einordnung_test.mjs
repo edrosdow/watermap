@@ -1,6 +1,6 @@
 // Tests für die kurzfristige Tendenz und die Änderung (public/js/pegel-einordnung.js): node tests/pegel_einordnung_test.mjs
 import assert from 'node:assert/strict';
-import { tendenz, tendenzText, aenderungKurz } from '../public/js/pegel-einordnung.js';
+import { tendenz, tendenzText, tendenzSatz, aenderungKurz } from '../public/js/pegel-einordnung.js';
 
 // Tendenz der letzten 2 Stunden – getrennt von der Änderung in 24 h
 const H = 3600e3, t0 = Date.UTC(2026, 10, 2, 12);
@@ -10,6 +10,10 @@ const pts = reihe(i => (i < 112 ? 100 + i / 8 : 114 - (i - 112) * 0.5));
 const t = tendenz(pts);
 assert.deepEqual(t, { d: -4, richtung: -1, stunden: 2 });
 assert.equal(tendenzText(t), '↘ fallend, −4 cm');
+assert.equal(tendenzSatz(t), '↘ fällt leicht');
+assert.equal(tendenzSatz({ d: 5, richtung: 1 }), '↗ steigt deutlich');
+assert.equal(tendenzSatz({ d: -1, richtung: 0 }), '→ bleibt gleich');
+assert.equal(tendenzSatz(null), null);
 assert.equal(tendenzText(tendenz(reihe(() => 100))), '→ gleichbleibend, ±0 cm');
 assert.equal(tendenz(reihe(i => 100 + i, 12))?.richtung, 1);
 assert.equal(tendenz(reihe(i => i, 4)), null, 'kürzer als 2 h → keine Tendenz');
