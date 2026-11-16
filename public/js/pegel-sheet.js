@@ -87,7 +87,7 @@ export function pegelSheet(ctx) {
       const t = tendenz(pts);
       tend.textContent = tendenzSatz(t) || '–'; tend.title = t ? `In den letzten 2 Stunden ${aenderungKurz(t.d)}` : 'Keine Tendenz verfügbar';
     }, () => { if (zahlen) zahlen.querySelectorAll('b').forEach((b) => { b.textContent = '–'; }); });
-    const zustandText = alt ? `Veraltet – ${formatTime(g.time)}` : tide ? 'Tide' : grossSchreiben(ZUSTAND[z].text);
+    const zustandText = alt ? `Veraltet – ${formatTime(g.time)}` : tide ? 'Tidepegel' : grossSchreiben(ZUSTAND[z].text);
     const kurzWert = h('strong', { text: fmt(g.value) });
     if (!alt) setTimeout(() => hochzaehlen(kurzWert, Math.round(g.value), { format: fmt }), 0);
     return h('div', { class: 'pks-kurz' },
