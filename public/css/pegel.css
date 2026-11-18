@@ -571,6 +571,7 @@ details.pd-zeile[open] { padding-bottom: 10px; }
 .pks-kachel { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 9px 12px; border-radius: var(--wm-r-s); background: var(--wm-flaeche); box-shadow: var(--wm-schatten); }
 .pks-kachel small { font-size: var(--wm-t-xs); color: var(--wm-matt); }
 .pks-kachel b { display: flex; align-items: center; gap: 6px; font-size: var(--wm-t-m); color: var(--wm-tinte); }
+.pks-klein { font-size: var(--wm-t-xs); color: var(--wm-matt); }   /* 8.0.18: Tidepegel – „auflaufend“, „in 4 Std. 27 Min.“ unter dem Wert */
 .pks-kpunkt { flex: none; width: 9px; height: 9px; border-radius: var(--wm-r-rund); background: var(--wm-leise); }
 .pks-kpunkt.is-gut { background: var(--wm-gut); } .pks-kpunkt.is-warn { background: var(--wm-warn); }
 .pks-kpunkt.is-hoch { background: var(--wm-hoch); } .pks-kpunkt.is-stop { background: var(--wm-stop); }

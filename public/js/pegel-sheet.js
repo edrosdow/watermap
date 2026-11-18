@@ -1,16 +1,16 @@
 // Pegel-Sheet auf der Hauptkarte (Designumbau Phase 2a, 7.70.0): ein Tipp auf einen Pegel öffnet ihn im gemeinsamen Sheet-Rahmen.
 //  Handy: Stufe „klein“ = Kurzansicht (Wert, 24-h-Kurve, Zustand und Tendenz, „Details“); Hochwischen → „groß“ = alle Details (pegelDetail).
 //  Desktop ≥ 768: Panel rechts mit allen Details.
-// Hilfen aus dem früheren Pegel-Tab (pegel-dashboard.js): slipsAmPegel, kurzWerte, kurve24.
+// Hilfen aus dem früheren Pegel-Tab (pegel-dashboard.js): slipsAmPegel, kurve24.
 import { h, announce } from './dom.js';
 import { haversine, displayName } from './model.js';
 import { s as svgEl } from './chart.js';
-import { verlaufLaden, aenderung24h } from './pegel-daten.js';
-import { tendenz, tendenzText as tendenzTextKurz, tendenzSatz, aenderungKurz } from './pegel-einordnung.js';
+import { verlaufLaden } from './pegel-daten.js';
+import { tendenz, tendenzSatz, aenderungKurz } from './pegel-einordnung.js';
 import { fmt, zustand, ZUSTAND, pegelDetail } from './pegel-ansicht.js';
 import { formatTime, messluecken } from './pegel.js';
 import { istTidepegel, auswerten } from './gezeiten.js';
-import { tendenzText } from './pegel-tide-ansicht.js';
+import { vorhersageLaden, kommende, inText, tagUhr, ART } from './gezeiten-bsh.js';
 import { normW, gleichesGewaesser, istKueste, slug, KUESTE_SLUG, flussKm } from './pegel-fluss.js';
 import { sheetOeffnen } from './bausteine.js';
 import { hochzaehlen } from './bewegung.js';
@@ -23,15 +23,12 @@ export function slipsAmPegel(g, places, max = 5, radius = 30000) {
     .filter(e => e.d <= radius).sort((a, b) => a.d - b.d).slice(0, max);
 }
 
-/**
- * Werte für die Kurzansicht, getrennt nach Zeitraum: { aend: „+1 cm“ (24 h) | null, tend: „↘ fallend, −3 cm“ (2 h) | null, richtung, d }.
- * Tidepegel: statt beider Werte die Tide-Tendenz („↗ auflaufend“).
- */
-export function kurzWerte(g, pts) {
-  if (istTidepegel(g)) return { tide: tendenzText(auswerten(g, pts || [])) };
-  const d = aenderung24h(pts), t = tendenz(pts);
-  return { aend: aenderungKurz(d), d, tend: tendenzTextKurz(t), richtung: t?.richtung ?? null };
-}
+/** Kurzansicht Tidepegel, Kachel „Gezeit“ (8.0.18): Wort groß, Fachwort klein darunter. */
+const GEZEIT = {
+  auflaufend: { pfeil: '↗', wort: 'Flut', klein: 'auflaufend' },
+  ablaufend: { pfeil: '↘', wort: 'Ebbe', klein: 'ablaufend' },
+  kentert: { pfeil: '→', wort: 'Stillwasser', klein: 'kentert' },
+};
 
 /** Kurve der letzten 24 Stunden (Linie und Fläche, Lücken nicht überbrückt). */
 export function kurve24(pts, g, { breite = 300, hoehe = 60, klein = false } = {}) {
@@ -68,36 +65,65 @@ export function pegelSheet(ctx) {
 
   const kopfAngaben = () => ({ titel: g.name, titelId: 'pd-name', unter: [istTidepegel(g) ? 'Tidepegel' : 'Pegel', g.water].filter(Boolean).join(' · ') });
 
-  /** Kurzansicht (Stufe „klein“): Wert mit 24-h-Kurve, darunter zwei Kacheln „Wasserstand“ und „Tendenz“ (8.0.16), „Details“. */
+  /**
+   * Kurzansicht (Stufe „klein“): Wert mit 24-h-Kurve, darunter zwei Kacheln, „Details“.
+   * Binnenpegel: „Wasserstand“ und „Tendenz“ (8.0.16). Tidepegel (8.0.18, Variante B): „Gezeit“ (↗ Flut, klein „auflaufend“)
+   * und das nächste Hoch-/Niedrigwasser aus der BSH-Vorhersage (Uhrzeit, klein „in …“); ohne Vorhersage nur „Gezeit“ über die ganze Breite.
+   * Veraltet: nur „Wasserstand“.
+   */
   function kurz() {
-    const z = zustand(g), alt = g.state === 'old', tide = istTidepegel(g);
-    const tend = h('b', { text: '…' });
-    // Zweite Kachel „Tendenz“: was der Pegel gerade tut (letzte 2 Stunden, als Satz) bzw. bei Tidepegeln die Tide; veraltet: keine
-    const zahlen = alt ? null : h('div', { class: 'pks-kachel pks-zahlen', title: tide ? null : 'Was der Pegel gerade tut (letzte 2 Stunden)' },
-      h('small', { text: 'Tendenz' }), tend);
-    const kurveBox = h('div', { class: 'pks-kurve' });
+    const z = zustand(g), alt = g.state === 'old', tide = istTidepegel(g) && !alt;
     const fuer = g;
+    const kurveBox = h('div', { class: 'pks-kurve' });
+    let kacheln, trend, fehlt = () => {};
+    if (tide) {
+      const gzWert = h('b', { text: '…' }), gzKlein = h('span', { class: 'pks-klein' });
+      const ereignisArt = h('small', { text: 'Gezeiten' }), ereignisWert = h('b', { text: '…' }), ereignisKlein = h('span', { class: 'pks-klein' });
+      const ereignis = h('div', { class: 'pks-kachel pks-ereignis' }, ereignisArt, ereignisWert, ereignisKlein);
+      kacheln = [h('div', { class: 'pks-kachel pks-zahlen pks-gezeit' }, h('small', { text: 'Gezeit' }), gzWert, gzKlein), ereignis];
+      const nurGezeit = () => { ereignis.remove(); trend?.classList.add('is-einzeln'); };
+      fehlt = () => { gzWert.textContent = '–'; };
+      verlaufLaden(g.id).then((pts) => {
+        if (!kurveBox.isConnected || fuer !== g) return;
+        const gz = GEZEIT[auswerten(g, pts || [])?.tendenz];
+        gzWert.textContent = gz ? `${gz.pfeil} ${gz.wort}` : '–';
+        gzKlein.textContent = gz?.klein || '';
+      }, () => {});
+      vorhersageLaden(g).then((v) => {
+        if (fuer !== g) return;
+        const e = v && kommende(v.d)[0];
+        if (!e) { nurGezeit(); return; }
+        ereignisArt.textContent = ART[e.typ];
+        ereignisWert.textContent = `${tagUhr(e.t)} Uhr`;
+        ereignisKlein.textContent = inText(e.t);
+      }, nurGezeit);
+    } else {
+      const tend = h('b', { text: '…' });
+      // Zweite Kachel „Tendenz“: was der Pegel gerade tut (letzte 2 Stunden, als Satz); veraltet: keine
+      const zahlen = alt ? null : h('div', { class: 'pks-kachel pks-zahlen', title: 'Was der Pegel gerade tut (letzte 2 Stunden)' }, h('small', { text: 'Tendenz' }), tend);
+      kacheln = [h('div', { class: 'pks-kachel' }, h('small', { text: 'Wasserstand' }),
+        h('b', null, h('i', { class: `pks-kpunkt is-${alt ? 'leise' : (MARKE[z] || 'leise')}`, 'aria-hidden': 'true' }),
+          alt ? `Veraltet – ${formatTime(g.time)}` : grossSchreiben(ZUSTAND[z].text))), zahlen];
+      fehlt = () => { tend.textContent = '–'; };
+      if (!alt) verlaufLaden(g.id).then((pts) => {
+        if (!kurveBox.isConnected || fuer !== g) return;
+        const t = tendenz(pts);
+        tend.textContent = tendenzSatz(t) || '–'; tend.title = t ? `In den letzten 2 Stunden ${aenderungKurz(t.d)}` : 'Keine Tendenz verfügbar';
+      }, () => {});
+    }
     verlaufLaden(g.id).then((pts) => {
       if (!kurveBox.isConnected || fuer !== g) return;
       const k = kurve24(pts, g, { breite: 220, hoehe: 64 });
       if (k) kurveBox.replaceChildren(k);
-      if (alt) return;
-      const w = kurzWerte(g, pts);
-      if ('tide' in w) { tend.textContent = w.tide || '–'; return; }
-      const t = tendenz(pts);
-      tend.textContent = tendenzSatz(t) || '–'; tend.title = t ? `In den letzten 2 Stunden ${aenderungKurz(t.d)}` : 'Keine Tendenz verfügbar';
-    }, () => { if (zahlen) zahlen.querySelectorAll('b').forEach((b) => { b.textContent = '–'; }); });
-    const zustandText = alt ? `Veraltet – ${formatTime(g.time)}` : tide ? 'Tidepegel' : grossSchreiben(ZUSTAND[z].text);
+    }, () => fehlt());
     const kurzWert = h('strong', { text: fmt(g.value) });
     if (!alt) setTimeout(() => hochzaehlen(kurzWert, Math.round(g.value), { format: fmt }), 0);
+    trend = h('div', { class: 'pks-trend' + (kacheln.filter(Boolean).length > 1 ? '' : ' is-einzeln') }, kacheln);
     return h('div', { class: 'pks-kurz' },
       h('div', { class: 'pks-mitte' },
         h('p', { class: 'pks-wert' }, kurzWert, h('small', { text: ` ${g.unit}` })),
         kurveBox),
-      h('div', { class: 'pks-trend' + (zahlen ? '' : ' is-einzeln') },
-        h('div', { class: 'pks-kachel' }, h('small', { text: 'Wasserstand' }),
-          h('b', null, h('i', { class: `pks-kpunkt is-${alt ? 'leise' : (MARKE[z] || 'leise')}`, 'aria-hidden': 'true' }), zustandText)),
-        zahlen),
+      trend,
       h('button', { type: 'button', class: 'wm-btn is-primaer pks-details', 'aria-expanded': 'false', onclick: () => s?.stufe('gross') }, 'Details'));
   }
 

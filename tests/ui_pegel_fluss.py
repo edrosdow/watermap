@@ -236,9 +236,17 @@ def run(b, w, hh, mobile):
     details(pg, f'#pegel/{U(21)}', mobile); pg.wait_for_selector('.pt-svg', timeout=8000); pg.wait_for_timeout(500)
     check(pg.locator('.pt-gezeiten').count() == 0 and pg.locator('.pt-vorhersage').count() == 0 and '24 h gemessen' in pg.inner_text('.pd-body'), f'{tag}: BSH nicht erreichbar → nur Messwerte')
     bsh['aus'] = False
-    if mobile:   # Kurzansicht (Stufe klein): Tidepegel mit auf-/ablaufend statt 2 Std./24 Std.
-        oeffne(pg, f'#pegel/{U(21)}'); pg.wait_for_selector(PEGEL + ' .pks-kurz .pks-kurve-svg', timeout=8000); pg.wait_for_timeout(300)
-        check('Tide' in pg.inner_text('.pks-trend') and 'auflaufend' in pg.inner_text('.pks-zahlen'), f'{tag}: Tidepegel kompakt mit „auflaufend“ statt 2 Std./24 Std. ({pg.inner_text(".pks-trend")!r})')
+    if mobile:   # Kurzansicht (Stufe klein, 8.0.18 Variante B): „Gezeit: ↗ Flut / auflaufend“ und nächstes Ereignis aus der BSH-Vorhersage
+        oeffne(pg, f'#pegel/{U(21)}'); pg.wait_for_selector(PEGEL + ' .pks-kurz .pks-kurve-svg', timeout=8000)
+        pg.wait_for_selector(PEGEL + ' .pks-ereignis .pks-klein:text("in ")', timeout=5000); pg.wait_for_timeout(300)
+        gz, er = pg.inner_text(PEGEL + ' .pks-gezeit'), pg.inner_text(PEGEL + ' .pks-ereignis')
+        ks = pg.locator(PEGEL + ' .pks-trend .pks-kachel').all()
+        check('Gezeit' in gz and '↗ Flut' in gz and 'auflaufend' in gz and 'Tendenz' not in pg.inner_text(PEGEL + ' .pks-trend'), f'{tag}: Tidepegel kompakt „Gezeit: ↗ Flut, auflaufend“ ({gz!r})')
+        check(re.search(r'Hochwassers+dd:dd Uhrs+in 1 Std. 1d Min.', er) and len(ks) == 2 and abs(ks[0].bounding_box()['y'] - ks[1].bounding_box()['y']) < 2, f'{tag}: Kachel „Hochwasser“ mit Uhrzeit und „in …“ neben „Gezeit“ ({er!r})')
+        # ohne BSH-Ort (Hamburg St. Pauli): nur „Gezeit“ über die ganze Breite
+        oeffne(pg, f'#pegel/{U(20)}'); pg.wait_for_selector(PEGEL + ' .pks-kurz .pks-kurve-svg', timeout=8000); pg.wait_for_timeout(800)
+        check(pg.locator(PEGEL + ' .pks-ereignis').count() == 0 and pg.locator(PEGEL + ' .pks-trend.is-einzeln .pks-gezeit').count() == 1, f'{tag}: Tidepegel ohne BSH-Vorhersage nur mit „Gezeit“ ({pg.inner_text(PEGEL + " .pks-trend")!r})')
+        pg.screenshot(path=str(SHOTS / f'fluss_{w}_5tide_kurz.png'))
 
     # Küste und Kanal: ohne Profil, nur Liste
     oeffne(pg, '#pegel/fluss/kueste'); pg.wait_for_selector(FLUSS + ' #pf-name')
