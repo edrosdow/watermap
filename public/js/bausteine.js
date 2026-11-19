@@ -56,9 +56,32 @@ export function aktionen(knoepfe) {
   return h('div', { class: 'wm-aktionen' }, knoepfe.map((k) => {
     const gedrueckt = typeof k.gemerkt === 'boolean';
     const kl = 'wm-aktion' + (k.primaer ? ' is-primaer' : '') + (k.gemerkt ? ' is-gemerkt' : '');
-    const inhalt = [h('span', { html: icon(k.icon, 22), 'aria-hidden': 'true' }), h('span', { text: k.text })];
+    const inhalt = [h('span', { html: k.svg || icon(k.icon, 22), 'aria-hidden': 'true' }), h('span', { text: k.text })];
     return k.href ? h('a', { class: kl, href: k.href, onclick: k.onclick }, inhalt)
       : h('button', { type: 'button', class: kl, 'aria-pressed': gedrueckt ? String(k.gemerkt) : null, onclick: k.onclick }, inhalt);
+  }));
+}
+
+/**
+ * Kreis-Knöpfe (8.1.0): bis zu vier runde Knöpfe nebeneinander, Beschriftung darunter, optional eine Unterzeile
+ * mit Zustand (Punkt am Kreis in Zustandsfarbe + Wort in der Unterzeile – nie nur Farbe).
+ * knoepfe = [{ icon, text, unter?, ton?, label?, onclick, aria? }] · Rückgabe: Gruppe; jeder Knopf hat .setzen({ unter, ton, label }).
+ */
+export function kreise(knoepfe, { label = 'Aktionen' } = {}) {
+  return h('div', { class: 'wm-kreise', role: 'group', 'aria-label': label }, knoepfe.map((k) => {
+    const unter = h('small', { class: 'wm-kreis-unter', text: k.unter || '' });
+    const punkt = h('i', { class: 'wm-kreis-punkt', 'aria-hidden': 'true' });
+    const b = h('button', { type: 'button', class: 'wm-kreis', onclick: k.onclick, ...(k.aria || {}) },
+      h('span', { class: 'wm-kreis-rund', 'aria-hidden': 'true' }, h('span', { html: icon(k.icon, 24) }), punkt),
+      h('span', { class: 'wm-kreis-text', text: k.text }), unter);
+    b.setzen = ({ unter: u, ton, label: l } = {}) => {
+      if (u !== undefined) unter.textContent = u || '';
+      b.classList.remove('is-gut', 'is-warn', 'is-hoch', 'is-stop', 'is-leise');
+      if (ton) b.classList.add(`is-${ton}`);
+      if (l !== undefined) { if (l) b.setAttribute('aria-label', l); else b.removeAttribute('aria-label'); }
+    };
+    b.setzen({ unter: k.unter, ton: k.ton, label: k.label });
+    return b;
   }));
 }
 

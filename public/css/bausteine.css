@@ -53,6 +53,28 @@
 .wm-aktion.is-gemerkt svg { fill: var(--wm-sonne); color: var(--wm-tinte); }
 .wm-aktion.is-pop svg { animation: wm-stern-pop 480ms var(--wm-feder); }
 
+/* 8.1.0: Wetter-Knopf bei amtlicher Warnung – Zustand „warn“ (Grund hell, Rahmen, Text dunkel), Wort statt „Wetter“ */
+.wm-aktion.is-warnung { background: var(--wm-warn-hell); color: var(--wm-warn-text); box-shadow: inset 0 0 0 1.5px var(--wm-warn-rand), var(--wm-schatten); }
+.wm-aktion > span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------------------------------------------------------------- Kreis-Knöpfe (8.1.0): runde Knöpfe nebeneinander, Text darunter */
+.wm-kreise { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--wm-2); }   /* Spalten wie die Aktionsleiste darüber */
+.wm-kreis { display: flex; flex-direction: column; align-items: center; gap: var(--wm-1); min-width: 0; padding: 0; border: 0; background: none;
+  color: var(--wm-tinte); font: inherit; text-align: center; cursor: pointer; }
+.wm-kreis-rund { position: relative; display: grid; place-items: center; width: 56px; height: 56px; border-radius: var(--wm-r-rund);
+  background: var(--wm-flaeche); color: var(--wm-petrol); box-shadow: var(--wm-schatten); transition: transform var(--wm-kurz) var(--wm-sanft); }
+.wm-kreis:active .wm-kreis-rund { transform: scale(.92); }
+.wm-kreis-punkt { position: absolute; top: 2px; right: 2px; display: none; width: 14px; height: 14px; border-radius: var(--wm-r-rund); border: 2px solid var(--wm-flaeche); background: var(--wm-leise); }
+.wm-kreis:is(.is-gut, .is-warn, .is-hoch, .is-stop, .is-leise) .wm-kreis-punkt { display: block; }
+.wm-kreis.is-gut .wm-kreis-punkt { background: var(--wm-gut); } .wm-kreis.is-warn .wm-kreis-punkt { background: var(--wm-warn); }
+.wm-kreis.is-hoch .wm-kreis-punkt { background: var(--wm-hoch); } .wm-kreis.is-stop .wm-kreis-punkt { background: var(--wm-stop); }
+.wm-kreis-text { font-size: var(--wm-t-s); font-weight: 700; }
+.wm-kreis-unter { max-width: 100%; font-size: var(--wm-t-xs); color: var(--wm-matt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-kreis-unter:empty { display: none; }
+.wm-kreis.is-warn .wm-kreis-unter { color: var(--wm-warn-text); } .wm-kreis.is-stop .wm-kreis-unter { color: var(--wm-stop-text); }
+.wm-kreis:focus-visible { outline: none; } .wm-kreis:focus-visible .wm-kreis-rund { outline: 3px solid var(--wm-fokus); outline-offset: 2px; }
+@media (hover: hover) { .wm-kreis:hover .wm-kreis-rund { background: var(--wm-flaeche-2); } }
+
 /* ---------------------------------------------------------------- Gruppe und Ortszeile */
 .wm-gruppe { background: var(--wm-flaeche); border-radius: var(--wm-r-m); box-shadow: var(--wm-schatten); overflow: hidden; }
 .wm-zeile { display: flex; align-items: center; gap: var(--wm-3); width: 100%; min-height: 64px; padding: 10px var(--wm-3); border: 0; background: none;

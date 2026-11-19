@@ -253,10 +253,10 @@ function aenderungsChips(haupt) {
  * Karte „Heute vor Ort“. onUnpassend(meldung, fertig) öffnet „Unpassend melden“ (fertig() nach dem Senden),
  * onAlle() führt zur Übersicht „Aktuelle Meldungen“.
  */
-export function vorOrtKarte({ standortId, daten, nah, onMehr, onGesendet, onGeaendert, onUnpassend, onAlle, toast }) {
+export function vorOrtKarte({ standortId, daten, nah, onMehr, onGesendet, onGeaendert, onUnpassend, onAlle, toast, nurProbleme = false }) {
   const live = h('p', { class: 'sr-only', 'aria-live': 'polite' });
   const inhalt = h('div', { class: 'vo-inhalt', 'aria-busy': 'true' }, h('p', { class: 'muted small vo-laden', text: 'Wird geladen …' }));
-  const karte = h('section', { class: 'vo-karte', id: 'heute-vor-ort', tabindex: '-1', 'aria-label': 'Heute vor Ort' }, inhalt, live);
+  const karte = h('section', { class: 'vo-karte', id: 'heute-vor-ort', tabindex: '-1', 'aria-label': 'Heute vor Ort', hidden: nurProbleme || null }, inhalt, live);
   const st = { meldungen: [], offline: false, zeit: null, unbekannt: false, wahl: null, notiz: '', busy: false, offen: new Set(), danke: new Set() };
   const online = () => navigator.onLine !== false && !st.offline;
   const sag = (text) => { live.textContent = ''; setTimeout(() => { live.textContent = text; }, 30); };
@@ -384,6 +384,8 @@ export function vorOrtKarte({ standortId, daten, nah, onMehr, onGesendet, onGeae
     const probleme = st.meldungen.filter(m => m.typ !== 'alles_frei');
     const ton = probleme.length ? (probleme[0].typ === 'gesperrt' ? 'vo-stop' : 'vo-warn') : 'vo-ok';
     karte.className = `vo-karte ${ton}` + (st.wahl ? ' is-edit' : '');
+    // 8.1.0: im Standort-Sheet nur bei echten Meldungen sichtbar (sonst zeigt der Kreis „Lage“ „keine Probleme“)
+    karte.hidden = nurProbleme && !st.wahl && !probleme.length && !(st.offline && st.unbekannt);
     const teile = [];
     // Keine Probleme, du bist nicht vor Ort: nur eine schmale Zeile (spart Platz für „Wichtig für dein Boot“)
     const schmal = !st.wahl && !probleme.length && !nah && !(st.offline && st.unbekannt);

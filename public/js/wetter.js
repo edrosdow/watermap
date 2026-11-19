@@ -180,6 +180,21 @@ export function wetterZeile(lat, lon, { name = '' } = {}) {
 }
 
 /**
+ * Knopf „Wetter“ in der Aktionsleiste des Standort-Sheets (8.1.0, ersetzt dort die Zeile „Wetter und Wind“).
+ * `warnung` löst bei einer amtlichen Warnung mit { wort: „Frost“, label: „Amtliche Warnung: Frost – ab morgen 02:00“ } auf, sonst mit null.
+ */
+export function wetterKnopf(lat, lon, { name = '' } = {}) {
+  const warnung = loadWeather(lat, lon).then((d) => {
+    const a = d.alerts?.list[0];
+    if (!a) return null;
+    const wort = titleCase(a.event), mehr = d.alerts.list.length > 1 ? ` (+${d.alerts.list.length - 1})` : '';
+    const wann = a.onset && a.onset > Date.now() ? `ab ${dayTimeFmt(a.onset)}` : a.expires ? `bis ${dayTimeFmt(a.expires)}` : 'gilt jetzt';
+    return { wort, label: `Amtliche Warnung: ${wort}${mehr} – ${wann}. Wetter und Wind öffnen` };
+  }, () => null);
+  return { svg: wxIcon('cloudy', 22).svg.replace('class="wx-ico"', 'class="ico wx-ico"'), warnung, oeffnen: (opener) => wetterFenster({ lat, lon, name, opener }) };
+}
+
+/**
  * Fenster über der Seite (Handy: von unten, sonst mittig). Der Inhalt kommt von außen; schließt per Escape, Klick daneben
  * oder über `dialog.close()`; danach geht der Fokus zurück zum Auslöser. `labelId`: Überschrift, die den Fokus bekommt.
  */

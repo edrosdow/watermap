@@ -13,7 +13,7 @@ import { wischenZuMachen } from './wischen.js';
 import { suchfelderMitX } from './suchfeld.js';
 import { ampel as bootAmpel, mindestAlle } from './mindestpegel.js';
 import { alarmFenster } from './alarm.js';
-import { aktivLaden, ausgeblendetAnzahl, ausgeblendetZuruecksetzen, gesehenSetzen, listeLaden, neueAnzahl, standortLaden, statusZeile, vorOrtKarte, zusammenfassen } from './meldungen.js';
+import { aktivLaden, ausgeblendetAnzahl, ausgeblendetZuruecksetzen, gesehenSetzen, listeLaden, neueAnzahl, standortLaden, statusZeile, vorOrtKarte, zusammenfassen, TYPEN as MELD_TYPEN } from './meldungen.js';
 import { openLageForm } from './lage-form.js';
 import { naehe, geoFreigabe } from './naehe.js';
 import { gruppieren, gruppeZu, naechsterPegel } from './pegel-fluss.js';
@@ -29,10 +29,10 @@ import { meldungenSeite } from './meldungen-uebersicht.js';
 import { unpassendMelden } from './meldung-unpassend.js';
 import { slipErgaenzen } from './slip-ergaenzen.js';
 import { imGebiet, gebietLaden } from './gebiet.js';
-import { sheetOeffnen, offeneSheets, kopf, marke, zeile, gruppe } from './bausteine.js';
+import { sheetOeffnen, offeneSheets, kopf, zeile, gruppe } from './bausteine.js';
 import { staffeln, merkFlug, sternPop, markerPlopp, hakenSvg } from './bewegung.js';
 import { pegelSheet, slipsAmPegel } from './pegel-sheet.js';
-import { wetterZeile } from './wetter.js';
+import { wetterZeile, wetterKnopf } from './wetter.js';
 import { GROUPS, loadExtras, renderExtraDetail } from './extras.js';
 import { enrichFacts, hafenWeb } from './hafeninfo.js';
 import { sucheEinrichten } from './suche-ui.js';
@@ -500,7 +500,7 @@ function showDetail(p, { scrollTo = null, stufe = null } = {}) {
     user: state.user,
     enrichFacts: enrichFacts(state.meta, p.id),
     hafenWeb: p.type === 'marina' ? hafenWeb(state.meta, p.id) : null,   // 8.0.10: Website füllt nur unbekannte Punkte von „Wichtig für dein Boot“
-    weather: wetterZeile(p.lat, p.lon, { name: displayName(p) }),   // 8.0.8: überall eine Zeile, Tipp öffnet das Wetter-Sheet
+    wetter: wetterKnopf(p.lat, p.lon, { name: displayName(p) }),   // 8.1.0: Knopf „Wetter“ in der Aktionsleiste, öffnet das Wetter-Sheet
     actions: {
       close: closeDetail,
       onFavorite: (e) => {
@@ -511,15 +511,14 @@ function showDetail(p, { scrollTo = null, stufe = null } = {}) {
         else toast(`${displayName(p)} entfernt.`, { text: 'Rückgängig', onclick: () => { favorites.setzen(vorher); if (state.selectedId === p.id) showDetail(p); state.map?.refresh(p.id); } });
         knopf?.focus({ preventScroll: true });
       },
-      share: () => shareLink(p),
       report: () => openReport('fehler-melden', { standort_id: p.id }),
       addPhoto: () => openReport('foto-einreichen', { standort_id: p.id }),
       reportPhoto: (ph) => openReport('fehler-melden', { standort_id: p.id, art: 'foto', details: `Foto unpassend: ${ph.url}\nGrund: ` }),
       ergaenzen: (q) => slipErgaenzen({ place: q?.id === p.id ? q : p, toast }),   // q: Hafen mit Website-Werten (8.0.12), sonst Klick-Ereignis
       details: () => standort?.sheet.stufe('gross'),
     },
-    pegel: pegelInfo(p).then(info => info && pegelBox(info)),
-    vorOrt: p.type === 'slip' ? vorOrtTeile(p) : null,   // „Heute vor Ort“ nur bei Slipanlagen
+    pegel: pegelInfo(p).then(info => info && pegelKreis(info)),
+    ...(p.type === 'slip' ? vorOrtTeile(p) : {}),   // „Heute vor Ort“ und Kreis „Lage“ nur bei Slipanlagen
   });
   standortZeigen({ kopf, body, key: 'p:' + p.id, stufe: scrollTo ? 'gross' : stufe });
   // Handy, Stufe „klein“: aktuelle Lagemeldung als Zeile über „Details“ (wie früher in der Vorschau-Karte); Tipp → „Heute vor Ort“
@@ -547,38 +546,43 @@ function vorOrtTeile(p) {
   const daten = standortLaden(p.id);
   daten.then(d => meldStandortGeladen(p.id, d));
   const section = vorOrtKarte({
-    standortId: p.id, daten, nah: istNah(p), toast,
+    standortId: p.id, daten, nah: istNah(p), toast, nurProbleme: true,   // 8.1.0: ohne Probleme keine Karte – der Kreis „Lage“ zeigt „keine Probleme“
     onMehr: () => lageMelden(p),
     onGeaendert: (liste) => meldLokal(p.id, liste),
     onGesendet: (liste) => { meldLokal(p.id, liste); toast('Danke! Deine Meldung ist jetzt sichtbar.'); },
     onUnpassend: (m, fertig) => unpassendMelden({ meldung: m, ortName: displayName(p), toast, onFertig: fertig }),
     onAlle: () => setView('meldungen'),
   });
-  return { zeile: null, section };
+  // Kreis „Lage“: Wort + Zustandsfarbe aus der wichtigsten Meldung
+  const stand = daten.then((d) => {
+    const probleme = (d.meldungen || []).filter(m => m.typ !== 'alles_frei').sort((a, b) => (MELD_TYPEN[b.typ]?.rang || 0) - (MELD_TYPEN[a.typ]?.rang || 0));
+    if (!probleme.length) return d.unbekannt ? { unter: 'melden', ton: null, label: 'Lage melden' } : { unter: 'keine Probleme', ton: 'gut', label: 'Lage melden – heute keine Probleme gemeldet' };
+    const t = MELD_TYPEN[probleme[0].typ] || MELD_TYPEN.hindernis;
+    return { unter: t.text, ton: t.ton === 'stop' ? 'stop' : 'warn', label: `Lage melden – gemeldet: ${t.text}` };
+  });
+  return { vorOrt: { zeile: null, section }, lage: { oeffnen: () => lageMelden(p), stand } };
 }
 
 // ---- Pegel am selben Gewässer (nächster PEGELONLINE-Pegel, siehe naechsterPegel)
 function allGauges() { return pegelLaden().then(st => st.gauges); }
-// „Passt mein Boot?“ (Mindestpegel je Pegel, mindestpegel.js) → Klassen des Pegel-Kastens und des Etiketts in der Vorschau
-const AMPEL_KLASSE = { gut: { box: 'is-gruen' }, warn: { box: 'is-warn' }, stop: { box: 'is-rot' } };
 const pegelCache = new Map();
 function pegelInfo(p) {
   if (!pegelCache.has(p.id)) pegelCache.set(p.id, allGauges().then(list => naechsterPegel(p, list)).catch(() => null));
   return pegelCache.get(p.id).then(best => (best ? { ...best, ampel: bootAmpel(best.g) } : null));   // Ampel immer frisch (Mindestpegel kann sich ändern)
 }
 
-function pegelBox({ g, d, ampel }) {
-  const trend = { 1: 'steigend', 0: 'gleichbleibend', '-1': 'fallend' }[g.trend];
-  const weit = d > 2000 ? `${formatDistance(d)} entfernt` : null;   // weiter weg: ehrlich dazusagen
-  // Ortszeile (Bausteine, Designumbau 3b): öffnet die Pegel-Details als Sheet über dem Standort; neuer Tab bleibt möglich
-  const a = h('a', { class: 'wm-zeile pegel-box ' + (ampel ? AMPEL_KLASSE[ampel.zustand].box : 'is-neutral'), href: `#karte/pegel/${encodeURIComponent(g.id)}`, 'aria-haspopup': 'dialog',
-    onclick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); pegelFenster(g, e.currentTarget); } },
-    h('span', { class: 'wm-kachel-ico', html: icon('gauge', 20), 'aria-hidden': 'true' }),
-    h('span', { class: 'wm-zeile-text' }, h('strong', { text: `Pegel ${g.name}` }),
-      h('small', { text: [ampel ? `Passt mein Boot? ${ampel.satz}` : [PEGEL_ZUSTAND[pegelZustand(g)]?.text, trend].filter(Boolean).join(' · '), weit].filter(Boolean).join(' · ') })),
-    ampel ? marke(ampel.zustand, ampel.wort) : h('span', { class: 'wm-zeile-wert', text: `${fmtN(Math.round(g.value))} ${g.unit}` }),
-    h('span', { class: 'wm-pfeil', html: icon('chevron', 18), 'aria-hidden': 'true' }));
-  return h('div', { class: 'wm-gruppe pegel-gruppe' }, a);
+/** Kreis „Pegel“ im Standort-Sheet (8.1.0): Wert und Wort darunter, Punkt in der Zustandsfarbe; Tipp öffnet die Pegel-Details. */
+const PEGEL_TON = { normal: 'gut', low: 'warn', high: 'hoch', hsw: 'stop' };
+function pegelKreis({ g, d, ampel }) {
+  const wert = `${fmtN(Math.round(g.value))} ${g.unit}`;
+  const z = pegelZustand(g), wort = ampel ? ampel.wort : (PEGEL_TON[z] ? PEGEL_ZUSTAND[z].text : null);
+  const weit = d > 2000 ? `, ${formatDistance(d)} entfernt` : '';
+  return {
+    unter: wort ? `${wert} · ${wort}` : wert,
+    ton: ampel ? ampel.zustand : (PEGEL_TON[z] || 'leise'),
+    label: `Pegel ${g.name}${weit}: ${wert}${wort ? `, ${wort}` : ''}`,
+    oeffnen: (el) => pegelFenster(g, el),
+  };
 }
 
 /** Pegel-Details im Fenster über der Standortansicht: dieselbe Darstellung wie im Kartenpanel, „×“ führt zurück zum Standort. */
@@ -693,16 +697,6 @@ function closeDetail() {
   setSelHash(null);
   $$('.place', el.list).forEach(b => b.classList.remove('is-selected'));
   if (prev) $(`.place[data-id="${CSS.escape(prev)}"]`, el.list)?.focus({ preventScroll: true });
-}
-
-async function shareLink(p) {
-  const url = location.origin + location.pathname + '#p=' + encodeURIComponent(p.id);
-  const data = { title: `${displayName(p)} – WaterMap`, text: `${displayName(p)} (${TYPES[p.type].label}) auf WaterMap`, url };
-  try {
-    if (navigator.share) { await navigator.share(data); return; }
-  } catch (e) { if (e.name === 'AbortError') return; }
-  try { await navigator.clipboard.writeText(url); toast('Link kopiert.'); }
-  catch { prompt('Link zum Kopieren:', url); }
 }
 
 // ============================================================ Pegel

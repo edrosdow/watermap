@@ -1,7 +1,7 @@
 // Detailansicht eines Standorts im Sheet-Rahmen (Designumbau 3b, 7.72.1): Handy von unten (Stufe klein = Kopf, Aktionen, „Details“),
 // Desktop Panel rechts. Kopf (Titel links, ×) kommt vom Rahmen; renderDetail liefert die Angaben dafür und den Inhalt.
 import { h } from './dom.js';
-import { aktionen, zeile, gruppe } from './bausteine.js';
+import { aktionen, zeile, gruppe, kreise } from './bausteine.js';
 import { icon } from './icons.js';
 import { TYPES, UNKNOWN, displayName, describeFacts, bootPunkte, hafenPunkte, hafenExtra, formatDate, navUrl, osmUrl, safeHttpUrl, safeTel, formatDistance, haversine } from './model.js';
 import { favorites } from './favorites.js';
@@ -55,7 +55,7 @@ export function detailKopf(p, user) {
 }
 
 /** Rückgabe: [kopf-Angaben, Inhalt]. actions.details(): Stufe „groß“ (Knopf „Details“, nur in der Stufe „klein“ sichtbar). */
-export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, hafenWeb, pegel, vorOrt }) {
+export function renderDetail(p, { user, actions, wetter, nearby, enrichFacts, hafenWeb, pegel, lage, vorOrt }) {
   const isFav = favorites.has(p.id);
 
   const body = h('div', { class: 'detail-body' });
@@ -64,11 +64,11 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, h
   const slip = p.type === 'slip';
   // 8.0.8 (Nutzer): keine Etiketten mehr – dieselben Angaben stehen in „Wichtig für dein Boot“ bzw. „Ausstattung“
 
-  // Aktionsleiste (Bausteine): Route (primär) · Merken · Teilen
+  // Aktionsleiste (Bausteine): Route (primär) · Merken · Wetter (8.1.0, Nutzer: „Teilen“ entfällt im Standort-Sheet)
   const leiste = aktionen([
     { icon: 'navigate', text: 'Route', primaer: true, href: navUrl(p) },
     { icon: 'star', text: isFav ? 'Gemerkt' : 'Merken', gemerkt: isFav, onclick: actions.onFavorite },
-    { icon: 'share', text: 'Teilen', onclick: actions.share },
+    { svg: wetter?.svg, icon: 'thermo', text: 'Wetter', onclick: (e) => wetter?.oeffnen(e.currentTarget) },
   ]);
   leiste.classList.add('dbtns');
   const route = leiste.querySelector('a');
@@ -76,51 +76,53 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, h
   const fav = leiste.querySelectorAll('.wm-aktion')[1];
   fav.classList.add('fav'); fav.title = isFav ? 'Aus „Gemerkt“ entfernen' : 'Merken';
   if (isFav) fav.querySelector('span').innerHTML = icon('star', 22, true);
-  leiste.querySelectorAll('.wm-aktion')[2].title = 'Link teilen';
+  const wx = leiste.querySelectorAll('.wm-aktion')[2];
+  wx.title = 'Wetter und Wind'; wx.setAttribute('aria-haspopup', 'dialog');
+  // Amtliche Warnung: Knopf im Zustand „warn“, Wort statt „Wetter“ (z. B. „Frost“) – schon in der Stufe „klein“ sichtbar
+  wetter?.warnung.then((w) => {
+    if (!w) return;
+    wx.classList.add('is-warnung');
+    wx.lastElementChild.textContent = w.wort;
+    wx.firstElementChild.innerHTML = icon('alert', 22);
+    wx.setAttribute('aria-label', w.label); wx.title = w.label;
+  }, () => {});
   body.append(leiste);
   // Handy, Stufe „klein“: „Details“ öffnet die Stufe „groß“; bis hierher reicht die Stufe „klein“
   body.append(h('button', { type: 'button', class: 'wm-btn is-primaer st-details', onclick: actions.details }, 'Details'), h('span', { class: 'st-klein-ende', 'aria-hidden': 'true' }));
 
-  // Pegel am selben Gewässer (wird nachgeladen; ohne Pegel bleibt der Platz leer)
-  const pegelTeil = () => {
-    if (!pegel) return;
-    const slot = h('div', { class: 'pegel-slot' });
-    body.append(slot);
-    pegel.then(box => { if (box) slot.replaceWith(box); else slot.remove(); }, () => slot.remove());
-  };
+  // 8.1.0 (Nutzer): Kreis-Knöpfe Foto · Lage · Pegel statt der Zeilen „Erstes Foto hinzufügen“, „Heute keine Probleme / Lage melden“
+  // und des Pegel-Kastens. Lage nur bei Slipanlagen (wie „Heute vor Ort“), Pegel nur, wenn es am Gewässer einen gibt.
+  const fotoK = { icon: 'camera', text: 'Foto', unter: 'hinzufügen', label: 'Foto hinzufügen', onclick: actions.addPhoto, aria: { 'aria-haspopup': 'dialog' } };
+  const lageK = lage && { icon: 'pin', text: 'Lage', unter: '…', label: 'Lage melden', onclick: lage.oeffnen, aria: { 'aria-haspopup': 'dialog' } };
+  const pegelK = pegel && { icon: 'gauge', text: 'Pegel', unter: '…', label: 'Pegel am Gewässer', aria: { 'aria-haspopup': 'dialog' } };
+  const kreisGruppe = kreise([fotoK, lageK, pegelK].filter(Boolean), { label: 'Foto, Lage und Pegel' });
+  kreisGruppe.classList.add('st-kreise');
+  const [, ...rest] = kreisGruppe.children;
+  const lageKnopf = lage ? rest[0] : null, pegelKnopf = pegel ? rest[lage ? 1 : 0] : null;
+  lage?.stand.then((st) => lageKnopf.setzen(st), () => lageKnopf.setzen({ unter: 'melden', label: 'Lage melden' }));
+  pegel?.then((pg) => {
+    if (!pg) { pegelKnopf.remove(); return; }
+    pegelKnopf.setzen(pg);
+    pegelKnopf.onclick = (e) => pg.oeffnen(e.currentTarget);
+  }, () => pegelKnopf.remove());
+  const kreisTeil = () => body.append(kreisGruppe);
 
-  // Fotos – „Foto hinzufügen“ direkt dabei; ohne Fotos eine Einladung an derselben Stelle
+  // Fotos (8.1.0): nur noch die Fotoreihe; hinzufügen über den Kreis „Foto“
   const fotenTeil = () => {
-    if (p.photos.length) {
-      const fotos = photoCarousel(p.photos, { name: displayName(p), onReport: actions.reportPhoto });
-      fotos.append(h('button', { type: 'button', class: 'ph-add', onclick: actions.addPhoto }, h('span', { html: icon('camera', 18), 'aria-hidden': 'true' }), h('span', { text: 'Foto hinzufügen' })));
-      body.append(fotos);
-    } else {
-      // 8.0.5: schlanke Ortszeile statt großem gestricheltem Kasten
-      const z = zeile({ ico: 'camera', titel: 'Erstes Foto hinzufügen', unter: 'Zeig anderen, wie es hier aussieht', onClick: actions.addPhoto, label: 'Foto hinzufügen' });
-      z.classList.add('ph-leer-btn');
-      const g = gruppe([z]); g.classList.add('ph-leer'); g.setAttribute('aria-label', 'Fotos'); g.setAttribute('role', 'group');
-      body.append(g);
-    }
+    if (p.photos.length) body.append(photoCarousel(p.photos, { name: displayName(p), onReport: actions.reportPhoto }));
   };
 
   if (slip) {
-    // Slipanlage: Titel → Knöpfe → Etiketten → Fotos → Heute vor Ort → (Wetterwarnung) → Pegel → Wichtig für dein Boot → Wetter-Zeile → Rest
-    fotenTeil();
+    // Slipanlage (8.1.0): Kopf → Route · Merken · Wetter → Foto · Lage · Pegel → Meldung (nur bei Problemen) → Fotos → Wichtig für dein Boot → Rest
+    kreisTeil();
     if (vorOrt?.section) body.append(vorOrt.section);
-    const wxOben = h('span', { hidden: true });   // Platz für die Wetter-Zeile, wenn eine amtliche Warnung vorliegt
-    body.append(wxOben);
-    pegelTeil();
+    fotenTeil();
     body.append(punkteBox(bootPunkte(p), [p.opening_hours ? `Öffnungszeiten: ${p.opening_hours}` : null, p.operator ? `Betreiber: ${p.operator}` : null].filter(Boolean), actions));
-    if (weather?.zeile) {
-      body.append(weather.zeile);
-      weather.warnung.then((warnung) => { if (warnung) wxOben.replaceWith(weather.zeile); });
-    }
   } else {
-    // Hafen, Tankstelle, Zusatzorte (8.0.8): wie beim Slip – Fotos → Heute vor Ort → Pegel → Ausstattung → Wetter-Zeile → Kontakt → Rest
-    fotenTeil();
+    // Hafen, Tankstelle, Zusatzorte (8.1.0): wie beim Slip – Kreise Foto · Pegel → Fotos → Ausstattung → Kontakt → Rest
+    kreisTeil();
     if (vorOrt?.section) body.append(vorOrt.section);
-    pegelTeil();
+    fotenTeil();
     // Häfen (8.0.8, Nutzer): „Wichtig für dein Boot“ wie bei Slipanlagen, mit „Ergänzen“.
     // 8.0.10 (Nutzer): kein eigener Block „Laut Website“ mehr – die Website füllt nur unbekannte Punkte, die es auch in „Angaben ergänzen“ gibt.
     // Tankstellen und Zusatzorte: „Ausstattung“ als Kacheln.
@@ -144,10 +146,6 @@ export function renderDetail(p, { user, actions, weather, nearby, enrichFacts, h
       if (enrichFacts) enrichFacts(factsBlock, facts, factList);
     }
     body.append(factsBlock);
-    if (weather?.zeile) {
-      body.append(weather.zeile);
-      weather.warnung.then((warnung) => { if (warnung) factsBlock.before(weather.zeile); });   // amtliche Warnung rückt nach oben
-    }
   }
 
   if (p.description) body.append(h('p', { class: 'desc', text: p.description }));
