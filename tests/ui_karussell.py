@@ -116,13 +116,14 @@ with sync_playwright() as p:
         check(pg.inner_text('dialog.lightbox .ph-count') == '2 / 2', f'{name}: Vollbild zeigt nur die gefilterten Fotos')
         pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
         pg.screenshot(path=str(SHOTS / f'karussell_{name}_kategorie.png'))
-        # Reihenfolge bei Slipanlagen: Knöpfe · Etiketten · Fotos · Heute vor Ort · Boot · Wetter-Zeile · Rest
+        # Reihenfolge bei Slipanlagen (8.1.0): Route · Merken · Wetter → Foto · Lage · Pegel → Heute vor Ort → Fotos → Boot → Rest
         folge = pg.evaluate("""() => { const b = document.querySelector('#detail .detail-body');
-          return ['.dbtns', '.photos, .ph-leer', '#heute-vor-ort', '.wb', '.wxz', '.st-fuss'].map(s => [...b.children].findIndex(e => e.matches(s))); }""")
-        check(all(i >= 0 for i in folge) and folge == sorted(folge), f'{name}: Reihenfolge Knöpfe · Etiketten · Fotos · Heute vor Ort · Boot · Wetter-Zeile · Rest ({folge})')
+          return ['.dbtns', '.st-kreise', '#heute-vor-ort', '.photos', '.wb', '.st-fuss'].map(s => [...b.children].findIndex(e => e.matches(s))); }""")
+        check(all(i >= 0 for i in folge) and folge == sorted(folge), f'{name}: Reihenfolge Knöpfe · Kreise · Heute vor Ort · Fotos · Boot · Rest ({folge})')
         check(pg.locator('#detail .wx-block').count() == 0, f'{name}: Wetter bei Slipanlagen nicht mehr als Abschnitt in der Seite')
-        # „Foto hinzufügen“ direkt unter den Fotos; unten nur noch „Fehler melden“
-        check(pg.is_visible('#detail .photos .ph-add') and pg.locator('#detail .detail-links button', has_text='Foto hinzufügen').count() == 0, f'{name}: „Foto hinzufügen“ im Fotobereich')
+        # „Foto hinzufügen“ (8.1.0) nur als Kreis-Knopf über den Fotos, nicht mehr im Karussell; unten nur noch „Fehler melden“
+        check(pg.is_visible('#detail .st-kreise .wm-kreis[aria-label="Foto hinzufügen"]') and pg.locator('#detail .photos .ph-add').count() == 0
+              and pg.locator('#detail .detail-links button', has_text='Foto hinzufügen').count() == 0, f'{name}: „Foto hinzufügen“ als Kreis-Knopf, nicht im Fotobereich')
         # Etikett wandert beim Scrollen nicht über den festen Kopf
         lage = None if mobile else pg.evaluate("""() => { const k = document.querySelector('#detail .ph-kat'), kopf = document.querySelector('#detail .wm-kopf');
           const sc = [k.parentElement]; let e = k.parentElement; while (e && e !== document.body) { if (/(auto|scroll)/.test(getComputedStyle(e).overflowY) && e.scrollHeight > e.clientHeight) { sc.push(e); break; } e = e.parentElement; }

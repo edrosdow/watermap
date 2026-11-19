@@ -496,6 +496,8 @@ function selectPlace(id, { fly = true, updateHash = true, full = false } = {}) {
 }
 
 function showDetail(p, { scrollTo = null, stufe = null } = {}) {
+  const vorOrt = p.type === 'slip' ? vorOrtTeile(p) : {};   // „Heute vor Ort“ und Kreis „Lage“ nur bei Slipanlagen
+  const vorOrtDaten = vorOrt.daten;
   const [kopf, body] = renderDetail(p, {
     user: state.user,
     enrichFacts: enrichFacts(state.meta, p.id),
@@ -518,7 +520,7 @@ function showDetail(p, { scrollTo = null, stufe = null } = {}) {
       details: () => standort?.sheet.stufe('gross'),
     },
     pegel: pegelInfo(p).then(info => info && pegelKreis(info)),
-    ...(p.type === 'slip' ? vorOrtTeile(p) : {}),   // „Heute vor Ort“ und Kreis „Lage“ nur bei Slipanlagen
+    ...vorOrt,
   });
   standortZeigen({ kopf, body, key: 'p:' + p.id, stufe: scrollTo ? 'gross' : stufe });
   // Handy, Stufe „klein“: aktuelle Lagemeldung als Zeile über „Details“ (wie früher in der Vorschau-Karte); Tipp → „Heute vor Ort“
@@ -530,10 +532,12 @@ function showDetail(p, { scrollTo = null, stufe = null } = {}) {
     body.querySelector('.st-details')?.before(z);
     standortKleinMessen();
   });
-  if (scrollTo === 'vor-ort') setTimeout(() => {
+  // 8.1.1: „Heute vor Ort“ ist bis zum Laden der Meldungen versteckt (nurProbleme) – erst danach hinscrollen und fokussieren
+  if (scrollTo === 'vor-ort') (vorOrtDaten || Promise.resolve()).then(() => setTimeout(() => {
     const sec = standort?.sheet.inhalt.querySelector('#heute-vor-ort');
-    sec?.scrollIntoView({ block: 'start' }); sec?.focus({ preventScroll: true });
-  }, 0);
+    if (!sec || sec.hidden) return;
+    sec.scrollIntoView({ block: 'start' }); sec.focus({ preventScroll: true });
+  }, 0), () => {});
 }
 
 /** Ist die (schon bekannte) Position höchstens VOR_ORT_RADIUS_M entfernt? Nie selbst nach der Position fragen. */
@@ -560,7 +564,7 @@ function vorOrtTeile(p) {
     const t = MELD_TYPEN[probleme[0].typ] || MELD_TYPEN.hindernis;
     return { unter: t.text, ton: t.ton === 'stop' ? 'stop' : 'warn', label: `Lage melden – gemeldet: ${t.text}` };
   });
-  return { vorOrt: { zeile: null, section }, lage: { oeffnen: () => lageMelden(p), stand } };
+  return { vorOrt: { zeile: null, section }, lage: { oeffnen: () => lageMelden(p), stand }, daten };
 }
 
 // ---- Pegel am selben Gewässer (nächster PEGELONLINE-Pegel, siehe naechsterPegel)

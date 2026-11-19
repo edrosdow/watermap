@@ -57,14 +57,14 @@ def run(b, w, hh):
     # Wetter-Fenster aus dem Detail
     pg.evaluate("window.__watermap.selectPlace('node/7000', { full: true })"); pg.wait_for_selector('#detail:not([hidden])'); pg.wait_for_timeout(400)
     pg.evaluate("window.__watermap.selectPlace(window.__watermap.state.places.find(p => p.type === 'slip').id, { full: true })"); pg.wait_for_timeout(400)
-    z = pg.locator('#detail .wxz')
+    z = pg.locator('#detail .dbtns .wm-aktion:nth-child(3)')   # 8.1.0: Knopf „Wetter“ in der Aktionsleiste
     if z.count():
         z.first.click(); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen'); pg.wait_for_timeout(500)
         r = rect(pg, '.wm-sheet.wxd-wetter'); wisch(pg, w / 2, r['y'] + 12, 560)
         pg.wait_for_timeout(300)
         check(pg.locator('.wm-sheet.wxd-wetter').count() == 0 and pg.locator('#detail').is_visible(), f'{tag}: Wetter-Sheet: nach unten gewischt → zu, Standort bleibt offen')
     else:
-        check(False, f'{tag}: Wetter-Zeile nicht gefunden')
+        check(False, f'{tag}: Knopf „Wetter“ nicht gefunden')
     # In der Nähe: Sheet über der Karte (Designumbau 3a) – Wischen am Griff nach unten oder die Zurück-Taste führt zur Karte
     NH = '.wm-sheet.nh-sheet'
     pg.goto(uf.BASE + '#karte'); pg.wait_for_timeout(300); pg.click('#btn-naehe-m'); pg.wait_for_selector(f'{NH} .place, {NH} .nh-leer'); pg.wait_for_timeout(600)
