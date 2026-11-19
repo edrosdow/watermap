@@ -572,6 +572,10 @@ details.pd-zeile[open] { padding-bottom: 10px; }
 .pks-kachel small { font-size: var(--wm-t-xs); color: var(--wm-matt); }
 .pks-kachel b { display: flex; align-items: center; gap: 6px; font-size: var(--wm-t-m); color: var(--wm-tinte); }
 .pks-klein { font-size: var(--wm-t-xs); color: var(--wm-matt); }   /* 8.0.18: Tidepegel – „auflaufend“, „in 4 Std. 27 Min.“ unter dem Wert */
+/* 8.0.19: Tidepegel – Schimmer-Balken, solange Verlauf/Vorhersage laden (gemeinsamer Schimmer wie .skeleton) */
+.pks-kachel .pks-laden { display: block; height: 1em; border-radius: var(--wm-r-s); color: transparent; background: linear-gradient(90deg, var(--wm-flaeche-2) 25%, var(--wm-wasser-2) 50%, var(--wm-flaeche-2) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite linear; }
+.pks-kachel small.pks-laden { width: 55%; } .pks-kachel b.pks-laden { width: 70%; height: 1.2em; } .pks-kachel .pks-klein.pks-laden { width: 45%; }
+@media (prefers-reduced-motion: reduce) { .pks-kachel .pks-laden { animation: none; } }
 .pks-kpunkt { flex: none; width: 9px; height: 9px; border-radius: var(--wm-r-rund); background: var(--wm-leise); }
 .pks-kpunkt.is-gut { background: var(--wm-gut); } .pks-kpunkt.is-warn { background: var(--wm-warn); }
 .pks-kpunkt.is-hoch { background: var(--wm-hoch); } .pks-kpunkt.is-stop { background: var(--wm-stop); }

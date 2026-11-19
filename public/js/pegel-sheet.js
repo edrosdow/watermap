@@ -77,18 +77,22 @@ export function pegelSheet(ctx) {
     const kurveBox = h('div', { class: 'pks-kurve' });
     let kacheln, trend, fehlt = () => {};
     if (tide) {
-      const gzWert = h('b', { text: '…' }), gzKlein = h('span', { class: 'pks-klein' });
-      const ereignisArt = h('small', { text: 'Gezeiten' }), ereignisWert = h('b', { text: '…' }), ereignisKlein = h('span', { class: 'pks-klein' });
-      const ereignis = h('div', { class: 'pks-kachel pks-ereignis' }, ereignisArt, ereignisWert, ereignisKlein);
-      kacheln = [h('div', { class: 'pks-kachel pks-zahlen pks-gezeit' }, h('small', { text: 'Gezeit' }), gzWert, gzKlein), ereignis];
+      // 8.0.19: Solange geladen wird, Schimmer-Balken statt Platzhalterwörter (kein Umspringen „Gezeiten …“ → „Hochwasser“)
+      const gzWert = h('b', { class: 'pks-laden' }), gzKlein = h('span', { class: 'pks-klein pks-laden' });
+      const ereignisArt = h('small', { class: 'pks-laden' }), ereignisWert = h('b', { class: 'pks-laden' }), ereignisKlein = h('span', { class: 'pks-klein pks-laden' });
+      const gezeit = h('div', { class: 'pks-kachel pks-zahlen pks-gezeit', 'aria-busy': 'true' }, h('small', { text: 'Gezeit' }), gzWert, gzKlein);
+      const ereignis = h('div', { class: 'pks-kachel pks-ereignis', 'aria-busy': 'true', 'aria-label': 'Nächstes Hoch- oder Niedrigwasser wird geladen' }, ereignisArt, ereignisWert, ereignisKlein);
+      kacheln = [gezeit, ereignis];
+      const fertig = (kachel) => { kachel.removeAttribute('aria-busy'); kachel.querySelectorAll('.pks-laden').forEach((el) => el.classList.remove('pks-laden')); };
       const nurGezeit = () => { ereignis.remove(); trend?.classList.add('is-einzeln'); };
-      fehlt = () => { gzWert.textContent = '–'; };
+      fehlt = () => { gzWert.textContent = '–'; gzKlein.textContent = ''; fertig(gezeit); };
       verlaufLaden(g.id).then((pts) => {
         if (!kurveBox.isConnected || fuer !== g) return;
         const gz = GEZEIT[auswerten(g, pts || [])?.tendenz];
         gzWert.textContent = gz ? `${gz.pfeil} ${gz.wort}` : '–';
         gzKlein.textContent = gz?.klein || '';
-      }, () => {});
+        fertig(gezeit);
+      }, () => { gzWert.textContent = '–'; fertig(gezeit); });
       vorhersageLaden(g).then((v) => {
         if (fuer !== g) return;
         const e = v && kommende(v.d)[0];
@@ -96,6 +100,8 @@ export function pegelSheet(ctx) {
         ereignisArt.textContent = ART[e.typ];
         ereignisWert.textContent = `${tagUhr(e.t)} Uhr`;
         ereignisKlein.textContent = inText(e.t);
+        ereignis.removeAttribute('aria-label');
+        fertig(ereignis);
       }, nurGezeit);
     } else {
       const tend = h('b', { text: '…' });
