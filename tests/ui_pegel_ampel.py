@@ -25,6 +25,14 @@ def warte(pg, ausdruck, ms=8000):
         pg.wait_for_timeout(100)
     return False
 
+def ruhig(pg):
+    """Das Formular scrollt sanft ins Bild (scrollIntoView): erst weiter tippen, wenn es stillsteht – sonst geht der Tipp daneben."""
+    alt = None
+    for _ in range(40):
+        y = pg.locator(S + ' .pmb').bounding_box()['y']
+        if y == alt: return
+        alt = y; pg.wait_for_timeout(50)
+
 def frisch(pg, adr):
     pg.goto('about:blank'); pg.goto(uf.BASE + adr)
 
@@ -60,7 +68,7 @@ def run(b, w, hh):
     pg.locator(S + ' .pmb').screenshot(path=str(SHOTS / f'pmb_{w}_mit.png'))
 
     # ---- Ändern → Entfernen → Zeile „Mindestpegel festlegen“
-    pg.click(S + ' .pmb .wm-hinweis-aktion'); pg.wait_for_selector(S + ' .pmb-form')
+    pg.click(S + ' .pmb .wm-hinweis-aktion'); pg.wait_for_selector(S + ' .pmb-form'); ruhig(pg)
     check(pg.input_value(S + ' .pmb-wert') == '150' and pg.locator(S + ' .pmb-entfernen').count() == 1, f'{tag}: Formular mit 150 cm und „Entfernen“')
     check(pg.evaluate("document.activeElement?.classList.contains('pmb-wert')"), f'{tag}: Fokus im Feld')
     pg.click(S + ' .pmb-entfernen'); pg.wait_for_timeout(300)
@@ -69,7 +77,7 @@ def run(b, w, hh):
     pg.locator(S + ' .pmb').screenshot(path=str(SHOTS / f'pmb_{w}_ohne.png'))
 
     # ---- Festlegen: Vorbelegung, −/+ 5 cm, Fehler, Bootstyp, Speichern
-    pg.click(S + ' .pmb .wm-zeile'); pg.wait_for_selector(S + ' .pmb-form')
+    pg.click(S + ' .pmb .wm-zeile'); pg.wait_for_selector(S + ' .pmb-form'); ruhig(pg)
     check(pg.input_value(S + ' .pmb-wert') == '95', f'{tag}: vorbelegt mit dem gerundeten Pegel ({pg.input_value(S + " .pmb-wert")})')
     check(pg.locator(S + ' .pmb .wm-seg button[aria-pressed=true]').inner_text() == 'Segelboot', f'{tag}: Bootstyp aus den Einstellungen vorbelegt')
     check(pg.locator(S + ' .pmb-entfernen').count() == 0, f'{tag}: ohne Mindestpegel kein „Entfernen“')
@@ -83,7 +91,7 @@ def run(b, w, hh):
     check('Knapp – 16 cm über deinem Mindestpegel' in t and 'Kanu/SUP' in t and pg.locator(S + ' .pmb .wm-hinweis.is-warn').count() == 1, f'{tag}: gespeichert → „Knapp“ ({t!r})')
     check(json.loads(pg.evaluate("localStorage.getItem('watermap.boot')")).get('typ') == 'kanu', f'{tag}: Bootstyp in watermap.boot')
     check(pg.evaluate("document.activeElement?.classList.contains('wm-hinweis-aktion')"), f'{tag}: Fokus danach auf „Ändern“')
-    pg.click(S + ' .pmb .wm-hinweis-aktion'); pg.fill(S + ' .pmb-wert', '60'); pg.click(S + ' .pmb .wm-btn.is-leise:not(.pmb-entfernen)'); pg.wait_for_timeout(200)
+    pg.click(S + ' .pmb .wm-hinweis-aktion'); ruhig(pg); pg.fill(S + ' .pmb-wert', '60'); pg.click(S + ' .pmb .wm-btn.is-leise:not(.pmb-entfernen)'); pg.wait_for_timeout(200)
     check('Knapp – 16 cm' in pg.inner_text(S + ' .pmb'), f'{tag}: „Abbrechen“ lässt den Wert')
     pg.click(S + ' .pmb .wm-hinweis-aktion'); pg.fill(S + ' .pmb-wert', '60'); pg.press(S + ' .pmb-wert', 'Enter'); pg.wait_for_timeout(200)
     check('Passt – 36 cm über deinem Mindestpegel' in pg.inner_text(S + ' .pmb') and pg.locator(S + ' .pmb .wm-hinweis.is-gut').count() == 1, f'{tag}: Enter speichert → „Passt“')
