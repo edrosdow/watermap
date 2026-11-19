@@ -113,6 +113,7 @@ def details(pg, adresse, mobile):
 def run(b, w, hh, mobile):
     tag = f'{w}px'
     print(f'--- {tag}')
+    n_start = len(calls)   # calls gilt für alle Durchgänge – hier nur die eigenen zählen
     nav = '#bottomnav' if mobile else '#topnav'
     ctx, pg = page(b, w, hh, mobile)
     # Pegel-Tab entfallen (Designumbau 2a): #pegel → Karte mit Chip „Pegel“, die Flussseite ist ein Sheet über der Karte
@@ -164,7 +165,7 @@ def run(b, w, hh, mobile):
     next((True for _ in range(100) if pg.evaluate("[...document.querySelectorAll('.pf-zeile')].some(z => / HW (morgen )?\\d\\d:\\d\\d/.test(z.textContent))") or pg.wait_for_timeout(50)), None)   # selbst abfragen: die CSP verbietet wait_for_function mit Text
     texte = [t for t in pg.locator('.pf-zeile').all_inner_texts()]
     check(re.search(r'km 727 · HW (morgen )?\d\d:\d\d', texte[11]) and 'km 623,1 · Tide' in texte[10], f'{tag}: Tidepegel mit BSH-Ort „HW 14:32“ statt „Tide“ ({texte[11]!r})')
-    check(len([c for c in calls if '/api/gezeiten' in c and 'pegel=' in c and U(20) in c]) == 0, f'{tag}: nur Pegel mit BSH-Ort werden abgefragt')
+    check(len([c for c in calls[n_start:] if '/api/gezeiten' in c and 'pegel=' in c and U(20) in c]) == 0, f'{tag}: nur Pegel mit BSH-Ort werden abgefragt')
     pg.wait_for_function("document.querySelector('.pf-tide-hw')", timeout=5000)
     check(re.search(r'· HW Cuxhaven (morgen )?\d\d:\d\d', pg.inner_text('.pf-tidezeile')), f'{tag}: Tide-Zeile mit nächstem HW ({pg.inner_text(".pf-tidezeile")!r})')
     neu = [c for c in calls[len(calls) - 50:] if 'measurements' in c]
@@ -242,7 +243,7 @@ def run(b, w, hh, mobile):
         gz, er = pg.inner_text(PEGEL + ' .pks-gezeit'), pg.inner_text(PEGEL + ' .pks-ereignis')
         ks = pg.locator(PEGEL + ' .pks-trend .pks-kachel').all()
         check('Gezeit' in gz and '↗ Flut' in gz and 'auflaufend' in gz and 'Tendenz' not in pg.inner_text(PEGEL + ' .pks-trend'), f'{tag}: Tidepegel kompakt „Gezeit: ↗ Flut, auflaufend“ ({gz!r})')
-        check(re.search(r'Hochwassers+dd:dd Uhrs+in 1 Std. 1d Min.', er) and len(ks) == 2 and abs(ks[0].bounding_box()['y'] - ks[1].bounding_box()['y']) < 2, f'{tag}: Kachel „Hochwasser“ mit Uhrzeit und „in …“ neben „Gezeit“ ({er!r})')
+        check(re.search(r'Hochwasser\s+\d\d:\d\d Uhr\s+in 1 Std\. \d+ Min\.', er) and len(ks) == 2 and abs(ks[0].bounding_box()['y'] - ks[1].bounding_box()['y']) < 2, f'{tag}: Kachel „Hochwasser“ mit Uhrzeit und „in …“ neben „Gezeit“ ({er!r})')
         # ohne BSH-Ort (Hamburg St. Pauli): nur „Gezeit“ über die ganze Breite
         oeffne(pg, f'#pegel/{U(20)}'); pg.wait_for_selector(PEGEL + ' .pks-kurz .pks-kurve-svg', timeout=8000); pg.wait_for_timeout(800)
         check(pg.locator(PEGEL + ' .pks-ereignis').count() == 0 and pg.locator(PEGEL + ' .pks-trend.is-einzeln .pks-gezeit').count() == 1, f'{tag}: Tidepegel ohne BSH-Vorhersage nur mit „Gezeit“ ({pg.inner_text(PEGEL + " .pks-trend")!r})')
