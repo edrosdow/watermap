@@ -92,6 +92,7 @@ def check(cond, msg):
 srv = ThreadingHTTPServer(('127.0.0.1', PORT), functools.partial(Handler, directory=str(ROOT)))
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 
+WX = '#detail .dbtns .wm-aktion[aria-haspopup="dialog"]'   # 8.1.0: Knopf „Wetter“ in der Aktionsleiste des Standort-Sheets
 PICK = """([north, typ]) => { const ps = window.__watermap.state.places.filter(p => p.type === typ);
   return (north ? ps.find(p => p.lat > 51.5 && p.name) : ps.find(p => p.lat < 50.5 && p.name)).id; }"""
 
@@ -122,15 +123,17 @@ with sync_playwright() as p:
         place = pg.evaluate(f"window.__watermap.state.byId.get({json.dumps(north)})")
         pos = lambda sels: pg.evaluate("(sels) => { const b = document.querySelector('#detail .detail-body'); return sels.map(s => [...b.children].findIndex(e => e.matches(s))); }", sels)
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)}, {{ full: true }})")
-        pg.wait_for_selector('#detail .wxz-warn', timeout=8000)
-        # Slipanlage: Zeile statt Abschnitt; bei amtlicher Warnung gelb und weiter oben
-        zeile = pg.inner_text('#detail .wxz')
-        check('Amtliche Warnung: Sturmböen (+1)' in zeile and 'jetzt 3 Bft SW' in zeile and pg.locator('#detail .wx-block').count() == 0, f'{name}: Zeile zeigt die Warnung ({zeile!r}), kein Abschnitt in der Seite')
-        check(pg.locator('#detail .wxz').get_attribute('class').endswith('wxz-moderate') and pg.locator('#detail .wxz').get_attribute('aria-haspopup') == 'dialog', f'{name}: Warnstufe als Klasse, Zeile öffnet ein Fenster')
-        i = pos(['.dbtns', '.photos, .ph-leer', '#heute-vor-ort', '.wxz', '.wb'])   # 8.0.8: keine Etiketten mehr
-        check(all(x >= 0 for x in i) and i == sorted(i) and pg.locator('#detail .dtags').count() == 0, f'{name}: Reihenfolge Knöpfe · Fotos · Heute vor Ort · Wetterwarnung · Boot ({i})')
-        check(pg.locator('#detail .wxz').bounding_box()['height'] >= 44, f'{name}: Zeile ≥ 44 px hoch')
-        pg.click('#detail .wxz'); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen .wx-wind', timeout=8000)
+        pg.wait_for_selector(f'{WX}.is-warnung', timeout=8000)
+        # Slipanlage (8.1.0): Knopf „Wetter“ in der Aktionsleiste; bei amtlicher Warnung Zustand warn mit Wort statt „Wetter“
+        knopf = pg.locator(WX)
+        label = knopf.get_attribute('aria-label') or ''
+        check(knopf.inner_text().strip() == 'Sturmböen' and 'Amtliche Warnung: Sturmböen (+1)' in label and pg.locator('#detail .wxz, #detail .wx-block').count() == 0,
+              f'{name}: Knopf zeigt die Warnung ({knopf.inner_text()!r}, {label!r}), keine Zeile, kein Abschnitt in der Seite')
+        check(pg.locator('#detail .dbtns .wm-aktion').count() == 3 and 'Teilen' not in pg.inner_text('#detail .dbtns'), f'{name}: Aktionsleiste Route · Merken · Wetter, ohne „Teilen“')
+        i = pos(['.dbtns', '.st-kreise', '#heute-vor-ort', '.wb'])
+        check(all(x >= 0 for x in i) and i == sorted(i) and pg.locator('#detail .dtags').count() == 0, f'{name}: Reihenfolge Knöpfe · Kreise · Heute vor Ort · Boot ({i})')
+        check(knopf.bounding_box()['height'] >= 44, f'{name}: Knopf ≥ 44 px hoch')
+        pg.click(WX); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen .wx-wind', timeout=8000)
         txt = pg.inner_text('.wm-sheet.wxd-wetter')
         check('Sturmböen'.upper() in txt and 'Markante Wetterwarnung' in txt, f'{name}: amtliche Warnung mit Stufe als Text')
         check(pg.locator('.wm-sheet.wxd-wetter .wx-alert').count() == 2 and pg.locator('.wm-sheet.wxd-wetter .wx-alert').first.get_attribute('class').endswith('moderate'),
@@ -166,36 +169,35 @@ with sync_playwright() as p:
         if mobile: check(abs(r['y'] + r['height'] - vp['height']) <= 1 and r['width'] >= vp['width'] - 1, f'{name}: Fenster sitzt unten, volle Breite ({r})')
         else: check(abs(r['x'] + r['width'] - vp['width']) <= 1 and r['width'] <= 421, f'{name}: Sheet als Panel rechts ({r})')
         pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
-        check(pg.locator('.wm-sheet.wxd-wetter').count() == 0 and pg.locator('#detail:not([hidden]) .wxz').count() == 1, f'{name}: Escape schließt nur das Fenster')
-        check(pg.evaluate("document.activeElement.classList.contains('wxz')"), f'{name}: Fokus zurück auf die Zeile')
-        pg.click('#detail .wxz'); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen .wx-wind'); pg.click('.wm-sheet.wxd-wetter .wm-zu'); pg.wait_for_timeout(700)
+        check(pg.locator('.wm-sheet.wxd-wetter').count() == 0 and pg.locator('#detail:not([hidden])').count() == 1, f'{name}: Escape schließt nur das Fenster')
+        check(pg.evaluate("document.activeElement.matches('#detail .dbtns .wm-aktion[aria-haspopup=dialog]')"), f'{name}: Fokus zurück auf den Knopf „Wetter“')
+        pg.click(WX); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen .wx-wind'); pg.click('.wm-sheet.wxd-wetter .wm-zu'); pg.wait_for_timeout(700)
         check(pg.locator('.wm-sheet.wxd-wetter').count() == 0, f'{name}: „×“ schließt das Fenster')
         # Zurück-Taste schließt das Sheet (Verlaufseintrag des Rahmens, Designumbau 3a); die Slipanlage bleibt
-        pg.click('#detail .wxz'); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen .wx-wind'); url0 = pg.url
+        pg.click(WX); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen .wx-wind'); url0 = pg.url
         pg.go_back(); pg.wait_for_timeout(700)
-        check(pg.locator('.wm-sheet.wxd-wetter').count() == 0 and pg.locator('#detail:not([hidden]) .wxz').count() == 1 and pg.url == url0, f'{name}: Zurück-Taste schließt nur das Wetter-Sheet')
+        check(pg.locator('.wm-sheet.wxd-wetter').count() == 0 and pg.locator('#detail:not([hidden])').count() == 1 and pg.url == url0, f'{name}: Zurück-Taste schließt nur das Wetter-Sheet')
 
         # Zwischenspeicher: gleicher Standort erneut → keine neuen Abfragen
         n = len(calls)
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)}, {{ full: true }})"); pg.wait_for_selector('#detail .wxz-warn')
-        pg.click('#detail .wxz'); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen .wx-wind'); pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(north)}, {{ full: true }})"); pg.wait_for_selector(f'{WX}.is-warnung')
+        pg.click(WX); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen .wx-wind'); pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
         check(len(calls) == n, f'{name}: kurzzeitiger Zwischenspeicher je Ort')
 
-        # Ohne Warnung: Zeile mit Kurzwerten, nach „Wichtig für dein Boot“
+        # Ohne Warnung (8.1.0): Knopf bleibt „Wetter“, die Werte stehen im Sheet
         south = pg.evaluate(PICK, [False, 'slip'])
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(south)}, {{ full: true }})"); pg.wait_for_selector('#detail .wxz:not(.wxz-warn) small:not(:has-text("Wird geladen"))', timeout=8000)
-        zeile = pg.inner_text('#detail .wxz')
-        check('3 Bft aus SW · Böen 34 km/h · 12 °C · keine Warnung' in zeile, f'{name}: Kurzwerte in der Zeile ({zeile!r})')
-        i = pos(['.dbtns', '.photos, .ph-leer', '#heute-vor-ort', '.wb', '.wxz'])
-        check(all(x >= 0 for x in i) and i == sorted(i), f'{name}: Reihenfolge … Heute vor Ort · Boot · Wetter ({i})')
-        pg.click('#detail .wxz'); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen .wx-noalert')
-        check('keine amtlichen Wetterwarnungen für Stadt Mainz' in pg.inner_text('.wm-sheet.wxd-wetter'), f'{name}: Hinweis ohne Warnung nennt den Warnbereich')
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(south)}, {{ full: true }})"); pg.wait_for_selector(WX, timeout=8000)
+        pg.click(WX); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen .wx-noalert', timeout=8000)
+        check(pg.locator(WX).inner_text().strip() == 'Wetter' and 'is-warnung' not in pg.locator(WX).get_attribute('class') and not pg.locator(WX).get_attribute('aria-label'),
+              f'{name}: ohne Warnung Knopf „Wetter“ ohne Warnzustand ({pg.locator(WX).inner_text()!r})')
+        txt = pg.inner_text('.wm-sheet.wxd-wetter')
+        check('keine amtlichen Wetterwarnungen für Stadt Mainz' in txt and '3 Bft' in txt, f'{name}: Hinweis ohne Warnung nennt den Warnbereich, Wind im Sheet')
         pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
 
-        # Andere Standorte (Hafen, Tankstelle): 8.0.8 ebenfalls die Zeile, kein Abschnitt
+        # Andere Standorte (Hafen, Tankstelle): 8.1.0 ebenfalls der Knopf „Wetter“, keine Zeile, kein Abschnitt
         marina = pg.evaluate("window.__watermap.state.places.find(p => p.type === 'marina' && p.lat > 51.5).id")
-        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(marina)}, {{ full: true }})"); pg.wait_for_selector('#detail .wxz', timeout=8000)
-        check(pg.locator('#detail .wx-block').count() == 0 and pg.locator('#detail .wxz').count() == 1, f'{name}: Hafen: Wetter als Zeile wie beim Slip (8.0.8)')
+        pg.evaluate(f"window.__watermap.selectPlace({json.dumps(marina)}, {{ full: true }})"); pg.wait_for_selector(WX, timeout=8000)
+        check(pg.locator('#detail .wx-block, #detail .wxz').count() == 0 and pg.locator(WX).count() == 1, f'{name}: Hafen: Wetter als Knopf wie beim Slip (8.1.0)')
 
         # Pegel-Detail enthält ebenfalls Wetter
         pg.evaluate("window.__watermap.setGauges(true)"); next((True for _ in range(60) if pg.evaluate('!!window.__watermap.state.gauges') or pg.wait_for_timeout(100)), None)   # Cluster zeichnen nur Marker im Ausschnitt
@@ -210,8 +212,8 @@ with sync_playwright() as p:
         fail['on'] = True
         other = pg.evaluate("window.__watermap.state.places.find(p => p.type === 'slip' && p.lat > 53 && p.lon > 10).id")
         pg.evaluate(f"window.__watermap.selectPlace({json.dumps(other)}, {{ full: true }})"); pg.wait_for_timeout(800)
-        check('Wind, Vorhersage und Warnungen' in pg.inner_text('#detail .wxz'), f'{name}: Zeile bleibt bei Ausfall bedienbar')
-        pg.click('#detail .wxz'); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen')
+        check(pg.locator(WX).inner_text().strip() == 'Wetter' and pg.locator(WX).is_enabled(), f'{name}: Knopf bleibt bei Ausfall bedienbar')
+        pg.click(WX); pg.wait_for_selector('.wm-sheet.wxd-wetter.is-offen')
         check('Wetterdaten sind gerade nicht erreichbar' in pg.inner_text('.wm-sheet.wxd-wetter'), f'{name}: Hinweis bei Ausfall')
         pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
         check(pg.locator('#detail .facts, #detail .wb').count() == 1, f'{name}: restliche Details trotzdem da')

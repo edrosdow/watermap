@@ -116,7 +116,7 @@ def run(b, mobile):
     wb.click(); check(karte.locator('.vo-weiter-btn').get_attribute('aria-expanded') == 'true' and 'noch nicht bestätigt' in karte.inner_text(), f'{tag}: aufklappbar')
     order = [c for c in pg.evaluate("[...document.querySelectorAll('#detail .detail-body > *')].map(e => e.id || e.className)") if not any(x.startswith('st-') for x in str(c).split())]   # Stufe-„klein“-Teile (Designumbau 3b) zählen nicht
     i_btn = next(k for k, c in enumerate(order) if 'dbtns' in str(c))
-    check(order.index('heute-vor-ort') == i_btn + 1 or order.index('heute-vor-ort') == i_btn + 2, f'{tag}: Karte direkt unter Route/Merken/Teilen')
+    check(order.index('heute-vor-ort') == i_btn + 1 or order.index('heute-vor-ort') == i_btn + 2, f'{tag}: Karte direkt unter Route/Merken/Wetter und den Kreisen')
     check(order.index('heute-vor-ort') < next((k for k, c in enumerate(order) if 'wx-block' in str(c)), 999), f'{tag}: Karte über dem Wetter')
     check('bei Testort' in pg.inner_text('#detail .wm-kopf') and pg.locator('#detail .st-meta').count() == 0, f'{tag}: Ort in der Unterzeile des Kopfs (8.0.5)')
     pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_3b_weit.png'))
@@ -144,27 +144,31 @@ def run(b, mobile):
     pg.evaluate("window.__watermap.selectPlace('node/2', { full: true })"); pg.wait_for_selector('#detail .vo-karte.vo-stop')
     check(pg.evaluate("getComputedStyle(document.querySelector('#detail .vo-oben')).backgroundColor") == 'rgb(253, 236, 234)' and pg.inner_text('#detail .vo-status') == 'Gesperrt', f'{tag}: b gesperrt – rot getönt (stop-hell)')
     pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_5b_rot.png'))
-    # Zustand e: keine Meldungen und weit weg → schmale Zeile statt großem Kasten
+    # Kreis „Lage“ (8.1.0) zeigt den Zustand der wichtigsten Meldung
+    lk = pg.locator('#detail .st-kreise .wm-kreis', has_text='Lage'); lk.locator('.wm-kreis-unter', has_text='Gesperrt').wait_for()
+    check(lk.count() == 1 and 'is-stop' in lk.get_attribute('class') and 'Gesperrt' in lk.inner_text() and 'gemeldet: Gesperrt' in (lk.get_attribute('aria-label') or ''), f'{tag}: b gesperrt – Kreis „Lage“ rot mit Wort ({lk.inner_text()!r})')
+    # Zustand e: keine Meldungen und weit weg → 8.1.0: keine Karte, Kreis „Lage“ zeigt „keine Probleme“
     pg.evaluate("window.__watermap.state.user = null")
-    pg.evaluate("window.__watermap.selectPlace('node/3', { full: true })"); pg.wait_for_selector('#detail .vo-karte.vo-schmal')
-    karte = pg.locator('#detail #heute-vor-ort')
-    bb = karte.bounding_box()
-    check(pg.inner_text('#detail .vo-status') == 'Heute keine Probleme gemeldet' and bb['height'] <= 80, f'{tag}: e – schmale Zeile, höchstens 80 px ({bb["height"]:.0f})')
-    check(karte.locator('.vo-chip').count() == 0 and karte.locator('.vo-alle').count() == 0 and karte.locator('.vo-melden').count() == 0, f'{tag}: e – keine Chips, kein „Alle Meldungen“')
-    btn = karte.locator('button.vo-schmal-btn')
-    check(btn.count() == 1 and btn.bounding_box()['height'] >= 43.9 and 'Lage melden' in btn.inner_text(), f'{tag}: e – Knopf „Lage melden“ ≥ 44 px ({btn.bounding_box()})')
-    pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_6e_schmal.png'))
-    btn.click(); pg.wait_for_selector('.lf-sheet.is-offen .lf-grid')
-    check('TEST Slip 3' in pg.inner_text('.wm-sheet.lf-sheet .wm-kopf'), f'{tag}: e – Knopf öffnet „Lage melden“ für den Standort')
+    pg.evaluate("window.__watermap.selectPlace('node/3', { full: true })")
+    lk = pg.locator('#detail .st-kreise .wm-kreis', has_text='Lage')
+    lk.locator('.wm-kreis-unter', has_text='keine Probleme').wait_for()
+    check(pg.locator('#detail #heute-vor-ort').count() == 1 and pg.locator('#detail #heute-vor-ort').is_hidden(), f'{tag}: e – ohne Meldungen keine Karte „Heute vor Ort“ (8.1.0)')
+    check('is-gut' in lk.get_attribute('class') and lk.get_attribute('aria-label') == 'Lage melden – heute keine Probleme gemeldet' and lk.bounding_box()['height'] >= 43.9, f'{tag}: e – Kreis „Lage“: keine Probleme, grün, ≥ 44 px')
+    pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_6e_kreis.png'))
+    lk.click(); pg.wait_for_selector('.lf-sheet.is-offen .lf-grid')
+    check('TEST Slip 3' in pg.inner_text('.wm-sheet.lf-sheet .wm-kopf'), f'{tag}: e – Kreis „Lage“ öffnet „Lage melden“ für den Standort')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
-    # Zustand a: nah, keine Meldungen
+    # Zustand a: nah, keine Meldungen → 8.1.0: ebenfalls keine Karte (Melden über den Kreis „Lage“)
     pg.evaluate("(() => { const p = window.__watermap.state.byId.get('node/3'); window.__watermap.state.user = { lat: p.lat, lon: p.lon + 0.003 }; })()")
+    pg.evaluate("window.__watermap.selectPlace('node/3', { full: true })")
+    pg.locator('#detail .st-kreise .wm-kreis', has_text='Lage').locator('.wm-kreis-unter', has_text='keine Probleme').wait_for()
+    check(pg.locator('#detail #heute-vor-ort').is_hidden(), f'{tag}: a – nah ohne Meldungen: keine Karte (8.1.0)')
+    # Zustand c: Meldung „Warteschlange“ liegt vor, du bist nah → Chips „Lage hat sich geändert?“
+    st['M']['node/3'] = [{'id': 'c1', 'standortId': 'node/3', 'typ': 'warteschlange', 'notiz': None, 'erstelltAm': NOW - 10 * 60000, 'bestaetigt': 0, 'widersprochen': 0}]
     pg.evaluate("window.__watermap.selectPlace('node/3', { full: true })"); pg.wait_for_selector('#detail .vo-unten')
     karte = pg.locator('#detail #heute-vor-ort')
-    chips = [c.strip() for c in karte.locator('.vo-chip').all_inner_texts()]
-    check(pg.inner_text('#detail .vo-status') == 'Heute keine Probleme gemeldet' and karte.locator('.vo-lage small').count() == 0, f'{tag}: a – „Heute keine Probleme gemeldet“ ohne Zusatzzeile')
-    check('Bist du gerade hier?' in karte.inner_text() and 'ein Tipp genügt' in karte.inner_text() and chips == ['Alles frei', 'Parkplatz voll', 'Warteschlange', 'Mehr'], f'{tag}: a – „Bist du gerade hier?“ mit Chips ({chips})')
-    check(karte.locator('.vo-melden').count() == 0, f'{tag}: a – keine Zeile „Lage melden“ (nah)')
+    chips = [c.strip() for c in karte.locator('.vo-unten .vo-chip').all_inner_texts()]
+    check(chips == ['Alles frei', 'Parkplatz voll', 'Gesperrt', 'Mehr'], f'{tag}: c – Chips zur Meldung „Warteschlange“ ({chips})')
     pg.screenshot(path=str(SHOTS / f'meld_{"m" if mobile else "d"}_6a.png'))
     # Zustand c: Chip antippen
     karte.locator('.vo-chip', has_text='Parkplatz voll').click(); pg.wait_for_selector('#detail .vo-karte.is-edit')
@@ -186,8 +190,8 @@ def run(b, mobile):
     check('Danke! Deine Meldung ist jetzt sichtbar.' in pg.inner_text('#toast'), f'{tag}: Toast nach dem Senden')
     p = st['posts'][-1]['body']
     check(p == {'standortId': 'node/3', 'typ': 'alles_frei', 'notiz': 'Rampe frei geräumt'}, f'{tag}: gesendet nur Standort-ID, Typ, Notiz ({p})')
-    check('Zuletzt: „Alles frei“ · heute' in pg.inner_text('#detail .vo-lage'), f'{tag}: danach „Zuletzt: „Alles frei“ · heute …“')
-    check(pg.evaluate("window.__watermap.state.meld.get('node/3')?.typ") == 'alles_frei', f'{tag}: Marker-Stand sofort aktualisiert')
+    check(pg.inner_text('#detail .vo-status') == 'Warteschlange am Slip' and karte.is_visible(), f'{tag}: danach bleibt die wichtigste Meldung sichtbar')
+    check(pg.evaluate("window.__watermap.state.meld.get('node/3')?.n") == 2, f'{tag}: Marker-Stand sofort aktualisiert (2 Meldungen)')
     # „Mehr ›“ → sechs Kacheln
     karte.locator('.vo-chip-mehr').click(); pg.wait_for_selector('.lf-sheet.is-offen .lf-grid')
     send = pg.locator('.wm-sheet.lf-sheet .lf-send')

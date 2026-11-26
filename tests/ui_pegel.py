@@ -213,12 +213,13 @@ with sync_playwright() as p:
         pg.locator(S + ' .wm-sheet-inhalt').evaluate('e => e.scrollTop = 99999'); pg.wait_for_timeout(100)
         pg.screenshot(path=str(SHOTS / f'{name}_4_detail_unten.png'))
 
-        # Slipanlage am selben Gewässer: Pegel-Kasten öffnet ein Fenster (wie „Wetter und Wind“), „×“ führt zurück zur Slipanlage
+        # Slipanlage am selben Gewässer (8.1.0): Kreis „Pegel“ öffnet ein Fenster (wie „Wetter“), „×“ führt zurück zur Slipanlage
         sid = pg.evaluate("""(k) => { const st = window.__watermap.state, g = st.gauges.find(x => x.id === k), p = st.places.find(x => x.type === 'slip');
             p.water = { name: 'Rhein' }; p.lat = g.lat + 0.01; p.lon = g.lon; return p.id; }""", KOELN)
-        pg.evaluate("(id) => window.__watermap.selectPlace(id, { full: true })", sid); pg.wait_for_selector('#detail .pegel-box', timeout=8000)
-        box = pg.locator('#detail .pegel-box')
-        check(box.get_attribute('href') == '#karte/pegel/' + KOELN and '312 cm' in box.inner_text() and 'wm-zeile' in box.get_attribute('class') and 'Pegel-Ampel' not in box.inner_text(), f'{name}: Pegel als Ortszeile mit Wert ({box.inner_text()!r})')
+        pg.evaluate("(id) => window.__watermap.selectPlace(id, { full: true })", sid); pg.wait_for_selector('#detail .st-kreise .wm-kreis[aria-label^="Pegel Köln"]', timeout=8000)   # vorher: „Pegel am Gewässer“ (lädt)
+        box = pg.locator('#detail .st-kreise .wm-kreis[aria-label^="Pegel "]')
+        check(box.count() == 1 and '312 cm' in box.locator('.wm-kreis-unter').inner_text() and box.get_attribute('aria-label').startswith('Pegel Köln') and '312 cm' in box.get_attribute('aria-label')
+              and box.get_attribute('aria-haspopup') == 'dialog' and pg.locator('#detail .pegel-box').count() == 0, f'{name}: Pegel als Kreis mit Wert ({box.inner_text()!r}, {box.get_attribute("aria-label")!r})')
         box.click(); pg.wait_for_selector('.wm-sheet.wxd-pegel.is-offen #pd-name', timeout=8000); pg.wait_for_selector(S, state='detached')
         check(pg.inner_text('.wm-sheet.wxd-pegel #pd-name') == 'Köln' and 'pegel/' not in pg.url and pg.locator(S).count() == 0 and pg.locator('#detail:not([hidden])').count() == 1,
               f'{name}: Klick öffnet die Pegel-Details im Fenster, keine neue Seite ({pg.url[-30:]})')
@@ -231,8 +232,8 @@ with sync_playwright() as p:
         else: check(abs(r['x'] + r['width'] - vp['width']) <= 1 and r['width'] <= 421, f'{name}: Sheet als Panel rechts über der Slipanlage')
         pg.screenshot(path=str(SHOTS / f'{name}_3b_pegel_fenster.png'))
         pg.locator('.wm-sheet.wxd-pegel .wm-zu').first.click(); pg.wait_for_timeout(700)
-        check(pg.locator('.wm-sheet.wxd-pegel').count() == 0 and pg.locator('#detail:not([hidden]) .pegel-box').count() == 1 and pg.evaluate("document.activeElement.classList.contains('pegel-box')"),
-              f'{name}: „×“ schließt das Fenster, die Slipanlage bleibt offen, Fokus zurück auf den Kasten')
+        check(pg.locator('.wm-sheet.wxd-pegel').count() == 0 and pg.locator('#detail:not([hidden]) .wm-kreis[aria-label^="Pegel "]').count() == 1 and pg.evaluate("document.activeElement.matches('.wm-kreis[aria-label^=\"Pegel \"]')"),
+              f'{name}: „×“ schließt das Fenster, die Slipanlage bleibt offen, Fokus zurück auf den Kreis')
         box.click(); pg.wait_for_selector('.wm-sheet.wxd-pegel.is-offen #pd-name'); pg.keyboard.press('Escape'); pg.wait_for_timeout(700)
         check(pg.locator('.wm-sheet.wxd-pegel').count() == 0 and pg.locator('#detail:not([hidden])').count() == 1, f'{name}: Escape schließt nur das Fenster')
         box.click(); pg.wait_for_selector('.wm-sheet.wxd-pegel.is-offen .pm-stern'); pg.click('.wm-sheet.wxd-pegel .pm-stern'); pg.wait_for_timeout(300)

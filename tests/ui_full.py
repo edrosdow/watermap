@@ -365,8 +365,8 @@ def desktop(b):
     pg.click('.wm-sheet.pf-sheet .wm-zu'); pg.wait_for_selector('.wm-sheet.pf-sheet', state='detached')
     # Aus der Detailansicht: Standort steht fest (auch bei Standorten jenseits der ersten 600 der Liste)
     last = pg.evaluate("window.__watermap.state.places.map(p => p.id).sort().pop()")
-    pg.evaluate(f"window.__watermap.selectPlace({json.dumps(last)})"); pg.wait_for_selector('#detail .ph-add, #detail .ph-leer-btn')
-    pg.click('#detail .ph-add, #detail .ph-leer-btn'); pg.wait_for_selector('.pf-sheet.is-offen')
+    pg.evaluate(f"window.__watermap.selectPlace({json.dumps(last)})"); pg.wait_for_selector('#detail .wm-kreis[aria-label="Foto hinzufügen"]')
+    pg.click('#detail .wm-kreis[aria-label="Foto hinzufügen"]'); pg.wait_for_selector('.pf-sheet.is-offen')   # 8.1.0: Kreis „Foto“
     check(pg.locator('.wm-sheet.pf-sheet input[name=standort_id]').get_attribute('value') == last, f'Foto aus Detail: Standort-ID fest ({last})')
     pg.click('.wm-sheet.pf-sheet .wm-zu'); pg.wait_for_selector('.wm-sheet.pf-sheet', state='detached')
     # Kraftstoffpreise sind entfernt (8.0.8, Nutzer): Tankstelle ohne Preise und ohne „Preis melden“
@@ -405,10 +405,12 @@ def photo_form(b, mobile):
         return route.continue_()
     ctx.route(BASE, on_post)
     open_app(pg, mobile)
-    pg.evaluate("window.__watermap.selectPlace('node/1', { full: true })"); pg.wait_for_selector('#detail .ph-add, #detail .ph-leer-btn')
-    check(pg.is_visible('#detail .ph-leer') and 'Erstes Foto hinzufügen' in pg.inner_text('#detail .ph-leer') and pg.locator('#detail .detail-links button', has_text='Foto hinzufügen').count() == 0,
-          f'{tag}: ohne Fotos Zeile „Erstes Foto hinzufügen“ (8.0.5)')
-    pg.click('#detail .ph-add, #detail .ph-leer-btn'); pg.wait_for_selector('.pf-sheet.is-offen')
+    pg.evaluate("window.__watermap.selectPlace('node/1', { full: true })"); pg.wait_for_selector('#detail .wm-kreis[aria-label="Foto hinzufügen"]')
+    fk = '#detail .wm-kreis[aria-label="Foto hinzufügen"]'
+    check(pg.is_visible(fk) and 'hinzufügen' in pg.inner_text(f'{fk} .wm-kreis-unter') and pg.locator('#detail .photos, #detail .ph-leer, #detail .ph-add').count() == 0
+          and pg.locator('#detail .detail-links button', has_text='Foto hinzufügen').count() == 0,
+          f'{tag}: ohne Fotos nur der Kreis „Foto · hinzufügen“, keine Fotoreihe (8.1.0)')
+    pg.click(fk); pg.wait_for_selector('.pf-sheet.is-offen')
     shot = lambda n: pg.screenshot(path=str(SHOTS / f'foto_{"m" if mobile else "d"}_{n}.png'))
     # leer
     txt = pg.inner_text('.wm-sheet.pf-sheet')
