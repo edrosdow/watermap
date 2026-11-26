@@ -85,5 +85,91 @@
       "suitable_boats": "größer als 9 m"
     },
     "updated": "2026-10-27"
+  },
+  {
+    "id": "node/1652078594",
+    "status": "approved",
+    "beispiel": true,
+    "photos": [
+      {
+        "url": "photos/node-1652078594-beispiel1.jpg",
+        "credit": "Beispielbild",
+        "alt": "Beispielbild: Rampe",
+        "kategorie": "rampe"
+      },
+      {
+        "url": "photos/node-1652078594-beispiel2.jpg",
+        "credit": "Beispielbild",
+        "alt": "Beispielbild: Steg",
+        "kategorie": "steg"
+      },
+      {
+        "url": "photos/node-1652078594-beispiel3.jpg",
+        "credit": "Beispielbild",
+        "alt": "Beispielbild: Parkplatz",
+        "kategorie": "parkplatz"
+      },
+      {
+        "url": "photos/node-1652078594-beispiel4.jpg",
+        "credit": "Beispielbild",
+        "alt": "Beispielbild: Zufahrt",
+        "kategorie": "zufahrt"
+      }
+    ],
+    "updated": "2026-11-26"
+  },
+  {
+    "id": "node/431070637",
+    "status": "approved",
+    "beispiel": true,
+    "photos": [
+      {
+        "url": "photos/node-431070637-beispiel1.jpg",
+        "credit": "Beispielbild",
+        "alt": "Beispielbild: Rampe",
+        "kategorie": "rampe"
+      }
+    ],
+    "updated": "2026-11-26"
+  },
+  {
+    "id": "node/27378815",
+    "status": "approved",
+    "beispiel": true,
+    "photos": [
+      {
+        "url": "photos/node-27378815-beispiel1.jpg",
+        "credit": "Beispielbild",
+        "alt": "Beispielbild: Rampe",
+        "kategorie": "rampe"
+      },
+      {
+        "url": "photos/node-27378815-beispiel2.jpg",
+        "credit": "Beispielbild",
+        "alt": "Beispielbild: Umgebung",
+        "kategorie": "umgebung"
+      }
+    ],
+    "updated": "2026-11-26"
+  },
+  {
+    "id": "node/13850384353",
+    "status": "approved",
+    "beispiel": true,
+    "photos": [
+      {
+        "url": "photos/node-13850384353-beispiel1.jpg",
+        "credit": "Beispielbild",
+        "alt": "Beispielbild: Steg",
+        "kategorie": "steg"
+      },
+      {
+        "url": "photos/node-13850384353-beispiel2.jpg",
+        "credit": "Beispielbild",
+        "alt": "Beispielbild: WC und Kiosk",
+        "kategorie": "sonstiges"
+      }
+    ],
+    "updated": "2026-11-26"
   }
 ]
